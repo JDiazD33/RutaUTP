@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800&family=Be+Vietnam+Pro:wght@400;500&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "tertiary-container": "#00758d",
+          "primary": "#a80033",
+          "surface-dim": "#d8dadc",
+          "surface-container": "#eceef0",
+          "on-surface-variant": "#5c3f41",
+          "on-tertiary-fixed": "#001f27",
+          "primary-fixed": "#ffdadb",
+          "primary-container": "#d31245",
+          "on-surface": "#191c1e",
+          "on-tertiary": "#ffffff",
+          "surface-container-high": "#e6e8ea",
+          "on-error-container": "#93000a",
+          "on-secondary": "#ffffff",
+          "outline-variant": "#e4bdbf",
+          "surface-container-low": "#f2f4f6",
+          "on-tertiary-fixed-variant": "#004e5f",
+          "error": "#ba1a1a",
+          "on-primary-fixed": "#40000e",
+          "tertiary": "#005b6e",
+          "on-tertiary-container": "#d1f2ff",
+          "inverse-primary": "#ffb2b7",
+          "on-secondary-container": "#244885",
+          "inverse-on-surface": "#eff1f3",
+          "surface-tint": "#be003b",
+          "outline": "#906f70",
+          "tertiary-fixed": "#b3ebff",
+          "on-secondary-fixed": "#001a42",
+          "on-background": "#191c1e",
+          "primary-fixed-dim": "#ffb2b7",
+          "surface-container-lowest": "#ffffff",
+          "surface-bright": "#f7f9fb",
+          "on-primary": "#ffffff",
+          "secondary-container": "#99b8fe",
+          "tertiary-fixed-dim": "#4cd6fb",
+          "secondary-fixed": "#d8e2ff",
+          "secondary": "#3c5d9c",
+          "surface": "#f7f9fb",
+          "background": "#f7f9fb",
+          "secondary-fixed-dim": "#aec6ff",
+          "error-container": "#ffdad6",
+          "surface-container-highest": "#e0e3e5",
+          "on-primary-fixed-variant": "#91002b",
+          "on-primary-container": "#ffe8e8",
+          "on-error": "#ffffff",
+          "inverse-surface": "#2d3133",
+          "on-secondary-fixed-variant": "#224583",
+          "surface-variant": "#e0e3e5"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "stack-gap": "12px",
+          "gutter": "16px",
+          "container-padding": "20px",
+          "unit": "4px",
+          "touch-target-min": "48px"
+        },
+        "fontFamily": {
+          "body-md": ["Be Vietnam Pro"],
+          "label-caps": ["JetBrains Mono"],
+          "display-lg": ["Hanken Grotesk"],
+          "headline-sm": ["Hanken Grotesk"],
+          "headline-md": ["Hanken Grotesk"],
+          "headline-lg-mobile": ["Hanken Grotesk"],
+          "body-lg": ["Be Vietnam Pro"],
+          "body-sm": ["Be Vietnam Pro"]
+        },
+        "fontSize": {
+          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+          "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+          "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+          "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+          "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+          "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "800"}],
+          "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+          "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+        }
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .fill-icon {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  html, body {
+    min-height: 100vh;
+    height: 100%;
+    background-color: #f7f9fb;
+  }
+  body { min-height: 100vh; }
+
+  .hero-gradient {
+    background: linear-gradient(160deg, #a80033 0%, #d31245 55%, #005b6e 100%);
+  }
+  .toggle-track {
+    width: 44px; height: 24px;
+    background: #e0e3e5;
+    border-radius: 9999px;
+    transition: background 0.2s;
+    position: relative;
+    cursor: pointer;
+  }
+  .toggle-track.on { background: #a80033; }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 9999px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+  }
+  .toggle-track.on .toggle-thumb { transform: translateX(20px); }
+
+  html, body {
+    min-height: 100vh;
+    height: 100%;
+    background-color: #f7f9fb;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  .profile-scroll {
+    height: 100vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<div class="profile-scroll">
+
+<!-- Hero Banner -->
+<div class="hero-gradient w-full pt-14 pb-8 px-container-padding relative">
+  <!-- Top bar placeholder (para safe area) -->
+  <div class="absolute top-0 left-0 w-full h-14 flex items-center px-gutter">
+    <p class="font-label-caps text-label-caps text-white/70 tracking-widest">PERFIL</p>
+  </div>
+
+  <!-- Avatar + info -->
+  <div class="flex items-end gap-4 mt-2">
+    <div class="relative">
+      <div class="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/40 overflow-hidden">
+        <span class="material-symbols-outlined fill-icon text-white" style="font-size:48px;">account_circle</span>
+      </div>
+      <div class="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow">
+        <span class="material-symbols-outlined text-primary text-[14px]">edit</span>
+      </div>
+    </div>
+    <div class="pb-1">
+      <p class="font-headline-lg-mobile text-headline-lg-mobile text-white font-extrabold leading-tight">Joaquín Díaz</p>
+      <p class="font-body-sm text-body-sm text-white/70">Estudiante · UTP Trujillo</p>
+    </div>
+  </div>
+
+  <!-- Stats rapidas -->
+  <div class="grid grid-cols-3 gap-3 mt-5">
+    <div class="bg-white/15 rounded-xl p-3 flex flex-col items-center">
+      <p class="font-display-lg text-[22px] text-white font-extrabold">6</p>
+      <p class="font-label-caps text-[10px] text-white/70 text-center">GUARDADOS</p>
+    </div>
+    <div class="bg-white/15 rounded-xl p-3 flex flex-col items-center">
+      <p class="font-display-lg text-[22px] text-white font-extrabold">48</p>
+      <p class="font-label-caps text-[10px] text-white/70 text-center">VIAJES</p>
+    </div>
+    <div class="bg-white/15 rounded-xl p-3 flex flex-col items-center">
+      <p class="font-display-lg text-[22px] text-white font-extrabold">S/72</p>
+      <p class="font-label-caps text-[10px] text-white/70 text-center">AHORRADO</p>
+    </div>
+  </div>
+</div>
+
+<main class="pb-36 px-container-padding pt-4">
+
+  <!-- seccion: cuenta -->
+  <p class="font-label-caps text-label-caps text-on-surface-variant mb-2 mt-2">CUENTA</p>
+  <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm mb-4 overflow-hidden">
+
+    <div class="flex items-center gap-3 px-4 py-3.5 border-b border-outline-variant/20 cursor-pointer active:bg-surface-container-low transition-all">
+      <span class="material-symbols-outlined text-primary text-[22px]">person</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Nombre</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Joaquín Díaz</p>
+      </div>
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+    </div>
+
+    <div class="flex items-center gap-3 px-4 py-3.5 border-b border-outline-variant/20 cursor-pointer active:bg-surface-container-low transition-all">
+      <span class="material-symbols-outlined text-primary text-[22px]">mail</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Correo</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">j.diaz@utp.edu.pe</p>
+      </div>
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+    </div>
+
+    <div class="flex items-center gap-3 px-4 py-3.5 cursor-pointer active:bg-surface-container-low transition-all">
+      <span class="material-symbols-outlined text-primary text-[22px]">school</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Universidad</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">UTP — sede Trujillo</p>
+      </div>
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+    </div>
+
+  </div>
+
+  <!-- seccion: preferencias -->
+  <p class="font-label-caps text-label-caps text-on-surface-variant mb-2">PREFERENCIAS</p>
+  <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm mb-4 overflow-hidden">
+
+    <div class="flex items-center gap-3 px-4 py-3.5 border-b border-outline-variant/20">
+      <span class="material-symbols-outlined text-primary text-[22px]">notifications</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Alertas de ruta</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Notificaciones de llegada</p>
+      </div>
+      <div class="toggle-track on" id="toggle-notif">
+        <div class="toggle-thumb"></div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 px-4 py-3.5 border-b border-outline-variant/20">
+      <span class="material-symbols-outlined text-primary text-[22px]">location_on</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Ubicación en tiempo real</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Mejora las sugerencias de ruta</p>
+      </div>
+      <div class="toggle-track on" id="toggle-ubicacion">
+        <div class="toggle-thumb"></div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 px-4 py-3.5">
+      <span class="material-symbols-outlined text-primary text-[22px]">route</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Rutas económicas primero</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Prioriza el costo sobre tiempo</p>
+      </div>
+      <div class="toggle-track" id="toggle-economico">
+        <div class="toggle-thumb"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- seccion: app -->
+  <p class="font-label-caps text-label-caps text-on-surface-variant mb-2">APP</p>
+  <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm mb-4 overflow-hidden">
+
+    <div class="flex items-center gap-3 px-4 py-3.5 border-b border-outline-variant/20 cursor-pointer active:bg-surface-container-low transition-all">
+      <span class="material-symbols-outlined text-primary text-[22px]">info</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Versión</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">RutaUTP 1.0.0</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 px-4 py-3.5 border-b border-outline-variant/20 cursor-pointer active:bg-surface-container-low transition-all">
+      <span class="material-symbols-outlined text-primary text-[22px]">security</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Privacidad y datos</p>
+      </div>
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+    </div>
+
+    <div class="flex items-center gap-3 px-4 py-3.5 cursor-pointer active:bg-surface-container-low transition-all">
+      <span class="material-symbols-outlined text-primary text-[22px]">help</span>
+      <div class="flex-1">
+        <p class="font-body-md text-on-surface font-medium">Ayuda y soporte</p>
+      </div>
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
+    </div>
+
+  </div>
+
+  <!-- boton cerrar sesion -->
+  <button class="w-full py-3.5 rounded-xl border-2 border-error text-error font-headline-sm text-[16px] font-bold flex items-center justify-center gap-2 active:scale-95 transition-all mt-1">
+    <span class="material-symbols-outlined text-[20px]">logout</span>
+    Cerrar sesión
+  </button>
+
+</main>
+
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe bg-surface shadow-lg rounded-t-xl border-t border-outline-variant/10">
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="mapa_principal">
+    <span class="material-symbols-outlined">map</span>
+    <span class="font-label-caps text-label-caps">Mapa</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="detalle_ruta">
+    <span class="material-symbols-outlined">directions_bus</span>
+    <span class="font-label-caps text-label-caps">Rutas</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="guardado">
+    <span class="material-symbols-outlined">bookmark</span>
+    <span class="font-label-caps text-label-caps">Guardado</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="seguridad">
+    <span class="material-symbols-outlined">shield_with_heart</span>
+    <span class="font-label-caps text-label-caps">Seguridad</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-3 py-1 shadow-md" data-dest="">
+    <span class="material-symbols-outlined fill-icon">person</span>
+    <span class="font-label-caps text-label-caps">Perfil</span>
+  </div>
+</nav>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ── Toggles ──
+  document.querySelectorAll('.toggle-track').forEach(function(track) {
+    track.addEventListener('click', function() {
+      track.classList.toggle('on');
+    });
+  });
+
+  // ── Navbar ──
+  document.querySelectorAll('.nav-item').forEach(function(item) {
+    var dest = item.getAttribute('data-dest');
+    if (!dest) return;
+    item.addEventListener('click', function() {
+      window.location.href = 'app://navigate/' + dest;
+    });
+  });
+
+});
+</script>
+</div>
+</body>
+</html>

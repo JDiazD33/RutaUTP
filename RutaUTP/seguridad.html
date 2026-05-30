@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800&amp;family=Be+Vietnam+Pro:wght@400;600&amp;family=JetBrains+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#00758d",
+                    "primary": "#a80033",
+                    "surface-dim": "#d8dadc",
+                    "surface-container": "#eceef0",
+                    "on-surface-variant": "#5c3f41",
+                    "on-tertiary-fixed": "#001f27",
+                    "primary-fixed": "#ffdadb",
+                    "primary-container": "#d31245",
+                    "on-surface": "#191c1e",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#e6e8ea",
+                    "on-error-container": "#93000a",
+                    "on-secondary": "#ffffff",
+                    "outline-variant": "#e4bdbf",
+                    "surface-container-low": "#f2f4f6",
+                    "on-tertiary-fixed-variant": "#004e5f",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#40000e",
+                    "tertiary": "#005b6e",
+                    "on-tertiary-container": "#d1f2ff",
+                    "inverse-primary": "#ffb2b7",
+                    "on-secondary-container": "#244885",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-tint": "#be003b",
+                    "outline": "#906f70",
+                    "tertiary-fixed": "#b3ebff",
+                    "on-secondary-fixed": "#001a42",
+                    "on-background": "#191c1e",
+                    "primary-fixed-dim": "#ffb2b7",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-bright": "#f7f9fb",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#99b8fe",
+                    "tertiary-fixed-dim": "#4cd6fb",
+                    "secondary-fixed": "#d8e2ff",
+                    "secondary": "#3c5d9c",
+                    "surface": "#f7f9fb",
+                    "background": "#f7f9fb",
+                    "secondary-fixed-dim": "#aec6ff",
+                    "error-container": "#ffdad6",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-primary-fixed-variant": "#91002b",
+                    "on-primary-container": "#ffe8e8",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "on-secondary-fixed-variant": "#224583",
+                    "surface-variant": "#e0e3e5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-gap": "12px",
+                    "gutter": "16px",
+                    "container-padding": "20px",
+                    "unit": "4px",
+                    "touch-target-min": "48px"
+            },
+            "fontFamily": {
+                    "body-md": ["Be Vietnam Pro"],
+                    "label-caps": ["JetBrains Mono"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"],
+                    "headline-lg-mobile": ["Hanken Grotesk"],
+                    "body-lg": ["Be Vietnam Pro"],
+                    "body-sm": ["Be Vietnam Pro"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "800"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    html {
+      background-color: #f7f9fb;
+    }
+    html, body {
+      height: 100% !important;
+      overflow: hidden !important;
+      overscroll-behavior: none;
+    }
+    main {
+      position: fixed !important;
+      top: 56px;
+      bottom: 64px;
+      left: 0;
+      right: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    header, nav {
+      will-change: transform;
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full flex justify-between items-center px-gutter h-14 bg-surface z-50 shadow-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1; font-size:28px;">shield_with_heart</span>
+<h1 class="font-headline-md text-headline-md font-extrabold text-primary">Seguridad</h1>
+</div>
+</header>
+<main class="pt-20 px-container-padding space-y-8">
+<!-- Quick actions / (summary inserted) para aprovechar el espacio arriba del saludo -->
+<div class="mb-2">
+  <div class="bg-surface-container p-3 rounded-xl shadow-sm flex items-center justify-between gap-3">
+    <div class="flex items-center gap-4">
+      <div class="flex flex-col">
+        <p class="font-label-caps text-[11px] text-on-surface-variant">Alertas hoy</p>
+        <p class="font-headline-sm text-headline-sm text-on-surface font-bold">2</p>
+      </div>
+      <div class="flex flex-col">
+        <p class="font-label-caps text-[11px] text-on-surface-variant">Paraderos iluminados</p>
+        <p class="font-headline-sm text-headline-sm text-on-surface font-bold">24</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="bg-primary text-white px-3 py-2 rounded-lg text-[13px]">Denunciar</button>
+      <button class="bg-surface-container-high text-on-surface px-3 py-2 rounded-lg text-[13px]">Llamar 105</button>
+    </div>
+  </div>
+</div>
+<!-- Date & Greeting Card -->
+<section>
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/20 p-4 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-tertiary fill-icon">today</span>
+</div>
+<div>
+<p id="greeting-text" class="font-headline-sm text-[16px] text-on-surface font-bold">Buenas tardes</p>
+<p id="current-date" class="font-body-sm text-body-sm text-on-surface-variant">Cargando fecha...</p>
+</div>
+</div>
+</section>
+<!-- Section 1: Lugares Guardados -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Lugares Guardados</h2>
+<span class="material-symbols-outlined text-on-surface-variant">edit</span>
+</div>
+<div class="grid grid-cols-3 gap-3">
+<div class="flex flex-col items-center gap-2 p-4 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30">
+<div class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary fill-icon">home</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">Casa</span>
+</div>
+<div class="flex flex-col items-center gap-2 p-4 bg-surface-container-lowest rounded-xl shadow-sm border-2 border-primary">
+<div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary fill-icon">school</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface">UTP Trujillo</span>
+</div>
+<div class="flex flex-col items-center gap-2 p-4 bg-surface-container-low rounded-xl border border-dashed border-outline">
+<div class="w-12 h-12 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">add</span>
+</div>
+<span class="font-label-caps text-label-caps text-outline text-center leading-none">Añadir lugar</span>
+</div>
+</div>
+</section>
+<!-- Section 2: Rutas Seguras Hoy -->
+<section>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-tertiary">verified_user</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Rutas Seguras Hoy</h2>
+</div>
+<div class="relative rounded-2xl overflow-hidden h-48 mb-4 shadow-lg border border-outline-variant/20">
+<img class="w-full h-full object-cover" data-alt="A detailed map view of Trujillo, Peru at night, showing the urban grid with glowing routes highlighted in a vibrant cyan blue. Bus stops are marked with bright circular icons, and safe zones are indicated by soft green glows. The lighting is moody and urban, suggesting a secure nocturnal transit environment with high tech-optimistic clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDXjZ3eQ_6AAhRheYemdwH_Z0X-e9TP7LkfTyqrgcBTTtEHxGlLach6YxxABH4nvgdHmKuJImqsMPGbc7dUNeV9snn1tP6gjfOTqbCe0JeMjx9ZECgn_OxHdBwoCzFPsS4x58RaubAh-Z82GTU0ESCCUCO0Nh7WwpuQnIgm-wJ1jOkb2yOaRJGIX-5qt_l4GHircfoHSKny3e2Idd-SUraC2rC9LIuvdndZZfyrSSXwP-oTucxjcMVwsw5DHRFeVroynphH8E4k8So"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
+<div class="flex items-center gap-2 text-white">
+<span class="material-symbols-outlined text-tertiary-fixed-dim fill-icon">lightbulb</span>
+<p class="font-body-sm text-body-sm">Paraderos iluminados activos: 24</p>
+</div>
+</div>
+</div>
+<div class="space-y-stack-gap">
+<div class="flex items-center gap-4 p-4 bg-tertiary-container/5 rounded-xl border-l-4 border-tertiary">
+<div class="bg-tertiary text-on-tertiary p-2 rounded-lg">
+<span class="material-symbols-outlined">night_shelter</span>
+</div>
+<div>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Zona Segura: Óvalo Papal</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Patrullaje activo y alta iluminación hasta las 11:00 PM.</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
+<div class="bg-secondary text-on-secondary p-2 rounded-lg">
+<span class="material-symbols-outlined">visibility</span>
+</div>
+<div>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Paradero UTP (Entrada)</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Monitoreo por cámaras de seguridad municipal.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Reportes de la Comunidad -->
+<section class="pb-8">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">groups</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Comunidad</h2>
+</div>
+<button class="text-primary font-label-caps text-label-caps">VER TODOS</button>
+</div>
+<div class="space-y-stack-gap">
+<!-- Report Card 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/20">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center font-bold text-xs">JD</div>
+<div>
+<p class="font-body-sm text-body-sm font-semibold">Jorge D.</p>
+<p class="text-[10px] font-label-caps text-on-surface-variant/60">HACE 5 MIN</p>
+</div>
+</div>
+<span class="bg-error-container text-on-error-container px-2 py-0.5 rounded-full font-label-caps text-[10px]">ALERTA</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mb-3">Micro lleno en Av. Larco. Pasaron 3 sin parar hacia la UTP.</p>
+<div class="flex gap-2">
+<div class="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-xs">thumb_up</span>
+<span class="font-label-caps text-[10px]">Útil (12)</span>
+</div>
+<div class="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-xs">chat_bubble</span>
+<span class="font-label-caps text-[10px]">2</span>
+</div>
+</div>
+</div>
+<!-- Report Card 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-2xl shadow-sm border border-outline-variant/20">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center font-bold text-xs text-on-secondary-container">MA</div>
+<div>
+<p class="font-body-sm text-body-sm font-semibold">Maria A.</p>
+<p class="text-[10px] font-label-caps text-on-surface-variant/60">HACE 15 MIN</p>
+</div>
+</div>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full font-label-caps text-[10px]">TRÁFICO</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mb-3">Demora en Óvalo Papal por obras. Considerar 10 min adicionales.</p>
+<div class="flex gap-2">
+<div class="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full text-primary">
+<span class="material-symbols-outlined text-xs fill-icon">thumb_up</span>
+<span class="font-label-caps text-[10px]">Útil (45)</span>
+</div>
+<div class="flex items-center gap-1 bg-surface-container px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-xs">chat_bubble</span>
+<span class="font-label-caps text-[10px]">8</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- FAB for quick report -->
+<button class="fixed bottom-20 right-6 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center z-40 active:scale-95 duration-200">
+<span class="material-symbols-outlined">campaign</span>
+</button>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe bg-surface shadow-lg rounded-t-xl border-t border-outline-variant/10">
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-label-caps text-label-caps">Mapa</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined" data-icon="directions_bus">directions_bus</span>
+<span class="font-label-caps text-label-caps">Rutas</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span class="font-label-caps text-label-caps">Guardado</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-3 py-1 shadow-md scale-95 duration-200">
+<span class="material-symbols-outlined fill-icon" data-icon="shield_with_heart">shield_with_heart</span>
+<span class="font-label-caps text-label-caps">Seguridad</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-caps text-label-caps">Perfil</span>
+</div>
+</nav>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Navbar: los items son <div> en esta pantalla
+  document.querySelectorAll('nav div[class*="flex-col"]').forEach(function(item) {
+    var label = item.querySelector('.font-label-caps');
+    if (!label) return;
+    var txt = label.textContent.trim();
+    item.style.cursor = 'pointer';
+    item.addEventListener('click', function() {
+      if (txt === 'Mapa') {
+        window.location.href = 'app://navigate/mapa_principal';
+      } else if (txt === 'Rutas') {
+        window.location.href = 'app://navigate/detalle_ruta';
+      } else if (txt === 'Guardado') {
+        window.location.href = 'app://navigate/guardado';
+      } else if (txt === 'Perfil') {
+        window.location.href = 'app://navigate/perfil';
+      } else if (txt === 'Seguridad') {
+        // ya estamos aquí
+      }
+    });
+  });
+  // Fecha y saludo dinamico
+  var now = new Date();
+  var hora = now.getHours();
+  var saludo = 'Buenas noches';
+  if (hora >= 5 && hora < 12) saludo = 'Buenos días';
+  else if (hora >= 12 && hora < 19) saludo = 'Buenas tardes';
+
+  var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var dia = dias[now.getDay()];
+  var num = now.getDate();
+  var mes = meses[now.getMonth()];
+  var anio = now.getFullYear();
+
+  var greetEl = document.getElementById('greeting-text');
+  var dateEl = document.getElementById('current-date');
+  if (greetEl) greetEl.textContent = saludo;
+  if (dateEl) dateEl.textContent = dia + ', ' + num + ' de ' + mes + ' de ' + anio;
+
+});
+</script>
+</body></html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800&family=Be+Vietnam+Pro:wght@400;500&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "tertiary-container": "#00758d",
+          "primary": "#a80033",
+          "surface-dim": "#d8dadc",
+          "surface-container": "#eceef0",
+          "on-surface-variant": "#5c3f41",
+          "on-tertiary-fixed": "#001f27",
+          "primary-fixed": "#ffdadb",
+          "primary-container": "#d31245",
+          "on-surface": "#191c1e",
+          "on-tertiary": "#ffffff",
+          "surface-container-high": "#e6e8ea",
+          "on-error-container": "#93000a",
+          "on-secondary": "#ffffff",
+          "outline-variant": "#e4bdbf",
+          "surface-container-low": "#f2f4f6",
+          "on-tertiary-fixed-variant": "#004e5f",
+          "error": "#ba1a1a",
+          "on-primary-fixed": "#40000e",
+          "tertiary": "#005b6e",
+          "on-tertiary-container": "#d1f2ff",
+          "inverse-primary": "#ffb2b7",
+          "on-secondary-container": "#244885",
+          "inverse-on-surface": "#eff1f3",
+          "surface-tint": "#be003b",
+          "outline": "#906f70",
+          "tertiary-fixed": "#b3ebff",
+          "on-secondary-fixed": "#001a42",
+          "on-background": "#191c1e",
+          "primary-fixed-dim": "#ffb2b7",
+          "surface-container-lowest": "#ffffff",
+          "surface-bright": "#f7f9fb",
+          "on-primary": "#ffffff",
+          "secondary-container": "#99b8fe",
+          "tertiary-fixed-dim": "#4cd6fb",
+          "secondary-fixed": "#d8e2ff",
+          "secondary": "#3c5d9c",
+          "surface": "#f7f9fb",
+          "background": "#f7f9fb",
+          "secondary-fixed-dim": "#aec6ff",
+          "error-container": "#ffdad6",
+          "surface-container-highest": "#e0e3e5",
+          "on-primary-fixed-variant": "#91002b",
+          "on-primary-container": "#ffe8e8",
+          "on-error": "#ffffff",
+          "inverse-surface": "#2d3133",
+          "on-secondary-fixed-variant": "#224583",
+          "surface-variant": "#e0e3e5"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "stack-gap": "12px",
+          "gutter": "16px",
+          "container-padding": "20px",
+          "unit": "4px",
+          "touch-target-min": "48px"
+        },
+        "fontFamily": {
+          "body-md": ["Be Vietnam Pro"],
+          "label-caps": ["JetBrains Mono"],
+          "display-lg": ["Hanken Grotesk"],
+          "headline-sm": ["Hanken Grotesk"],
+          "headline-md": ["Hanken Grotesk"],
+          "headline-lg-mobile": ["Hanken Grotesk"],
+          "body-lg": ["Be Vietnam Pro"],
+          "body-sm": ["Be Vietnam Pro"]
+        },
+        "fontSize": {
+          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+          "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+          "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+          "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+          "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+          "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "800"}],
+          "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+          "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+        }
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .fill-icon {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  html {
+    background-color: #f7f9fb;
+  }
+  html, body {
+    min-height: 100vh;
+    height: 100% !important;
+    background-color: #f7f9fb;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+  body {
+    min-height: 100vh;
+  }
+  main {
+    position: fixed !important;
+    top: 56px;
+    bottom: 64px;
+    left: 0;
+    right: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 !important;
+  }
+  header, nav {
+    will-change: transform;
+  }
+
+  .item-swipe {
+    transition: transform 0.2s ease;
+  }
+  .chip-active {
+    background-color: #d31245;
+    color: #ffe8e8;
+  }
+  .chip-inactive {
+    background-color: #eceef0;
+    color: #5c3f41;
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full flex justify-between items-center px-gutter h-14 bg-surface z-50 shadow-sm">
+  <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined fill-icon text-primary" style="font-size:28px;">bookmark</span>
+    <h1 class="font-headline-md text-headline-md font-extrabold text-primary">Guardado</h1>
+  </div>
+  <button id="btn-add" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary-container text-on-primary-container font-label-caps text-label-caps active:scale-95 transition-all">
+    <span class="material-symbols-outlined text-[18px]">add</span>
+    Añadir
+  </button>
+</header>
+
+<main class="px-container-padding pb-24">
+
+  <!-- Tabs: Lugares / lineas -->
+  <div class="flex gap-2 mb-5 mt-2">
+    <button id="tab-lugares" class="chip-active font-label-caps text-label-caps px-4 py-2 rounded-full transition-all">
+      Lugares
+    </button>
+    <button id="tab-lineas" class="chip-inactive font-label-caps text-label-caps px-4 py-2 rounded-full transition-all">
+      Líneas de micro
+    </button>
+  </div>
+
+  <!--secccion lugares-->
+  <section id="section-lugares">
+    <p class="font-body-sm text-body-sm text-on-surface-variant mb-3">Toca un lugar para ver la ruta desde tu posición.</p>
+
+    <div id="lista-lugares" class="flex flex-col gap-3">
+
+      <!-- Lugar: UTP -->
+      <div class="lugar-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined text-primary fill-icon text-[20px]">school</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">UTP</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Universidad Tecnológica del Perú</p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="font-label-caps text-[10px] text-tertiary bg-on-tertiary-container/30 px-2 py-0.5 rounded-full">FRECUENTE</span>
+          <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+        </div>
+      </div>
+
+      <!-- Lugar: Casa -->
+      <div class="lugar-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined fill-icon text-[20px]" style="color:#224583;">home</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Casa</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Urb. Los Pinos, Trujillo</p>
+        </div>
+        <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+      </div>
+
+      <!-- Lugar: Centro Comercial -->
+      <div class="lugar-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined fill-icon text-[20px] text-on-surface-variant">shopping_bag</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Centro Comercial</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Mall Aventura, Av. América</p>
+        </div>
+        <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+      </div>
+
+      <!-- Lugar: pasteleria Dulce Lima -->
+      <div class="lugar-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined fill-icon text-[20px] text-on-surface-variant">cake</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Pastelería Dulce Lima</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Jr. Pizarro 348, Centro</p>
+        </div>
+        <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+      </div>
+
+      <!-- Lugar: Plaza de Armas -->
+      <div class="lugar-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined fill-icon text-[20px] text-on-surface-variant">account_balance</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Plaza de Armas</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Centro histórico de Trujillo</p>
+        </div>
+        <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+      </div>
+
+      <!-- Lugar: Playa Huanchaco -->
+      <div class="lugar-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-full bg-on-tertiary-container/40 flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined fill-icon text-[20px] text-tertiary">waves</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Playa Huanchaco</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Balneario, ~20 min en micro</p>
+        </div>
+        <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+      </div>
+
+    </div>
+
+    <!-- Empty state (hidden by default) -->
+    <div id="empty-lugares" class="hidden flex-col items-center justify-center py-16 text-center gap-3">
+      <span class="material-symbols-outlined text-outline text-[56px]">bookmark_border</span>
+      <p class="font-headline-sm text-on-surface-variant">Aún no tienes lugares guardados</p>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">Toca "Añadir" para guardar un sitio frecuente.</p>
+    </div>
+  </section>
+
+  <!-- ── seccion lineas ── -->
+  <section id="section-lineas" class="hidden">
+    <p class="font-body-sm text-body-sm text-on-surface-variant mb-3">Líneas guardadas para seguimiento rápido.</p>
+
+    <div class="flex flex-col gap-3">
+
+      <!-- linea B -->
+      <div class="linea-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center flex-shrink-0">
+          <span class="font-headline-sm text-headline-sm text-on-primary-container font-extrabold">B</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Línea B — Empresa Salaverry</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Salaverry → UTP → Centro</p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="font-body-sm text-[11px] text-tertiary font-bold">~4 min</span>
+          <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+        </div>
+      </div>
+
+      <!-- linea 7 -->
+      <div class="linea-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-xl bg-secondary-container flex items-center justify-center flex-shrink-0">
+          <span class="font-headline-sm text-headline-sm font-extrabold" style="color:#224583;">7</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Línea 7 — El Esfuerzo</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Huanchaco → Centro → La Esperanza</p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="font-body-sm text-[11px] text-tertiary font-bold">~12 min</span>
+          <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+        </div>
+      </div>
+
+      <!-- linea C -->
+      <div class="linea-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer">
+        <div class="w-10 h-10 rounded-xl bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+          <span class="font-headline-sm text-headline-sm text-on-surface font-extrabold">C</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">Línea C — Trans Moche</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant truncate">Moche → Av. España → Plaza Mayor</p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="font-body-sm text-[11px] text-on-surface-variant font-bold">~20 min</span>
+          <span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- Modal: Añadir lugar -->
+<div id="modal-add" class="fixed inset-0 z-[100] flex items-end justify-center hidden">
+  <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="modal-backdrop"></div>
+  <div class="relative bg-surface-container-lowest w-full rounded-t-2xl p-6 pb-10 shadow-2xl z-10">
+    <div class="w-10 h-1 bg-outline-variant rounded-full mx-auto mb-5"></div>
+    <h2 class="font-headline-sm text-headline-sm text-on-surface mb-4">Guardar lugar</h2>
+    <div class="flex flex-col gap-3">
+      <input id="input-nombre" type="text" placeholder="Nombre del lugar (ej. Casa, Trabajo...)"
+        class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container font-body-md text-on-surface focus:outline-none focus:border-primary placeholder:text-on-surface-variant"/>
+      <input id="input-direccion" type="text" placeholder="Dirección o referencia"
+        class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container font-body-md text-on-surface focus:outline-none focus:border-primary placeholder:text-on-surface-variant"/>
+      <button id="btn-guardar-lugar" class="w-full py-3.5 bg-primary text-on-primary rounded-xl font-headline-sm text-[16px] font-bold active:scale-95 transition-all mt-1">
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe bg-surface shadow-lg rounded-t-xl border-t border-outline-variant/10">
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="mapa_principal">
+    <span class="material-symbols-outlined">map</span>
+    <span class="font-label-caps text-label-caps">Mapa</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="detalle_ruta">
+    <span class="material-symbols-outlined">directions_bus</span>
+    <span class="font-label-caps text-label-caps">Rutas</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-3 py-1 shadow-md" data-dest="">
+    <span class="material-symbols-outlined fill-icon">bookmark</span>
+    <span class="font-label-caps text-label-caps">Guardado</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="seguridad">
+    <span class="material-symbols-outlined">shield_with_heart</span>
+    <span class="font-label-caps text-label-caps">Seguridad</span>
+  </div>
+  <div class="nav-item flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all px-2 py-1 rounded-xl cursor-pointer" data-dest="perfil">
+    <span class="material-symbols-outlined">person</span>
+    <span class="font-label-caps text-label-caps">Perfil</span>
+  </div>
+</nav>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  //Tabs
+  var tabLugares = document.getElementById('tab-lugares');
+  var tabLineas  = document.getElementById('tab-lineas');
+  var secLugares = document.getElementById('section-lugares');
+  var secLineas  = document.getElementById('section-lineas');
+
+  tabLugares.addEventListener('click', function() {
+    tabLugares.classList.replace('chip-inactive', 'chip-active');
+    tabLineas.classList.replace('chip-active', 'chip-inactive');
+    secLugares.classList.remove('hidden');
+    secLineas.classList.add('hidden');
+  });
+
+  tabLineas.addEventListener('click', function() {
+    tabLineas.classList.replace('chip-inactive', 'chip-active');
+    tabLugares.classList.replace('chip-active', 'chip-inactive');
+    secLineas.classList.remove('hidden');
+    secLugares.classList.add('hidden');
+  });
+
+  //Modal añadir lugar
+  var modal = document.getElementById('modal-add');
+  document.getElementById('btn-add').addEventListener('click', function() {
+    modal.classList.remove('hidden');
+  });
+  document.getElementById('modal-backdrop').addEventListener('click', function() {
+    modal.classList.add('hidden');
+  });
+  document.getElementById('btn-guardar-lugar').addEventListener('click', function() {
+    var nombre = document.getElementById('input-nombre').value.trim();
+    var direccion = document.getElementById('input-direccion').value.trim();
+    if (!nombre) return;
+    agregarLugar(nombre, direccion || 'Trujillo');
+    document.getElementById('input-nombre').value = '';
+    document.getElementById('input-direccion').value = '';
+    modal.classList.add('hidden');
+  });
+
+  function agregarLugar(nombre, direccion) {
+    var lista = document.getElementById('lista-lugares');
+    var icons = ['place', 'star', 'favorite', 'flag'];
+    var icon = icons[Math.floor(Math.random() * icons.length)];
+    var div = document.createElement('div');
+    div.className = 'lugar-item bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex items-center gap-4 px-4 py-3.5 active:scale-[0.98] transition-all cursor-pointer';
+    div.innerHTML = '<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center flex-shrink-0">'
+      + '<span class="material-symbols-outlined fill-icon text-[20px] text-on-surface-variant">' + icon + '</span>'
+      + '</div>'
+      + '<div class="flex-1 min-w-0">'
+      + '<p class="font-headline-sm text-[16px] font-bold text-on-surface leading-tight">' + nombre + '</p>'
+      + '<p class="font-body-sm text-body-sm text-on-surface-variant truncate">' + direccion + '</p>'
+      + '</div>'
+      + '<span class="material-symbols-outlined text-on-surface-variant text-[20px]">chevron_right</span>';
+    div.addEventListener('click', function() {
+      window.location.href = 'app://navigate/mapa_principal';
+    });
+    lista.appendChild(div);
+  }
+
+  //Tap en lugares => mapa
+  document.querySelectorAll('.lugar-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      window.location.href = 'app://navigate/mapa_principal';
+    });
+  });
+
+  // Tap en lineas => detalle
+  document.querySelectorAll('.linea-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      window.location.href = 'app://navigate/detalle_ruta';
+    });
+  });
+
+  // Navbar
+  document.querySelectorAll('.nav-item').forEach(function(item) {
+    var dest = item.getAttribute('data-dest');
+    if (!dest) return;
+    item.addEventListener('click', function() {
+      window.location.href = 'app://navigate/' + dest;
+    });
+  });
+
+});
+</script>
+</body>
+</html>

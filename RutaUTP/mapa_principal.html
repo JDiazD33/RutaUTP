@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800&amp;family=Be+Vietnam+Pro:wght@400;600&amp;family=JetBrains+Mono:wght@600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .map-gradient-overlay {
+            background: linear-gradient(to bottom, rgba(247, 249, 251, 0.9) 0%, rgba(247, 249, 251, 0) 15%, rgba(247, 249, 251, 0) 85%, rgba(247, 249, 251, 0.9) 100%);
+        }
+        .custom-scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* MARK: Drawer/Side Menu */
+        #side-drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 200;
+            pointer-events: none;
+        }
+        #drawer-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0);
+            transition: background 0.28s ease;
+        }
+        #drawer-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 82%;
+            max-width: 320px;
+            height: 100%;
+            background: #ffffff;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.13);
+            transform: translateX(-105%);
+            transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #side-drawer.open {
+            pointer-events: all;
+        }
+        #side-drawer.open #drawer-backdrop {
+            background: rgba(0,0,0,0.35);
+        }
+        #side-drawer.open #drawer-panel {
+            transform: translateX(0);
+        }
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 24px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 15px;
+            font-weight: 500;
+            color: #191c1e;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-radius: 0;
+            text-decoration: none;
+        }
+        .drawer-item:active {
+            background: #f2f4f6;
+        }
+        .drawer-item .drawer-icon {
+            font-size: 22px;
+            width: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .drawer-item.logout {
+            color: #a80033;
+            margin-top: auto;
+            border-top: 1px solid #e4bdbf;
+        }
+        .drawer-item.logout .drawer-icon {
+            color: #a80033;
+        }
+        .drawer-divider {
+            height: 1px;
+            background: #f2f4f6;
+            margin: 4px 0;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#00758d",
+                        "primary": "#a80033",
+                        "surface-dim": "#d8dadc",
+                        "surface-container": "#eceef0",
+                        "on-surface-variant": "#5c3f41",
+                        "on-tertiary-fixed": "#001f27",
+                        "primary-fixed": "#ffdadb",
+                        "primary-container": "#d31245",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "on-error-container": "#93000a",
+                        "on-secondary": "#ffffff",
+                        "outline-variant": "#e4bdbf",
+                        "surface-container-low": "#f2f4f6",
+                        "on-tertiary-fixed-variant": "#004e5f",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#40000e",
+                        "tertiary": "#005b6e",
+                        "on-tertiary-container": "#d1f2ff",
+                        "inverse-primary": "#ffb2b7",
+                        "on-secondary-container": "#244885",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-tint": "#be003b",
+                        "outline": "#906f70",
+                        "tertiary-fixed": "#b3ebff",
+                        "on-secondary-fixed": "#001a42",
+                        "on-background": "#191c1e",
+                        "primary-fixed-dim": "#ffb2b7",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#99b8fe",
+                        "tertiary-fixed-dim": "#4cd6fb",
+                        "secondary-fixed": "#d8e2ff",
+                        "secondary": "#3c5d9c",
+                        "surface": "#f7f9fb",
+                        "background": "#f7f9fb",
+                        "secondary-fixed-dim": "#aec6ff",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-primary-fixed-variant": "#91002b",
+                        "on-primary-container": "#ffe8e8",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "on-secondary-fixed-variant": "#224583",
+                        "surface-variant": "#e0e3e5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-gap": "12px",
+                        "gutter": "16px",
+                        "container-padding": "20px",
+                        "unit": "4px",
+                        "touch-target-min": "48px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Be Vietnam Pro"],
+                        "label-caps": ["JetBrains Mono"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "body-sm": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "800"}],
+                        "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    html {
+      background-color: #f7f9fb;
+    }
+    html, body {
+      min-height: 100vh;
+      height: 100% !important;
+      background-color: #f7f9fb;
+      overflow: hidden !important;
+      overscroll-behavior: none;
+    }
+    body {
+      min-height: 100vh;
+    }
+    main {
+      position: fixed !important;
+      top: 56px;
+      bottom: 64px;
+      left: 0;
+      right: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    header, nav {
+      will-change: transform;
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md h-screen w-screen flex flex-col">
+<!--Side Drawer-->
+<div id="side-drawer">
+  <div id="drawer-backdrop" onclick="closeDrawer()"></div>
+  <div id="drawer-panel">
+    <!-- Drawer header -->
+    <div style="background:#a80033; padding: 48px 24px 20px; display:flex; flex-direction:column; gap:8px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid rgba(255,255,255,0.5);">
+        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsBRFsEl3unoevUwXLJOC7MgyhTT0memsXgW_-2t-JJJTCUR4i09qzqRFj7sZZu9y4G0BA-2INwSHef-R53eAgdgyAgtIeLQ1DqwRnlmZc5c6QBaZNz_Z868ABO5y5eG-_6r8UxUmsE2zlj6SxTyol8oPcYrIgwvToGz99VIQSpZt9FdsLMriyzLxpPABlJLtVcHEK3rnguJCYvucH92Mnr3rUvPEi2R-qAxpz7GJrnQ84GDdqchOAvo51n494HOMOPEPC-OAPWDQO" alt="Profile" style="width:100%;height:100%;object-fit:cover;"/>
+      </div>
+      <p style="font-family:'Hanken Grotesk',sans-serif;font-size:18px;font-weight:800;color:#fff;margin:0;">Ruta UTP Trujillo</p>
+      <p style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);margin:0;">Menú principal</p>
+    </div>
+
+    <!-- Menu items -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:8px 0;">
+
+      <a class="drawer-item" onclick="closeDrawer()">
+        <span class="material-symbols-outlined drawer-icon" style="color:#005b6e;">notifications</span>
+        <span>Notificaciones</span>
+      </a>
+
+      <a class="drawer-item" onclick="closeDrawer()">
+        <span class="material-symbols-outlined drawer-icon" style="color:#3c5d9c;">location_city</span>
+        <span>Ciudad</span>
+      </a>
+
+      <div class="drawer-divider"></div>
+
+      <a class="drawer-item" onclick="closeDrawer()">
+        <span class="material-symbols-outlined drawer-icon" style="color:#5c3f41;">settings</span>
+        <span>Ajustes</span>
+      </a>
+
+      <a class="drawer-item" onclick="closeDrawer()">
+        <span class="material-symbols-outlined drawer-icon" style="color:#5c3f41;">support_agent</span>
+        <span>Soporte</span>
+      </a>
+
+      <a class="drawer-item" onclick="closeDrawer()">
+        <span class="material-symbols-outlined drawer-icon" style="color:#5c3f41;">info</span>
+        <span>Sobre Nosotros</span>
+      </a>
+
+      <!-- Cerrar seionn al final para evitar falsos clicks -->
+      <a class="drawer-item logout" onclick="closeDrawer()">
+        <span class="material-symbols-outlined drawer-icon">logout</span>
+        <span>Cerrar Sesión</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Top AppBar -->
+<header class="fixed top-0 w-full flex justify-between items-center px-gutter h-14 bg-surface shadow-sm z-50">
+<div class="flex items-center gap-3">
+<button onclick="openDrawer()" class="w-10 h-10 flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors rounded-full active:opacity-80 duration-150">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-extrabold text-primary">Mapa</h1>
+</div>
+</header>
+<!-- Main Map Canvas -->
+<main class="relative w-full">
+<!-- Background Map Layer -->
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover" data-alt="A clean, top-down satellite view of an urban city center in Trujillo, Peru, featuring a grid of streets and low-rise colorful colonial and modern buildings. The lighting is the bright, direct sun of a coastal city, creating high-contrast shadows. The overall map aesthetic is stylized with a slight desaturation to allow UI elements to pop, maintaining a professional and navigational mood." data-location="Trujillo, Peru" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLrtbXFewaKGUHxaBqaqB9qsG920Z_QT4RItp0FdN6CIlVFxOtBhYKk37HJwVQlVnv0OF37ipH0IckujzTtfgRgN9ehMH5iOeN7xM9l89_01KGa3SJwaXBiob8C9yza1-sRoKgNCbDLNp7F-tEENORdHGxpdYMDcwHITnarytz4c_jyAuxCrw8V0AdeYUiwzBlN3_23hDmR4g9wtm5IpLOwerT7em9WwlG1PMq3W5YNzTCL_XRejsKnTMokR4arY3lFaOfpD4C3QA2"/>
+<div class="absolute inset-0 map-gradient-overlay pointer-events-none"></div>
+</div>
+<!-- Custom Map Markers -->
+<!-- User location (Blue Marker with Pulse) -->
+<div class="absolute top-1/2 left-1/3 transform -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="relative flex items-center justify-center">
+<div class="absolute w-8 h-8 bg-secondary-container/40 rounded-full animate-ping"></div>
+<div class="w-6 h-6 bg-secondary-container border-2 border-white rounded-full shadow-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px] text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">person_pin_circle</span>
+</div>
+</div>
+</div>
+<!-- UTP Campus Marker (Red Marker) -->
+<div class="absolute top-[40%] left-[60%] transform -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="flex flex-col items-center">
+<div class="px-3 py-1 bg-primary text-white text-label-caps font-label-caps rounded-full shadow-md mb-1">UTP Trujillo</div>
+<div class="w-10 h-10 bg-primary border-2 border-white rounded-full shadow-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+</div>
+</div>
+<!-- Floating UI: Search Bar & Chips -->
+<div class="absolute top-4 inset-x-container-padding z-20">
+<div class="bg-surface/85 backdrop-blur-xl rounded-xl shadow-lg border border-outline-variant p-2 flex flex-col gap-2">
+<div class="flex items-center bg-surface-container-low rounded-lg px-3 py-2">
+<span class="material-symbols-outlined text-on-surface-variant mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full placeholder:text-on-surface-variant/60" placeholder="¿A dónde vas hoy?" type="text"/>
+</div>
+<div class="flex gap-2 overflow-x-auto custom-scrollbar-hide px-1">
+<button class="flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest rounded-full text-on-surface font-body-sm whitespace-nowrap hover:bg-surface-dim transition-colors">
+<span class="material-symbols-outlined text-[18px]">home</span>
+<span>Casa</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-1.5 bg-primary-container text-on-primary-container rounded-full text-on-surface font-body-sm whitespace-nowrap shadow-sm">
+<span class="material-symbols-outlined text-[18px]">school</span>
+<span>UTP</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest rounded-full text-on-surface font-body-sm whitespace-nowrap hover:bg-surface-dim transition-colors">
+<span class="material-symbols-outlined text-[18px]">work</span>
+<span>Trabajo</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Near Buses Panel (Horizontal Chips/Cards) -->
+<div class="absolute bottom-6 inset-x-0 z-20">
+<div class="px-container-padding mb-2">
+<button class="flex items-center gap-2 bg-primary text-white rounded-full px-4 py-2 shadow-md hover:bg-primary-container active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">report</span>
+<span class="font-label-caps text-label-caps">Reportar</span>
+</button>
+</div>
+<div class="px-container-padding mb-3 flex justify-between items-end">
+<h3 class="font-headline-sm text-headline-sm bg-surface/80 backdrop-blur-md px-3 py-1 rounded-lg">Transportes cercanos</h3>
+<span class="font-label-caps text-label-caps text-primary bg-primary-fixed px-2 py-0.5 rounded">En vivo</span>
+</div>
+<div class="flex gap-stack-gap overflow-x-auto custom-scrollbar-hide px-container-padding pb-2">
+<!-- Route Card 1 -->
+<div class="flex-shrink-0 w-64 bg-surface/95 backdrop-blur-lg rounded-xl shadow-lg border-l-4 border-primary p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant">LÍNEA 10</span>
+<span class="font-headline-sm text-headline-sm">El Cortijo</span>
+</div>
+<div class="bg-primary-container px-2 py-1 rounded text-on-primary-container font-label-caps text-label-caps">
+                            4 MIN
+                        </div>
+</div>
+<div class="flex items-center gap-2 text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">directions_bus</span>
+<span>Micro • Placa: T1B-721</span>
+</div>
+</div>
+<!-- Route Card 2 -->
+<div class="flex-shrink-0 w-64 bg-surface/95 backdrop-blur-lg rounded-xl shadow-lg border-l-4 border-secondary p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant">LÍNEA 4</span>
+<span class="font-headline-sm text-headline-sm">Salaverry</span>
+</div>
+<div class="bg-secondary-container px-2 py-1 rounded text-on-secondary-container font-label-caps text-label-caps">
+                            12 MIN
+                        </div>
+</div>
+<div class="flex items-center gap-2 text-body-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">directions_bus</span>
+<span>Combi • Placa: A6N-450</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom navigation Bar (from Shared Components JSON) -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe bg-surface dark:bg-surface-container shadow-lg rounded-t-xl">
+<!-- Mapa (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container dark:bg-primary dark:text-on-primary rounded-xl px-3 py-1 scale-95 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-label-caps text-label-caps">Mapa</span>
+</a>
+<!-- Rutas -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined">directions_bus</span>
+<span class="font-label-caps text-label-caps">Rutas</span>
+</a>
+<!-- Guardado -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="font-label-caps text-label-caps">Guardado</span>
+</a>
+<!-- Seguridad -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined">shield_with_heart</span>
+<span class="font-label-caps text-label-caps">Seguridad</span>
+</a>
+<!-- Perfil -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70 hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-caps text-label-caps">Perfil</span>
+</a>
+</nav>
+
+<script>
+
+  // ── Drawer functions ──
+  function openDrawer() {
+    document.getElementById('side-drawer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDrawer() {
+    document.getElementById('side-drawer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  // Cerrar con swipe hacia la izquierda
+  (function() {
+    var panel = document.getElementById('drawer-panel');
+    var startX = 0;
+    panel.addEventListener('touchstart', function(e){ startX = e.touches[0].clientX; }, {passive:true});
+    panel.addEventListener('touchend', function(e){
+      if (startX - e.changedTouches[0].clientX > 60) closeDrawer();
+    }, {passive:true});
+  })();
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ── Navbar ──
+  document.querySelectorAll('nav a').forEach(function(link) {
+    var label = link.querySelector('.font-label-caps');
+    if (!label) return;
+    var txt = label.textContent.trim();
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (txt === 'Seguridad') {
+        window.location.href = 'app://navigate/seguridad';
+      } else if (txt === 'Guardado') {
+        window.location.href = 'app://navigate/guardado';
+      } else if (txt === 'Rutas') {
+        window.location.href = 'app://navigate/detalle_ruta';
+      } else if (txt === 'Perfil') {
+        window.location.href = 'app://navigate/perfil';
+      } else if (txt === 'Mapa') {
+        // ya estamos aquí, no hacer nada
+      }
+    });
+  });
+
+  //  Cards de micros => detalle de ruta
+  document.querySelectorAll('.flex-shrink-0.w-64').forEach(function(card) {
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', function() {
+      window.location.href = 'app://navigate/detalle_ruta';
+    });
+  });
+
+  //Mapa: habilitar gestos de zoom (pinch
+  var mapImg = document.querySelector('.absolute.inset-0.z-0 img');
+  if (mapImg) {
+    mapImg.style.touchAction = 'pinch-zoom pan-x pan-y';
+    mapImg.parentElement.style.touchAction = 'pinch-zoom pan-x pan-y';
+    mapImg.parentElement.style.overflow = 'visible';
+  }
+
+});
+</script>
+</body></html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+
+<title>Ruta UTP Trujillo</title>
+
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Hanken+Grotesk:wght@700;800&family=JetBrains+Mono:wght@600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+<style>
+
+.material-symbols-outlined{
+    font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+::-webkit-scrollbar{
+    display:none;
+}
+
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#f7f9fb;
+    font-family:'Be Vietnam Pro',sans-serif;
+    -webkit-font-smoothing:antialiased;
+}
+
+main{
+    position:fixed;
+    top:56px;
+    left:0;
+    right:0;
+    bottom:0;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:20px;
+}
+
+</style>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        primary: "#a80033",
+        tertiary: "#005b6e",
+        background: "#f7f9fb",
+        surface: "#ffffff",
+        surfaceContainer: "#eceef0",
+        onSurface: "#191c1e",
+        onSurfaceVariant: "#5c3f41"
+      }
+    }
+  }
+}
+</script>
+
+</head>
+
+<body>
+
+<!-- HEADER -->
+
+<header class="fixed top-0 left-0 right-0 h-14 bg-white flex items-center justify-between px-5 shadow-sm z-50">
+
+    <h1 class="text-[24px] font-extrabold text-primary">
+        Ruta UTP Trujillo
+    </h1>
+
+    <button id="btnSaltar" class="text-[14px] text-onSurfaceVariant tracking-wide">
+        Saltar
+    </button>
+
+</header>
+
+<!-- MAIN -->
+
+<main class="max-w-lg mx-auto">
+
+    <!-- CARD -->
+
+    <div class="bg-white rounded-[30px] p-4 shadow-lg flex items-center gap-4 mb-5">
+
+        <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white shrink-0">
+
+            <span class="material-symbols-outlined">
+                directions_bus
+            </span>
+
+        </div>
+
+        <div>
+
+            <p class="text-[11px] tracking-[0.2em] text-onSurfaceVariant font-semibold">
+                LLEGANDO EN
+            </p>
+
+            <p class="text-[42px] font-extrabold text-primary leading-none mt-1">
+                3 min
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- IMAGEN -->
+
+    <div class="w-full h-[290px] rounded-[34px] overflow-hidden shadow-2xl mb-10 bg-black">
+
+        <img
+            src="bus.png"
+            alt="Bus"
+            class="w-full h-full object-cover object-center"
+        >
+
+    </div>
+
+    <!-- TEXTO -->
+
+    <section class="text-center">
+
+        <h2 class="text-[42px] leading-[46px] font-extrabold text-onSurface mb-4">
+            Llega a la UTP sin perderte
+        </h2>
+
+        <p class="text-[20px] leading-8 text-onSurfaceVariant mb-7 px-2">
+            Encuentra la ruta exacta desde tu ubicación hasta el campus sin complicaciones.
+        </p>
+
+        <!-- INDICADORES -->
+
+        <div class="flex justify-center gap-2 mb-10">
+
+            <div class="w-10 h-2 rounded-full bg-primary"></div>
+
+            <div class="w-2 h-2 rounded-full bg-gray-300"></div>
+
+            <div class="w-2 h-2 rounded-full bg-gray-300"></div>
+
+        </div>
+
+    </section>
+
+    <!-- FEATURES -->
+
+    <div class="grid grid-cols-2 gap-4 mb-10">
+
+        <div class="bg-surfaceContainer rounded-[26px] p-5">
+
+            <span class="material-symbols-outlined text-primary mb-3">
+                shield_with_heart
+            </span>
+
+            <p class="text-[12px] tracking-[0.15em] font-bold mb-2">
+                SEGURIDAD
+            </p>
+
+            <p class="text-[18px] leading-6 text-onSurfaceVariant">
+                Rutas nocturnas monitoreadas.
+            </p>
+
+        </div>
+
+        <div class="bg-surfaceContainer rounded-[26px] p-5">
+
+            <span class="material-symbols-outlined text-tertiary mb-3">
+                payments
+            </span>
+
+            <p class="text-[12px] tracking-[0.15em] font-bold mb-2">
+                AHORRO
+            </p>
+
+            <p class="text-[18px] leading-6 text-onSurfaceVariant">
+                Precios de micros y combis actualizados.
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- BOTON -->
+
+    <button
+        id="btnComenzar"
+        class="w-full h-[62px] rounded-2xl bg-primary text-white text-[30px] font-bold shadow-lg active:scale-95 transition-all duration-200 flex items-center justify-center gap-2"
+    >
+
+        Comenzar
+
+        <span class="material-symbols-outlined">
+            arrow_forward
+        </span>
+
+    </button>
+
+    <!-- FOOTER -->
+
+    <p class="text-center text-[14px] text-onSurfaceVariant mt-5 px-6 leading-6 pb-10">
+
+        Al continuar, aceptas nuestros
+
+        <a href="#" class="text-primary underline font-semibold">
+            Términos de Servicio
+        </a>
+
+    </p>
+
+</main>
+
+<!-- BARRA SUPERIOR -->
+
+<div class="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-400 to-primary opacity-30"></div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const comenzar = document.getElementById('btnComenzar');
+    const saltar = document.getElementById('btnSaltar');
+
+    if(comenzar){
+        comenzar.addEventListener('click', function () {
+            window.location.href = 'app://navigate/mapa_principal';
+        });
+    }
+
+    if(saltar){
+        saltar.addEventListener('click', function () {
+            window.location.href = 'app://navigate/mapa_principal';
+        });
+    }
+
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800&amp;family=Be+Vietnam+Pro:wght@400;500&amp;family=JetBrains+Mono:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#00758d",
+                    "primary": "#a80033",
+                    "surface-dim": "#d8dadc",
+                    "surface-container": "#eceef0",
+                    "on-surface-variant": "#5c3f41",
+                    "on-tertiary-fixed": "#001f27",
+                    "primary-fixed": "#ffdadb",
+                    "primary-container": "#d31245",
+                    "on-surface": "#191c1e",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#e6e8ea",
+                    "on-error-container": "#93000a",
+                    "on-secondary": "#ffffff",
+                    "outline-variant": "#e4bdbf",
+                    "surface-container-low": "#f2f4f6",
+                    "on-tertiary-fixed-variant": "#004e5f",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#40000e",
+                    "tertiary": "#005b6e",
+                    "on-tertiary-container": "#d1f2ff",
+                    "inverse-primary": "#ffb2b7",
+                    "on-secondary-container": "#244885",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-tint": "#be003b",
+                    "outline": "#906f70",
+                    "tertiary-fixed": "#b3ebff",
+                    "on-secondary-fixed": "#001a42",
+                    "on-background": "#191c1e",
+                    "primary-fixed-dim": "#ffb2b7",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-bright": "#f7f9fb",
+                    "on-primary": "#ffffff",
+                    "secondary-container": "#99b8fe",
+                    "tertiary-fixed-dim": "#4cd6fb",
+                    "secondary-fixed": "#d8e2ff",
+                    "secondary": "#3c5d9c",
+                    "surface": "#f7f9fb",
+                    "background": "#f7f9fb",
+                    "secondary-fixed-dim": "#aec6ff",
+                    "error-container": "#ffdad6",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-primary-fixed-variant": "#91002b",
+                    "on-primary-container": "#ffe8e8",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "on-secondary-fixed-variant": "#224583",
+                    "surface-variant": "#e0e3e5"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-gap": "12px",
+                    "gutter": "16px",
+                    "container-padding": "20px",
+                    "unit": "4px",
+                    "touch-target-min": "48px"
+            },
+            "fontFamily": {
+                    "body-md": ["Be Vietnam Pro"],
+                    "label-caps": ["JetBrains Mono"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"],
+                    "headline-lg-mobile": ["Hanken Grotesk"],
+                    "body-lg": ["Be Vietnam Pro"],
+                    "body-sm": ["Be Vietnam Pro"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "800"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .step-line::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: -8px;
+            width: 2px;
+            background-color: #e0e3e5;
+        }
+        .step-line-last::before {
+            display: none;
+        }
+        .glass-panel {
+            backdrop-filter: blur(12px);
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+    </style>
+<style>
+    html {
+      background-color: #f7f9fb;
+    }
+    html, body {
+      min-height: 100vh;
+      height: 100% !important;
+      background-color: #f7f9fb;
+      overflow: hidden !important;
+      overscroll-behavior: none;
+    }
+    body {
+      min-height: 100vh;
+    }
+    main {
+      position: fixed !important;
+      top: 56px;
+      bottom: 64px;
+      left: 0;
+      right: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 !important;
+    }
+    header, nav {
+      will-change: transform;
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full flex justify-between items-center px-gutter h-14 bg-surface z-50 shadow-sm">
+<div class="flex items-center gap-3">
+<button id="btn-back" class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full">arrow_back</button>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1; font-size:28px;">directions_bus</span>
+<h1 class="font-headline-md text-headline-md font-extrabold text-primary">Rutas</h1>
+</div>
+</header>
+<main class="pb-8">
+<!-- Map Visualization Section -->
+<div class="relative h-[353px] w-full overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A high-angle architectural view of Trujillo, Peru, showing the colonial city center grid and modern urban expansion. The lighting is bright and clear, reflecting a sunny day in Trujillo. The image style is clean and professional, with a slight tilt-shift effect to emphasize the urban transit network, using a natural color palette that complements the brand's primary red and deep blue accents." data-location="Trujillo, Peru" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7xD-Yl6KiL-yrxdReVvQL2kA1_Y_-R5i4jNQ9XXgic7aeRiWDomlE_lGI-k7PPSt_vRo5b8GTLeWXvPiHN3UhMqUVSNyqEpqN-dgrFXznQQCAB7O5PshlNjIozqRUqirjG8TbOi7Gn3fV6JW1XSb69M3H2b5Z0YGSwPlqxWq-rV1sc9JV_fqNatnCFgPU3iY8ovFo-9c_pN1aU1dCybbGNYtdrVT_iSS29M3_TOMOPiLrVNHD7-Sj0OZBz7hhQEbf6pKdhK_GnMMG"/>
+<!-- Route Overlay Graphics (Simulated) -->
+<div class="absolute inset-0 bg-primary/5"></div>
+<!-- Floating Badge: Ruta Segura -->
+<div class="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 rounded-full bg-tertiary text-on-tertiary shadow-lg glass-panel">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">shield_with_heart</span>
+<span class="font-label-caps text-label-caps">Ruta Segura</span>
+</div>
+</div>
+<!-- Route Detail Card -->
+<div class="px-container-padding -mt-8 relative z-10">
+<div class="bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 p-5 mb-stack-gap">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-12 bg-primary rounded-full"></div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Línea B - Empresa Salaverry</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                                Destino: UTP Trujillo
+                            </p>
+</div>
+</div>
+<div class="bg-primary-container text-on-primary-container px-3 py-1 rounded-lg">
+<p class="font-label-caps text-label-caps">LLEGA EN</p>
+<p class="font-headline-sm text-headline-sm text-center">4 min</p>
+</div>
+</div>
+<!-- Bento Stats Grid -->
+<div class="grid grid-cols-2 gap-3 mb-6">
+<div class="bg-surface-container-low p-3 rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<div>
+<p class="font-label-caps text-[10px] text-on-surface-variant">TIEMPO</p>
+<p class="font-body-md text-body-md font-bold">20 min</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">payments</span>
+<div>
+<p class="font-label-caps text-[10px] text-on-surface-variant">COSTO</p>
+<p class="font-body-md text-body-md font-bold">S/ 1.50</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">swap_calls</span>
+<div>
+<p class="font-label-caps text-[10px] text-on-surface-variant">TRANSBORDOS</p>
+<p class="font-body-md text-body-md font-bold">0</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">traffic</span>
+<div>
+<p class="font-label-caps text-[10px] text-on-surface-variant">CONGESTIÓN</p>
+<p class="font-body-md text-body-md font-bold text-secondary">Media</p>
+</div>
+</div>
+</div>
+<!-- Step-by-Step Guide -->
+<div class="space-y-6">
+<h3 class="font-headline-sm text-[18px] text-on-surface">Guía paso a paso</h3>
+<!-- Step 1 -->
+<div class="relative flex gap-4 step-line">
+<div class="z-10 w-6 h-6 rounded-full bg-surface-container-highest border-2 border-outline flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">directions_walk</span>
+</div>
+<div class="pb-2">
+<p class="font-body-md text-body-md">1. Camina al paradero Av. España</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">250 metros • 3 min aprox.</p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="relative flex gap-4 step-line">
+<div class="z-10 w-6 h-6 rounded-full bg-primary border-2 border-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-[14px]">directions_bus</span>
+</div>
+<div class="pb-2">
+<p class="font-body-md text-body-md">2. Sube a Línea B</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Empresa Salaverry • 15 min de viaje</p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="relative flex gap-4 step-line step-line-last">
+<div class="z-10 w-6 h-6 rounded-full bg-tertiary border-2 border-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary text-[14px]">school</span>
+</div>
+<div>
+<p class="font-body-md text-body-md">3. Baja en frontis UTP</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Llegada a destino final</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+    <!-- boton colocado dentro del flujo de contenido para evitar solapamientos con el texto -->
+    <div class="px-container-padding mt-4 mb-6">
+      <button class="w-full h-14 bg-primary-container text-on-primary-container rounded-xl shadow-lg flex items-center justify-center gap-3 font-headline-sm text-headline-sm active:scale-95 duration-200">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">navigation</span>
+        Iniciar Navegación
+      </button>
+    </div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe bg-surface dark:bg-surface-container shadow-lg rounded-t-xl">
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-label-caps text-label-caps">Mapa</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container dark:bg-primary dark:text-on-primary rounded-xl px-3 py-1">
+<span class="material-symbols-outlined" data-icon="directions_bus">directions_bus</span>
+<span class="font-label-caps text-label-caps">Rutas</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span class="font-label-caps text-label-caps">Guardado</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined" data-icon="shield_with_heart">shield_with_heart</span>
+<span class="font-label-caps text-label-caps">Seguridad</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-caps text-label-caps">Perfil</span>
+</div>
+</nav>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('button').forEach(function(btn) {
+    if (btn.textContent.trim() === 'arrow_back') {
+      btn.addEventListener('click', function() {
+        window.location.href = 'app://navigate/mapa_principal';
+      });
+    }
+  });
+
+  // Nav bar los items son <div> en esta pantalla
+  document.querySelectorAll('nav div[class*="flex-col"]').forEach(function(item) {
+    var label = item.querySelector('.font-label-caps');
+    if (!label) return;
+    var txt = label.textContent.trim();
+    item.style.cursor = 'pointer';
+    item.addEventListener('click', function() {
+      if (txt === 'Mapa') {
+        window.location.href = 'app://navigate/mapa_principal';
+      } else if (txt === 'Guardado') {
+        window.location.href = 'app://navigate/guardado';
+      } else if (txt === 'Seguridad') {
+        window.location.href = 'app://navigate/seguridad';
+      } else if (txt === 'Perfil') {
+        window.location.href = 'app://navigate/perfil';
+      } else if (txt === 'Rutas') {
+        // ya estamos aquí
+      }
+    });
+  });
+});
+
+</script>
+</body></html>
