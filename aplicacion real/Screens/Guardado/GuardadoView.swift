@@ -401,9 +401,11 @@ private struct LugarDetailSheet: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button {
-                        router.navigate(to: .detalleRuta)
+                                        Button {
+                        router.navigate(to: .rutas)
                         dismiss()
+
+
                     } label: {
                         HStack {
                             Image(systemName: "bus.fill")
@@ -501,7 +503,7 @@ private struct LineaDetailSheet: View {
 
             VStack(spacing: 10) {
                 Button {
-                    router.navigate(to: .detalleRuta)
+                    router.navigate(to: .rutas)
                     dismiss()
                 } label: {
                     HStack {

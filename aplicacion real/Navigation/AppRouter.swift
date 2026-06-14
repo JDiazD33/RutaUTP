@@ -10,7 +10,6 @@ import SwiftUI
 enum AppScreen: Equatable {
     case bienvenida
     case mapaPrincipal
-    case detalleRuta
     case rutas
     case guardado
     case seguridad
