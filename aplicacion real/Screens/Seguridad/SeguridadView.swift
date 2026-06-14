@@ -2,8 +2,8 @@
 //  SeguridadView.swift
 //  RutaUTP
 //
-//  Pantalla de seguridad con resumen, lugares, rutas seguras y comunidad.
-//  TODO es interactivo: denunciar, llamar 105, ver lugares, ver rutas, ver reportes.
+//  Pantalla de seguridad. Layout ZStack(alignment: .bottom) + ignoresSafeArea.
+//  FAB anclado a navbarHeight + 12 para estar pegado encima de la navbar.
 //
 
 import SwiftUI
@@ -16,7 +16,8 @@ struct SeguridadView: View {
     @State private var showLlamarAlert = false
     @State private var selectedReporte: ReporteComunidad?
     @State private var selectedRutaIndex: Int? = nil
-    @State private var showAddLugarAlert = false
+
+    private let tabBarHeight: CGFloat = 64
 
     private let reportes: [ReporteComunidad] = [
         ReporteComunidad(
@@ -42,30 +43,23 @@ struct SeguridadView: View {
     ]
 
     private let rutasSeguras: [RutaSegura] = [
-        RutaSegura(
-            id: 0,
-            titulo: "Zona Segura: Óvalo Papal",
-            descripcion: "Patrullaje activo y alta iluminación hasta las 11:00 PM.",
-            icono: "moon.zzz.fill",
-            iconoBg: .tertiary,
-            iconoFg: .onTertiary,
-            accent: .tertiary
-        ),
-        RutaSegura(
-            id: 1,
-            titulo: "Paradero UTP (Entrada)",
-            descripcion: "Monitoreo por cámaras de seguridad municipal.",
-            icono: "eye.fill",
-            iconoBg: .secondary,
-            iconoFg: .onSecondary,
-            accent: nil
-        )
+        RutaSegura(id: 0,
+                   titulo: "Zona Segura: Óvalo Papal",
+                   descripcion: "Patrullaje activo y alta iluminación hasta las 11:00 PM.",
+                   icono: "moon.zzz.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
+                   accent: .tertiary),
+        RutaSegura(id: 1,
+                   titulo: "Paradero UTP (Entrada)",
+                   descripcion: "Monitoreo por cámaras de seguridad municipal.",
+                   icono: "eye.fill", iconoBg: .secondary, iconoFg: .onSecondary,
+                   accent: nil)
     ]
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack(alignment: .bottom) {
             Color.appBackground.ignoresSafeArea()
 
+            // Contenido scrollable
             VStack(spacing: 0) {
                 header
                 summaryBar
@@ -75,18 +69,21 @@ struct SeguridadView: View {
                         lugaresSection
                         rutasSegurasSection
                         comunidadSection
-                        Spacer(minLength: 100)
+                        Spacer(minLength: 20)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
                 }
             }
+            .padding(.bottom, tabBarHeight)
 
+            // FAB anclado a navbarHeight + 12
             fab
-        }
-        .safeAreaInset(edge: .bottom) {
+
+            // Navbar
             BottomNavBar()
         }
+        .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $showReportarSheet) {
             ReportarSheet()
                 .presentationDetents([.medium, .large])
@@ -105,9 +102,24 @@ struct SeguridadView: View {
         } message: {
             Text("Se abrirá la aplicación de teléfono para llamar a la central de emergencias.")
         }
+        .alert(selectedRutaIndex != nil ? rutasSeguras[selectedRutaIndex ?? 0].titulo : "",
+               isPresented: Binding(
+                get: { selectedRutaIndex != nil },
+                set: { if !$0 { selectedRutaIndex = nil } }
+               )) {
+            Button("Ver en mapa") {
+                router.navigate(to: .mapaPrincipal)
+                selectedRutaIndex = nil
+            }
+            Button("Cerrar", role: .cancel) { selectedRutaIndex = nil }
+        } message: {
+            if let idx = selectedRutaIndex {
+                Text(rutasSeguras[idx].descripcion)
+            }
+        }
     }
 
-    // MARK: - Header (logo mejorado)
+    // MARK: - Header
     private var header: some View {
         HStack(spacing: 12) {
             ZStack {
@@ -285,7 +297,6 @@ struct SeguridadView: View {
                     .font(.headlineSm)
             }
 
-            // Mapa nocturno
             Button {
                 router.navigate(to: .mapaPrincipal)
             } label: {
@@ -342,21 +353,6 @@ struct SeguridadView: View {
                     }
                     .buttonStyle(.plain)
                 }
-            }
-        }
-        .alert(selectedRutaIndex != nil ? rutasSeguras[selectedRutaIndex ?? 0].titulo : "",
-               isPresented: Binding(
-                get: { selectedRutaIndex != nil },
-                set: { if !$0 { selectedRutaIndex = nil } }
-               )) {
-            Button("Ver en mapa") {
-                router.navigate(to: .mapaPrincipal)
-                selectedRutaIndex = nil
-            }
-            Button("Cerrar", role: .cancel) { selectedRutaIndex = nil }
-        } message: {
-            if let idx = selectedRutaIndex {
-                Text(rutasSeguras[idx].descripcion)
             }
         }
     }
@@ -435,25 +431,28 @@ struct SeguridadView: View {
         }
     }
 
-    // MARK: - FAB
+    // MARK: - FAB (anclado a navbarHeight + 12)
     private var fab: some View {
-        Button {
-            showReportarSheet = true
-        } label: {
-            Image(systemName: "megaphone.fill")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(
-                    Circle()
-                        .fill(Color.appPrimary)
-                        .shadow(color: .appPrimary.opacity(0.40), radius: 14, x: 0, y: 8)
-                )
+        HStack {
+            Spacer()
+            Button {
+                showReportarSheet = true
+            } label: {
+                Image(systemName: "megaphone.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        Circle()
+                            .fill(Color.appPrimary)
+                            .shadow(color: .appPrimary.opacity(0.40), radius: 14, x: 0, y: 8)
+                    )
+            }
+            .buttonStyle(FABStyle())
+            .accessibilityLabel("Reportar incidente")
         }
-        .buttonStyle(FABStyle())
         .padding(.trailing, 24)
-        .padding(.bottom, 90)
-        .accessibilityLabel("Reportar incidente")
+        .padding(.bottom, tabBarHeight + 12)
     }
 
     // MARK: - Helpers
@@ -614,7 +613,7 @@ private struct ReporteDetailSheet: View {
     }
 }
 
-// MARK: - Reportar Sheet (compartido con MapaView, redefinido localmente)
+// MARK: - Reportar Sheet
 private struct ReportarSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var tipo: TipoReporte = .alerta

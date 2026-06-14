@@ -2,8 +2,7 @@
 //  AppRouter.swift
 //  RutaUTP
 //
-//  Router central. Toda la navegación pasa por aquí.
-//  NO se usa NavigationStack / NavigationLink en este proyecto.
+//  Router central. Toda la navegación pasa por aquí (no se usa NavigationStack).
 //
 
 import SwiftUI
@@ -12,6 +11,7 @@ enum AppScreen: Equatable {
     case bienvenida
     case mapaPrincipal
     case detalleRuta
+    case rutas
     case guardado
     case seguridad
     case perfil

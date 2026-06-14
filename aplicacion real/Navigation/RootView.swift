@@ -17,6 +17,7 @@ struct RootView: View {
             case .bienvenida:    BienvenidaView()
             case .mapaPrincipal: MapaView()
             case .detalleRuta:   DetalleRutaView()
+            case .rutas:         RutasView()
             case .guardado:      GuardadoView()
             case .seguridad:     SeguridadView()
             case .perfil:        PerfilView()

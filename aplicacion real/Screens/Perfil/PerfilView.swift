@@ -18,7 +18,7 @@ struct PerfilView: View {
     @State private var tempName: String = ""
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             Color.appBackground.ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: false) {
@@ -34,13 +34,14 @@ struct PerfilView: View {
                     configuracion
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
-                    Spacer(minLength: 120)
+                    Spacer(minLength: 140)
                 }
             }
-        }
-        .safeAreaInset(edge: .bottom) {
+            .padding(.bottom, 64)
+
             BottomNavBar()
         }
+        .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $showEditSheet) {
             EditarPerfilSheet(nombre: $tempName) { newName in
                 nombre = newName

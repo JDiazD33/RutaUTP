@@ -2,42 +2,58 @@
 //  BottomNavBar.swift
 //  RutaUTP
 //
-//  Barra de navegación inferior compartida entre las pantallas principales.
-//  Se renderiza como overlay flotante (NO es un TabView).
-//
-//  - 5 tabs distribuidos uniformemente en HStack
-//  - El tab "Seguridad" NO muestra icono (solo texto)
-//  - El background se extiende con ignoresSafeArea para tapar el area
-//    inferior del dispositivo (fix de safe area)
+//  Barra de navegación inferior.
+//  - 5 tabs distribuidos uniformemente (HStack + maxWidth: .infinity).
+//  - El background se extiende al borde físico inferior del dispositivo
+//    usando ignoresSafeArea(edges: .bottom) en el contenedor padre y
+//    padding(.bottom, bottomSafeArea()) para el contenido (respeta
+//    el home indicator).
+//  - Tab "Seguridad" usa ícono lock.fill / lock.
 //
 
 import SwiftUI
+import UIKit
 
-enum NavTab: String, CaseIterable, Identifiable {
-    case mapa      = "Mapa"
-    case rutas     = "Rutas"
-    case guardado  = "Guardado"
-    case seguridad = "Seguridad"
-    case perfil    = "Perfil"
+// MARK: - Tab enum
+enum NavTab: CaseIterable, Hashable {
+    case mapa, rutas, guardado, seguridad, perfil
 
-    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .mapa:      return "Mapa"
+        case .rutas:     return "Rutas"
+        case .guardado:  return "Guardado"
+        case .seguridad: return "Seguridad"
+        case .perfil:    return "Perfil"
+        }
+    }
 
-    /// Solo Mapa, Rutas, Guardado y Perfil tienen icono.
-    /// Seguridad se renderiza sin icono segun requerimiento de diseno.
-    var icon: String? {
+    /// Ícono outline (tab inactivo)
+    var icon: String {
+        switch self {
+        case .mapa:      return "map"
+        case .rutas:     return "bus"
+        case .guardado:  return "bookmark"
+        case .seguridad: return "lock"
+        case .perfil:    return "person"
+        }
+    }
+
+    /// Ícono filled (tab activo)
+    var iconFill: String {
         switch self {
         case .mapa:      return "map.fill"
         case .rutas:     return "bus.fill"
         case .guardado:  return "bookmark.fill"
+        case .seguridad: return "lock.fill"
         case .perfil:    return "person.fill"
-        case .seguridad: return nil
         }
     }
 
     var screen: AppScreen {
         switch self {
         case .mapa:      return .mapaPrincipal
-        case .rutas:     return .detalleRuta
+        case .rutas:     return .rutas
         case .guardado:  return .guardado
         case .seguridad: return .seguridad
         case .perfil:    return .perfil
@@ -45,86 +61,72 @@ enum NavTab: String, CaseIterable, Identifiable {
     }
 }
 
-struct BottomNavBar: View {
-    @EnvironmentObject private var router: AppRouter
-
-    private var activeTab: NavTab? {
-        switch router.currentScreen {
-        case .mapaPrincipal: return .mapa
-        case .detalleRuta:   return .rutas
-        case .guardado:      return .guardado
-        case .seguridad:     return .seguridad
-        case .perfil:        return .perfil
-        case .bienvenida:    return nil
-        }
-    }
+// MARK: - Tab Item
+struct NavTabItem: View {
+    let tab: NavTab
+    let isActive: Bool
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(NavTab.allCases) { tab in
-                tabButton(tab)
-                    .frame(maxWidth: .infinity)
-            }
+        VStack(spacing: 3) {
+            Image(systemName: isActive ? tab.iconFill : tab.icon)
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(
+                    isActive ? Color.appPrimary : Color.onSurfaceVariant.opacity(0.65)
+                )
+                .frame(height: 26)
+            Text(tab.label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(
+                    isActive ? Color.appPrimary : Color.onSurfaceVariant.opacity(0.65)
+                )
+                .lineLimit(1)
         }
-        .padding(.horizontal, 4)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
-        .frame(maxWidth: .infinity)
-        .background(
-            // El background se extiende mas alla del safe area inferior
-            // para tapar completamente la parte baja del dispositivo.
-            Color.appSurface
-                .ignoresSafeArea(edges: .bottom)
-        )
-        .overlay(
-            Rectangle()
-                .fill(Color.outlineVariant.opacity(0.35))
-                .frame(height: 1),
-            alignment: .top
-        )
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16))
-        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: -4)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
     }
+}
 
-    @ViewBuilder
-    private func tabButton(_ tab: NavTab) -> some View {
-        let isActive = (activeTab == tab)
-        Button {
-            router.navigate(to: tab.screen)
-        } label: {
-            VStack(spacing: 4) {
-                // Contenedor de icono: real o invisible (para mantener altura consistente)
-                if let icon = tab.icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .frame(height: 20)
-                } else {
-                    // Contenedor invisible del mismo tamano que el icono
-                    Color.clear.frame(height: 20)
-                }
+// MARK: - Bottom NavBar
+struct BottomNavBar: View {
+    @EnvironmentObject var router: AppRouter
 
-                Text(tab.rawValue)
-                    .font(.system(size: 10, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            .foregroundStyle(isActive ? Color.onPrimaryContainer : Color.onSurfaceVariant.opacity(0.75))
-            .padding(.horizontal, 4)
-            .padding(.vertical, 6)
-            .frame(minHeight: 48)
-            .background(
-                Group {
-                    if isActive {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.primaryContainer)
-                    } else {
-                        Color.clear
+    var body: some View {
+        VStack(spacing: 0) {
+            // Separador superior
+            Rectangle()
+                .fill(Color.outlineVariant.opacity(0.20))
+                .frame(height: 0.5)
+
+            HStack(alignment: .center, spacing: 0) {
+                ForEach(NavTab.allCases, id: \.self) { tab in
+                    NavTabItem(
+                        tab: tab,
+                        isActive: router.currentScreen == tab.screen
+                    )
+                    .frame(maxWidth: .infinity)
+                    .onTapGesture {
+                        router.navigate(to: tab.screen)
                     }
                 }
-            )
+            }
+            .padding(.top, 8)
+            .padding(.horizontal, 4)
+            .padding(.bottom, bottomSafeArea())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(tab.rawValue)
+        .background(Color.appSurface)
+    }
+
+    /// Devuelve la altura del safe area inferior real del dispositivo.
+    /// Esto permite que el contenido de la navbar quede por encima del
+    /// home indicator sin dejar un gap visual.
+    private func bottomSafeArea() -> CGFloat {
+        guard let window = UIApplication.shared
+            .connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first?.windows.first
+        else { return 16 }
+        let inset = window.safeAreaInsets.bottom
+        return inset > 0 ? inset : 12
     }
 }
 

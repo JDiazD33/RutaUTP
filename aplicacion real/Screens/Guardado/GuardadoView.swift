@@ -36,7 +36,7 @@ struct GuardadoView: View {
     ]
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             Color.appBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -49,13 +49,14 @@ struct GuardadoView: View {
                         case .lineas:  lineasSection
                         }
                     }
-                    .padding(.bottom, 120)
+                    .padding(.bottom, 90)
                 }
             }
-        }
-        .safeAreaInset(edge: .bottom) {
+            .padding(.bottom, 64)
+
             BottomNavBar()
         }
+        .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $showAddSheet) {
             AddLugarSheet { nuevo in
                 lugares.insert(nuevo, at: 0)

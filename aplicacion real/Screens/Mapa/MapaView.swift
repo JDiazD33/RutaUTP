@@ -2,113 +2,76 @@
 //  MapaView.swift
 //  RutaUTP
 //
-//  Pantalla principal con mapa real (MapKit), búsqueda, marcadores y cards de micros.
+//  Pantalla principal del mapa.
+//  - Mapa (MapKit) de fondo con marcadores UTP, usuario y buses animados.
+//  - Header con botón de menú y título "Mapa".
+//  - Panel de búsqueda con TextField funcional y chips de destino.
+//  - Al seleccionar destino: mapa hace zoom + aparecen 6 puntos rojos animados.
+//  - Bottom panel con botón REPORTAR y cards de buses.
 //
 
 import SwiftUI
 import MapKit
 
 struct MapaView: View {
-    @EnvironmentObject private var router: AppRouter
-    @State private var drawerOpen = false
-    @State private var destination: Destino = .utp
-    @State private var searchText: String = ""
+    @EnvironmentObject var router: AppRouter
+    @StateObject private var vm = MapaViewModel()
+    @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     @State private var showReportSuccess = false
+    @FocusState private var campoEnfocado: Bool
 
-    @State private var cameraPosition: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0289),
-            span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
-        )
-    )
-
-    enum Destino: String, CaseIterable, Identifiable {
-        case casa, utp, trabajo
-        var id: String { rawValue }
-        var label: String {
-            switch self {
-            case .casa:    return "Casa"
-            case .utp:     return "UTP"
-            case .trabajo: return "Trabajo"
-            }
-        }
-        var icon: String {
-            switch self {
-            case .casa:    return "house.fill"
-            case .utp:     return "graduationcap.fill"
-            case .trabajo: return "briefcase.fill"
-            }
-        }
-    }
-
-    // Coordenadas aproximadas: Trujillo - UTP sede
-    private let utpCoord  = CLLocationCoordinate2D(latitude: -8.1120, longitude: -79.0300)
-    private let userCoord = CLLocationCoordinate2D(latitude: -8.1110, longitude: -79.0270)
-    private let routeCoords: [CLLocationCoordinate2D] = [
-        CLLocationCoordinate2D(latitude: -8.1110, longitude: -79.0270),
-        CLLocationCoordinate2D(latitude: -8.1114, longitude: -79.0280),
-        CLLocationCoordinate2D(latitude: -8.1117, longitude: -79.0290),
-        CLLocationCoordinate2D(latitude: -8.1120, longitude: -79.0300)
-    ]
-
-    private let rutas: [Ruta] = [
-        Ruta(id: "1", linea: "LÍNEA 10", nombre: "El Cortijo",
-             empresa: "Salaverry", tipo: .micro, placa: "T1B-721",
-             minutosLlegada: 4, colorIdentificador: .appPrimary),
-        Ruta(id: "2", linea: "LÍNEA 4", nombre: "Salaverry",
-             empresa: "Salaverry", tipo: .combi, placa: "A6N-450",
-             minutosLlegada: 12, colorIdentificador: .secondary),
-        Ruta(id: "3", linea: "LÍNEA 7", nombre: "Huanchaco",
-             empresa: "El Esfuerzo", tipo: .combi, placa: "B7H-201",
-             minutosLlegada: 18, colorIdentificador: .tertiary)
-    ]
+    private let tabBarHeight: CGFloat = 64
 
     var body: some View {
-        ZStack(alignment: .top) {
-            // Mapa real MapKit
-            Map(position: $cameraPosition) {
-                Annotation("UTP Trujillo", coordinate: utpCoord) {
-                    UTPMarker()
+        ZStack(alignment: .bottom) {
+
+            // ── MAPA DE FONDO ──
+            Map(coordinateRegion: $vm.region,
+                annotationItems: vm.anotaciones()) { item in
+                MapAnnotation(coordinate: item.coordinate) {
+                    switch item.tipo {
+                    case .utp:      MarcadorUTP()
+                    case .usuario:  PulsingUserMarker()
+                    case .bus(let linea): BusMarker(linea: linea)
+                    }
                 }
-                Annotation("Yo", coordinate: userCoord) {
-                    UserMarker()
-                }
-                MapPolyline(coordinates: routeCoords)
-                    .stroke(Color.appPrimary, style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [10, 6]))
             }
-            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
             .ignoresSafeArea()
+            .onTapGesture { campoEnfocado = false }
 
-            // Header
+            // ── UI FLOTANTE ──
             VStack(spacing: 0) {
-                TopAppBar(leading: .menu, title: "Mapa", titleColor: .appPrimary)
+                // Header
+                header
+                    .padding(.top, 0)
+
+                // Panel de búsqueda
                 searchPanel
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                Spacer()
-            }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
 
-            // Panel inferior
-            VStack {
                 Spacer()
-                reportarPill
-                    .padding(.leading, 20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Bottom panel
                 bottomPanel
+                    .padding(.bottom, 12)
             }
-            .padding(.bottom, 12)
+            .padding(.bottom, tabBarHeight)
 
-            // Drawer overlay
-            SideDrawer(isOpen: $drawerOpen)
-                .environmentObject(router)
-        }
-        .safeAreaInset(edge: .bottom) {
+            // ── DRAWER OVERLAY ──
+            if mostrarDrawer {
+                SideDrawer(isOpen: $mostrarDrawer)
+                    .environmentObject(router)
+                    .transition(.move(edge: .leading))
+            }
+
+            // ── NAVBAR ──
             BottomNavBar()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openSideDrawer)) { _ in
-            drawerOpen = true
-        }
+        .ignoresSafeArea(edges: .bottom)
+        .onDisappear { vm.detenerAnimacion() }
+        .animation(.easeInOut(duration: 0.28), value: mostrarDrawer)
         .sheet(isPresented: $showReportarSheet) {
             ReportarSheet()
                 .presentationDetents([.medium, .large])
@@ -120,129 +83,181 @@ struct MapaView: View {
         }
     }
 
+    // MARK: - Header
+    private var header: some View {
+        HStack(spacing: 12) {
+            Button {
+                withAnimation { mostrarDrawer = true }
+            } label: {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.onSurface)
+                    .frame(width: 40, height: 40)
+                    .background(Color.surfaceContainerLow)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: .black.opacity(0.08), radius: 4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Abrir menú")
+
+            Text("Mapa")
+                .font(.headlineLgMobile)
+                .foregroundStyle(.appPrimary)
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 56)
+        .background(Color.appSurface.opacity(0.95))
+        .overlay(
+            Rectangle()
+                .fill(Color.outlineVariant.opacity(0.25))
+                .frame(height: 1),
+            alignment: .bottom
+        )
+    }
+
     // MARK: - Search panel
     private var searchPanel: some View {
         VStack(spacing: 10) {
+            // TextField
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.onSurfaceVariant)
-                TextField("¿A dónde vas hoy?", text: $searchText)
-                    .font(.bodyMd)
+                    .font(.system(size: 16))
+                TextField("¿A dónde vas hoy?", text: $vm.textoBusqueda)
+                    .font(.system(size: 15))
                     .foregroundStyle(.onSurface)
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.surfaceContainerLow)
-            )
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(Destino.allCases) { d in
-                        chip(d)
+                    .focused($campoEnfocado)
+                    .submitLabel(.search)
+                    .onSubmit { vm.buscarTexto(vm.textoBusqueda) }
+                    .onChange(of: vm.textoBusqueda) { nuevo in
+                        vm.buscarTexto(nuevo)
                     }
+                if !vm.textoBusqueda.isEmpty {
+                    Button {
+                        vm.limpiar()
+                        campoEnfocado = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.onSurfaceVariant.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.surfaceContainerLow))
+
+            // Chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(vm.destinos) { destino in
+                        chip(destino)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
         }
-        .padding(12)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.outlineVariant.opacity(0.5), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
         )
+        .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 2)
     }
 
-    private func chip(_ d: Destino) -> some View {
-        let isActive = (d == destination)
+    private func chip(_ destino: DestinoChip) -> some View {
+        let activo = vm.destinoSeleccionado?.id == destino.id
         return Button {
-            withAnimation(.easeInOut(duration: 0.2)) { destination = d }
+            campoEnfocado = false
+            vm.seleccionar(destino: destino)
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: d.icon)
-                    .font(.system(size: 14, weight: .semibold))
-                Text(d.label)
-                    .font(.bodySm)
+                Image(systemName: destino.icon)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(destino.label)
+                    .font(.system(size: 13, weight: .medium))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-            .foregroundStyle(isActive ? Color.onPrimaryContainer : Color.onSurfaceVariant)
+            .foregroundStyle(activo ? Color.onSecondaryContainer : Color.onSurface)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
             .background(
-                Capsule().fill(isActive ? Color.primaryContainer : Color.surfaceContainerHighest)
+                Capsule().fill(activo ? Color.secondaryContainer : Color.surfaceContainerHighest)
             )
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Reportar pill
-    private var reportarPill: some View {
-        Button {
-            showReportarSheet = true
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("REPORTAR")
-                    .font(.labelCapsMd)
-                    .appTracking(AppTracking.wideLabel)
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                Capsule()
-                    .fill(Color.appPrimary)
-                    .shadow(color: .appPrimary.opacity(0.35), radius: 10, x: 0, y: 4)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Reportar incidente")
-    }
-
-    // MARK: - Bottom panel (transportes)
+    // MARK: - Bottom panel
     private var bottomPanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Transportes cercanos")
-                    .font(.headlineSm)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
+        VStack(spacing: 10) {
+            HStack(alignment: .center) {
+                Button {
+                    showReportarSheet = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("REPORTAR")
+                            .font(.labelCapsMd)
+                            .appTracking(AppTracking.wideLabel)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
                     .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.ultraThinMaterial)
+                        Capsule()
+                            .fill(Color.appPrimary)
+                            .shadow(color: .appPrimary.opacity(0.35), radius: 8, x: 0, y: 4)
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.appSurface.opacity(0.65))
-                    )
-                Spacer()
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(Color.tertiary)
-                        .frame(width: 6, height: 6)
-                    Text("En vivo")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.appPrimary)
-                        .appTracking(AppTracking.wideLabel)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.primaryFixed)
-                )
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                HStack(spacing: 6) {
+                    Text("Transportes cercanos")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.onSurface.opacity(0.85))
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.appPrimary)
+                            .frame(width: 7, height: 7)
+                        Text("En vivo")
+                            .font(.labelCapsSm)
+                            .foregroundStyle(.appPrimary)
+                            .appTracking(AppTracking.wideLabel)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.primaryFixed)
+                    )
+                }
             }
             .padding(.horizontal, 20)
 
+            // Cards de buses
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(rutas) { ruta in
-                        RouteCard(ruta: ruta) {
-                            router.navigate(to: .detalleRuta)
-                        }
-                    }
+                    BusCard(
+                        linea: "LÍNEA 10", empresa: "El Cortijo",
+                        minutos: "4 MIN", tipo: "Micro",
+                        placa: "T1B-721", colorLinea: .appPrimary
+                    )
+                    .onTapGesture { router.navigate(to: .rutas) }
+                    BusCard(
+                        linea: "LÍNEA 4", empresa: "Salaverry",
+                        minutos: "12 MIN", tipo: "Combi",
+                        placa: "A6N-450", colorLinea: .secondary
+                    )
+                    .onTapGesture { router.navigate(to: .rutas) }
                 }
                 .padding(.horizontal, 20)
             }
@@ -250,57 +265,65 @@ struct MapaView: View {
     }
 }
 
-// MARK: - Marcadores personalizados
-private struct UTPMarker: View {
+// MARK: - Bus card
+private struct BusCard: View {
+    let linea: String
+    let empresa: String
+    let minutos: String
+    let tipo: String
+    let placa: String
+    let colorLinea: Color
+
     var body: some View {
-        VStack(spacing: 4) {
-            Text("UTP Trujillo")
+        VStack(alignment: .leading, spacing: 6) {
+            Text(linea)
                 .font(.labelCapsMd)
-                .foregroundStyle(.white)
+                .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(Color.appPrimary))
-                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
-            ZStack {
-                Circle()
-                    .fill(Color.appPrimary)
-                    .frame(width: 40, height: 40)
-                    .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                    .shadow(color: .black.opacity(0.30), radius: 6, x: 0, y: 3)
-                Image(systemName: "graduationcap.fill")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
+            Text(empresa)
+                .font(.headlineSm)
+                .foregroundStyle(.onSurface)
+                .lineLimit(1)
+            HStack(spacing: 6) {
+                Text(minutos)
+                    .font(.labelCapsMd)
+                    .foregroundStyle(colorLinea == .appPrimary ? Color.onPrimaryContainer : Color.onSecondaryContainer)
+                    .appTracking(AppTracking.wideLabel)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(colorLinea == .appPrimary ? Color.primaryContainer : Color.secondaryContainer)
+                    )
+                Text("\(tipo) • \(placa)")
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .lineLimit(1)
             }
         }
+        .padding(14)
+        .frame(width: 256, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.appSurface.opacity(0.55))
+                )
+        )
+        .overlay(
+            HStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(colorLinea)
+                    .frame(width: 4, height: 56)
+                Spacer()
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
-private struct UserMarker: View {
-    @State private var pulse: Bool = false
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.secondaryContainer.opacity(0.4))
-                .frame(width: 32, height: 32)
-                .scaleEffect(pulse ? 1.8 : 1.0)
-                .opacity(pulse ? 0 : 1)
-                .animation(.easeOut(duration: 1.6).repeatForever(autoreverses: false), value: pulse)
-            Circle()
-                .fill(Color.secondaryContainer)
-                .frame(width: 24, height: 24)
-                .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
-            Image(systemName: "figure.walk.circle.fill")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.onSecondaryContainer)
-        }
-        .onAppear { pulse = true }
-    }
-}
-
-// MARK: - Reportar Sheet
+// MARK: - Reportar sheet
 private struct ReportarSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var tipo: TipoReporte = .alerta
@@ -331,27 +354,10 @@ private struct ReportarSheet: View {
                         .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
                         .appTracking(AppTracking.wideLabel)
-                    TextField("¿Qué sucede en tu ruta?", text: $descripcion, axis: .vertical)
+                    TextField("¿Qué sucede?", text: $descripcion, axis: .vertical)
                         .lineLimit(3...6)
                         .padding(12)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("UBICACIÓN")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    HStack {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundStyle(.appPrimary)
-                        Text("Av. España 1234, Trujillo")
-                            .font(.bodySm)
-                            .foregroundStyle(.onSurface)
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
                 }
 
                 Spacer()
