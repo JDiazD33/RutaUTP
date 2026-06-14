@@ -256,11 +256,11 @@ struct GuardadoView: View {
                 Spacer()
                 Text(linea.tiempoEstimado)
                     .font(.labelCapsMd)
-                    .foregroundStyle(.onTertiary)
+                    .foregroundStyle(.white)
                     .appTracking(AppTracking.wideLabel)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.tertiaryContainer))
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.tertiary))
             }
             .padding(12)
             .background(

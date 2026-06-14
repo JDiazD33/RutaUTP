@@ -3,17 +3,20 @@
 //  RutaUTP
 //
 //  Punto de entrada de la aplicación.
-//  Esta versión reemplaza el WKWebView del prototipo HTML por SwiftUI 100% nativo.
+//  El modo oscuro/claro se persiste con @AppStorage y se aplica a toda
+//  la app via preferredColorScheme.
 //
 
 import SwiftUI
 
 @main
 struct RutaUTPApp: App {
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+
     var body: some Scene {
         WindowGroup {
             RootView()
-                .preferredColorScheme(.light)
+                .preferredColorScheme(isDarkMode ? .dark : .light)
                 .tint(.appPrimary)
                 .background(Color.appBackground.ignoresSafeArea())
         }
