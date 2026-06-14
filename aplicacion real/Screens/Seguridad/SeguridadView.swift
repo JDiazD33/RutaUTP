@@ -119,23 +119,44 @@ struct SeguridadView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header (✅ CORREGIDO V3: Reportar en header, icono lock.fill)
     private var header: some View {
         HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.appPrimary.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                Image(systemName: "heart.shield.fill")
-                    .font(.system(size: 24, weight: .bold))
+            // Lado izquierdo: icono + titulo
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "#ffdadb"))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.appPrimary)
+                }
+                Text("Seguridad")
+                    .font(.headlineLgMobile)
                     .foregroundStyle(.appPrimary)
             }
-            Text("Seguridad")
-                .font(.headlineLgMobile)
-                .foregroundStyle(.appPrimary)
             Spacer()
+            // Lado derecho: boton Reportar
+            Button {
+                showReportarSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Reportar")
+                        .font(.labelCapsMd)
+                        .appTracking(AppTracking.wideLabel)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(Color.appPrimary))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Reportar incidente")
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .frame(height: 56)
         .background(Color.appSurface)
         .overlay(
@@ -146,7 +167,7 @@ struct SeguridadView: View {
         )
     }
 
-    // MARK: - Summary bar
+    // MARK: - Summary bar (✅ CORREGIDO V3: Reportar movido al header, solo queda Llamar 105)
     private var summaryBar: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -156,18 +177,6 @@ struct SeguridadView: View {
                     .font(.bodySmMedium)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
-                showReportarSheet = true
-            } label: {
-                Text("Denunciar")
-                    .font(.bodyXsMedium)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.appPrimary))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Denunciar incidente")
             Button {
                 showLlamarAlert = true
             } label: {

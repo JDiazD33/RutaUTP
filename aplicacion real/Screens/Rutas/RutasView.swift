@@ -248,190 +248,228 @@ private struct DetalleRutaView: View {
     let ruta: RutaOpcion
     let onBack: () -> Void
 
+    @State private var showCarPlay: Bool = false
+    private let tabBarHeight: CGFloat = 64
+    private let ctaHeight: CGFloat = 88
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack(spacing: 12) {
-                Button(action: onBack) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.onSurface)
-                        .frame(width: 40, height: 40)
-                        .background(Circle().fill(Color.surfaceContainerLow))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Volver")
-
-                Image(systemName: "bus.fill")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(.appPrimary)
-                Text("Ruta \(ruta.linea)")
-                    .font(.headlineLgMobile)
-                    .foregroundStyle(.appPrimary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 56)
-            .background(Color.appSurface)
-            .overlay(
-                Rectangle()
-                    .fill(Color.outlineVariant.opacity(0.25))
-                    .frame(height: 1),
-                alignment: .bottom
-            )
-
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
-                    // Hero ruta
-                    ZStack(alignment: .topTrailing) {
-                        ZStack {
-                            LinearGradient(
-                                colors: [ruta.colorLinea.opacity(0.6), Color.secondary.opacity(0.4)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
-                            GeometryReader { geo in
-                                let w = geo.size.width
-                                let h = geo.size.height
-                                Path { p in
-                                    p.move(to: CGPoint(x: w * 0.10, y: h * 0.85))
-                                    p.addCurve(
-                                        to: CGPoint(x: w * 0.55, y: h * 0.55),
-                                        control1: CGPoint(x: w * 0.25, y: h * 0.75),
-                                        control2: CGPoint(x: w * 0.40, y: h * 0.65)
-                                    )
-                                    p.addCurve(
-                                        to: CGPoint(x: w * 0.90, y: h * 0.25),
-                                        control1: CGPoint(x: w * 0.70, y: h * 0.45),
-                                        control2: CGPoint(x: w * 0.80, y: h * 0.35)
-                                    )
+        ZStack(alignment: .bottom) {
+            // ✅ CORREGIDO V3: ZStack con CTA fuera del ScrollView
+            VStack(spacing: 0) {
+                header
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        // Hero ruta
+                        ZStack(alignment: .topTrailing) {
+                            ZStack {
+                                LinearGradient(
+                                    colors: [ruta.colorLinea.opacity(0.6), Color.secondary.opacity(0.4)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                                GeometryReader { geo in
+                                    let w = geo.size.width
+                                    let h = geo.size.height
+                                    Path { p in
+                                        p.move(to: CGPoint(x: w * 0.10, y: h * 0.85))
+                                        p.addCurve(
+                                            to: CGPoint(x: w * 0.55, y: h * 0.55),
+                                            control1: CGPoint(x: w * 0.25, y: h * 0.75),
+                                            control2: CGPoint(x: w * 0.40, y: h * 0.65)
+                                        )
+                                        p.addCurve(
+                                            to: CGPoint(x: w * 0.90, y: h * 0.25),
+                                            control1: CGPoint(x: w * 0.70, y: h * 0.45),
+                                            control2: CGPoint(x: w * 0.80, y: h * 0.35)
+                                        )
+                                    }
+                                    .stroke(ruta.colorLinea, style: StrokeStyle(lineWidth: 6, lineCap: .round, dash: [12, 6]))
                                 }
-                                .stroke(ruta.colorLinea, style: StrokeStyle(lineWidth: 6, lineCap: .round, dash: [12, 6]))
                             }
-                        }
-                        .frame(height: 200)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                        .overlay(ruta.colorLinea.opacity(0.05))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .frame(height: 200)
+                            .frame(maxWidth: .infinity)
+                            .clipped()
+                            .overlay(ruta.colorLinea.opacity(0.05))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .allowsHitTesting(false) // ✅ CORREGIDO V3
 
-                        HStack(spacing: 6) {
-                            Image(systemName: "heart.shield.fill")
-                                .font(.system(size: 16, weight: .bold))
-                            Text("RUTA SEGURA")
-                                .font(.labelCapsMd)
-                                .appTracking(AppTracking.wideLabel)
-                        }
-                        .foregroundStyle(.onTertiary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                                .overlay(Capsule().fill(Color.tertiary.opacity(0.85)))
-                        )
-                        .shadow(color: .black.opacity(0.20), radius: 8, x: 0, y: 4)
-                        .padding(12)
-                    }
-                    .padding(.horizontal, 20)
-
-                    // Info card
-                    HStack(alignment: .top, spacing: 14) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(ruta.colorLinea)
-                            .frame(width: 6, height: 48)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(ruta.empresa)")
-                                .font(.headlineSm)
-                                .foregroundStyle(.onSurface)
-                            Text("Destino: UTP Trujillo")
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurfaceVariant)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("LLEGA EN")
-                                .font(.labelCapsMd)
-                                .foregroundStyle(.onPrimaryContainer)
-                                .appTracking(AppTracking.wideLabel)
-                            Text(ruta.llegaEn)
-                                .font(.displayNumberMd)
-                                .foregroundStyle(.onPrimaryContainer)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primaryContainer))
-                    }
-                    .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.surfaceContainerLowest)
-                            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
-                    )
-                    .padding(.horizontal, 20)
-
-                    // Stats grid
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                              spacing: 12) {
-                        StatTile(icon: "clock.fill", iconColor: .appPrimary,
-                                 label: "TIEMPO", value: ruta.tiempo)
-                        StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
-                                 label: "COSTO", value: ruta.costo)
-                        StatTile(icon: "arrow.triangle.2.circlepath", iconColor: .appPrimary,
-                                 label: "TRANSBORDOS", value: "0")
-                        StatTile(icon: "chart.bar.fill", iconColor: .secondary,
-                                 label: "CONGESTIÓN", value: ruta.congestion)
-                    }
-                    .padding(.horizontal, 20)
-
-                    // Pasos
-                    VStack(alignment: .leading, spacing: 18) {
-                        Text("Guía paso a paso")
-                            .font(.headlineXs)
-                            .foregroundStyle(.onSurface)
-                            .padding(.horizontal, 20)
-
-                        VStack(spacing: 0) {
-                            pasoRow("1", "Camina al paradero Av. España",
-                                    "250 metros • 3 min aprox.",
-                                    "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
-                            pasoRow("2", "Sube a la línea \(ruta.linea)",
-                                    "\(ruta.empresa) • 15 min de viaje",
-                                    "bus.fill", .appPrimary, .white, isLast: false)
-                            pasoRow("3", "Baja en frontis UTP",
-                                    "Llegada a destino final",
-                                    "graduationcap.fill", .tertiary, .white, isLast: true)
+                            HStack(spacing: 6) {
+                                Image(systemName: "heart.shield.fill")
+                                    .font(.system(size: 16, weight: .bold))
+                                Text("RUTA SEGURA")
+                                    .font(.labelCapsMd)
+                                    .appTracking(AppTracking.wideLabel)
+                            }
+                            .foregroundStyle(.onTertiary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(.ultraThinMaterial)
+                                    .overlay(Capsule().fill(Color.tertiary.opacity(0.85)))
+                            )
+                            .shadow(color: .black.opacity(0.20), radius: 8, x: 0, y: 4)
+                            .padding(12)
                         }
                         .padding(.horizontal, 20)
-                    }
 
-                    // CTA
-                    Button {} label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 22, weight: .bold))
-                            Text("Iniciar Navegación")
-                                .font(.headlineSm)
+                        // Info card
+                        HStack(alignment: .top, spacing: 14) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(ruta.colorLinea)
+                                .frame(width: 6, height: 48)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("\(ruta.empresa)")
+                                    .font(.headlineSm)
+                                    .foregroundStyle(.onSurface)
+                                Text("Destino: UTP Trujillo")
+                                    .font(.bodySm)
+                                    .foregroundStyle(.onSurfaceVariant)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("LLEGA EN")
+                                    .font(.labelCapsMd)
+                                    .foregroundStyle(.onPrimaryContainer)
+                                    .appTracking(AppTracking.wideLabel)
+                                Text(ruta.llegaEn)
+                                    .font(.displayNumberMd)
+                                    .foregroundStyle(.onPrimaryContainer)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.primaryContainer))
                         }
-                        .foregroundStyle(.onPrimaryContainer)
-                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.primaryContainer)
-                                .shadow(color: .primaryContainer.opacity(0.35), radius: 12, x: 0, y: 6)
+                                .fill(Color.surfaceContainerLowest)
+                                .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
                         )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
+                        )
+                        .padding(.horizontal, 20)
+
+                        // Stats grid
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                                  spacing: 12) {
+                            StatTile(icon: "clock.fill", iconColor: .appPrimary,
+                                     label: "TIEMPO", value: ruta.tiempo)
+                            StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
+                                     label: "COSTO", value: ruta.costo)
+                            StatTile(icon: "arrow.triangle.2.circlepath", iconColor: .appPrimary,
+                                     label: "TRANSBORDOS", value: "0")
+                            StatTile(icon: "chart.bar.fill", iconColor: .secondary,
+                                     label: "CONGESTIÓN", value: ruta.congestion)
+                        }
+                        .padding(.horizontal, 20)
+
+                        // Pasos
+                        VStack(alignment: .leading, spacing: 18) {
+                            Text("Guía paso a paso")
+                                .font(.headlineXs)
+                                .foregroundStyle(.onSurface)
+                                .padding(.horizontal, 20)
+
+                            VStack(spacing: 0) {
+                                pasoRow("1", "Camina al paradero Av. España",
+                                        "250 metros • 3 min aprox.",
+                                        "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
+                                pasoRow("2", "Sube a la línea \(ruta.linea)",
+                                        "\(ruta.empresa) • 15 min de viaje",
+                                        "bus.fill", .appPrimary, .white, isLast: false)
+                                pasoRow("3", "Baja en frontis UTP",
+                                        "Llegada a destino final",
+                                        "graduationcap.fill", .tertiary, .white, isLast: true)
+                            }
+                            .padding(.horizontal, 20)
+                        }
+
+                        // Espacio para que el CTA no tape el ultimo paso
+                        Spacer().frame(height: ctaHeight + 20)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 40)
                 }
             }
+
+            // ✅ CORREGIDO V3: CTA fijo fuera del ScrollView
+            ctaButton
         }
         .background(Color.appBackground.ignoresSafeArea())
+        // ✅ CORREGIDO V3: fullScreenCover para modo CarPlay
+        .fullScreenCover(isPresented: $showCarPlay) {
+            CarPlayNavegacionView(
+                rutaNombre: "Ruta \(ruta.linea) - \(ruta.empresa)",
+                onFinish: { showCarPlay = false }
+            )
+        }
+    }
+
+    // MARK: - Header
+    private var header: some View {
+        HStack(spacing: 12) {
+            Button(action: onBack) {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.onSurface)
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color.surfaceContainerLow))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Volver")
+
+            Image(systemName: "bus.fill")
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(.appPrimary)
+            Text("Ruta \(ruta.linea)")
+                .font(.headlineLgMobile)
+                .foregroundStyle(.appPrimary)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 56)
+        .background(Color.appSurface)
+        .overlay(
+            Rectangle()
+                .fill(Color.outlineVariant.opacity(0.25))
+                .frame(height: 1),
+            alignment: .bottom
+        )
+    }
+
+    // MARK: - CTA (fuera del ScrollView)
+    private var ctaButton: some View {
+        Button {
+            showCarPlay = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 22, weight: .bold))
+                Text("Iniciar Navegación")
+                    .font(.headlineSm)
+            }
+            .foregroundStyle(.onPrimaryContainer)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.primaryContainer)
+                    .shadow(color: .primaryContainer.opacity(0.35), radius: 12, x: 0, y: 6)
+            )
+            .contentShape(Rectangle()) // ✅ CORREGIDO V3
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.bottom, tabBarHeight + 16) // ✅ CORREGIDO V3: navbarHeight + 16
+        .background(
+            LinearGradient(
+                colors: [Color.appBackground.opacity(0), Color.appBackground],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 100)
+            .allowsHitTesting(false),
+            alignment: .bottom
+        )
+        .accessibilityLabel("Iniciar navegación")
     }
 
     private func pasoRow(_ n: String, _ title: String, _ subtitle: String,

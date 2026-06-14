@@ -194,6 +194,7 @@ struct MapaView: View {
     }
 
     // MARK: - Bottom panel
+    // ✅ CORREGIDO V3: frame explicito de 168pt para que las cards no se corten
     private var bottomPanel: some View {
         VStack(spacing: 10) {
             HStack(alignment: .center) {
@@ -243,7 +244,7 @@ struct MapaView: View {
             }
             .padding(.horizontal, 20)
 
-            // Cards de buses
+            // Cards de buses con altura suficiente
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     BusCard(
@@ -251,17 +252,22 @@ struct MapaView: View {
                         minutos: "4 MIN", tipo: "Micro",
                         placa: "T1B-721", colorLinea: .appPrimary
                     )
+                    .frame(height: 100)
                     .onTapGesture { router.navigate(to: .rutas) }
                     BusCard(
                         linea: "LÍNEA 4", empresa: "Salaverry",
                         minutos: "12 MIN", tipo: "Combi",
                         placa: "A6N-450", colorLinea: .secondary
                     )
+                    .frame(height: 100)
                     .onTapGesture { router.navigate(to: .rutas) }
                 }
                 .padding(.horizontal, 20)
             }
+            .frame(height: 112)
         }
+        .frame(height: 168)
+        .padding(.bottom, 12)
     }
 }
 

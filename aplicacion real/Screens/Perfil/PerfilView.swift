@@ -16,6 +16,11 @@ struct PerfilView: View {
     @State private var ecoOff: Bool = false
     @State private var showEditSheet: Bool = false
     @State private var tempName: String = ""
+    // ✅ CORREGIDO V3: estado para Wallet
+    @State private var showTarjetaSheet: Bool = false
+    @State private var showCarnetScanner: Bool = false
+    @State private var carnetVerificado: Bool = false
+    @State private var metodoPagoGuardado: String? = nil
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -30,6 +35,10 @@ struct PerfilView: View {
                             .offset(y: 45)
                     }
                     .frame(height: 340)
+
+                    walletSection // ✅ CORREGIDO V3
+                        .padding(.horizontal, 20)
+                        .padding(.top, 24)
 
                     configuracion
                         .padding(.horizontal, 20)
@@ -47,6 +56,20 @@ struct PerfilView: View {
                 nombre = newName
             }
             .presentationDetents([.medium])
+        }
+        // ✅ CORREGIDO V3: sheet de tarjeta
+        .sheet(isPresented: $showTarjetaSheet) {
+            TarjetaFormSheet { numero in
+                let ultimos4 = numero.filter { $0.isNumber }.suffix(4)
+                metodoPagoGuardado = String(ultimos4)
+            }
+            .presentationDetents([.large])
+        }
+        // ✅ CORREGIDO V3: scanner de carnet
+        .fullScreenCover(isPresented: $showCarnetScanner) {
+            CarnetScannerView {
+                carnetVerificado = true
+            }
         }
     }
 
@@ -93,6 +116,20 @@ struct PerfilView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(Capsule().fill(Color.white.opacity(0.20)))
+                            // ✅ CORREGIDO V3: badge Verificado
+                            if carnetVerificado {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.system(size: 10, weight: .bold))
+                                    Text("VERIFICADO")
+                                        .font(.labelCapsSm)
+                                        .appTracking(AppTracking.wideLabel)
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(Color.tertiary))
+                            }
                         }
                     }
                     Spacer()
@@ -138,6 +175,97 @@ struct PerfilView: View {
                 .appTracking(AppTracking.wideLabel)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - ✅ CORREGIDO V3: Mi Wallet
+    private var walletSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("MI WALLET")
+                .font(.labelCapsLg)
+                .foregroundStyle(.onSurfaceVariant)
+                .appTracking(AppTracking.wideLabel)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 10) {
+                // Card 1: Metodo de pago
+                Button {
+                    showTarjetaSheet = true
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle().fill(Color.secondary.opacity(0.14)).frame(width: 44, height: 44)
+                            Image(systemName: "creditcard.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Método de pago")
+                                .font(.bodyMdMedium)
+                                .foregroundStyle(.onSurface)
+                            Text(metodoPagoGuardado.map { "Visa •••• \($0)" } ?? "Agrega una tarjeta")
+                                .font(.bodySm)
+                                .foregroundStyle(.onSurfaceVariant)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.onSurfaceVariant)
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.surfaceContainerLowest)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+
+                // Card 2: Carnet universitario
+                Button {
+                    showCarnetScanner = true
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle().fill(Color.tertiary.opacity(0.14)).frame(width: 44, height: 44)
+                            Image(systemName: "person.text.rectangle.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Carnet universitario")
+                                .font(.bodyMdMedium)
+                                .foregroundStyle(.onSurface)
+                            Text(carnetVerificado ? "Verificado" : "Escanea tu carnet UTP")
+                                .font(.bodySm)
+                                .foregroundStyle(carnetVerificado ? .tertiary : .onSurfaceVariant)
+                        }
+                        Spacer()
+                        if carnetVerificado {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.onSurfaceVariant)
+                        }
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.surfaceContainerLowest)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: - Configuración

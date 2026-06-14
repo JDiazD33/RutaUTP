@@ -2,13 +2,10 @@
 //  BottomNavBar.swift
 //  RutaUTP
 //
-//  Barra de navegación inferior.
-//  - 5 tabs distribuidos uniformemente (HStack + maxWidth: .infinity).
-//  - El background se extiende al borde físico inferior del dispositivo
-//    usando ignoresSafeArea(edges: .bottom) en el contenedor padre y
-//    padding(.bottom, bottomSafeArea()) para el contenido (respeta
-//    el home indicator).
-//  - Tab "Seguridad" usa ícono lock.fill / lock.
+//  ✅ CORREGIDO V3: layout compacto (~56pt sin safe area).
+//  - padding top exacto 8pt
+//  - sin padding vertical interno en NavTabItem
+//  - padding bottom = bottomSafeArea() + 6pt
 //
 
 import SwiftUI
@@ -28,7 +25,6 @@ enum NavTab: CaseIterable, Hashable {
         }
     }
 
-    /// Ícono outline (tab inactivo)
     var icon: String {
         switch self {
         case .mapa:      return "map"
@@ -39,7 +35,6 @@ enum NavTab: CaseIterable, Hashable {
         }
     }
 
-    /// Ícono filled (tab activo)
     var iconFill: String {
         switch self {
         case .mapa:      return "map.fill"
@@ -73,7 +68,6 @@ struct NavTabItem: View {
                 .foregroundStyle(
                     isActive ? Color.appPrimary : Color.onSurfaceVariant.opacity(0.65)
                 )
-                .frame(height: 26)
             Text(tab.label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(
@@ -81,7 +75,6 @@ struct NavTabItem: View {
                 )
                 .lineLimit(1)
         }
-        .padding(.vertical, 6)
         .contentShape(Rectangle())
     }
 }
@@ -104,6 +97,8 @@ struct BottomNavBar: View {
                         isActive: router.currentScreen == tab.screen
                     )
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
                     .onTapGesture {
                         router.navigate(to: tab.screen)
                     }
@@ -111,14 +106,11 @@ struct BottomNavBar: View {
             }
             .padding(.top, 8)
             .padding(.horizontal, 4)
-            .padding(.bottom, bottomSafeArea())
+            .padding(.bottom, bottomSafeArea() + 6)
         }
         .background(Color.appSurface)
     }
 
-    /// Devuelve la altura del safe area inferior real del dispositivo.
-    /// Esto permite que el contenido de la navbar quede por encima del
-    /// home indicator sin dejar un gap visual.
     private func bottomSafeArea() -> CGFloat {
         guard let window = UIApplication.shared
             .connectedScenes
