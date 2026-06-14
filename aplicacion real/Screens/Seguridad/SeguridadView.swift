@@ -3,12 +3,20 @@
 //  RutaUTP
 //
 //  Pantalla de seguridad con resumen, lugares, rutas seguras y comunidad.
+//  TODO es interactivo: denunciar, llamar 105, ver lugares, ver rutas, ver reportes.
 //
 
 import SwiftUI
+import UIKit
 
 struct SeguridadView: View {
     @EnvironmentObject private var router: AppRouter
+
+    @State private var showReportarSheet = false
+    @State private var showLlamarAlert = false
+    @State private var selectedReporte: ReporteComunidad?
+    @State private var selectedRutaIndex: Int? = nil
+    @State private var showAddLugarAlert = false
 
     private let reportes: [ReporteComunidad] = [
         ReporteComunidad(
@@ -23,6 +31,34 @@ struct SeguridadView: View {
             cuerpo: "Demora en Óvalo Papal por obras. Considerar 10 min adicionales.",
             utiles: 45, comentarios: 8, utilMarcado: true,
             avatarColor: .secondaryContainer, avatarForeground: .onSecondaryContainer
+        ),
+        ReporteComunidad(
+            iniciales: "RC", nombre: "Rosa C.", hace: "HACE 1 HORA",
+            tipo: .sugerencia,
+            cuerpo: "Tomar Av. Miraflores a las 7:30 AM evita el tráfico de España.",
+            utiles: 28, comentarios: 5,
+            avatarColor: .tertiaryContainer, avatarForeground: .onTertiaryContainer
+        )
+    ]
+
+    private let rutasSeguras: [RutaSegura] = [
+        RutaSegura(
+            id: 0,
+            titulo: "Zona Segura: Óvalo Papal",
+            descripcion: "Patrullaje activo y alta iluminación hasta las 11:00 PM.",
+            icono: "moon.zzz.fill",
+            iconoBg: .tertiary,
+            iconoFg: .onTertiary,
+            accent: .tertiary
+        ),
+        RutaSegura(
+            id: 1,
+            titulo: "Paradero UTP (Entrada)",
+            descripcion: "Monitoreo por cámaras de seguridad municipal.",
+            icono: "eye.fill",
+            iconoBg: .secondary,
+            iconoFg: .onSecondary,
+            accent: nil
         )
     ]
 
@@ -46,27 +82,49 @@ struct SeguridadView: View {
                 }
             }
 
-            BottomNavBar()
-                .background(Color.clear)
-                .allowsHitTesting(true)
-
             fab
+        }
+        .safeAreaInset(edge: .bottom) {
+            BottomNavBar()
+        }
+        .sheet(isPresented: $showReportarSheet) {
+            ReportarSheet()
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $selectedReporte) { reporte in
+            ReporteDetailSheet(reporte: reporte)
+                .presentationDetents([.medium, .large])
+        }
+        .alert("Llamar al 105", isPresented: $showLlamarAlert) {
+            Button("Llamar") {
+                if let url = URL(string: "tel://105") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancelar", role: .cancel) { }
+        } message: {
+            Text("Se abrirá la aplicación de teléfono para llamar a la central de emergencias.")
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header (logo mejorado)
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: "heart.shield.fill")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.appPrimary)
+            ZStack {
+                Circle()
+                    .fill(Color.appPrimary.opacity(0.12))
+                    .frame(width: 44, height: 44)
+                Image(systemName: "heart.shield.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.appPrimary)
+            }
             Text("Seguridad")
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
             Spacer()
         }
         .padding(.horizontal, 16)
-        .frame(height: 56, alignment: .center)
+        .frame(height: 56)
         .background(Color.appSurface)
         .overlay(
             Rectangle()
@@ -86,7 +144,9 @@ struct SeguridadView: View {
                     .font(.bodySmMedium)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button {} label: {
+            Button {
+                showReportarSheet = true
+            } label: {
                 Text("Denunciar")
                     .font(.bodyXsMedium)
                     .foregroundStyle(.white)
@@ -95,7 +155,10 @@ struct SeguridadView: View {
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.appPrimary))
             }
             .buttonStyle(.plain)
-            Button {} label: {
+            .accessibilityLabel("Denunciar incidente")
+            Button {
+                showLlamarAlert = true
+            } label: {
                 Text("Llamar 105")
                     .font(.bodyXsMedium)
                     .foregroundStyle(.onSurface)
@@ -104,6 +167,7 @@ struct SeguridadView: View {
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.surfaceContainerHigh))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Llamar al 105 emergencias")
         }
         .padding(12)
         .background(
@@ -144,7 +208,7 @@ struct SeguridadView: View {
         )
     }
 
-    // MARK: - Lugares guardados (grid 3 cols)
+    // MARK: - Lugares guardados
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -152,47 +216,66 @@ struct SeguridadView: View {
                     .font(.headlineSm)
                     .foregroundStyle(.onSurface)
                 Spacer()
-                Image(systemName: "pencil")
-                    .font(.system(size: 18, weight: .semibold))
+                Button {
+                    router.navigate(to: .guardado)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("EDITAR")
+                            .font(.labelCapsSm)
+                            .appTracking(AppTracking.wideLabel)
+                    }
                     .foregroundStyle(.onSurfaceVariant)
+                }
+                .buttonStyle(.plain)
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-                lugarTile(nombre: "Casa", icon: "house.fill", bg: Color.primaryContainer.opacity(0.12), fg: .appPrimary, border: false)
-                lugarTile(nombre: "UTP Trujillo", icon: "graduationcap.fill", bg: .appPrimary, fg: .white, border: true)
-                lugarTile(nombre: "Añadir", icon: "plus", bg: Color.surfaceContainerLow, fg: .outline, border: false, dashed: true)
+                lugarTile(nombre: "Casa", icon: "house.fill", bg: Color.primaryContainer.opacity(0.12), fg: .appPrimary, border: false) {
+                    router.navigate(to: .guardado)
+                }
+                lugarTile(nombre: "UTP Trujillo", icon: "graduationcap.fill", bg: .appPrimary, fg: .white, border: true) {
+                    router.navigate(to: .mapaPrincipal)
+                }
+                lugarTile(nombre: "Añadir", icon: "plus", bg: Color.surfaceContainerLow, fg: .outline, border: false, dashed: true) {
+                    router.navigate(to: .guardado)
+                }
             }
         }
     }
 
-    private func lugarTile(nombre: String, icon: String, bg: Color, fg: Color, border: Bool, dashed: Bool = false) -> some View {
-        VStack(spacing: 10) {
-            ZStack {
-                Circle().fill(bg).frame(width: 48, height: 48)
-                    .overlay(
-                        Circle()
-                            .strokeBorder(border ? Color.appPrimary : Color.outline.opacity(0.4),
-                                          style: StrokeStyle(lineWidth: border ? 2 : 1, dash: dashed ? [3, 3] : []))
-                    )
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(fg)
+    private func lugarTile(nombre: String, icon: String, bg: Color, fg: Color, border: Bool, dashed: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle().fill(bg).frame(width: 48, height: 48)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(border ? Color.appPrimary : Color.outline.opacity(0.4),
+                                              style: StrokeStyle(lineWidth: border ? 2 : 1, dash: dashed ? [3, 3] : []))
+                        )
+                    Image(systemName: icon)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(fg)
+                }
+                Text(nombre)
+                    .font(.labelCapsMd)
+                    .foregroundStyle(.onSurface)
+                    .appTracking(AppTracking.wideLabel)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            Text(nombre)
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurface)
-                .appTracking(AppTracking.wideLabel)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.surfaceContainerLowest)
+            )
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.surfaceContainerLowest)
-        )
+        .buttonStyle(.plain)
     }
 
-    // MARK: - Rutas seguras hoy
+    // MARK: - Rutas seguras
     private var rutasSegurasSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -203,106 +286,107 @@ struct SeguridadView: View {
             }
 
             // Mapa nocturno
-            ZStack(alignment: .bottomLeading) {
-                LinearGradient(
-                    colors: [Color.tertiary.opacity(0.55), Color.secondary.opacity(0.45)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                )
-                GeometryReader { geo in
-                    let w = geo.size.width
-                    let h = geo.size.height
-                    Path { p in
-                        p.move(to: CGPoint(x: 20, y: h * 0.65))
-                        p.addLine(to: CGPoint(x: w * 0.4, y: h * 0.50))
-                        p.addLine(to: CGPoint(x: w * 0.7, y: h * 0.30))
-                        p.addLine(to: CGPoint(x: w - 20, y: h * 0.20))
+            Button {
+                router.navigate(to: .mapaPrincipal)
+            } label: {
+                ZStack(alignment: .bottomLeading) {
+                    LinearGradient(
+                        colors: [Color.tertiary.opacity(0.65), Color.secondary.opacity(0.45)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                    GeometryReader { geo in
+                        let w = geo.size.width
+                        let h = geo.size.height
+                        Path { p in
+                            p.move(to: CGPoint(x: 20, y: h * 0.65))
+                            p.addLine(to: CGPoint(x: w * 0.4, y: h * 0.50))
+                            p.addLine(to: CGPoint(x: w * 0.7, y: h * 0.30))
+                            p.addLine(to: CGPoint(x: w - 20, y: h * 0.20))
+                        }
+                        .stroke(Color.tertiaryFixedDim.opacity(0.85), style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 4]))
                     }
-                    .stroke(Color.tertiaryFixedDim.opacity(0.85), style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 4]))
-
-                    ForEach([CGPoint(x: w * 0.20, y: h * 0.62),
-                             CGPoint(x: w * 0.40, y: h * 0.50),
-                             CGPoint(x: w * 0.70, y: h * 0.30),
-                             CGPoint(x: w * 0.85, y: h * 0.25)], id: \.x) { p in
-                        Circle().fill(Color.tertiaryFixedDim)
-                            .frame(width: 8, height: 8)
-                            .position(p)
+                    LinearGradient(
+                        colors: [Color.clear, Color.black.opacity(0.60)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    HStack(spacing: 6) {
+                        Image(systemName: "lightbulb.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.tertiaryFixedDim)
+                        Text("Paraderos iluminados activos: 24")
+                            .font(.bodySm)
+                            .foregroundStyle(.white)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.85)
+                    )
+                    .padding(12)
                 }
-                LinearGradient(
-                    colors: [Color.clear, Color.black.opacity(0.60)],
-                    startPoint: .top, endPoint: .bottom
-                )
-                HStack(spacing: 6) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.tertiaryFixedDim)
-                    Text("Paraderos iluminados activos: 24")
-                        .font(.bodySm)
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(.ultraThinMaterial)
-                        .opacity(0.85)
-                )
-                .padding(12)
+                .frame(height: 192)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
             }
-            .frame(height: 192)
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
+            .buttonStyle(.plain)
 
             VStack(spacing: 12) {
-                rutaSeguraRow(
-                    icon: "moon.zzz.fill",
-                    iconColor: .onTertiary,
-                    iconBg: .tertiary,
-                    title: "Zona Segura: Óvalo Papal",
-                    subtitle: "Patrullaje activo y alta iluminación hasta las 11:00 PM.",
-                    accent: .tertiary
-                )
-                rutaSeguraRow(
-                    icon: "eye.fill",
-                    iconColor: .onSecondary,
-                    iconBg: .secondary,
-                    title: "Paradero UTP (Entrada)",
-                    subtitle: "Monitoreo por cámaras de seguridad municipal.",
-                    accent: nil
-                )
+                ForEach(rutasSeguras) { ruta in
+                    Button {
+                        selectedRutaIndex = ruta.id
+                    } label: {
+                        rutaSeguraRow(ruta: ruta)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .alert(selectedRutaIndex != nil ? rutasSeguras[selectedRutaIndex ?? 0].titulo : "",
+               isPresented: Binding(
+                get: { selectedRutaIndex != nil },
+                set: { if !$0 { selectedRutaIndex = nil } }
+               )) {
+            Button("Ver en mapa") {
+                router.navigate(to: .mapaPrincipal)
+                selectedRutaIndex = nil
+            }
+            Button("Cerrar", role: .cancel) { selectedRutaIndex = nil }
+        } message: {
+            if let idx = selectedRutaIndex {
+                Text(rutasSeguras[idx].descripcion)
             }
         }
     }
 
-    private func rutaSeguraRow(icon: String,
-                               iconColor: Color,
-                               iconBg: Color,
-                               title: String,
-                               subtitle: String,
-                               accent: Color?) -> some View {
+    private func rutaSeguraRow(ruta: RutaSegura) -> some View {
         HStack(alignment: .top, spacing: 0) {
-            if let accent {
+            if let accent = ruta.accent {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(accent)
                     .frame(width: 4)
             }
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    Circle().fill(iconBg).frame(width: 40, height: 40)
-                    Image(systemName: icon)
+                    Circle().fill(ruta.iconoBg).frame(width: 40, height: 40)
+                    Image(systemName: ruta.icono)
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(iconColor)
+                        .foregroundStyle(ruta.iconoFg)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
+                    Text(ruta.titulo)
                         .font(.bodyMdMedium)
                         .foregroundStyle(.onSurface)
-                    Text(subtitle)
+                    Text(ruta.descripcion)
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                 }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.onSurfaceVariant)
             }
             .padding(14)
         }
@@ -328,14 +412,24 @@ struct SeguridadView: View {
                         .font(.headlineSm)
                 }
                 Spacer()
-                Text("VER TODOS")
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.appPrimary)
-                    .appTracking(AppTracking.wideLabel)
+                Button {
+                    showReportarSheet = true
+                } label: {
+                    Text("AÑADIR")
+                        .font(.labelCapsSm)
+                        .foregroundStyle(.appPrimary)
+                        .appTracking(AppTracking.wideLabel)
+                }
+                .buttonStyle(.plain)
             }
             VStack(spacing: 12) {
                 ForEach(reportes) { r in
-                    ReporteCard(reporte: r)
+                    Button {
+                        selectedReporte = r
+                    } label: {
+                        ReporteCard(reporte: r)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -343,7 +437,9 @@ struct SeguridadView: View {
 
     // MARK: - FAB
     private var fab: some View {
-        Button {} label: {
+        Button {
+            showReportarSheet = true
+        } label: {
             Image(systemName: "megaphone.fill")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.white)
@@ -376,6 +472,17 @@ struct SeguridadView: View {
         f.dateFormat = "EEEE d 'de' MMMM"
         return f.string(from: Date()).capitalized
     }
+}
+
+// MARK: - Modelo de Ruta Segura
+private struct RutaSegura: Identifiable {
+    let id: Int
+    let titulo: String
+    let descripcion: String
+    let icono: String
+    let iconoBg: Color
+    let iconoFg: Color
+    let accent: Color?
 }
 
 // MARK: - Reporte card
@@ -432,6 +539,9 @@ private struct ReporteCard: View {
                         .foregroundStyle(.onSurfaceVariant)
                 }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.onSurfaceVariant)
             }
         }
         .padding(16)
@@ -443,6 +553,122 @@ private struct ReporteCard: View {
                         .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
                 )
         )
+    }
+}
+
+// MARK: - Reporte Detail Sheet
+private struct ReporteDetailSheet: View {
+    let reporte: ReporteComunidad
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
+                    Text(reporte.iniciales)
+                        .font(.headlineSm)
+                        .foregroundStyle(reporte.avatarForeground)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(reporte.nombre)
+                        .font(.headlineSm)
+                    Text(reporte.hace)
+                        .font(.labelCapsSm)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                }
+                Spacer()
+                Text(reporte.tipo.rawValue)
+                    .font(.labelCapsMd)
+                    .foregroundStyle(reporte.tipo.foreground)
+                    .appTracking(AppTracking.wideLabel)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
+            }
+            Divider()
+            Text(reporte.cuerpo)
+                .font(.bodyLg)
+                .foregroundStyle(.onSurface)
+            Divider()
+            HStack(spacing: 24) {
+                Label("Útil (\(reporte.utiles))", systemImage: reporte.utilMarcado ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .foregroundStyle(reporte.utilMarcado ? .appPrimary : .onSurfaceVariant)
+                Label("\(reporte.comentarios)", systemImage: "bubble.left")
+                    .foregroundStyle(.onSurfaceVariant)
+                Spacer()
+            }
+            .font(.bodyMdMedium)
+            Spacer()
+            Button { dismiss() } label: {
+                Text("Cerrar")
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                    .foregroundStyle(.white)
+                    .font(.bodyMdMedium)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(20)
+    }
+}
+
+// MARK: - Reportar Sheet (compartido con MapaView, redefinido localmente)
+private struct ReportarSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var tipo: TipoReporte = .alerta
+    @State private var descripcion: String = ""
+    @State private var showSuccess = false
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Reportar incidente")
+                    .font(.headlineMd)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("TIPO DE REPORTE")
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    Picker("Tipo", selection: $tipo) {
+                        Text("Alerta").tag(TipoReporte.alerta)
+                        Text("Tráfico").tag(TipoReporte.trafico)
+                        Text("Sugerencia").tag(TipoReporte.sugerencia)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("DESCRIPCIÓN")
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    TextField("¿Qué sucede?", text: $descripcion, axis: .vertical)
+                        .lineLimit(3...6)
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+                }
+                Spacer()
+                Button {
+                    showSuccess = true
+                } label: {
+                    Text("Enviar reporte")
+                        .font(.headlineSm)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                }
+                .buttonStyle(.plain)
+                .disabled(descripcion.isEmpty)
+                .opacity(descripcion.isEmpty ? 0.5 : 1.0)
+            }
+            .padding(20)
+        }
+        .alert("Reporte enviado", isPresented: $showSuccess) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("Gracias por colaborar con la comunidad.")
+        }
     }
 }
 

@@ -11,7 +11,7 @@ struct DetalleRutaView: View {
     @EnvironmentObject private var router: AppRouter
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.appBackground.ignoresSafeArea()
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -30,9 +30,11 @@ struct DetalleRutaView: View {
                     iniciarButton
                         .padding(.horizontal, 20)
                         .padding(.top, 28)
-                        .padding(.bottom, 110)
+                        .padding(.bottom, 120)
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom) {
             BottomNavBar()
         }
     }

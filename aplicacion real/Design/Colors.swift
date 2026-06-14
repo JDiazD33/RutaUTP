@@ -73,3 +73,65 @@ extension Color {
         self.init(red: r, green: g, blue: b)
     }
 }
+
+// MARK: - ShapeStyle: permite usar los colores en .foregroundStyle(.appPrimary) etc.
+//
+// SwiftUI recibe un `ShapeStyle` (protocolo) en `.foregroundStyle()`,
+// `.fill()` y similares. Como nuestros colores son extension de `Color`
+// y no de `ShapeStyle`, el compilador no los encuentra en contexto
+// generico. Esta extension los re-exporta para que el shorthand funcione.
+//
+// IMPORTANTE: NO exportamos `secondary` ni `tertiary` porque colisionan
+// con los colores jerarquicos del sistema (iOS 16+). Para esos casos usa
+// `Color.secondary` y `Color.tertiary` explicitamente (que apuntan a
+// NUESTROS colores gracias a la extension de `Color` de arriba).
+extension ShapeStyle where Self == Color {
+
+    // Primarios
+    static var appPrimary:           Color { .appPrimary }
+    static var primaryContainer:     Color { .primaryContainer }
+    static var onPrimary:            Color { .onPrimary }
+    static var onPrimaryContainer:   Color { .onPrimaryContainer }
+    static var primaryFixed:         Color { .primaryFixed }
+    static var primaryFixedDim:      Color { .primaryFixedDim }
+    static var inversePrimary:       Color { .inversePrimary }
+
+    // Terciarios (los "container" no colisionan con el sistema)
+    static var tertiaryContainer:    Color { .tertiaryContainer }
+    static var onTertiary:           Color { .onTertiary }
+    static var onTertiaryContainer:  Color { .onTertiaryContainer }
+    static var tertiaryFixed:        Color { .tertiaryFixed }
+    static var tertiaryFixedDim:     Color { .tertiaryFixedDim }
+
+    // Secundarios container
+    static var secondaryContainer:   Color { .secondaryContainer }
+    static var onSecondary:          Color { .onSecondary }
+    static var onSecondaryContainer: Color { .onSecondaryContainer }
+
+    // Superficie
+    static var appBackground:             Color { .appBackground }
+    static var appSurface:                Color { .appSurface }
+    static var surfaceContainer:          Color { .surfaceContainer }
+    static var surfaceContainerLow:       Color { .surfaceContainerLow }
+    static var surfaceContainerHigh:      Color { .surfaceContainerHigh }
+    static var surfaceContainerHighest:   Color { .surfaceContainerHighest }
+    static var surfaceContainerLowest:    Color { .surfaceContainerLowest }
+    static var surfaceDim:                Color { .surfaceDim }
+    static var surfaceBright:             Color { .surfaceBright }
+    static var surfaceVariant:            Color { .surfaceVariant }
+
+    // On-Surface
+    static var onSurface:          Color { .onSurface }
+    static var onSurfaceVariant:   Color { .onSurfaceVariant }
+    static var inverseSurface:     Color { .inverseSurface }
+    static var inverseOnSurface:   Color { .inverseOnSurface }
+
+    // Outline
+    static var outline:            Color { .outline }
+    static var outlineVariant:     Color { .outlineVariant }
+
+    // Error
+    static var appError:           Color { .appError }
+    static var errorContainer:     Color { .errorContainer }
+    static var onErrorContainer:   Color { .onErrorContainer }
+}

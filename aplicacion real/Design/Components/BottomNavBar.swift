@@ -12,7 +12,7 @@ enum NavTab: String, CaseIterable, Identifiable {
     case mapa      = "Mapa"
     case rutas     = "Rutas"
     case guardado  = "Guardado"
-    case seguridad = "Seguridad"
+    case seguridad = "Seguro"
     case perfil    = "Perfil"
 
     var id: String { rawValue }
@@ -30,7 +30,7 @@ enum NavTab: String, CaseIterable, Identifiable {
     var screen: AppScreen {
         switch self {
         case .mapa:      return .mapaPrincipal
-        case .rutas:     return .mapaPrincipal  // Rutas vive dentro de Mapa + Detalle
+        case .rutas:     return .detalleRuta
         case .guardado:  return .guardado
         case .seguridad: return .seguridad
         case .perfil:    return .perfil
@@ -43,11 +43,12 @@ struct BottomNavBar: View {
 
     private var activeTab: NavTab? {
         switch router.currentScreen {
-        case .mapaPrincipal, .detalleRuta: return .mapa
-        case .guardado:                    return .guardado
-        case .seguridad:                   return .seguridad
-        case .perfil:                      return .perfil
-        case .bienvenida:                  return nil
+        case .mapaPrincipal: return .mapa
+        case .detalleRuta:   return .rutas
+        case .guardado:      return .guardado
+        case .seguridad:     return .seguridad
+        case .perfil:        return .perfil
+        case .bienvenida:    return nil
         }
     }
 
@@ -58,14 +59,14 @@ struct BottomNavBar: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 18)
+        .padding(.horizontal, 6)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
         .frame(maxWidth: .infinity)
         .background(
             ZStack {
                 Color.appSurface
-                Color.white.opacity(0.001) // permite blur
+                Color.white.opacity(0.001)
             }
             .overlay(
                 Rectangle()
@@ -74,7 +75,7 @@ struct BottomNavBar: View {
                 alignment: .top
             )
         )
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 12, topTrailingRadius: 12))
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16))
         .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: -4)
     }
 
@@ -84,14 +85,16 @@ struct BottomNavBar: View {
         Button {
             router.navigate(to: tab.screen)
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Image(systemName: tab.icon)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                 Text(tab.rawValue)
-                    .font(.labelCapsMd)
+                    .font(.system(size: 10, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .foregroundStyle(isActive ? Color.onPrimaryContainer : Color.onSurfaceVariant.opacity(0.70))
-            .padding(.horizontal, 12)
+            .foregroundStyle(isActive ? Color.onPrimaryContainer : Color.onSurfaceVariant.opacity(0.75))
+            .padding(.horizontal, 6)
             .padding(.vertical, 4)
             .frame(minHeight: 48)
             .background(

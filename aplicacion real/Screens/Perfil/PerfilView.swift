@@ -18,22 +18,27 @@ struct PerfilView: View {
     @State private var tempName: String = ""
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.appBackground.ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    hero
-                    statsCard
-                        .padding(.horizontal, 20)
-                        .offset(y: -36)
+                    ZStack(alignment: .bottom) {
+                        hero
+                        statsCard
+                            .padding(.horizontal, 20)
+                            .offset(y: 45)
+                    }
+                    .frame(height: 340)
+
                     configuracion
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
-                    Spacer(minLength: 100)
+                    Spacer(minLength: 120)
                 }
             }
-
+        }
+        .safeAreaInset(edge: .bottom) {
             BottomNavBar()
         }
         .sheet(isPresented: $showEditSheet) {
@@ -46,51 +51,55 @@ struct PerfilView: View {
 
     // MARK: - Hero
     private var hero: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack(alignment: .topLeading) {
             LinearGradient(
                 colors: [Color.appPrimary, Color.primaryContainer, Color.tertiary],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
-            .frame(height: 220)
+            .frame(height: 340)
 
-            // Decorativo
             Circle()
                 .fill(Color.white.opacity(0.10))
-                .frame(width: 200, height: 200)
-                .offset(x: 220, y: -60)
+                .frame(width: 220, height: 220)
+                .offset(x: 230, y: -70)
             Circle()
                 .fill(Color.white.opacity(0.06))
-                .frame(width: 140, height: 140)
-                .offset(x: -40, y: 40)
+                .frame(width: 150, height: 150)
+                .offset(x: -50, y: 50)
 
-            HStack(alignment: .center, spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(Color.inversePrimary)
-                        .frame(width: 72, height: 72)
-                        .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                    Text(iniciales(nombre))
-                        .font(.headlineMd)
-                        .foregroundStyle(.white)
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(nombre)
-                        .font(.headlineLgMobile)
-                        .foregroundStyle(.white)
-                    HStack(spacing: 6) {
-                        Text("ESTUDIANTE UTP")
-                            .font(.labelCapsSm)
-                            .foregroundStyle(.white.opacity(0.95))
-                            .appTracking(AppTracking.wideLabel)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.white.opacity(0.20)))
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer().frame(height: 56)
+
+                HStack(alignment: .center, spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.inversePrimary)
+                            .frame(width: 72, height: 72)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                        Text(iniciales(nombre))
+                            .font(.headlineMd)
+                            .foregroundStyle(.white)
                     }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(nombre)
+                            .font(.headlineLgMobile)
+                            .foregroundStyle(.white)
+                        HStack(spacing: 6) {
+                            Text("ESTUDIANTE UTP")
+                                .font(.labelCapsSm)
+                                .foregroundStyle(.white.opacity(0.95))
+                                .appTracking(AppTracking.wideLabel)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(Color.white.opacity(0.20)))
+                        }
+                    }
+                    Spacer()
                 }
+                .padding(.horizontal, 20)
+
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 18)
         }
     }
 
@@ -107,7 +116,7 @@ struct PerfilView: View {
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.surfaceContainerLowest)
-                .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.10), radius: 12, x: 0, y: 6)
         )
     }
 

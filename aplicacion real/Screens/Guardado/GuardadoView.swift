@@ -2,16 +2,19 @@
 //  GuardadoView.swift
 //  RutaUTP
 //
-//  Lugares y líneas guardadas. Tabs + sheet para añadir lugar.
+//  Lugares y líneas guardadas. Tabs + sheets de detalle + sheet para añadir lugar.
 //
 
 import SwiftUI
+import MapKit
 
 struct GuardadoView: View {
     @EnvironmentObject private var router: AppRouter
     @State private var selectedTab: Tab = .lugares
     @State private var lugares: [LugarGuardado]
     @State private var showAddSheet = false
+    @State private var selectedLugar: LugarGuardado?
+    @State private var selectedLinea: LineaGuardada?
 
     init() {
         _lugares = State(initialValue: Self.sampleLugares())
@@ -33,7 +36,7 @@ struct GuardadoView: View {
     ]
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.appBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -46,10 +49,11 @@ struct GuardadoView: View {
                         case .lineas:  lineasSection
                         }
                     }
-                    .padding(.bottom, 110)
+                    .padding(.bottom, 120)
                 }
             }
-
+        }
+        .safeAreaInset(edge: .bottom) {
             BottomNavBar()
         }
         .sheet(isPresented: $showAddSheet) {
@@ -57,6 +61,16 @@ struct GuardadoView: View {
                 lugares.insert(nuevo, at: 0)
             }
             .presentationDetents([.medium])
+        }
+        .sheet(item: $selectedLugar) { lugar in
+            LugarDetailSheet(lugar: lugar) {
+                lugares.removeAll { $0.id == lugar.id }
+            }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $selectedLinea) { linea in
+            LineaDetailSheet(linea: linea)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -86,7 +100,7 @@ struct GuardadoView: View {
                 .background(Capsule().fill(Color.primaryContainer))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Añadir lugar")
+            .accessibilityLabel("Añadir lugar guardado")
         }
         .padding(.horizontal, 16)
         .frame(height: 56)
@@ -132,7 +146,7 @@ struct GuardadoView: View {
     // MARK: - Lugares section
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Toca un lugar para ver la ruta desde tu posición.")
+            Text("Toca un lugar para ver más opciones.")
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .padding(.horizontal, 20)
@@ -154,7 +168,7 @@ struct GuardadoView: View {
 
     private func lugarRow(_ lugar: LugarGuardado) -> some View {
         Button {
-            router.navigate(to: .mapaPrincipal)
+            selectedLugar = lugar
         } label: {
             HStack(spacing: 14) {
                 iconCircle(lugar: lugar)
@@ -220,7 +234,9 @@ struct GuardadoView: View {
     }
 
     private func lineaRow(_ linea: LineaGuardada) -> some View {
-        Button {} label: {
+        Button {
+            selectedLinea = linea
+        } label: {
             HStack(spacing: 14) {
                 ZStack {
                     Circle().fill(Color.primaryContainer).frame(width: 40, height: 40)
@@ -294,12 +310,244 @@ struct GuardadoView: View {
     }
 }
 
+// MARK: - Lugar Detail Sheet
+private struct LugarDetailSheet: View {
+    let lugar: LugarGuardado
+    var onEliminar: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var router: AppRouter
+
+    @State private var cameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0289),
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+    )
+
+    private var lugarCenter: CLLocationCoordinate2D {
+        cameraPosition.region?.center
+            ?? CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0289)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Mapa preview
+            Map(position: $cameraPosition) {
+                Annotation(lugar.nombre, coordinate: lugarCenter) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.appPrimary)
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                        Image(systemName: lugar.categoria.icono)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+            .frame(height: 180)
+            .clipped()
+
+            VStack(alignment: .leading, spacing: 16) {
+                // Header
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(lugar.nombre == "UTP" ? Color.appPrimary : Color.primaryContainer.opacity(0.15))
+                            .frame(width: 56, height: 56)
+                        Image(systemName: lugar.categoria.icono)
+                            .font(.system(size: 28))
+                            .foregroundStyle(lugar.nombre == "UTP" ? .white : .appPrimary)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text(lugar.nombre)
+                                .font(.headlineMd)
+                            if lugar.esFrecuente {
+                                Text("FRECUENTE")
+                                    .font(.labelCapsSm)
+                                    .foregroundStyle(.onTertiary)
+                                    .appTracking(AppTracking.wideLabel)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.tertiary))
+                            }
+                        }
+                        Text(lugar.direccion)
+                            .font(.bodySm)
+                            .foregroundStyle(.onSurfaceVariant)
+                    }
+                    Spacer()
+                }
+
+                Divider()
+
+                // Botones de acción
+                VStack(spacing: 10) {
+                    Button {
+                        router.navigate(to: .mapaPrincipal)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "map.fill")
+                            Text("Ver ruta desde mi posición")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                        .foregroundStyle(.white)
+                        .font(.bodyMdMedium)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        router.navigate(to: .detalleRuta)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "bus.fill")
+                            Text("Buscar transporte cercano")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryContainer))
+                        .foregroundStyle(.onPrimaryContainer)
+                        .font(.bodyMdMedium)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        onEliminar()
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                            Text("Eliminar de guardados")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
+                        .foregroundStyle(.onErrorContainer)
+                        .font(.bodyMdMedium)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(20)
+        }
+    }
+}
+
+// MARK: - Linea Detail Sheet
+private struct LineaDetailSheet: View {
+    let linea: LineaGuardada
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var router: AppRouter
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // Header
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle().fill(Color.primaryContainer).frame(width: 64, height: 64)
+                    Text(linea.letra)
+                        .font(.displayNumberMd)
+                        .foregroundStyle(.onPrimaryContainer)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(linea.nombre)
+                        .font(.headlineSm)
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 12))
+                        Text(linea.tiempoEstimado)
+                            .font(.labelCapsMd)
+                            .appTracking(AppTracking.wideLabel)
+                    }
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.tertiaryContainer))
+                }
+                Spacer()
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("RECORRIDO")
+                    .font(.labelCapsMd)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .appTracking(AppTracking.wideLabel)
+                Text(linea.recorrido)
+                    .font(.bodyMd)
+                    .foregroundStyle(.onSurface)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("PARADAS PRINCIPALES")
+                    .font(.labelCapsMd)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .appTracking(AppTracking.wideLabel)
+                VStack(alignment: .leading, spacing: 8) {
+                    paradaRow("Av. España")
+                    paradaRow("Óvalo Papal")
+                    paradaRow("Plaza de Armas")
+                    paradaRow("UTP Trujillo")
+                }
+            }
+
+            Spacer()
+
+            VStack(spacing: 10) {
+                Button {
+                    router.navigate(to: .detalleRuta)
+                    dismiss()
+                } label: {
+                    HStack {
+                        Image(systemName: "location.fill")
+                        Text("Ver ruta completa")
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                    .foregroundStyle(.white)
+                    .font(.headlineSm)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Cerrar")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .font(.bodyMdMedium)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(20)
+    }
+
+    private func paradaRow(_ nombre: String) -> some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Color.appPrimary)
+                .frame(width: 8, height: 8)
+            Text(nombre)
+                .font(.bodyMd)
+                .foregroundStyle(.onSurface)
+            Spacer()
+        }
+    }
+}
+
 // MARK: - Add Lugar sheet
 private struct AddLugarSheet: View {
     var onSave: (LugarGuardado) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var nombre: String = ""
     @State private var direccion: String = ""
+    @State private var categoria: CategoriaLugar = .otro
 
     var body: some View {
         NavigationStack {
@@ -308,22 +556,38 @@ private struct AddLugarSheet: View {
                     .font(.headlineMd)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Nombre")
+                    Text("NOMBRE")
                         .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
                     TextField("Ej. Mi trabajo", text: $nombre)
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Dirección")
+                    Text("DIRECCIÓN")
                         .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
                     TextField("Ej. Av. España 123", text: $direccion)
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("CATEGORÍA")
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    Picker("Categoría", selection: $categoria) {
+                        ForEach(CategoriaLugar.allCases) { c in
+                            Text(c.rawValue).tag(c)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
                 }
 
                 Spacer()
@@ -332,7 +596,7 @@ private struct AddLugarSheet: View {
                     let nuevo = LugarGuardado(
                         nombre: nombre.isEmpty ? "Nuevo lugar" : nombre,
                         direccion: direccion.isEmpty ? "Sin dirección" : direccion,
-                        categoria: .otro
+                        categoria: categoria
                     )
                     onSave(nuevo)
                     dismiss()

@@ -2,16 +2,26 @@
 //  MapaView.swift
 //  RutaUTP
 //
-//  Pantalla principal con mapa, búsqueda, marcadores y cards de micros.
+//  Pantalla principal con mapa real (MapKit), búsqueda, marcadores y cards de micros.
 //
 
 import SwiftUI
+import MapKit
 
 struct MapaView: View {
     @EnvironmentObject private var router: AppRouter
     @State private var drawerOpen = false
     @State private var destination: Destino = .utp
     @State private var searchText: String = ""
+    @State private var showReportarSheet = false
+    @State private var showReportSuccess = false
+
+    @State private var cameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0289),
+            span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
+        )
+    )
 
     enum Destino: String, CaseIterable, Identifiable {
         case casa, utp, trabajo
@@ -32,6 +42,16 @@ struct MapaView: View {
         }
     }
 
+    // Coordenadas aproximadas: Trujillo - UTP sede
+    private let utpCoord  = CLLocationCoordinate2D(latitude: -8.1120, longitude: -79.0300)
+    private let userCoord = CLLocationCoordinate2D(latitude: -8.1110, longitude: -79.0270)
+    private let routeCoords: [CLLocationCoordinate2D] = [
+        CLLocationCoordinate2D(latitude: -8.1110, longitude: -79.0270),
+        CLLocationCoordinate2D(latitude: -8.1114, longitude: -79.0280),
+        CLLocationCoordinate2D(latitude: -8.1117, longitude: -79.0290),
+        CLLocationCoordinate2D(latitude: -8.1120, longitude: -79.0300)
+    ]
+
     private let rutas: [Ruta] = [
         Ruta(id: "1", linea: "LÍNEA 10", nombre: "El Cortijo",
              empresa: "Salaverry", tipo: .micro, placa: "T1B-721",
@@ -46,110 +66,61 @@ struct MapaView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            mapBackground
+            // Mapa real MapKit
+            Map(position: $cameraPosition) {
+                Annotation("UTP Trujillo", coordinate: utpCoord) {
+                    UTPMarker()
+                }
+                Annotation("Yo", coordinate: userCoord) {
+                    UserMarker()
+                }
+                MapPolyline(coordinates: routeCoords)
+                    .stroke(Color.appPrimary, style: StrokeStyle(lineWidth: 5, lineCap: .round, dash: [10, 6]))
+            }
+            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+            .ignoresSafeArea()
+
+            // Header
             VStack(spacing: 0) {
                 TopAppBar(leading: .menu, title: "Mapa", titleColor: .appPrimary)
-                ZStack(alignment: .bottom) {
-                    Color.clear
-                    mapOverlays
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                searchPanel
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                Spacer()
             }
+
+            // Panel inferior
+            VStack {
+                Spacer()
+                reportarPill
+                    .padding(.leading, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                bottomPanel
+            }
+            .padding(.bottom, 12)
 
             // Drawer overlay
             SideDrawer(isOpen: $drawerOpen)
                 .environmentObject(router)
-
-            // Bottom nav
-            VStack {
-                Spacer()
-                BottomNavBar()
-            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            BottomNavBar()
         }
         .onReceive(NotificationCenter.default.publisher(for: .openSideDrawer)) { _ in
             drawerOpen = true
         }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
-    }
-
-    // MARK: - Map background (placeholder con gradiente + textura)
-    private var mapBackground: some View {
-        ZStack {
-            // Fondo base
-            Color.surfaceContainerLow
-
-            // "Calles" decorativas
-            GeometryReader { geo in
-                let w = geo.size.width
-                let h = geo.size.height
-                // Diagonal principal
-                Path { p in
-                    p.move(to: CGPoint(x: 0, y: h * 0.75))
-                    p.addLine(to: CGPoint(x: w * 0.35, y: h * 0.45))
-                    p.addLine(to: CGPoint(x: w * 0.7, y: h * 0.30))
-                    p.addLine(to: CGPoint(x: w, y: h * 0.10))
-                }
-                .stroke(Color.outlineVariant.opacity(0.45), style: StrokeStyle(lineWidth: 8, lineCap: .round))
-
-                Path { p in
-                    p.move(to: CGPoint(x: w * 0.05, y: h * 0.15))
-                    p.addLine(to: CGPoint(x: w * 0.55, y: h * 0.55))
-                    p.addLine(to: CGPoint(x: w * 0.95, y: h * 0.75))
-                }
-                .stroke(Color.outlineVariant.opacity(0.35), style: StrokeStyle(lineWidth: 6, lineCap: .round))
-
-                Path { p in
-                    p.move(to: CGPoint(x: w * 0.20, y: h))
-                    p.addLine(to: CGPoint(x: w * 0.30, y: h * 0.70))
-                    p.addLine(to: CGPoint(x: w * 0.40, y: h * 0.40))
-                    p.addLine(to: CGPoint(x: w * 0.55, y: 0))
-                }
-                .stroke(Color.outlineVariant.opacity(0.30), style: StrokeStyle(lineWidth: 5, lineCap: .round))
-            }
-
-            // Gradientes superior e inferior (fog)
-            VStack(spacing: 0) {
-                LinearGradient(
-                    colors: [Color.appBackground.opacity(0.95), Color.appBackground.opacity(0.0)],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 120)
-                Spacer()
-                LinearGradient(
-                    colors: [Color.appBackground.opacity(0.0), Color.appBackground.opacity(0.90)],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .frame(height: 220)
-            }
-            .allowsHitTesting(false)
-
-            // Marcadores
-            GeometryReader { geo in
-                let w = geo.size.width
-                let h = geo.size.height
-                userMarker
-                    .position(x: w * 0.33, y: h * 0.50)
-                utpMarker
-                    .position(x: w * 0.60, y: h * 0.40)
-            }
+        .sheet(isPresented: $showReportarSheet) {
+            ReportarSheet()
+                .presentationDetents([.medium, .large])
         }
-        .ignoresSafeArea()
-    }
-
-    // MARK: - Overlays flotantes
-    private var mapOverlays: some View {
-        VStack(spacing: 16) {
-            searchPanel
-                .padding(.horizontal, 20)
-            Spacer()
-            reportarPill
-                .padding(.leading, 20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            bottomPanel
+        .alert("Reporte enviado", isPresented: $showReportSuccess) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Tu reporte fue enviado a la comunidad. Gracias por colaborar.")
         }
-        .padding(.bottom, 80) // espacio para la navbar
     }
 
+    // MARK: - Search panel
     private var searchPanel: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
@@ -205,8 +176,11 @@ struct MapaView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Reportar pill
     private var reportarPill: some View {
-        Button {} label: {
+        Button {
+            showReportarSheet = true
+        } label: {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 18, weight: .semibold))
@@ -224,8 +198,10 @@ struct MapaView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Reportar incidente")
     }
 
+    // MARK: - Bottom panel (transportes)
     private var bottomPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -242,16 +218,21 @@ struct MapaView: View {
                             .fill(Color.appSurface.opacity(0.65))
                     )
                 Spacer()
-                Text("En vivo")
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.appPrimary)
-                    .appTracking(AppTracking.wideLabel)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.primaryFixed)
-                    )
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.tertiary)
+                        .frame(width: 6, height: 6)
+                    Text("En vivo")
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.appPrimary)
+                        .appTracking(AppTracking.wideLabel)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.primaryFixed)
+                )
             }
             .padding(.horizontal, 20)
 
@@ -267,28 +248,11 @@ struct MapaView: View {
             }
         }
     }
+}
 
-    // MARK: - Markers
-    private var userMarker: some View {
-        ZStack {
-            Circle()
-                .fill(Color.secondaryContainer.opacity(0.4))
-                .frame(width: 32, height: 32)
-                .scaleEffect(pulseScale)
-                .opacity(pulseOpacity)
-                .onAppear { startPulse() }
-            Circle()
-                .fill(Color.secondaryContainer)
-                .frame(width: 24, height: 24)
-                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                .shadow(color: .black.opacity(0.20), radius: 4, x: 0, y: 2)
-            Image(systemName: "figure.walk.circle.fill")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.onSecondaryContainer)
-        }
-    }
-
-    private var utpMarker: some View {
+// MARK: - Marcadores personalizados
+private struct UTPMarker: View {
+    var body: some View {
         VStack(spacing: 4) {
             Text("UTP Trujillo")
                 .font(.labelCapsMd)
@@ -297,27 +261,120 @@ struct MapaView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(Capsule().fill(Color.appPrimary))
+                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
             ZStack {
                 Circle()
                     .fill(Color.appPrimary)
                     .frame(width: 40, height: 40)
-                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                    .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                    .shadow(color: .black.opacity(0.30), radius: 6, x: 0, y: 3)
                 Image(systemName: "graduationcap.fill")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
             }
         }
     }
+}
 
-    // MARK: - Pulse animation
-    @State private var pulseScale: CGFloat = 1.0
-    @State private var pulseOpacity: Double = 1.0
+private struct UserMarker: View {
+    @State private var pulse: Bool = false
 
-    private func startPulse() {
-        withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) {
-            pulseScale = 1.6
-            pulseOpacity = 0
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.secondaryContainer.opacity(0.4))
+                .frame(width: 32, height: 32)
+                .scaleEffect(pulse ? 1.8 : 1.0)
+                .opacity(pulse ? 0 : 1)
+                .animation(.easeOut(duration: 1.6).repeatForever(autoreverses: false), value: pulse)
+            Circle()
+                .fill(Color.secondaryContainer)
+                .frame(width: 24, height: 24)
+                .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+            Image(systemName: "figure.walk.circle.fill")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.onSecondaryContainer)
+        }
+        .onAppear { pulse = true }
+    }
+}
+
+// MARK: - Reportar Sheet
+private struct ReportarSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var tipo: TipoReporte = .alerta
+    @State private var descripcion: String = ""
+    @State private var showSuccess = false
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Reportar incidente")
+                    .font(.headlineMd)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("TIPO DE REPORTE")
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    Picker("Tipo", selection: $tipo) {
+                        Text("Alerta").tag(TipoReporte.alerta)
+                        Text("Tráfico").tag(TipoReporte.trafico)
+                        Text("Sugerencia").tag(TipoReporte.sugerencia)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("DESCRIPCIÓN")
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    TextField("¿Qué sucede en tu ruta?", text: $descripcion, axis: .vertical)
+                        .lineLimit(3...6)
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("UBICACIÓN")
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    HStack {
+                        Image(systemName: "mappin.circle.fill")
+                            .foregroundStyle(.appPrimary)
+                        Text("Av. España 1234, Trujillo")
+                            .font(.bodySm)
+                            .foregroundStyle(.onSurface)
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+                }
+
+                Spacer()
+
+                Button {
+                    showSuccess = true
+                } label: {
+                    Text("Enviar reporte")
+                        .font(.headlineSm)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                }
+                .buttonStyle(.plain)
+                .disabled(descripcion.isEmpty)
+                .opacity(descripcion.isEmpty ? 0.5 : 1.0)
+            }
+            .padding(20)
+        }
+        .alert("Reporte enviado", isPresented: $showSuccess) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("Gracias por colaborar con la comunidad.")
         }
     }
 }
