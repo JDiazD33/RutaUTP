@@ -258,136 +258,91 @@ private struct DetalleRutaView: View {
             VStack(spacing: 0) {
                 header
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        // Hero ruta
-                        ZStack(alignment: .topTrailing) {
-                            ZStack {
-                                LinearGradient(
-                                    colors: [ruta.colorLinea.opacity(0.6), Color.secondary.opacity(0.4)],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                )
-                                GeometryReader { geo in
-                                    let w = geo.size.width
-                                    let h = geo.size.height
-                                    Path { p in
-                                        p.move(to: CGPoint(x: w * 0.10, y: h * 0.85))
-                                        p.addCurve(
-                                            to: CGPoint(x: w * 0.55, y: h * 0.55),
-                                            control1: CGPoint(x: w * 0.25, y: h * 0.75),
-                                            control2: CGPoint(x: w * 0.40, y: h * 0.65)
-                                        )
-                                        p.addCurve(
-                                            to: CGPoint(x: w * 0.90, y: h * 0.25),
-                                            control1: CGPoint(x: w * 0.70, y: h * 0.45),
-                                            control2: CGPoint(x: w * 0.80, y: h * 0.35)
-                                        )
-                                    }
-                                    .stroke(ruta.colorLinea, style: StrokeStyle(lineWidth: 6, lineCap: .round, dash: [12, 6]))
+                    VStack(spacing: 0) {
+                        // ✅ CORREGIDO V4: mapa real con MapKit (reemplaza contenedor azul decorativo)
+                        RutaMapKitView(ruta: ruta)
+                            .frame(height: 280)
+                            .disabled(true)            // no captura gestos de scroll
+                            .allowsHitTesting(false)   // tampoco los de toque
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+
+                        VStack(spacing: 20) {
+                            // Info card
+                            HStack(alignment: .top, spacing: 14) {
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(ruta.colorLinea)
+                                    .frame(width: 6, height: 48)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("\(ruta.empresa)")
+                                        .font(.headlineSm)
+                                        .foregroundStyle(.onSurface)
+                                    Text("Destino: UTP Trujillo")
+                                        .font(.bodySm)
+                                        .foregroundStyle(.onSurfaceVariant)
+                                }
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text("LLEGA EN")
+                                        .font(.labelCapsMd)
+                                        .foregroundStyle(.onPrimaryContainer)
+                                        .appTracking(AppTracking.wideLabel)
+                                    Text(ruta.llegaEn)
+                                        .font(.displayNumberMd)
+                                        .foregroundStyle(.onPrimaryContainer)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(RoundedRectangle(cornerRadius: 8).fill(Color.primaryContainer))
+                            }
+                            .padding(20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color.surfaceContainerLowest)
+                                    .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
+                            )
+
+                            // Stats grid
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                                      spacing: 12) {
+                                StatTile(icon: "clock.fill", iconColor: .appPrimary,
+                                         label: "TIEMPO", value: ruta.tiempo)
+                                StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
+                                         label: "COSTO", value: ruta.costo)
+                                StatTile(icon: "arrow.triangle.2.circlepath", iconColor: .appPrimary,
+                                         label: "TRANSBORDOS", value: "0")
+                                StatTile(icon: "chart.bar.fill", iconColor: .secondary,
+                                         label: "CONGESTIÓN", value: ruta.congestion)
+                            }
+
+                            // Pasos
+                            VStack(alignment: .leading, spacing: 18) {
+                                Text("Guía paso a paso")
+                                    .font(.headlineXs)
+                                    .foregroundStyle(.onSurface)
+
+                                VStack(spacing: 0) {
+                                    pasoRow("1", "Camina al paradero Av. España",
+                                            "250 metros • 3 min aprox.",
+                                            "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
+                                    pasoRow("2", "Sube a la línea \(ruta.linea)",
+                                            "\(ruta.empresa) • 15 min de viaje",
+                                            "bus.fill", .appPrimary, .white, isLast: false)
+                                    pasoRow("3", "Baja en frontis UTP",
+                                            "Llegada a destino final",
+                                            "graduationcap.fill", .tertiary, .white, isLast: true)
                                 }
                             }
-                            .frame(height: 200)
-                            .frame(maxWidth: .infinity)
-                            .clipped()
-                            .overlay(ruta.colorLinea.opacity(0.05))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .allowsHitTesting(false) // ✅ CORREGIDO V3
-
-                            HStack(spacing: 6) {
-                                Image(systemName: "heart.shield.fill")
-                                    .font(.system(size: 16, weight: .bold))
-                                Text("RUTA SEGURA")
-                                    .font(.labelCapsMd)
-                                    .appTracking(AppTracking.wideLabel)
-                            }
-                            .foregroundStyle(.onTertiary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule()
-                                    .fill(.ultraThinMaterial)
-                                    .overlay(Capsule().fill(Color.tertiary.opacity(0.85)))
-                            )
-                            .shadow(color: .black.opacity(0.20), radius: 8, x: 0, y: 4)
-                            .padding(12)
                         }
                         .padding(.horizontal, 20)
+                        .padding(.top, 20)
 
-                        // Info card
-                        HStack(alignment: .top, spacing: 14) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(ruta.colorLinea)
-                                .frame(width: 6, height: 48)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("\(ruta.empresa)")
-                                    .font(.headlineSm)
-                                    .foregroundStyle(.onSurface)
-                                Text("Destino: UTP Trujillo")
-                                    .font(.bodySm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                            }
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text("LLEGA EN")
-                                    .font(.labelCapsMd)
-                                    .foregroundStyle(.onPrimaryContainer)
-                                    .appTracking(AppTracking.wideLabel)
-                                Text(ruta.llegaEn)
-                                    .font(.displayNumberMd)
-                                    .foregroundStyle(.onPrimaryContainer)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.primaryContainer))
-                        }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.surfaceContainerLowest)
-                                .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
-                        )
-                        .padding(.horizontal, 20)
-
-                        // Stats grid
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                                  spacing: 12) {
-                            StatTile(icon: "clock.fill", iconColor: .appPrimary,
-                                     label: "TIEMPO", value: ruta.tiempo)
-                            StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
-                                     label: "COSTO", value: ruta.costo)
-                            StatTile(icon: "arrow.triangle.2.circlepath", iconColor: .appPrimary,
-                                     label: "TRANSBORDOS", value: "0")
-                            StatTile(icon: "chart.bar.fill", iconColor: .secondary,
-                                     label: "CONGESTIÓN", value: ruta.congestion)
-                        }
-                        .padding(.horizontal, 20)
-
-                        // Pasos
-                        VStack(alignment: .leading, spacing: 18) {
-                            Text("Guía paso a paso")
-                                .font(.headlineXs)
-                                .foregroundStyle(.onSurface)
-                                .padding(.horizontal, 20)
-
-                            VStack(spacing: 0) {
-                                pasoRow("1", "Camina al paradero Av. España",
-                                        "250 metros • 3 min aprox.",
-                                        "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
-                                pasoRow("2", "Sube a la línea \(ruta.linea)",
-                                        "\(ruta.empresa) • 15 min de viaje",
-                                        "bus.fill", .appPrimary, .white, isLast: false)
-                                pasoRow("3", "Baja en frontis UTP",
-                                        "Llegada a destino final",
-                                        "graduationcap.fill", .tertiary, .white, isLast: true)
-                            }
-                            .padding(.horizontal, 20)
-                        }
-
-                        // Espacio para que el CTA no tape el ultimo paso
-                        Spacer().frame(height: ctaHeight + 20)
+                        // ✅ CORREGIDO V4: espacio para que el CTA fijo no tape contenido
+                        Spacer(minLength: 100)
                     }
                 }
             }

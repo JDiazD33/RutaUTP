@@ -108,7 +108,13 @@ struct BottomNavBar: View {
             .padding(.horizontal, 4)
             .padding(.bottom, bottomSafeArea() + 6)
         }
-        .background(Color.appSurface)
+        // ✅ CORREGIDO V4: background se extiende al borde fisico inferior.
+        // El contenido respeta el safe area via bottomSafeArea() en el padding,
+        // pero el fondo blanco baja hasta el borde real del telefono.
+        .background(
+            Color.appSurface
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 
     private func bottomSafeArea() -> CGFloat {
