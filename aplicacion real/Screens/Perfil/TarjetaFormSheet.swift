@@ -2,7 +2,7 @@
 //  TarjetaFormSheet.swift
 //  RutaUTP
 //
-//  ✅ CORREGIDO V3: Sheet para agregar metodo de pago.
+//  CORREGIDO V3: Sheet para agregar metodo de pago.
 //  - 4 campos: numero, titular, vencimiento, CVV
 //  - Numero formateado como 0000 0000 0000 0000
 //  - Vencimiento como MM/AA
@@ -173,3 +173,4 @@ struct TarjetaFormSheet: View {
 #Preview {
     TarjetaFormSheet(onGuardar: { _ in })
 }
+

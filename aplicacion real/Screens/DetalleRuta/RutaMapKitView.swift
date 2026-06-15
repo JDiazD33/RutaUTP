@@ -2,7 +2,7 @@
 //  RutaMapKitView.swift
 //  RutaUTP
 //
-//  ✅ CORREGIDO V4: Reemplaza el contenedor azul decorativo por un mapa real.
+//  CORREGIDO V4: Reemplaza el contenedor azul decorativo por un mapa real.
 //  - Usa un unico MKMapView (UIViewRepresentable) con anotaciones y polyline.
 //  - Esto evita el problema de doble mapa (SwiftUI Map + MKMapView overlay)
 //    donde los tiles del MKMapView ocultaban las anotaciones.
@@ -242,3 +242,4 @@ struct RutaMapKitView: View {
     .frame(height: 280)
     .padding()
 }
+

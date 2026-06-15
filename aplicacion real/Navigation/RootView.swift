@@ -22,6 +22,7 @@ struct RootView: View {
             case .perfil:        PerfilView()
             }
         }
+        .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
         .environmentObject(router)
         .animation(.easeInOut(duration: 0.25), value: router.currentScreen)
     }

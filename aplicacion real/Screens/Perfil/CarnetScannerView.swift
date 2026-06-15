@@ -2,7 +2,7 @@
 //  CarnetScannerView.swift
 //  RutaUTP
 //
-//  ✅ CORREGIDO V3: Vista de escaneo de carnet universitario con camara real.
+//  CORREGIDO V3: Vista de escaneo de carnet universitario con camara real.
 //  - AVCaptureSession + AVCaptureVideoPreviewLayer
 //  - Overlay oscuro con cutout tipo escaner DNI
 //  - Esquinas de escaneo color appPrimary
@@ -350,3 +350,4 @@ struct CarnetScannerView: View {
 #Preview {
     CarnetScannerView(onCapture: {})
 }
+

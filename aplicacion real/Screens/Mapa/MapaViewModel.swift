@@ -175,3 +175,4 @@ final class MapaViewModel: ObservableObject {
         return items
     }
 }
+

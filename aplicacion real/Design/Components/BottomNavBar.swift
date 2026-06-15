@@ -2,10 +2,9 @@
 //  BottomNavBar.swift
 //  RutaUTP
 //
-//  ✅ CORREGIDO V3: layout compacto (~56pt sin safe area).
-//  - padding top exacto 8pt
-//  - sin padding vertical interno en NavTabItem
-//  - padding bottom = bottomSafeArea() + 6pt
+//  CORREGIDO V5: Diseño nativo y flexible.
+//  - Control de altura simple mediante padding inferior.
+//  - Eliminado cálculo manual de safe area para evitar iconos caídos.
 //
 
 import SwiftUI
@@ -106,25 +105,17 @@ struct BottomNavBar: View {
             }
             .padding(.top, 8)
             .padding(.horizontal, 4)
-            .padding(.bottom, bottomSafeArea() + 6)
+            // 💡 MODIFICA ESTE NÚMERO:
+            // 12 es un excelente estándar. Si quieres los iconos más altos, súbelo a 16 o 20.
+            // SwiftUI se encargará de sumarle el espacio de la barra del iPhone automáticamente.
+            .padding(.bottom, 12)
         }
-        // ✅ CORREGIDO V4: background se extiende al borde fisico inferior.
-        // El contenido respeta el safe area via bottomSafeArea() en el padding,
-        // pero el fondo blanco baja hasta el borde real del telefono.
+        // El fondo blanco se extiende hasta abajo del todo (borde físico),
+        // pero gracias a SwiftUI, el contenido de arriba respeta la barra del iPhone de forma segura.
         .background(
             Color.appSurface
                 .ignoresSafeArea(edges: .bottom)
         )
-    }
-
-    private func bottomSafeArea() -> CGFloat {
-        guard let window = UIApplication.shared
-            .connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first?.windows.first
-        else { return 16 }
-        let inset = window.safeAreaInsets.bottom
-        return inset > 0 ? inset : 12
     }
 }
 

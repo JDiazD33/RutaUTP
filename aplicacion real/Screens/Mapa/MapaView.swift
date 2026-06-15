@@ -55,9 +55,8 @@ struct MapaView: View {
 
                 // Bottom panel
                 bottomPanel
-                    .padding(.bottom, 12)
+                    .padding(.bottom,tabBarHeight + 8 )
             }
-            .padding(.bottom, tabBarHeight)
 
             // ── DRAWER OVERLAY ──
             if mostrarDrawer {
@@ -194,7 +193,7 @@ struct MapaView: View {
     }
 
     // MARK: - Bottom panel
-    // ✅ CORREGIDO V3: frame explicito de 168pt para que las cards no se corten
+    // CORREGIDO V3: frame explicito de 168pt para que las cards no se corten
     private var bottomPanel: some View {
         VStack(spacing: 10) {
             HStack(alignment: .center) {
@@ -267,7 +266,6 @@ struct MapaView: View {
             .frame(height: 112)
         }
         .frame(height: 168)
-        .padding(.bottom, 12)
     }
 }
 
@@ -394,3 +392,4 @@ private struct ReportarSheet: View {
 #Preview {
     MapaView().environmentObject(AppRouter())
 }
+

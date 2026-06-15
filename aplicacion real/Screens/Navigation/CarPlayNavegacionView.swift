@@ -2,7 +2,7 @@
 //  CarPlayNavegacionView.swift
 //  RutaUTP
 //
-//  ✅ CORREGIDO V3: Vista de navegacion tipo CarPlay/turn-by-turn.
+//  CORREGIDO V3: Vista de navegacion tipo CarPlay/turn-by-turn.
 //  - Fondo oscuro #0a0a0a
 //  - Franja superior con nombre de ruta + boton Finalizar
 //  - Mapa oscuro 60% altura con MKPolyline
@@ -231,3 +231,4 @@ struct CarPlayNavegacionView: View {
 #Preview {
     CarPlayNavegacionView(rutaNombre: "Linea B - Salaverry", onFinish: {})
 }
+

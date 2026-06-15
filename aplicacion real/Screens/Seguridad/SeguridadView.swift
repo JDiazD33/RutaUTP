@@ -77,9 +77,6 @@ struct SeguridadView: View {
             }
             .padding(.bottom, tabBarHeight)
 
-            // FAB anclado a navbarHeight + 12
-            fab
-
             // Navbar
             BottomNavBar()
         }
@@ -119,7 +116,7 @@ struct SeguridadView: View {
         }
     }
 
-    // MARK: - Header (✅ CORREGIDO V3: Reportar en header, icono lock.fill)
+    // MARK: - Header (CORREGIDO V3: Reportar en header, icono lock.fill)
     private var header: some View {
         HStack(spacing: 12) {
             // Lado izquierdo: icono + titulo
@@ -167,7 +164,7 @@ struct SeguridadView: View {
         )
     }
 
-    // MARK: - Summary bar (✅ CORREGIDO V3: Reportar movido al header, solo queda Llamar 105)
+    // MARK: - Summary bar (CORREGIDO V3: Reportar movido al header, solo queda Llamar 105)
     private var summaryBar: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -440,29 +437,7 @@ struct SeguridadView: View {
         }
     }
 
-    // MARK: - FAB (anclado a navbarHeight + 12)
-    private var fab: some View {
-        HStack {
-            Spacer()
-            Button {
-                showReportarSheet = true
-            } label: {
-                Image(systemName: "megaphone.fill")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 56, height: 56)
-                    .background(
-                        Circle()
-                            .fill(Color.appPrimary)
-                            .shadow(color: .appPrimary.opacity(0.40), radius: 14, x: 0, y: 8)
-                    )
-            }
-            .buttonStyle(FABStyle())
-            .accessibilityLabel("Reportar incidente")
-        }
-        .padding(.trailing, 24)
-        .padding(.bottom, tabBarHeight + 12)
-    }
+
 
     // MARK: - Helpers
     private var saludoDinamico: String {
@@ -692,3 +667,4 @@ private struct FABStyle: ButtonStyle {
 #Preview {
     SeguridadView().environmentObject(AppRouter())
 }
+
