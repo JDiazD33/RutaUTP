@@ -7,18 +7,67 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0A40D9182FDE5E7D00F79FBC /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9172FDE5E7D00F79FBC /* RutaUTPApp.swift */; };
-		0A40D91A2FDE5E7D00F79FBC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9192FDE5E7D00F79FBC /* ContentView.swift */; };
 		0A40D91C2FDE5E7F00F79FBC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A40D91B2FDE5E7F00F79FBC /* Assets.xcassets */; };
 		0A40D91F2FDE5E7F00F79FBC /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A40D91E2FDE5E7F00F79FBC /* Preview Assets.xcassets */; };
+		0A40D9472FDE5EE800F79FBC /* BottomNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9252FDE5EE800F79FBC /* BottomNavBar.swift */; };
+		0A40D9482FDE5EE800F79FBC /* RouteCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9262FDE5EE800F79FBC /* RouteCard.swift */; };
+		0A40D9492FDE5EE800F79FBC /* TopAppBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9272FDE5EE800F79FBC /* TopAppBar.swift */; };
+		0A40D94A2FDE5EE800F79FBC /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9292FDE5EE800F79FBC /* Colors.swift */; };
+		0A40D94B2FDE5EE800F79FBC /* Spacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D92A2FDE5EE800F79FBC /* Spacing.swift */; };
+		0A40D94C2FDE5EE800F79FBC /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D92B2FDE5EE800F79FBC /* Typography.swift */; };
+		0A40D94D2FDE5EE800F79FBC /* LugarGuardado.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D92D2FDE5EE800F79FBC /* LugarGuardado.swift */; };
+		0A40D94E2FDE5EE800F79FBC /* ReporteComunidad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D92E2FDE5EE800F79FBC /* ReporteComunidad.swift */; };
+		0A40D94F2FDE5EE800F79FBC /* Ruta.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D92F2FDE5EE800F79FBC /* Ruta.swift */; };
+		0A40D9502FDE5EE800F79FBC /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9312FDE5EE800F79FBC /* AppRouter.swift */; };
+		0A40D9512FDE5EE800F79FBC /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9322FDE5EE800F79FBC /* RootView.swift */; };
+		0A40D9532FDE5EE800F79FBC /* BienvenidaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9362FDE5EE800F79FBC /* BienvenidaView.swift */; };
+		0A40D9552FDE5EE800F79FBC /* GuardadoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D93A2FDE5EE800F79FBC /* GuardadoView.swift */; };
+		0A40D9562FDE5EE800F79FBC /* MapaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D93C2FDE5EE800F79FBC /* MapaView.swift */; };
+		0A40D9572FDE5EE800F79FBC /* SideDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D93D2FDE5EE800F79FBC /* SideDrawer.swift */; };
+		0A40D9582FDE5EE800F79FBC /* PerfilView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D93F2FDE5EE800F79FBC /* PerfilView.swift */; };
+		0A40D9592FDE5EE800F79FBC /* SeguridadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9412FDE5EE800F79FBC /* SeguridadView.swift */; };
+		0A40D95A2FDE5EE800F79FBC /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A40D9442FDE5EE800F79FBC /* README.md */; };
+		0A40D95B2FDE5EE800F79FBC /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A40D9452FDE5EE800F79FBC /* RutaUTPApp.swift */; };
+		0A4252752FDF0AEC007F6FF0 /* MapMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4252742FDF0AEC007F6FF0 /* MapMarkers.swift */; };
+		0A4252772FDF0B13007F6FF0 /* MapaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4252762FDF0B13007F6FF0 /* MapaViewModel.swift */; };
+		0A42527A2FDF0B6B007F6FF0 /* RutasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4252792FDF0B6B007F6FF0 /* RutasView.swift */; };
+		0A42527D2FDF2230007F6FF0 /* CarPlayNavegacionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A42527C2FDF2230007F6FF0 /* CarPlayNavegacionView.swift */; };
+		0A42527F2FDF2260007F6FF0 /* CarnetScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A42527E2FDF2260007F6FF0 /* CarnetScannerView.swift */; };
+		0A4252812FDF229C007F6FF0 /* TarjetaFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4252802FDF229C007F6FF0 /* TarjetaFormSheet.swift */; };
+		0A48D39A2FDF332B00516EA5 /* RutaMapKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A48D3992FDF332B00516EA5 /* RutaMapKitView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RutaUTP.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0A40D9172FDE5E7D00F79FBC /* RutaUTPApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
-		0A40D9192FDE5E7D00F79FBC /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0A40D91B2FDE5E7F00F79FBC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A40D91E2FDE5E7F00F79FBC /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		0A40D9252FDE5EE800F79FBC /* BottomNavBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BottomNavBar.swift; sourceTree = "<group>"; };
+		0A40D9262FDE5EE800F79FBC /* RouteCard.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RouteCard.swift; sourceTree = "<group>"; };
+		0A40D9272FDE5EE800F79FBC /* TopAppBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TopAppBar.swift; sourceTree = "<group>"; };
+		0A40D9292FDE5EE800F79FBC /* Colors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		0A40D92A2FDE5EE800F79FBC /* Spacing.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Spacing.swift; sourceTree = "<group>"; };
+		0A40D92B2FDE5EE800F79FBC /* Typography.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		0A40D92D2FDE5EE800F79FBC /* LugarGuardado.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugarGuardado.swift; sourceTree = "<group>"; };
+		0A40D92E2FDE5EE800F79FBC /* ReporteComunidad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReporteComunidad.swift; sourceTree = "<group>"; };
+		0A40D92F2FDE5EE800F79FBC /* Ruta.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Ruta.swift; sourceTree = "<group>"; };
+		0A40D9312FDE5EE800F79FBC /* AppRouter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
+		0A40D9322FDE5EE800F79FBC /* RootView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		0A40D9362FDE5EE800F79FBC /* BienvenidaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BienvenidaView.swift; sourceTree = "<group>"; };
+		0A40D93A2FDE5EE800F79FBC /* GuardadoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoView.swift; sourceTree = "<group>"; };
+		0A40D93C2FDE5EE800F79FBC /* MapaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaView.swift; sourceTree = "<group>"; };
+		0A40D93D2FDE5EE800F79FBC /* SideDrawer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideDrawer.swift; sourceTree = "<group>"; };
+		0A40D93F2FDE5EE800F79FBC /* PerfilView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerfilView.swift; sourceTree = "<group>"; };
+		0A40D9412FDE5EE800F79FBC /* SeguridadView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadView.swift; sourceTree = "<group>"; };
+		0A40D9442FDE5EE800F79FBC /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		0A40D9452FDE5EE800F79FBC /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
+		0A40D95C2FDE694700F79FBC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0A4252742FDF0AEC007F6FF0 /* MapMarkers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapMarkers.swift; sourceTree = "<group>"; };
+		0A4252762FDF0B13007F6FF0 /* MapaViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapaViewModel.swift; sourceTree = "<group>"; };
+		0A4252792FDF0B6B007F6FF0 /* RutasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutasView.swift; sourceTree = "<group>"; };
+		0A42527C2FDF2230007F6FF0 /* CarPlayNavegacionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayNavegacionView.swift; sourceTree = "<group>"; };
+		0A42527E2FDF2260007F6FF0 /* CarnetScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarnetScannerView.swift; sourceTree = "<group>"; };
+		0A4252802FDF229C007F6FF0 /* TarjetaFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TarjetaFormSheet.swift; sourceTree = "<group>"; };
+		0A48D3992FDF332B00516EA5 /* RutaMapKitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutaMapKitView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +81,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0A396C0E2FDF31BF00CC7992 /* DetalleRuta */ = {
+			isa = PBXGroup;
+			children = (
+				0A48D3992FDF332B00516EA5 /* RutaMapKitView.swift */,
+			);
+			path = DetalleRuta;
+			sourceTree = "<group>";
+		};
 		0A40D90B2FDE5E7D00F79FBC = {
 			isa = PBXGroup;
 			children = (
@@ -51,8 +108,13 @@
 		0A40D9162FDE5E7D00F79FBC /* RutaUTP */ = {
 			isa = PBXGroup;
 			children = (
-				0A40D9172FDE5E7D00F79FBC /* RutaUTPApp.swift */,
-				0A40D9192FDE5E7D00F79FBC /* ContentView.swift */,
+				0A40D95C2FDE694700F79FBC /* Info.plist */,
+				0A40D9442FDE5EE800F79FBC /* README.md */,
+				0A40D9452FDE5EE800F79FBC /* RutaUTPApp.swift */,
+				0A40D9432FDE5EE800F79FBC /* Screens */,
+				0A40D9332FDE5EE800F79FBC /* Navigation */,
+				0A40D9302FDE5EE800F79FBC /* Models */,
+				0A40D92C2FDE5EE800F79FBC /* Design */,
 				0A40D91B2FDE5E7F00F79FBC /* Assets.xcassets */,
 				0A40D91D2FDE5E7F00F79FBC /* Preview Content */,
 			);
@@ -65,6 +127,122 @@
 				0A40D91E2FDE5E7F00F79FBC /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		0A40D9282FDE5EE800F79FBC /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D9252FDE5EE800F79FBC /* BottomNavBar.swift */,
+				0A40D9262FDE5EE800F79FBC /* RouteCard.swift */,
+				0A40D9272FDE5EE800F79FBC /* TopAppBar.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		0A40D92C2FDE5EE800F79FBC /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D9282FDE5EE800F79FBC /* Components */,
+				0A40D9292FDE5EE800F79FBC /* Colors.swift */,
+				0A40D92A2FDE5EE800F79FBC /* Spacing.swift */,
+				0A40D92B2FDE5EE800F79FBC /* Typography.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		0A40D9302FDE5EE800F79FBC /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D92D2FDE5EE800F79FBC /* LugarGuardado.swift */,
+				0A40D92E2FDE5EE800F79FBC /* ReporteComunidad.swift */,
+				0A40D92F2FDE5EE800F79FBC /* Ruta.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		0A40D9332FDE5EE800F79FBC /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D9312FDE5EE800F79FBC /* AppRouter.swift */,
+				0A40D9322FDE5EE800F79FBC /* RootView.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		0A40D9372FDE5EE800F79FBC /* Bienvenida */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D9362FDE5EE800F79FBC /* BienvenidaView.swift */,
+			);
+			path = Bienvenida;
+			sourceTree = "<group>";
+		};
+		0A40D93B2FDE5EE800F79FBC /* Guardado */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D93A2FDE5EE800F79FBC /* GuardadoView.swift */,
+			);
+			path = Guardado;
+			sourceTree = "<group>";
+		};
+		0A40D93E2FDE5EE800F79FBC /* Mapa */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D93C2FDE5EE800F79FBC /* MapaView.swift */,
+				0A40D93D2FDE5EE800F79FBC /* SideDrawer.swift */,
+				0A4252742FDF0AEC007F6FF0 /* MapMarkers.swift */,
+				0A4252762FDF0B13007F6FF0 /* MapaViewModel.swift */,
+			);
+			path = Mapa;
+			sourceTree = "<group>";
+		};
+		0A40D9402FDE5EE800F79FBC /* Perfil */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D93F2FDE5EE800F79FBC /* PerfilView.swift */,
+				0A42527E2FDF2260007F6FF0 /* CarnetScannerView.swift */,
+				0A4252802FDF229C007F6FF0 /* TarjetaFormSheet.swift */,
+			);
+			path = Perfil;
+			sourceTree = "<group>";
+		};
+		0A40D9422FDE5EE800F79FBC /* Seguridad */ = {
+			isa = PBXGroup;
+			children = (
+				0A40D9412FDE5EE800F79FBC /* SeguridadView.swift */,
+			);
+			path = Seguridad;
+			sourceTree = "<group>";
+		};
+		0A40D9432FDE5EE800F79FBC /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				0A396C0E2FDF31BF00CC7992 /* DetalleRuta */,
+				0A42527B2FDF2222007F6FF0 /* Navigation */,
+				0A4252782FDF0B53007F6FF0 /* Rutas */,
+				0A40D9372FDE5EE800F79FBC /* Bienvenida */,
+				0A40D93B2FDE5EE800F79FBC /* Guardado */,
+				0A40D93E2FDE5EE800F79FBC /* Mapa */,
+				0A40D9402FDE5EE800F79FBC /* Perfil */,
+				0A40D9422FDE5EE800F79FBC /* Seguridad */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		0A4252782FDF0B53007F6FF0 /* Rutas */ = {
+			isa = PBXGroup;
+			children = (
+				0A4252792FDF0B6B007F6FF0 /* RutasView.swift */,
+			);
+			path = Rutas;
+			sourceTree = "<group>";
+		};
+		0A42527B2FDF2222007F6FF0 /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				0A42527C2FDF2230007F6FF0 /* CarPlayNavegacionView.swift */,
+			);
+			path = Navigation;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -127,6 +305,7 @@
 			files = (
 				0A40D91F2FDE5E7F00F79FBC /* Preview Assets.xcassets in Resources */,
 				0A40D91C2FDE5E7F00F79FBC /* Assets.xcassets in Resources */,
+				0A40D95A2FDE5EE800F79FBC /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,8 +316,31 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0A40D91A2FDE5E7D00F79FBC /* ContentView.swift in Sources */,
-				0A40D9182FDE5E7D00F79FBC /* RutaUTPApp.swift in Sources */,
+				0A40D94E2FDE5EE800F79FBC /* ReporteComunidad.swift in Sources */,
+				0A4252812FDF229C007F6FF0 /* TarjetaFormSheet.swift in Sources */,
+				0A40D94D2FDE5EE800F79FBC /* LugarGuardado.swift in Sources */,
+				0A4252752FDF0AEC007F6FF0 /* MapMarkers.swift in Sources */,
+				0A40D9562FDE5EE800F79FBC /* MapaView.swift in Sources */,
+				0A40D94C2FDE5EE800F79FBC /* Typography.swift in Sources */,
+				0A40D9472FDE5EE800F79FBC /* BottomNavBar.swift in Sources */,
+				0A40D94A2FDE5EE800F79FBC /* Colors.swift in Sources */,
+				0A40D9592FDE5EE800F79FBC /* SeguridadView.swift in Sources */,
+				0A40D94F2FDE5EE800F79FBC /* Ruta.swift in Sources */,
+				0A48D39A2FDF332B00516EA5 /* RutaMapKitView.swift in Sources */,
+				0A40D9572FDE5EE800F79FBC /* SideDrawer.swift in Sources */,
+				0A40D9482FDE5EE800F79FBC /* RouteCard.swift in Sources */,
+				0A40D9502FDE5EE800F79FBC /* AppRouter.swift in Sources */,
+				0A42527F2FDF2260007F6FF0 /* CarnetScannerView.swift in Sources */,
+				0A40D9512FDE5EE800F79FBC /* RootView.swift in Sources */,
+				0A42527A2FDF0B6B007F6FF0 /* RutasView.swift in Sources */,
+				0A40D9492FDE5EE800F79FBC /* TopAppBar.swift in Sources */,
+				0A40D94B2FDE5EE800F79FBC /* Spacing.swift in Sources */,
+				0A40D9532FDE5EE800F79FBC /* BienvenidaView.swift in Sources */,
+				0A4252772FDF0B13007F6FF0 /* MapaViewModel.swift in Sources */,
+				0A40D95B2FDE5EE800F79FBC /* RutaUTPApp.swift in Sources */,
+				0A40D9582FDE5EE800F79FBC /* PerfilView.swift in Sources */,
+				0A42527D2FDF2230007F6FF0 /* CarPlayNavegacionView.swift in Sources */,
+				0A40D9552FDE5EE800F79FBC /* GuardadoView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -275,6 +477,8 @@
 				DEVELOPMENT_TEAM = 2DB6N5Q47S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RutaUTP/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Necesitamos acceso a la camara para escanear tu carnet universitario";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -304,6 +508,8 @@
 				DEVELOPMENT_TEAM = 2DB6N5Q47S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RutaUTP/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Necesitamos acceso a la camara para escanear tu carnet universitario";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
