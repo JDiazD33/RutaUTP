@@ -19,7 +19,6 @@
 		0A800500300AD9FE004E1676 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C1300AD9FE004E1676 /* AppRouter.swift */; };
 		0A800501300AD9FE004E1676 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C2300AD9FE004E1676 /* RootView.swift */; };
 		0A800502300AD9FE004E1676 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004C4300AD9FE004E1676 /* Preview Assets.xcassets */; };
-		0A800503300AD9FE004E1676 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004C6300AD9FE004E1676 /* Info.plist */; };
 		0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C8300AD9FE004E1676 /* BienvenidaView.swift */; };
 		0A800505300AD9FE004E1676 /* RutaMapKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CA300AD9FE004E1676 /* RutaMapKitView.swift */; };
 		0A800506300AD9FE004E1676 /* GuardadoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CC300AD9FE004E1676 /* GuardadoView.swift */; };
@@ -46,7 +45,6 @@
 		0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */; };
 		0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */; };
 		0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F2300AD9FE004E1676 /* Assets.xcassets */; };
-		0A80051E300AD9FE004E1676 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F3300AD9FE004E1676 /* Info.plist */; };
 		0A80051F300AD9FE004E1676 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F4300AD9FE004E1676 /* README.md */; };
 		0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */; };
 /* End PBXBuildFile section */
@@ -65,7 +63,6 @@
 		0A8004C1300AD9FE004E1676 /* AppRouter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		0A8004C2300AD9FE004E1676 /* RootView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		0A8004C4300AD9FE004E1676 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
-		0A8004C6300AD9FE004E1676 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0A8004C8300AD9FE004E1676 /* BienvenidaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BienvenidaView.swift; sourceTree = "<group>"; };
 		0A8004CA300AD9FE004E1676 /* RutaMapKitView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaMapKitView.swift; sourceTree = "<group>"; };
 		0A8004CC300AD9FE004E1676 /* GuardadoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoView.swift; sourceTree = "<group>"; };
@@ -92,7 +89,6 @@
 		0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VehicleTrackingProviding.swift; sourceTree = "<group>"; };
 		0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PolylineMatching.swift; sourceTree = "<group>"; };
 		0A8004F2300AD9FE004E1676 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		0A8004F3300AD9FE004E1676 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0A8004F4300AD9FE004E1676 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -170,14 +166,6 @@
 				0A8004C4300AD9FE004E1676 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
-			sourceTree = "<group>";
-		};
-		0A8004C7300AD9FE004E1676 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				0A8004C6300AD9FE004E1676 /* Info.plist */,
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 		0A8004C9300AD9FE004E1676 /* Bienvenida */ = {
@@ -350,7 +338,6 @@
 				0A8004EF300AD9FE004E1676 /* Services */,
 				0A8004F1300AD9FE004E1676 /* Utils */,
 				0A8004F2300AD9FE004E1676 /* Assets.xcassets */,
-				0A8004F3300AD9FE004E1676 /* Info.plist */,
 				0A8004F4300AD9FE004E1676 /* README.md */,
 				0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */,
 			);
@@ -416,10 +403,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A800502300AD9FE004E1676 /* Preview Assets.xcassets in Resources */,
-				0A800503300AD9FE004E1676 /* Info.plist in Resources */,
 				0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */,
 				0A80051F300AD9FE004E1676 /* README.md in Resources */,
-				0A80051E300AD9FE004E1676 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

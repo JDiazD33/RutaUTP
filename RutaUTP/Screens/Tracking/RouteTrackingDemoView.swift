@@ -59,7 +59,7 @@ struct RouteTrackingDemoView: View {
                     }
                 }
             }
-            .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .includingAll))
+            .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .all))
             .mapControls {
                 MapUserLocationButton()
                 MapCompass()
