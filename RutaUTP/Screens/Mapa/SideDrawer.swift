@@ -143,6 +143,12 @@ struct SideDrawer: View {
                 DrawerItemRow(icon: "info.circle.fill", iconColor: .onSurfaceVariant, label: "Sobre Nosotros") {
                     activeSheet = .sobreNosotros
                 }
+                // TEMPORAL: botón para abrir la pantalla de prueba de tracking real.
+                // No aparece en el README ni en la doc oficial — se quita cuando tracking
+                // esté integrado en el flujo principal.
+                DrawerItemRow(icon: "location.fill", iconColor: .secondary, label: "Tracking Demo") {
+                    router.navigate(to: .trackingDemo)
+                }
                 Spacer()
                 DrawerItemRow(icon: "rectangle.portrait.and.arrow.right",
                               iconColor: .appPrimary,

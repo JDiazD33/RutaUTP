@@ -14,6 +14,7 @@ enum AppScreen: Equatable {
     case guardado
     case seguridad
     case perfil
+    case trackingDemo         // Pantalla de prueba aislada (no entra por BottomNavBar).
 }
 
 final class AppRouter: ObservableObject {

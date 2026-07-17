@@ -20,6 +20,7 @@ struct RootView: View {
             case .guardado:      GuardadoView()
             case .seguridad:     SeguridadView()
             case .perfil:        PerfilView()
+            case .trackingDemo:  RouteTrackingDemoView()
             }
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico

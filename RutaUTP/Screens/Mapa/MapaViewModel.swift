@@ -40,7 +40,15 @@ struct DestinoChip: Identifiable, Equatable {
 enum TipoAnotacion: Equatable {
     case utp
     case usuario
+    /// Marcador del usuario alimentado por GPS real (LocationService).
+    /// Distinto de `.usuario` (que es el marcador peatonal mock). Se usa en
+    /// RouteTrackingDemoView y futuras pantallas de tracking real.
+    case usuarioReal
     case bus(String)
+    /// Vehículo con posición que viene de un VehicleTrackingProvider
+    /// (simulado o real). Mismo look que `.bus` pero semánticamente
+    /// representa un vehículo siendo trackeado, no un spot decorativo.
+    case conductor(String)
 }
 
 struct MapaAnotacion: Identifiable, Equatable {
@@ -66,6 +74,22 @@ final class MapaViewModel: ObservableObject {
     @Published var destinoSeleccionado: DestinoChip? = nil
 
     private var timer: Timer?
+
+    // Inyectado por DI — provider de posiciones de vehículos. Hoy usamos
+    // SimulatedTrackingProvider por defecto para mantener el comportamiento
+    // visual actual. Cuando exista backend, basta pasar RealTrackingProvider
+    // desde fuera sin tocar este VM. (regla #3 del plan)
+    private let trackingProvider: VehicleTrackingProviding
+
+    init(trackingProvider: VehicleTrackingProviding = SimulatedTrackingProvider()) {
+        self.trackingProvider = trackingProvider
+        // NO llamamos a trackingProvider.start() aquí todavía: el Timer
+        // interno existente (busSimulados) sigue siendo el que alimenta las
+        // anotaciones para mantener la demoo funcional. Cuando el VM pase a
+        // consumir el provider en producción, se reemplaza spawnBuses por
+        // un iterador `for await positions in trackingProvider.positions()`.
+    }
+
 
     // Destinos conocidos
     let destinos: [DestinoChip] = [

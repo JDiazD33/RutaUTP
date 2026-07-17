@@ -31,9 +31,11 @@ struct MapaView: View {
                 annotationItems: vm.anotaciones()) { item in
                 MapAnnotation(coordinate: item.coordinate) {
                     switch item.tipo {
-                    case .utp:      MarcadorUTP()
-                    case .usuario:  PulsingUserMarker()
+                    case .utp:           MarcadorUTP()
+                    case .usuario:       PulsingUserMarker()
                     case .bus(let linea): BusMarker(linea: linea)
+                    case .usuarioReal:   PulsingUserMarker()    // mismo look visual
+                    case .conductor(let linea): BusMarker(linea: linea)
                     }
                 }
             }

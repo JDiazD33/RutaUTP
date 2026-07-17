@@ -218,12 +218,14 @@ private struct RutasMapView: View {
     ]
 
     var body: some View {
-        Map(coordinateRegion: $region, annotationItems: marcadores) { m in
+            Map(coordinateRegion: $region, annotationItems: marcadores) { m in
             MapAnnotation(coordinate: m.coordinate) {
                 switch m.tipo {
-                case .utp:     MarcadorUTP()
-                case .usuario: PulsingUserMarker()
-                case .bus:     EmptyView()
+                case .utp:          MarcadorUTP()
+                case .usuario:      PulsingUserMarker()
+                case .bus:           EmptyView()
+                case .usuarioReal:   EmptyView()    // No se dibuja en RutasView (pantalla de listado).
+                case .conductor:    EmptyView()    // Idem: solo aplica en vista de tracking real.
                 }
             }
         }
