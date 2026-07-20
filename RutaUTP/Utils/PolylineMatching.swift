@@ -83,7 +83,7 @@ enum PolylineMatching {
         guard let result = best else { return nil }
         let totalLength = accumulatedLength // al finalit del bucle = longitud total
 
-        let progressFraction: Double
+        var progressFraction: Double
         if totalLength > 0 {
             progressFraction = (prefixLengthAtBest + lengthAtBest) / totalLength
             progressFraction = min(max(progressFraction, 0), 1)
