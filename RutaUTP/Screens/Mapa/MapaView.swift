@@ -21,21 +21,47 @@ struct MapaView: View {
     @State private var showReportSuccess = false
     @FocusState private var campoEnfocado: Bool
 
+    @State private var cameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
+            span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
+        )
+    )
+
     private let tabBarHeight: CGFloat = 64
 
     var body: some View {
         ZStack(alignment: .bottom) {
 
-            // ── MAPA DE FONDO ──
-            Map(coordinateRegion: $vm.region,
-                annotationItems: vm.anotaciones()) { item in
-                MapAnnotation(coordinate: item.coordinate) {
-                    switch item.tipo {
-                    case .utp:           MarcadorUTP()
-                    case .usuario:       PulsingUserMarker()
-                    case .bus(let linea): BusMarker(linea: linea)
-                    case .usuarioReal:   PulsingUserMarker()    // mismo look visual
-                    case .conductor(let linea): BusMarker(linea: linea)
+            // ── MAPA DE FONDO (iOS 17+ MapKit con MapPolyline) ──
+            Map(position: $cameraPosition) {
+
+                // 1. Marcador UTP Trujillo (Av. Nicolás de Piérola 1221)
+                Annotation("UTP Trujillo", coordinate: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232)) {
+                    MarcadorUTP()
+                }
+
+                // 2. Marcador del Usuario (GPS Real o Peatón)
+                if let userCoord = vm.userRealCoordinate {
+                    Annotation("Mi Ubicación", coordinate: userCoord) {
+                        PulsingUserMarker()
+                    }
+                } else {
+                    Annotation("Mi Ubicación", coordinate: CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)) {
+                        PulsingUserMarker()
+                    }
+                }
+
+                // 3. Trazo de Ruta Real (Polyline MKDirections - como Demo Tracking)
+                if let polyline = vm.routePolyline {
+                    MapPolyline(polyline)
+                        .stroke(Color.appPrimary, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                }
+
+                // 4. Marcador del Destino Buscado (ej. UPAO, Casa, Mall Plaza)
+                if let res = vm.busquedaResultado, res.titulo != "UTP" {
+                    Annotation(res.titulo, coordinate: res.coordenada) {
+                        MarcadorDestinoBuscado(titulo: res.titulo)
                     }
                 }
             }
@@ -53,11 +79,82 @@ struct MapaView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
+                // Info de Ruta Calculada (ETA + Distancia)
+                if let eta = vm.etaMinutos, let dist = vm.distanciaKm, let res = vm.busquedaResultado {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(Color.primaryContainer).frame(width: 38, height: 38)
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color.onPrimaryContainer)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Ruta hacia \(res.titulo)")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.onSurface)
+                                .lineLimit(1)
+                            HStack(spacing: 8) {
+                                Text("\(eta) MIN")
+                                    .font(.labelCapsSm)
+                                    .foregroundStyle(Color.onPrimaryContainer)
+                                    .appTracking(AppTracking.wideLabel)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.primaryContainer))
+                                Text("\(dist, specifier: "%.1f") km • Ruta activa")
+                                    .font(.bodySm)
+                                    .foregroundStyle(.onSurfaceVariant)
+                            }
+                        }
+                        Spacer()
+                        Button {
+                            vm.limpiar()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.outlineVariant.opacity(0.35), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 3)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
                 Spacer()
+
+                // Botón "Mi Ubicación" GPS
+                HStack {
+                    Spacer()
+                    Button {
+                        vm.recenterOnUser()
+                    } label: {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(vm.userRealCoordinate != nil ? Color.appPrimary : Color.onSurfaceVariant)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Color.surfaceContainerLowest))
+                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Centrar en mi ubicación")
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 8)
+                }
 
                 // Bottom panel
                 bottomPanel
-                    .padding(.bottom,tabBarHeight + 8 )
+                    .padding(.bottom, tabBarHeight + 8)
             }
 
             // ── DRAWER OVERLAY ──
@@ -71,7 +168,12 @@ struct MapaView: View {
             BottomNavBar()
         }
         .ignoresSafeArea(edges: .bottom)
-        .onDisappear { vm.detenerAnimacion() }
+        .onAppear { vm.iniciarGPS() }
+        .onChange(of: vm.region.center.latitude) { _ in
+            withAnimation {
+                cameraPosition = .region(vm.region)
+            }
+        }
         .animation(.easeInOut(duration: 0.28), value: mostrarDrawer)
         .sheet(isPresented: $showReportarSheet) {
             ReportarSheet()
@@ -131,11 +233,17 @@ struct MapaView: View {
                     .foregroundStyle(.onSurface)
                     .focused($campoEnfocado)
                     .submitLabel(.search)
-                    .onSubmit { vm.buscarTexto(vm.textoBusqueda) }
-                    .onChange(of: vm.textoBusqueda) { nuevo in
-                        vm.buscarTexto(nuevo)
+                    .onSubmit {
+                        campoEnfocado = false
+                        vm.buscarTexto(vm.textoBusqueda)
                     }
-                if !vm.textoBusqueda.isEmpty {
+                    .onChange(of: vm.textoBusqueda) { nuevo in
+                        vm.actualizarTextoBusqueda(nuevo)
+                    }
+                if vm.buscando {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else if !vm.textoBusqueda.isEmpty {
                     Button {
                         vm.limpiar()
                         campoEnfocado = false
@@ -149,6 +257,49 @@ struct MapaView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.surfaceContainerLow))
+
+            // Lista de Sugerencias Autocompletadas (ej. UPAO)
+            if !vm.sugerenciasBusqueda.isEmpty && campoEnfocado {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(vm.sugerenciasBusqueda.prefix(5), id: \.self) { sug in
+                        Button {
+                            campoEnfocado = false
+                            vm.seleccionarSugerencia(sug)
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "mappin.circle.fill")
+                                    .foregroundStyle(Color.appPrimary)
+                                    .font(.system(size: 16))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(sug.title)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.onSurface)
+                                        .lineLimit(1)
+                                    if !sug.subtitle.isEmpty {
+                                        Text(sug.subtitle)
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.onSurfaceVariant)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+
+                        if sug != vm.sugerenciasBusqueda.prefix(5).last {
+                            Divider()
+                        }
+                    }
+                }
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.surfaceContainerLowest))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
+                )
+            }
 
             // Chips
             ScrollView(.horizontal, showsIndicators: false) {

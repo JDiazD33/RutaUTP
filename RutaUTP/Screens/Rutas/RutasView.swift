@@ -226,6 +226,7 @@ private struct RutasMapView: View {
                 case .bus:           EmptyView()
                 case .usuarioReal:   EmptyView()    // No se dibuja en RutasView (pantalla de listado).
                 case .conductor:    EmptyView()    // Idem: solo aplica en vista de tracking real.
+                case .busqueda:     EmptyView()
                 }
             }
         }

@@ -78,3 +78,29 @@ struct MarcadorUTP: View {
     }
 }
 
+// MARK: - Marcador de Destino Buscado (ej. UPAO, Mall, etc.)
+struct MarcadorDestinoBuscado: View {
+    let titulo: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(titulo)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color.secondary))
+                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                .lineLimit(1)
+            ZStack {
+                Circle().fill(Color.secondary).frame(width: 34, height: 34)
+                    .shadow(color: .black.opacity(0.30), radius: 4, x: 0, y: 2)
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+}
+
+

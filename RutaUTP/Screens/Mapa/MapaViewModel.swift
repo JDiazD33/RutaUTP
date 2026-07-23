@@ -40,15 +40,10 @@ struct DestinoChip: Identifiable, Equatable {
 enum TipoAnotacion: Equatable {
     case utp
     case usuario
-    /// Marcador del usuario alimentado por GPS real (LocationService).
-    /// Distinto de `.usuario` (que es el marcador peatonal mock). Se usa en
-    /// RouteTrackingDemoView y futuras pantallas de tracking real.
     case usuarioReal
     case bus(String)
-    /// Vehículo con posición que viene de un VehicleTrackingProvider
-    /// (simulado o real). Mismo look que `.bus` pero semánticamente
-    /// representa un vehículo siendo trackeado, no un spot decorativo.
     case conductor(String)
+    case busqueda(String)
 }
 
 struct MapaAnotacion: Identifiable, Equatable {
@@ -63,140 +58,276 @@ struct MapaAnotacion: Identifiable, Equatable {
 }
 
 // MARK: - ViewModel
-final class MapaViewModel: ObservableObject {
+final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
 
+    // Región por defecto centrada en Trujillo / UTP
     @Published var region: MKCoordinateRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0287),
-        span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
+        center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
+        span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
     )
-    @Published var busSimulados: [BusSimulado] = []
+
     @Published var textoBusqueda: String = ""
     @Published var destinoSeleccionado: DestinoChip? = nil
 
-    private var timer: Timer?
+    // GPS Real
+    @Published var userRealCoordinate: CLLocationCoordinate2D? = nil
+    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
 
-    // Inyectado por DI — provider de posiciones de vehículos. Hoy usamos
-    // SimulatedTrackingProvider por defecto para mantener el comportamiento
-    // visual actual. Cuando exista backend, basta pasar RealTrackingProvider
-    // desde fuera sin tocar este VM. (regla #3 del plan)
-    private let trackingProvider: VehicleTrackingProviding
+    // Búsqueda MapKit
+    @Published var sugerenciasBusqueda: [MKLocalSearchCompletion] = []
+    @Published var busquedaResultado: (titulo: String, coordenada: CLLocationCoordinate2D)? = nil
+    @Published var buscando: Bool = false
 
-    init(trackingProvider: VehicleTrackingProviding = SimulatedTrackingProvider()) {
-        self.trackingProvider = trackingProvider
-        // NO llamamos a trackingProvider.start() aquí todavía: el Timer
-        // interno existente (busSimulados) sigue siendo el que alimenta las
-        // anotaciones para mantener la demoo funcional. Cuando el VM pase a
-        // consumir el provider en producción, se reemplaza spawnBuses por
-        // un iterador `for await positions in trackingProvider.positions()`.
+    // Tracking & Ruteo Real (igual a RouteTrackingDemoView)
+    @Published var routePolyline: MKPolyline? = nil
+    @Published var etaMinutos: Int? = nil
+    @Published var distanciaKm: Double? = nil
+    @Published var calculandoRuta: Bool = false
+
+    private let locationService: LocationServiceProtocol
+    private let routeService: RouteCalculationService
+    private let completer = MKLocalSearchCompleter()
+    private var locationTask: Task<Void, Never>?
+
+    init(
+        locationService: LocationServiceProtocol = LocationService(),
+        routeService: RouteCalculationService = RouteCalculationService()
+    ) {
+        self.locationService = locationService
+        self.routeService = routeService
+        super.init()
+
+        completer.delegate = self
+        completer.resultTypes = [.pointOfInterest, .address]
+        completer.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
+            span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
+        )
     }
 
+    deinit {
+        locationTask?.cancel()
+        locationService.stopUpdating()
+    }
 
-    // Destinos conocidos
+    // MARK: - Ubicación GPS Real
+    func iniciarGPS() {
+        locationTask?.cancel()
+        locationTask = Task { @MainActor in
+            let status = await locationService.requestPermission()
+            self.authorizationStatus = status
+            if status.isAuthorized {
+                locationService.startUpdating()
+                for await location in locationService.currentLocation() {
+                    self.userRealCoordinate = location.coordinate
+                }
+            }
+        }
+    }
+
+    func recenterOnUser() {
+        if let userCoord = userRealCoordinate {
+            withAnimation(.spring(response: 0.5)) {
+                region = MKCoordinateRegion(
+                    center: userCoord,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                )
+            }
+        } else {
+            iniciarGPS()
+        }
+    }
+
+    // Destinos conocidos (Coordenadas UTP actualizadas a Av. Nicolás de Piérola 1221, Trujillo)
     let destinos: [DestinoChip] = [
         DestinoChip(id: 1, label: "Casa",      icon: "house.fill",         lat: -8.1180, lon: -79.0350),
-        DestinoChip(id: 2, label: "UTP",       icon: "graduationcap.fill", lat: -8.1116, lon: -79.0287),
+        DestinoChip(id: 2, label: "UTP",       icon: "graduationcap.fill", lat: -8.0935, lon: -79.0232),
         DestinoChip(id: 3, label: "Trabajo",   icon: "briefcase.fill",     lat: -8.1050, lon: -79.0200),
         DestinoChip(id: 4, label: "Centro",    icon: "building.2.fill",    lat: -8.1090, lon: -79.0270),
         DestinoChip(id: 5, label: "Huanchaco", icon: "water.waves",        lat: -8.0825, lon: -79.1197)
     ]
 
-    // MARK: - Selección
+    // MARK: - Búsqueda en tiempo real
+    func actualizarTextoBusqueda(_ nuevoTexto: String) {
+        textoBusqueda = nuevoTexto
+        let t = nuevoTexto.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty {
+            sugerenciasBusqueda = []
+            completer.queryFragment = ""
+        } else {
+            completer.queryFragment = t
+        }
+    }
+
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        DispatchQueue.main.async {
+            self.sugerenciasBusqueda = completer.results
+        }
+    }
+
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        #if DEBUG
+        print("[MapaViewModel] MKLocalSearchCompleter error: \(error.localizedDescription)")
+        #endif
+    }
+
+    // MARK: - Selección y Búsqueda de Destino
     func seleccionar(destino: DestinoChip) {
-        // Evitar re-spawn si ya está seleccionado
         if destinoSeleccionado?.id == destino.id { return }
 
+        sugerenciasBusqueda = []
+        destinoSeleccionado = destino
+        let destCoord = CLLocationCoordinate2D(latitude: destino.lat, longitude: destino.lon)
+        busquedaResultado = (titulo: destino.label, coordenada: destCoord)
+        textoBusqueda = destino.label
+
         withAnimation(.spring(response: 0.5)) {
-            destinoSeleccionado = destino
             region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: destino.lat, longitude: destino.lon),
+                center: destCoord,
                 span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
             )
         }
-        textoBusqueda = destino.label
-        spawnBuses(alrededor: destino)
+        calcularRutaHacia(destCoord)
+    }
+
+    func seleccionarSugerencia(_ completion: MKLocalSearchCompletion) {
+        sugerenciasBusqueda = []
+        textoBusqueda = completion.title
+        buscando = true
+
+        let searchRequest = MKLocalSearch.Request(completion: completion)
+        let search = MKLocalSearch(request: searchRequest)
+
+        search.start { [weak self] response, error in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.buscando = false
+                if let mapItem = response?.mapItems.first {
+                    self.seleccionarLugar(
+                        titulo: mapItem.name ?? completion.title,
+                        coordenada: mapItem.placemark.coordinate
+                    )
+                }
+            }
+        }
     }
 
     func buscarTexto(_ texto: String) {
         let t = texto.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
+        sugerenciasBusqueda = []
+
         if let match = destinos.first(where: {
             $0.label.lowercased().contains(t.lowercased())
         }) {
             seleccionar(destino: match)
+            return
+        }
+
+        buscando = true
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = t
+        request.region = region
+
+        let search = MKLocalSearch(request: request)
+        search.start { [weak self] response, error in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.buscando = false
+                if let mapItem = response?.mapItems.first {
+                    self.seleccionarLugar(
+                        titulo: mapItem.name ?? t,
+                        coordenada: mapItem.placemark.coordinate
+                    )
+                }
+            }
+        }
+    }
+
+    private func seleccionarLugar(titulo: String, coordenada: CLLocationCoordinate2D) {
+        destinoSeleccionado = nil
+        busquedaResultado = (titulo: titulo, coordenada: coordenada)
+
+        withAnimation(.spring(response: 0.5)) {
+            region = MKCoordinateRegion(
+                center: coordenada,
+                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
+            )
+        }
+        calcularRutaHacia(coordenada)
+    }
+
+    // MARK: - Ruteo Real (Polilínea MKDirections)
+    func calcularRutaHacia(_ destinoCoord: CLLocationCoordinate2D) {
+        let origen = userRealCoordinate ?? CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)
+        calculandoRuta = true
+
+        Task { @MainActor in
+            do {
+                let route: CalculatedRoute
+                do {
+                    route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .transit)
+                } catch {
+                    route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .automobile)
+                }
+                self.routePolyline = route.polyline
+                self.etaMinutos = Int(ceil(route.expectedTravelTime / 60.0))
+                self.distanciaKm = Double(round(10 * (route.distance / 1000.0)) / 10)
+                self.calculandoRuta = false
+            } catch {
+                #if DEBUG
+                print("[MapaViewModel] Error calculando ruta: \(error.localizedDescription)")
+                #endif
+                self.calculandoRuta = false
+            }
         }
     }
 
     func limpiar() {
         textoBusqueda = ""
         destinoSeleccionado = nil
-        busSimulados = []
-        detenerAnimacion()
+        busquedaResultado = nil
+        sugerenciasBusqueda = []
+        completer.queryFragment = ""
+        routePolyline = nil
+        etaMinutos = nil
+        distanciaKm = nil
+
         withAnimation(.spring(response: 0.5)) {
             region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0287),
+                center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
                 span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
             )
         }
     }
 
-    // MARK: - Spawn de buses
-    private func spawnBuses(alrededor destino: DestinoChip) {
-        detenerAnimacion()
-        let lineas = ["B", "10", "4", "C", "7", "A"]
-        busSimulados = (0..<6).map { i in
-            let angulo = Double(i) * 60.0
-            let radio = 0.008 + Double.random(in: 0...0.004)
-            let rad = angulo * .pi / 180
-            return BusSimulado(
-                id: i,
-                lat: destino.lat + sin(rad) * radio,
-                lon: destino.lon + cos(rad) * radio,
-                linea: lineas[i % lineas.count],
-                colorBus: .appPrimary,
-                angulo: angulo,
-                velocidad: 0.0001 + Double.random(in: 0...0.00005)
-            )
-        }
-        iniciarAnimacion()
-    }
-
-    // MARK: - Timer
-    private func iniciarAnimacion() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                for i in self.busSimulados.indices {
-                    let rad = self.busSimulados[i].angulo * .pi / 180
-                    self.busSimulados[i].lat += sin(rad) * self.busSimulados[i].velocidad
-                    self.busSimulados[i].lon += cos(rad) * self.busSimulados[i].velocidad
-                    if Double.random(in: 0...1) < 0.002 {
-                        self.busSimulados[i].angulo = Double.random(in: 0...360)
-                    }
-                }
-            }
-        }
-    }
-
-    func detenerAnimacion() {
-        timer?.invalidate()
-        timer = nil
-    }
-
     // MARK: - Anotaciones para el mapa
     func anotaciones() -> [MapaAnotacion] {
-        var items: [MapaAnotacion] = [
-            MapaAnotacion(id: -1, lat: -8.1116, lon: -79.0287, tipo: .utp),
-            MapaAnotacion(id: -2, lat: -8.1180, lon: -79.0350, tipo: .usuario),
-        ]
-        for bus in busSimulados {
+        var items: [MapaAnotacion] = []
+
+        // Marcador del campus UTP
+        items.append(MapaAnotacion(id: -1, lat: -8.0935, lon: -79.0232, tipo: .utp))
+
+        // Marcador de usuario GPS Real o Peatón Mock
+        if let userCoord = userRealCoordinate {
+            items.append(MapaAnotacion(id: -2, lat: userCoord.latitude, lon: userCoord.longitude, tipo: .usuarioReal))
+        } else {
+            items.append(MapaAnotacion(id: -2, lat: -8.1180, lon: -79.0350, tipo: .usuario))
+        }
+
+        // Marcador del destino buscado (ej. UPAO, Casa, Mall)
+        if let res = busquedaResultado, res.titulo != "UTP" {
             items.append(MapaAnotacion(
-                id: 1000 + bus.id,
-                lat: bus.lat,
-                lon: bus.lon,
-                tipo: .bus(bus.linea)
+                id: -3,
+                lat: res.coordenada.latitude,
+                lon: res.coordenada.longitude,
+                tipo: .busqueda(res.titulo)
             ))
         }
+
         return items
     }
 }
+
+
 
