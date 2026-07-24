@@ -53,7 +53,7 @@ struct RouteTrackingDemoView: View {
                 }
                 // Marcador de destino (UTP) si hay un viaje en curso.
                 if vm.tripInProgress {
-                    let utpCoord = CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186)
+                    let utpCoord = CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645)
                     Annotation("UTP Trujillo", coordinate: utpCoord) {
                         MarcadorUTP()        // reutilizamos el marker existente de MapMarkers.swift
                     }

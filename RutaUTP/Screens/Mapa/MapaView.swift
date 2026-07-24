@@ -23,7 +23,7 @@ struct MapaView: View {
 
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186),
+            center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
             span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
         )
     )
@@ -36,14 +36,18 @@ struct MapaView: View {
             // ── MAPA DE FONDO (iOS 17+ MapKit con MapPolyline) ──
             Map(position: $cameraPosition) {
 
-                // 1. Marcador UTP Trujillo
-                Annotation("UTP Trujillo", coordinate: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186)) {
+                // 1. Marcador UTP Trujillo (Av. Nicolás de Piérola 1221)
+                Annotation("UTP Trujillo", coordinate: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645)) {
                     MarcadorUTP()
                 }
 
-                // 2. Marcador del Usuario (GPS Real)
+                // 2. Marcador del Usuario (GPS Real o Peatón)
                 if let userCoord = vm.userRealCoordinate {
                     Annotation("Mi Ubicación", coordinate: userCoord) {
+                        PulsingUserMarker()
+                    }
+                } else {
+                    Annotation("Mi Ubicación", coordinate: CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)) {
                         PulsingUserMarker()
                     }
                 }
@@ -58,18 +62,6 @@ struct MapaView: View {
                 if let res = vm.busquedaResultado, res.titulo != "UTP" {
                     Annotation(res.titulo, coordinate: res.coordenada) {
                         MarcadorDestinoBuscado(titulo: res.titulo)
-                    }
-                }
-
-                // 5. Buses Animados en Tiempo Real
-                ForEach(vm.busesAnimados) { bus in
-                    Annotation("Línea \(bus.linea)", coordinate: bus.coordinate) {
-                        AnimatedBusMarker(linea: bus.linea, color: bus.color, heading: bus.heading)
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    vm.busSeleccionado = bus
-                                }
-                            }
                     }
                 }
             }
@@ -160,25 +152,6 @@ struct MapaView: View {
                     .padding(.bottom, 8)
                 }
 
-                // Popup de detalle de Bus Seleccionado
-                if let bus = vm.busSeleccionado {
-                    BusDetailPopup(
-                        bus: bus,
-                        onClose: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                vm.busSeleccionado = nil
-                            }
-                        },
-                        onVerRuta: {
-                            vm.busSeleccionado = nil
-                            router.navigate(to: .rutas)
-                        }
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
                 // Bottom panel
                 bottomPanel
                     .padding(.bottom, tabBarHeight + 8)
@@ -197,11 +170,6 @@ struct MapaView: View {
         .ignoresSafeArea(edges: .bottom)
         .onAppear { vm.iniciarGPS() }
         .onChange(of: vm.region.center.latitude) { _ in
-            withAnimation {
-                cameraPosition = .region(vm.region)
-            }
-        }
-        .onChange(of: vm.region.center.longitude) { _ in
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
@@ -509,6 +477,82 @@ private struct BusCard: View {
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Popup de Detalle de Bus Animado
+private struct BusDetailPopup: View {
+    let bus: BusAnimado
+    let onClose: () -> Void
+    let onVerRuta: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(bus.color.opacity(0.18))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "bus.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(bus.color)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text("LÍNEA \(bus.linea)")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.onSurface)
+                        Text("\(bus.minutosLlegada) MIN")
+                            .font(.labelCapsSm)
+                            .foregroundStyle(.white)
+                            .appTracking(AppTracking.wideLabel)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(bus.color))
+                    }
+                    Text("\(bus.empresa) • \(bus.tipo) (\(bus.placa))")
+                        .font(.bodySm)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button(action: onVerRuta) {
+                HStack(spacing: 8) {
+                    Image(systemName: "map.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Ver Ruta Completa")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 42)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(bus.color)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(bus.color.opacity(0.35), lineWidth: 1)
+        )
     }
 }
 
