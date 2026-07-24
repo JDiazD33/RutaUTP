@@ -28,7 +28,7 @@ import MapKit
 import CoreLocation
 
 struct RouteTrackingDemoView: View {
-
+    @EnvironmentObject private var router: AppRouter
     @StateObject private var vm: RouteTrackingViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var cameraPosition: MapCameraPosition = .automatic
@@ -53,7 +53,7 @@ struct RouteTrackingDemoView: View {
                 }
                 // Marcador de destino (UTP) si hay un viaje en curso.
                 if vm.tripInProgress {
-                    let utpCoord = CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0287)
+                    let utpCoord = CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186)
                     Annotation("UTP Trujillo", coordinate: utpCoord) {
                         MarcadorUTP()        // reutilizamos el marker existente de MapMarkers.swift
                     }
@@ -103,6 +103,8 @@ struct RouteTrackingDemoView: View {
     private var topBar: some View {
         HStack(spacing: 12) {
             Button {
+                vm.stop()
+                router.navigate(to: .mapaPrincipal)
                 dismiss()
             } label: {
                 Image(systemName: "xmark.circle.fill")

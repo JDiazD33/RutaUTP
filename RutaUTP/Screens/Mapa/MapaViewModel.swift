@@ -62,7 +62,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     // Región por defecto centrada en Trujillo / UTP
     @Published var region: MKCoordinateRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
+        center: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186),
         span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
     )
 
@@ -100,7 +100,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         completer.delegate = self
         completer.resultTypes = [.pointOfInterest, .address]
         completer.region = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
+            center: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186),
             span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
         )
     }
@@ -119,7 +119,11 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             if status.isAuthorized {
                 locationService.startUpdating()
                 for await location in locationService.currentLocation() {
+                    let isInitialFix = (self.userRealCoordinate == nil)
                     self.userRealCoordinate = location.coordinate
+                    if isInitialFix {
+                        self.recenterOnUser()
+                    }
                 }
             }
         }
@@ -130,7 +134,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             withAnimation(.spring(response: 0.5)) {
                 region = MKCoordinateRegion(
                     center: userCoord,
-                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
                 )
             }
         } else {
@@ -141,7 +145,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // Destinos conocidos (Coordenadas UTP actualizadas a Av. Nicolás de Piérola 1221, Trujillo)
     let destinos: [DestinoChip] = [
         DestinoChip(id: 1, label: "Casa",      icon: "house.fill",         lat: -8.1180, lon: -79.0350),
-        DestinoChip(id: 2, label: "UTP",       icon: "graduationcap.fill", lat: -8.0935, lon: -79.0232),
+        DestinoChip(id: 2, label: "UTP",       icon: "graduationcap.fill", lat: -8.097955, lon: -79.038186),
         DestinoChip(id: 3, label: "Trabajo",   icon: "briefcase.fill",     lat: -8.1050, lon: -79.0200),
         DestinoChip(id: 4, label: "Centro",    icon: "building.2.fill",    lat: -8.1090, lon: -79.0270),
         DestinoChip(id: 5, label: "Huanchaco", icon: "water.waves",        lat: -8.0825, lon: -79.1197)
@@ -295,7 +299,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
         withAnimation(.spring(response: 0.5)) {
             region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
+                center: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186),
                 span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
             )
         }
@@ -306,7 +310,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         var items: [MapaAnotacion] = []
 
         // Marcador del campus UTP
-        items.append(MapaAnotacion(id: -1, lat: -8.0935, lon: -79.0232, tipo: .utp))
+        items.append(MapaAnotacion(id: -1, lat: -8.097955, lon: -79.038186, tipo: .utp))
 
         // Marcador de usuario GPS Real o Peatón Mock
         if let userCoord = userRealCoordinate {

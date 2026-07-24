@@ -119,11 +119,11 @@ struct CarnetScannerView: View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            let scanW = w * 0.85
-            let scanH = scanW * 0.54 // Proporcion CR80
+            let scanW = min(w * 0.86, 360)
+            let scanH = scanW * 0.63 // Proporción óptima para carnet universitario
             let scanRect = CGRect(
                 x: (w - scanW) / 2,
-                y: (h - scanH) / 2 - 40,
+                y: (h - scanH) / 2 - 20,
                 width: scanW,
                 height: scanH
             )
@@ -133,83 +133,92 @@ struct CarnetScannerView: View {
                 CameraPreviewRepresentable()
                     .ignoresSafeArea()
 
-                // Overlay oscuro con cutout
+                // Overlay oscuro con cutout perfectamente alineado
                 ScannerCutout(cutout: scanRect)
                     .fill(Color.black.opacity(0.65), style: FillStyle(eoFill: true))
                     .ignoresSafeArea()
 
-                // Borde del rectangulo
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white, lineWidth: 2)
+                // Borde del rectangulo encuadrado
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.white.opacity(0.9), lineWidth: 2)
                     .frame(width: scanW, height: scanH)
                     .position(x: w / 2, y: scanRect.midY)
 
-                // Esquinas tipo escaner
+                // Esquinas tipo escaner alineadas pixel-perfect
                 cornerMarkers(scanRect: scanRect)
+
+                // Texto encima del rectangulo
+                VStack(spacing: 4) {
+                    Text("Encuadra tu carnet UTP aquí")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("Alinea los bordes dentro del recuadro")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+                .position(x: w / 2, y: max(scanRect.minY - 36, 100))
+
+                // Texto debajo del rectangulo
+                Text("Asegúrate de que el texto y foto sean legibles")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .position(x: w / 2, y: scanRect.maxY + 32)
 
                 // Checkmark animado
                 if showCheckmark {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(.tertiary)
-                        .background(Circle().fill(.white).frame(width: 90, height: 90))
-                        .position(x: w / 2, y: scanRect.midY)
-                        .transition(.scale.combined(with: .opacity))
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.4))
+                            .frame(width: 96, height: 96)
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 80))
+                            .foregroundStyle(Color.appPrimary)
+                    }
+                    .position(x: w / 2, y: scanRect.midY)
+                    .transition(.scale.combined(with: .opacity))
                 }
 
-                // UI overlay
+                // UI Overlay (Top Bar + Bottom Button)
                 VStack {
-                    // Top bar
+                    // Top bar con Cancelar
                     HStack {
                         Spacer()
                         Button {
                             dismiss()
                         } label: {
-                            Text("Cancelar")
-                                .font(.bodyMdMedium)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(Capsule().fill(.ultraThinMaterial))
+                            HStack(spacing: 6) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                Text("Cancelar")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Capsule().fill(.ultraThinMaterial))
                         }
                         .buttonStyle(.plain)
                         .padding(.trailing, 20)
                     }
-                    .padding(.top, 16)
-
-                    Spacer().frame(height: scanRect.minY - 20)
-
-                    // Texto encima del rectangulo
-                    Text("Encuadra tu carnet aqui")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.white)
-                        .padding(.bottom, 12)
-
-                    Spacer().frame(height: scanH + 20)
-
-                    // Texto debajo
-                    Text("Asegurate que el texto sea legible")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(.top, 12)
+                    .padding(.top, 54)
 
                     Spacer()
 
-                    // Boton capturar
+                    // Boton capturar estilo camara
                     Button {
                         handleCapture()
                     } label: {
                         ZStack {
                             Circle()
                                 .stroke(Color.white, lineWidth: 4)
-                                .frame(width: 72, height: 72)
+                                .frame(width: 76, height: 76)
                             Circle()
                                 .fill(Color.white)
-                                .frame(width: 60, height: 60)
+                                .frame(width: 64, height: 64)
                         }
                     }
                     .buttonStyle(.plain)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 48)
                     .disabled(didCapture)
                 }
             }
@@ -248,8 +257,8 @@ struct CarnetScannerView: View {
 
     // MARK: - Corner markers
     private func cornerMarkers(scanRect: CGRect) -> some View {
-        let length: CGFloat = 20
-        let thickness: CGFloat = 3
+        let length: CGFloat = 24
+        let thickness: CGFloat = 4
         let color = Color.appPrimary
 
         return ZStack {
@@ -257,22 +266,22 @@ struct CarnetScannerView: View {
             cornerShape(corner: .topLeft, length: length, thickness: thickness)
                 .fill(color)
                 .frame(width: length, height: length)
-                .position(x: scanRect.minX, y: scanRect.minY)
+                .position(x: scanRect.minX + length / 2, y: scanRect.minY + length / 2)
             // Top-right
             cornerShape(corner: .topRight, length: length, thickness: thickness)
                 .fill(color)
                 .frame(width: length, height: length)
-                .position(x: scanRect.maxX, y: scanRect.minY)
+                .position(x: scanRect.maxX - length / 2, y: scanRect.minY + length / 2)
             // Bottom-left
             cornerShape(corner: .bottomLeft, length: length, thickness: thickness)
                 .fill(color)
                 .frame(width: length, height: length)
-                .position(x: scanRect.minX, y: scanRect.maxY)
+                .position(x: scanRect.minX + length / 2, y: scanRect.maxY - length / 2)
             // Bottom-right
             cornerShape(corner: .bottomRight, length: length, thickness: thickness)
                 .fill(color)
                 .frame(width: length, height: length)
-                .position(x: scanRect.maxX, y: scanRect.maxY)
+                .position(x: scanRect.maxX - length / 2, y: scanRect.maxY - length / 2)
         }
     }
 

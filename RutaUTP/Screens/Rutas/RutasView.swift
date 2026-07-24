@@ -209,11 +209,11 @@ private struct RutaOpcionCard: View {
 // MARK: - Mapa no interactivo para RutasView
 private struct RutasMapView: View {
     @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0287),
+        center: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186),
         span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
     )
     private let marcadores: [MapaAnotacion] = [
-        MapaAnotacion(id: 1, lat: -8.1116, lon: -79.0287, tipo: .utp),
+        MapaAnotacion(id: 1, lat: -8.097955, lon: -79.038186, tipo: .utp),
         MapaAnotacion(id: 2, lat: -8.1180, lon: -79.0350, tipo: .usuario)
     ]
 

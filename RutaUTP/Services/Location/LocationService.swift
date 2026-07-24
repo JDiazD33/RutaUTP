@@ -32,11 +32,11 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
     // MARK: - Internos
     private let manager: CLLocationManager
-    private var continuation: AsyncStream<CLLocation>.Continuation?
+    private var continuations: [UUID: AsyncStream<CLLocation>.Continuation] = [:]
     private(set) var lastKnownLocation: CLLocation?
 
     // Tunables
-    private let distanceFilter: CLLocationDistance = 10   // metros
+    private let distanceFilter: CLLocationDistance = 5    // metros para respuesta rápida
     private let desiredAccuracy: CLLocationAccuracy = kCLLocationAccuracyBest
 
     // Avoid duplicate start
@@ -49,26 +49,23 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         manager.delegate = self
         manager.desiredAccuracy = desiredAccuracy
         manager.distanceFilter = distanceFilter
-        // activityType específico para transporte públicopeatonal. Mejora la
-        //Kalman interna de iOS en vehículos que paran/arrancan.
         manager.activityType = .automotiveNavigation
+        
+        // Cargar ubicación almacenada en el manager si está disponible
+        if let loc = manager.location {
+            self.lastKnownLocation = loc
+        }
     }
 
     // MARK: - LocationServiceProtocol
 
     func requestPermission() async -> CLAuthorizationStatus {
-        // Volver a pedir solo tiene sentido si estado es .notDetermined.
         guard authorizationStatus == .notDetermined else {
             return authorizationStatus
         }
-        // CuandoInUso y luego pedir Always (pixel-perfect futuro).
-        if Bundle.main.object(forInfoDictionaryKey: "NSLocationAlwaysAndWhenInUseUsageDescription") != nil {
-            manager.requestAlwaysAuthorization()
-        } else {
-            manager.requestWhenInUseAuthorization()
-        }
-        // Para evitar anti-patrón "async shell", esperamos con un pequeño
-        // publisher: primer cambio de estado distinto a .notDetermined.
+        
+        manager.requestWhenInUseAuthorization()
+
         return await withCheckedContinuation { continuation in
             var cancellable: AnyCancellable?
             cancellable = self.$authorizationStatus
@@ -83,29 +80,34 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     }
 
     func currentLocation() -> AsyncStream<CLLocation> {
-        // Cada consumidor obtiene su propio stream. heartbreaking power: ok
-        // si el stream ya está activo se yielda también a este nuevo.
-        // Simplificación: un único continuation que alimenta TODOS los
-        // streams pedidos. Aquí devolvemos un stream que se bridgea al último.
-        let last = self.lastKnownLocation
+        let id = UUID()
         return AsyncStream { continuation in
-            if let last = last {
-                continuation.yield(last)
+            self.continuations[id] = continuation
+
+            // Emitir la última ubicación conocida o la actual del manager de inmediato
+            if let loc = self.lastKnownLocation ?? self.manager.location {
+                self.lastKnownLocation = loc
+                continuation.yield(loc)
             }
-            // Bridge: mantenemos solo el último continuation.
-            self.continuation = continuation
+
             continuation.onTermination = { [weak self] _ in
-                self?.continuation = nil
+                self?.continuations.removeValue(forKey: id)
             }
         }
     }
 
     func startUpdating() {
-        guard !isUpdating else { return }
-        guard authorizationStatus.isAuthorized else {
-            // No podemos arrancar sin permiso. El consumidor debe pedirlo.
-            return
+        guard authorizationStatus.isAuthorized else { return }
+        
+        // Emitir ubicación previa a los continuations existentes si la tenemos
+        if let loc = manager.location ?? lastKnownLocation {
+            lastKnownLocation = loc
+            for continuation in continuations.values {
+                continuation.yield(loc)
+            }
         }
+        
+        guard !isUpdating else { return }
         manager.startUpdatingLocation()
         isUpdating = true
     }
@@ -113,8 +115,10 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     func stopUpdating() {
         manager.stopUpdatingLocation()
         isUpdating = false
-        continuation?.finish()
-        continuation = nil
+        for continuation in continuations.values {
+            continuation.finish()
+        }
+        continuations.removeAll()
     }
 
     // MARK: - CLLocationManagerDelegate
@@ -123,10 +127,8 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         authorizationStatus = manager.authorizationStatus
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
-            // Si ya estábamos pidiendo updates, arrancar ahora.
             if !isUpdating { startUpdating() }
         case .denied, .restricted:
-            // Detener updates si los había, no crashear.
             stopUpdating()
         case .notDetermined:
             break
@@ -139,14 +141,13 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
                          didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         lastKnownLocation = location
-        continuation?.yield(location)
+        for continuation in continuations.values {
+            continuation.yield(location)
+        }
     }
 
     func locationManager(_ manager: CLLocationManager,
                          didFailWithError error: Error) {
-        // Errores comunes: CLError.denied, CLError.network, CLError.headingFailure.
-        // No queremos crashear la UI. El consumidor puede observer
-        // `lastKnownLocation == nil` para mostrar un mensaje.
         #if DEBUG
         print("[LocationService] didFailWithError: \(error.localizedDescription)")
         #endif

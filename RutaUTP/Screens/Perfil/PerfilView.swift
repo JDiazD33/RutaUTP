@@ -13,7 +13,12 @@ struct PerfilView: View {
     @State private var nombre: String = "Joaquín Díaz"
     @State private var notifOn: Bool = true
     @State private var ubicacionOn: Bool = true
-    @State private var ecoOff: Bool = false
+    @State private var modoOffline: Bool = false
+    @State private var showOfflineMapPopup: Bool = false
+    @State private var mapsDownloaded: Bool = false
+    @State private var showUbicacionPopup: Bool = false
+    @State private var ubicacionPopupMensaje: String = ""
+    @State private var ubicacionPopupSubtitulo: String = ""
     @State private var showEditAlert: Bool = false
     @State private var newNameInput: String = ""
     //  CORREGIDO V3: estado para Wallet
@@ -23,30 +28,59 @@ struct PerfilView: View {
     @State private var metodoPagoGuardado: String? = nil
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack(alignment: .top) {
             Color.appBackground.ignoresSafeArea()
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    ZStack(alignment: .bottom) {
-                        hero
-                        statsCard
+            ZStack(alignment: .bottom) {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        ZStack(alignment: .bottom) {
+                            hero
+                            statsCard
+                                .padding(.horizontal, 20)
+                                .offset(y: 45)
+                        }
+                        .frame(height: 420)
+
+                        configuracion
                             .padding(.horizontal, 20)
-                            .offset(y: 45)
+                            .padding(.top, 56)
+                        Spacer(minLength: 140)
                     }
-                    .frame(height: 420)
-
-                    configuracion
-                        .padding(.horizontal, 20)
-                        .padding(.top, 24)
-                    Spacer(minLength: 140)
                 }
-            }
-            .padding(.bottom, 64)
+                .padding(.bottom, 64)
 
-            BottomNavBar()
+                BottomNavBar()
+            }
+
+            // ── BANNER "SIN CONEXIÓN" (Top Banner en Modo Offline) ──
+            if modoOffline {
+                offlineTopBanner
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .ignoresSafeArea(edges: .bottom)
+        .animation(.easeInOut(duration: 0.28), value: modoOffline)
+        .onChange(of: modoOffline) { activo in
+            if activo {
+                showOfflineMapPopup = true
+            }
+        }
+        .onChange(of: ubicacionOn) { activo in
+            if activo {
+                ubicacionPopupMensaje = "Ubicación compartida"
+                ubicacionPopupSubtitulo = "Tu ubicación en tiempo real se compartirá para el seguimiento de rutas UTP."
+            } else {
+                ubicacionPopupMensaje = "Sin ubicación compartida"
+                ubicacionPopupSubtitulo = "Tu ubicación en tiempo real no se compartirá con otros usuarios."
+            }
+            showUbicacionPopup = true
+        }
+        .alert(ubicacionPopupMensaje, isPresented: $showUbicacionPopup) {
+            Button("Entendido", role: .cancel) { }
+        } message: {
+            Text(ubicacionPopupSubtitulo)
+        }
         .alert("Editar nombre", isPresented: $showEditAlert) {
             TextField("Nombre completo", text: $newNameInput)
             Button("Guardar") {
@@ -58,7 +92,7 @@ struct PerfilView: View {
         } message: {
             Text("Ingresa tu nuevo nombre para actualizar tu perfil.")
         }
-        //  CORREGIDO V3: sheet de tarjeta
+        // Sheet de Tarjeta
         .sheet(isPresented: $showTarjetaSheet) {
             TarjetaFormSheet { numero in
                 let ultimos4 = numero.filter { $0.isNumber }.suffix(4)
@@ -66,12 +100,74 @@ struct PerfilView: View {
             }
             .presentationDetents([.large])
         }
-        //  CORREGIDO V3: scanner de carnet
+        // Scanner de Carnet
         .fullScreenCover(isPresented: $showCarnetScanner) {
             CarnetScannerView {
                 carnetVerificado = true
             }
         }
+        // Sheet Modal de Descarga de Mapas Offline
+        .sheet(isPresented: $showOfflineMapPopup) {
+            OfflineMapSheet(mapsDownloaded: $mapsDownloaded)
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    // MARK: - Banner Sin Conexión (Top)
+    private var offlineTopBanner: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.20))
+                    .frame(width: 32, height: 32)
+                Image(systemName: "wifi.slash")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.orange)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text("SIN CONEXIÓN")
+                        .font(.labelCapsSm)
+                        .foregroundStyle(Color.orange)
+                        .appTracking(AppTracking.wideLabel)
+                    Text("• Modo Offline")
+                        .font(.bodySm)
+                        .foregroundStyle(.onSurfaceVariant)
+                }
+                Text(mapsDownloaded ? "Mapas de Trujillo listos localmente" : "Operando con datos almacenados")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.onSurfaceVariant)
+            }
+            Spacer()
+            Button {
+                showOfflineMapPopup = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : "arrow.down.circle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(mapsDownloaded ? "Mapas OK" : "Descargar")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(Color.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(Color.orange))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.orange.opacity(0.40), lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 50)
     }
 
     // MARK: - Hero
@@ -118,7 +214,6 @@ struct PerfilView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(Capsule().fill(Color.white.opacity(0.20)))
-                            //  CORREGIDO V3: badge Verificado
                             if carnetVerificado {
                                 HStack(spacing: 3) {
                                     Image(systemName: "checkmark.seal.fill")
@@ -255,7 +350,7 @@ struct PerfilView: View {
                 .font(.labelCapsLg)
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
-                .padding(.horizontal, 4)
+                .padding(.leading, 4)
 
             VStack(spacing: 0) {
                 toggleRow(icon: "bell.fill", iconColor: .appPrimary,
@@ -264,8 +359,8 @@ struct PerfilView: View {
                 toggleRow(icon: "mappin.circle.fill", iconColor: .secondary,
                           label: "Compartir ubicación", isOn: $ubicacionOn)
                 Divider().padding(.leading, 56)
-                toggleRow(icon: "creditcard.fill", iconColor: .tertiary,
-                          label: "Modo económico", isOn: $ecoOff)
+                toggleRow(icon: "wifi.slash", iconColor: .orange,
+                          label: "Modo offline", isOn: $modoOffline)
                 Divider().padding(.leading, 56)
                 chevronRow(icon: "person.crop.circle.fill", iconColor: .appPrimary,
                            label: "Nombre: \(nombre)") {
@@ -340,7 +435,161 @@ struct PerfilView: View {
     }
 }
 
+// MARK: - Sheet Modal de Descarga de Mapas Offline
+private struct OfflineMapSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var mapsDownloaded: Bool
+    @State private var isDownloading: Bool = false
+    @State private var progress: Double = 0.0
 
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.appPrimary.opacity(0.20), Color.orange.opacity(0.20)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 72, height: 72)
+                Image(systemName: mapsDownloaded ? "checkmark.seal.fill" : "map.circle.fill")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(mapsDownloaded ? Color.green : Color.appPrimary)
+            }
+            .padding(.top, 16)
+
+            VStack(spacing: 6) {
+                Text(mapsDownloaded ? "Mapas Offline Descargados" : "Descargar Mapas Locales")
+                    .font(.headlineLgMobile)
+                    .foregroundStyle(.onSurface)
+                Text(
+                    mapsDownloaded
+                    ? "Tienes el mapa de Trujillo y campus UTP guardado. Puedes navegar completamente sin conexión a internet."
+                    : "Descarga los mapas del campus UTP y rutas de Trujillo para continuar navegando aun cuando te quedes sin datos o señal."
+                )
+                .font(.bodySm)
+                .foregroundStyle(.onSurfaceVariant)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+            }
+
+            VStack(spacing: 10) {
+                mapPackageRow(
+                    icon: "graduationcap.fill",
+                    title: "Campus UTP Trujillo",
+                    detail: "Edificios, pabellones y paraderos • 12 MB"
+                )
+                mapPackageRow(
+                    icon: "bus.fill",
+                    title: "Rutas de Transporte Urbano",
+                    detail: "Líneas 10, 4 y paraderos cercanos • 28 MB"
+                )
+            }
+
+            if isDownloading {
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Descargando mapas locales...")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.onSurface)
+                        Spacer()
+                        Text("\(Int(progress * 100))%")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.appPrimary)
+                    }
+                    ProgressView(value: progress)
+                        .tint(Color.appPrimary)
+                }
+                .padding(.horizontal, 4)
+            }
+
+            Spacer()
+
+            VStack(spacing: 10) {
+                Button {
+                    if mapsDownloaded {
+                        dismiss()
+                    } else {
+                        iniciarDescarga()
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : (isDownloading ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill"))
+                        Text(mapsDownloaded ? "Entendido, cerrar" : (isDownloading ? "Descargando..." : "Descargar Mapas (40 MB)"))
+                    }
+                    .font(.headlineSm)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(mapsDownloaded ? Color.green : Color.appPrimary)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isDownloading)
+
+                if !isDownloading && !mapsDownloaded {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Ahora no")
+                            .font(.bodyMdMedium)
+                            .foregroundStyle(.onSurfaceVariant)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(24)
+        .background(Color.appSurface)
+    }
+
+    private func mapPackageRow(icon: String, title: String, detail: String) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.surfaceContainerHigh)
+                    .frame(width: 42, height: 42)
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.appPrimary)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.onSurface)
+                Text(detail)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.onSurfaceVariant)
+            }
+            Spacer()
+            Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
+                .font(.system(size: 18))
+                .foregroundStyle(mapsDownloaded ? Color.green : Color.onSurfaceVariant.opacity(0.5))
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.surfaceContainerLow)
+        )
+    }
+
+    private func iniciarDescarga() {
+        isDownloading = true
+        progress = 0.0
+        Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { timer in
+            progress += 0.08
+            if progress >= 1.0 {
+                progress = 1.0
+                timer.invalidate()
+                isDownloading = false
+                mapsDownloaded = true
+            }
+        }
+    }
+}
 
 #Preview {
     PerfilView().environmentObject(AppRouter())

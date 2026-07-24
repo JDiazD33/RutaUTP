@@ -23,7 +23,7 @@ struct MapaView: View {
 
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232),
+            center: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186),
             span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
         )
     )
@@ -36,18 +36,14 @@ struct MapaView: View {
             // ── MAPA DE FONDO (iOS 17+ MapKit con MapPolyline) ──
             Map(position: $cameraPosition) {
 
-                // 1. Marcador UTP Trujillo (Av. Nicolás de Piérola 1221)
-                Annotation("UTP Trujillo", coordinate: CLLocationCoordinate2D(latitude: -8.0935, longitude: -79.0232)) {
+                // 1. Marcador UTP Trujillo
+                Annotation("UTP Trujillo", coordinate: CLLocationCoordinate2D(latitude: -8.097955, longitude: -79.038186)) {
                     MarcadorUTP()
                 }
 
-                // 2. Marcador del Usuario (GPS Real o Peatón)
+                // 2. Marcador del Usuario (GPS Real)
                 if let userCoord = vm.userRealCoordinate {
                     Annotation("Mi Ubicación", coordinate: userCoord) {
-                        PulsingUserMarker()
-                    }
-                } else {
-                    Annotation("Mi Ubicación", coordinate: CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)) {
                         PulsingUserMarker()
                     }
                 }
@@ -170,6 +166,11 @@ struct MapaView: View {
         .ignoresSafeArea(edges: .bottom)
         .onAppear { vm.iniciarGPS() }
         .onChange(of: vm.region.center.latitude) { _ in
+            withAnimation {
+                cameraPosition = .region(vm.region)
+            }
+        }
+        .onChange(of: vm.region.center.longitude) { _ in
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
