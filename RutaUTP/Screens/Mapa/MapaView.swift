@@ -64,9 +64,30 @@ struct MapaView: View {
                         MarcadorDestinoBuscado(titulo: res.titulo)
                     }
                 }
+
+                // 5. Marcadores de Buses Animados en Tiempo Real
+                ForEach(vm.busesAnimados) { bus in
+                    Annotation("Línea \(bus.linea)", coordinate: bus.coordinate) {
+                        AnimatedBusMarker(
+                            linea: bus.linea,
+                            color: bus.color,
+                            heading: bus.heading
+                        )
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                vm.busSeleccionado = bus
+                            }
+                        }
+                    }
+                }
             }
             .ignoresSafeArea()
-            .onTapGesture { campoEnfocado = false }
+            .onTapGesture {
+                campoEnfocado = false
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    vm.busSeleccionado = nil
+                }
+            }
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
@@ -157,6 +178,29 @@ struct MapaView: View {
                     .padding(.bottom, tabBarHeight + 8)
             }
 
+            // ── POPUP DETALLE DE BUS ANIMADO ──
+            if let bus = vm.busSeleccionado {
+                VStack {
+                    Spacer()
+                    BusDetailPopup(
+                        bus: bus,
+                        onClose: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                vm.busSeleccionado = nil
+                            }
+                        },
+                        onVerRuta: {
+                            vm.busSeleccionado = nil
+                            router.navigate(to: .rutas)
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, tabBarHeight + 16)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(10)
+            }
+
             // ── DRAWER OVERLAY ──
             if mostrarDrawer {
                 SideDrawer(isOpen: $mostrarDrawer)
@@ -169,6 +213,7 @@ struct MapaView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear { vm.iniciarGPS() }
+        .onDisappear { vm.detenerSimulacionBuses() }
         .onChange(of: vm.region.center.latitude) { _ in
             withAnimation {
                 cameraPosition = .region(vm.region)
@@ -405,14 +450,30 @@ struct MapaView: View {
                         placa: "T1B-721", colorLinea: .appPrimary
                     )
                     .frame(height: 100)
-                    .onTapGesture { router.navigate(to: .rutas) }
+                    .onTapGesture {
+                        if let bus = vm.busesAnimados.first(where: { $0.linea == "10" }) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                vm.busSeleccionado = bus
+                            }
+                        } else {
+                            router.navigate(to: .rutas)
+                        }
+                    }
                     BusCard(
                         linea: "LÍNEA 4", empresa: "Salaverry",
                         minutos: "12 MIN", tipo: "Combi",
                         placa: "A6N-450", colorLinea: .secondary
                     )
                     .frame(height: 100)
-                    .onTapGesture { router.navigate(to: .rutas) }
+                    .onTapGesture {
+                        if let bus = vm.busesAnimados.first(where: { $0.linea == "4" }) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                vm.busSeleccionado = bus
+                            }
+                        } else {
+                            router.navigate(to: .rutas)
+                        }
+                    }
                 }
                 .padding(.horizontal, 20)
             }

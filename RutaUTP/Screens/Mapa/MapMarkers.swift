@@ -140,6 +140,7 @@ struct AnimatedBusMarker: View {
                 Image(systemName: "bus.fill")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
+                    .rotationEffect(Angle(degrees: heading))
             }
         }
         .onAppear { pulsando = true }
