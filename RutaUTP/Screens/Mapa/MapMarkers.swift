@@ -103,4 +103,48 @@ struct MarcadorDestinoBuscado: View {
     }
 }
 
+// MARK: - Marcador de Bus Animado en Tiempo Real
+struct AnimatedBusMarker: View {
+    let linea: String
+    let color: Color
+    let heading: Double
+    @State private var pulsando = false
+
+    var body: some View {
+        VStack(spacing: 2) {
+            // Badge con el número de línea
+            Text("L-\(linea)")
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(color))
+                .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
+
+            // Pin interactivo del bus con pulso
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.30))
+                    .frame(width: pulsando ? 44 : 32, height: pulsando ? 44 : 32)
+                    .animation(
+                        .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
+                        value: pulsando
+                    )
+
+                Circle()
+                    .fill(color)
+                    .frame(width: 32, height: 32)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .shadow(color: .black.opacity(0.35), radius: 4, x: 0, y: 2)
+
+                Image(systemName: "bus.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .onAppear { pulsando = true }
+    }
+}
+
+
 

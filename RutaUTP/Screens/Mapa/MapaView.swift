@@ -60,6 +60,18 @@ struct MapaView: View {
                         MarcadorDestinoBuscado(titulo: res.titulo)
                     }
                 }
+
+                // 5. Buses Animados en Tiempo Real
+                ForEach(vm.busesAnimados) { bus in
+                    Annotation("Línea \(bus.linea)", coordinate: bus.coordinate) {
+                        AnimatedBusMarker(linea: bus.linea, color: bus.color, heading: bus.heading)
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    vm.busSeleccionado = bus
+                                }
+                            }
+                    }
+                }
             }
             .ignoresSafeArea()
             .onTapGesture { campoEnfocado = false }
@@ -146,6 +158,25 @@ struct MapaView: View {
                     .accessibilityLabel("Centrar en mi ubicación")
                     .padding(.trailing, 20)
                     .padding(.bottom, 8)
+                }
+
+                // Popup de detalle de Bus Seleccionado
+                if let bus = vm.busSeleccionado {
+                    BusDetailPopup(
+                        bus: bus,
+                        onClose: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                vm.busSeleccionado = nil
+                            }
+                        },
+                        onVerRuta: {
+                            vm.busSeleccionado = nil
+                            router.navigate(to: .rutas)
+                        }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
                 // Bottom panel

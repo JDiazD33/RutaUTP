@@ -27,6 +27,36 @@ struct BusSimulado: Identifiable, Equatable {
     let velocidad: Double
 }
 
+// MARK: - Bus animado sobre ruta real
+struct BusAnimado: Identifiable, Equatable {
+    let id: Int
+    let linea: String        // "10", "4"
+    let empresa: String      // "El Cortijo", "Salaverry"
+    let tipo: String          // "Micro", "Combi"
+    let placa: String         // "T1B-721"
+    let minutosLlegada: Int   // 4, 12
+    let color: Color          // .appPrimary, .secondary
+    var lat: Double           // posición actual (animada)
+    var lon: Double
+    var heading: Double       // ángulo de dirección
+    let rutaCoordenadas: [CLLocationCoordinate2D]  // waypoints
+
+    var currentSegmentIndex: Int = 0
+    var segmentProgress: Double = 0.0
+    var isMovingForward: Bool = true
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
+    static func == (lhs: BusAnimado, rhs: BusAnimado) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.lat == rhs.lat &&
+        lhs.lon == rhs.lon &&
+        lhs.heading == rhs.heading
+    }
+}
+
 // MARK: - Destino chip
 struct DestinoChip: Identifiable, Equatable {
     let id: Int
@@ -84,6 +114,11 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var distanciaKm: Double? = nil
     @Published var calculandoRuta: Bool = false
 
+    // Buses Animados en Tiempo Real
+    @Published var busesAnimados: [BusAnimado] = []
+    @Published var busSeleccionado: BusAnimado? = nil
+    private var busSimulationTimer: Timer?
+
     private let locationService: LocationServiceProtocol
     private let routeService: RouteCalculationService
     private let completer = MKLocalSearchCompleter()
@@ -108,6 +143,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     deinit {
         locationTask?.cancel()
         locationService.stopUpdating()
+        detenerSimulacionBuses()
     }
 
     // MARK: - Ubicación GPS Real
@@ -126,6 +162,106 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                     }
                 }
             }
+        }
+        iniciarSimulacionBuses()
+    }
+
+    // MARK: - Simulación de Buses Animados
+    func iniciarSimulacionBuses() {
+        guard busSimulationTimer == nil else { return }
+
+        let coords10 = RutaCoordenadas.linea10
+        let coords4 = RutaCoordenadas.linea4
+
+        guard !coords10.isEmpty, !coords4.isEmpty else { return }
+
+        let bus10 = BusAnimado(
+            id: 1,
+            linea: "10",
+            empresa: "El Cortijo",
+            tipo: "Micro",
+            placa: "T1B-721",
+            minutosLlegada: 4,
+            color: .appPrimary,
+            lat: coords10.first!.latitude,
+            lon: coords10.first!.longitude,
+            heading: 0,
+            rutaCoordenadas: coords10
+        )
+
+        let bus4 = BusAnimado(
+            id: 2,
+            linea: "4",
+            empresa: "Salaverry",
+            tipo: "Combi",
+            placa: "A6N-450",
+            minutosLlegada: 12,
+            color: .secondary,
+            lat: coords4.first!.latitude,
+            lon: coords4.first!.longitude,
+            heading: 0,
+            rutaCoordenadas: coords4
+        )
+
+        busesAnimados = [bus10, bus4]
+
+        busSimulationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.actualizarPosicionBuses()
+            }
+        }
+    }
+
+    func detenerSimulacionBuses() {
+        busSimulationTimer?.invalidate()
+        busSimulationTimer = nil
+    }
+
+    private func actualizarPosicionBuses() {
+        for i in busesAnimados.indices {
+            var bus = busesAnimados[i]
+            let waypoints = bus.rutaCoordenadas
+            guard waypoints.count >= 2 else { continue }
+
+            let step: Double = 0.012
+
+            bus.segmentProgress += step
+            if bus.segmentProgress >= 1.0 {
+                bus.segmentProgress = 0.0
+                if bus.isMovingForward {
+                    if bus.currentSegmentIndex + 1 < waypoints.count - 1 {
+                        bus.currentSegmentIndex += 1
+                    } else {
+                        bus.isMovingForward = false
+                    }
+                } else {
+                    if bus.currentSegmentIndex > 0 {
+                        bus.currentSegmentIndex -= 1
+                    } else {
+                        bus.isMovingForward = true
+                    }
+                }
+            }
+
+            let idxA = bus.currentSegmentIndex
+            let idxB = idxA + 1
+            guard idxB < waypoints.count else { continue }
+
+            let pA = waypoints[idxA]
+            let pB = waypoints[idxB]
+
+            let fromCoord = bus.isMovingForward ? pA : pB
+            let toCoord = bus.isMovingForward ? pB : pA
+
+            bus.lat = fromCoord.latitude + (toCoord.latitude - fromCoord.latitude) * bus.segmentProgress
+            bus.lon = fromCoord.longitude + (toCoord.longitude - fromCoord.longitude) * bus.segmentProgress
+
+            let dLat = toCoord.latitude - fromCoord.latitude
+            let dLon = toCoord.longitude - fromCoord.longitude
+            bus.heading = atan2(dLon, dLat) * 180 / .pi
+
+            busesAnimados[i] = bus
         }
     }
 
