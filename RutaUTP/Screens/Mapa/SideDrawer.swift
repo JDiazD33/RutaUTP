@@ -16,6 +16,7 @@ enum DrawerItem: String, Identifiable {
     case soporte
     case sobreNosotros
     case cerrarSesion
+    case datosPersonales
 
     var id: String { rawValue }
 }
@@ -94,6 +95,7 @@ struct SideDrawer: View {
         case .soporte:        SoporteSheet()
         case .sobreNosotros:  SobreNosotrosSheet()
         case .cerrarSesion:   CerrarSesionSheet(onConfirm: { showLogoutConfirm = true })
+        case .datosPersonales: DatosPersonalesSheet()
         }
     }
 
@@ -102,15 +104,31 @@ struct SideDrawer: View {
         VStack(spacing: 0) {
             // Header
             VStack(alignment: .leading, spacing: 4) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.18))
-                        .frame(width: 52, height: 52)
-                        .overlay(Circle().stroke(Color.white.opacity(0.55), lineWidth: 2))
-                    Text("JD")
-                        .font(.headlineMd)
-                        .foregroundStyle(.white)
+                Button {
+                    activeSheet = .datosPersonales
+                } label: {
+                    ZStack(alignment: .bottomTrailing) {
+                        Circle()
+                            .fill(Color.white.opacity(0.18))
+                            .frame(width: 52, height: 52)
+                            .overlay(Circle().stroke(Color.white.opacity(0.55), lineWidth: 2))
+                        Text("JD")
+                            .font(.headlineMd)
+                            .foregroundStyle(.white)
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 18, height: 18)
+                                .overlay(Circle().stroke(Color.appPrimary.opacity(0.15), lineWidth: 0.5))
+                            Image(systemName: "pencil")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color.appPrimary)
+                        }
+                        .offset(x: 2, y: 2)
+                    }
                 }
+                .buttonStyle(.plain)
+
                 Text("Ruta UTP Trujillo")
                     .font(.headlineSm)
                     .foregroundStyle(.white)
@@ -559,8 +577,7 @@ private struct SobreNosotrosSheet: View {
                         .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
                         .appTracking(AppTracking.wideLabel)
-                    creditoRow("Diseño y desarrollo", "Joaquín Díaz")
-                    creditoRow("Curso", "Productos y Servicios - Ciclo 7")
+                    creditoRow("Diseño y desarrollo", "Universidad Tecnológica del Perú S.A.C")
                     creditoRow("Institución", "Universidad Tecnológica del Perú")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -647,6 +664,284 @@ private struct CerrarSesionSheet: View {
             withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
                 lloraScale = 1.1
             }
+        }
+    }
+}
+
+// MARK: - 7. DATOS PERSONALES SHEET
+private struct DatosPersonalesSheet: View {
+    // Datos institucionales (solo lectura)
+    private let nombresCompletos = "Joaquín Díaz"
+    private let carrera = "Ingeniería de Software"
+    private let correoInstitucional = "joaquin.diaz@utp.edu.pe"
+    private let codigoUTP = "1234567"
+    private let dni = "76543210"
+    private let modalidad = "Presencial"
+    private let campus = "Trujillo"
+
+    // Datos personales editables (persisten)
+    @AppStorage("perfil_telefono") private var telefono: String = "999888777"
+    @AppStorage("perfil_correoPersonal") private var correoPersonal: String = "joaquin.diaz@gmail.com"
+
+    @State private var editandoDatos: Bool = false
+    @State private var telefonoInput: String = ""
+    @State private var correoPersonalInput: String = ""
+    @State private var showCorreoTooltip: Bool = false
+
+    private let boxShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 20) {
+                SheetHeader(icon: "person.crop.circle.fill", iconColor: .appPrimary, title: "Datos Personales")
+
+                // ── Cabecera: foto + nombres + carrera + correo institucional ──
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .center, spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient(
+                                    colors: [Color.appPrimary, Color.primaryContainer, Color.tertiary],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 80, height: 80)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                            Text("JD")
+                                .font(.headlineMd)
+                                .foregroundStyle(.white)
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(nombresCompletos)
+                                .font(.headlineSm)
+                                .foregroundStyle(.onSurface)
+                            Text(carrera)
+                                .font(.bodySmMedium)
+                                .foregroundStyle(.onSurfaceVariant)
+                        }
+                        Spacer()
+                    }
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.appPrimary)
+                        Text(correoInstitucional)
+                            .font(.bodySm)
+                            .foregroundStyle(.onSurfaceVariant)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // ── Cuadro: Código UTP / DNI / Modalidad / Campus ──
+                VStack(spacing: 16) {
+                    HStack(spacing: 0) {
+                        datoInstitucional(titulo: "CÓDIGO UTP", valor: codigoUTP)
+                        Rectangle()
+                            .fill(Color.outlineVariant.opacity(0.5))
+                            .frame(width: 1, height: 48)
+                        datoInstitucional(titulo: "DNI", valor: dni)
+                    }
+
+                    Divider()
+
+                    datoHorizontal(titulo: "MODALIDAD DE CARRERA", valor: modalidad)
+
+                    Divider()
+
+                    datoHorizontal(titulo: "CAMPUS", valor: campus)
+                }
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.surfaceContainerLowest)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.outlineVariant.opacity(0.25), lineWidth: 0.5)
+                        )
+                )
+
+                // ── Mis datos personales + editar ──
+                HStack {
+                    Text("Mis datos personales")
+                        .font(.headlineXs)
+                        .foregroundStyle(.onSurface)
+                    Spacer()
+                    Button {
+                        toggleEdicion()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: editandoDatos ? "checkmark" : "pencil")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(editandoDatos ? "Listo" : "editar datos")
+                                .font(.labelCapsSm)
+                                .appTracking(AppTracking.wideLabel)
+                        }
+                        .foregroundStyle(Color.purple)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // ── Cuadro teléfono ──
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle().fill(Color.appPrimary.opacity(0.12)).frame(width: 36, height: 36)
+                        Image(systemName: "phone.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.appPrimary)
+                    }
+                    if editandoDatos {
+                        TextField("999 888 777", text: Binding(
+                            get: { telefonoInput },
+                            set: { newValue in
+                                let filtrado = newValue.filter { $0.isNumber }
+                                telefonoInput = String(filtrado.prefix(9))
+                            }
+                        ))
+                        .font(.bodyMd)
+                        .foregroundStyle(.onSurface)
+                        .keyboardType(.numberPad)
+                        .textInputAutocapitalization(.never)
+                    } else {
+                        Text(telefono)
+                            .font(.bodyMd)
+                            .foregroundStyle(.onSurface)
+                        Spacer()
+                    }
+                }
+                .padding(14)
+                .background(boxShape.fill(Color.surfaceContainerLow))
+                .overlay(boxShape.stroke(Color.outlineVariant.opacity(editandoDatos ? 0.6 : 0.25), lineWidth: 1))
+
+                // ── Cuadro correo personal + signo de exclamación ──
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle().fill(Color.appPrimary.opacity(0.12)).frame(width: 36, height: 36)
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.appPrimary)
+                    }
+                    if editandoDatos {
+                        TextField("correo@ejemplo.com", text: $correoPersonalInput)
+                            .font(.bodyMd)
+                            .foregroundStyle(.onSurface)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                    } else {
+                        Text(correoPersonal)
+                            .font(.bodyMd)
+                            .foregroundStyle(.onSurface)
+                    }
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showCorreoTooltip.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.purple.opacity(0.85))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(14)
+                .background(boxShape.fill(Color.surfaceContainerLow))
+                .overlay(boxShape.stroke(Color.outlineVariant.opacity(editandoDatos ? 0.6 : 0.25), lineWidth: 1))
+
+                // Tooltip del correo personal
+                if showCorreoTooltip {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.purple)
+                        Text("Correo personal utilizado para recuperar contraseña del correo institucional")
+                            .font(.bodyXs)
+                            .foregroundStyle(.onSurfaceVariant)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.purple.opacity(0.08))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.purple.opacity(0.25), lineWidth: 0.5)
+                            )
+                    )
+                    .transition(.opacity)
+                }
+
+                Spacer(minLength: 24)
+
+                // ── Cerrar sesión (solo de diseño) ──
+                Button {
+                    // Solo de diseño: no ejecuta acción real
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("Cerrar sesión")
+                            .font(.bodyMdMedium)
+                    }
+                    .foregroundStyle(.appPrimary)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.primaryFixed)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(20)
+        }
+        .onAppear {
+            telefonoInput = telefono
+            correoPersonalInput = correoPersonal
+        }
+    }
+
+    // MARK: - Subvistas
+    @ViewBuilder
+    private func datoInstitucional(titulo: String, valor: String) -> some View {
+        VStack(alignment: .center, spacing: 6) {
+            Text(titulo)
+                .font(.labelCapsSm)
+                .foregroundStyle(.onSurfaceVariant)
+                .appTracking(AppTracking.wideLabel)
+            Text(valor)
+                .font(.bodyMdMedium)
+                .foregroundStyle(.onSurface)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func datoHorizontal(titulo: String, valor: String) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(titulo)
+                    .font(.labelCapsSm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .appTracking(AppTracking.wideLabel)
+                Text(valor)
+                    .font(.bodyMdMedium)
+                    .foregroundStyle(.onSurface)
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Acciones
+    private func toggleEdicion() {
+        if editandoDatos {
+            telefono = telefonoInput
+            correoPersonal = correoPersonalInput
+            editandoDatos = false
+        } else {
+            telefonoInput = telefono
+            correoPersonalInput = correoPersonal
+            editandoDatos = true
         }
     }
 }
