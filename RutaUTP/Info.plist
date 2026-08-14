@@ -8,6 +8,8 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>RutaUTP puede usar tu ubicación en segundo plano para mantener activo el seguimiento de tu ruta incluso con la pantalla bloqueada (funcionalidad futura para el rol conductor).</string>
 	<!-- TODO (futuro): cuando se defina el rol conductor, habilitar background location:

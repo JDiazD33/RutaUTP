@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Menu Item Identifier
 enum DrawerItem: String, Identifiable {
@@ -107,7 +108,7 @@ struct SideDrawer: View {
                 Button {
                     activeSheet = .datosPersonales
                 } label: {
-                    ZStack(alignment: .bottomTrailing) {
+                    ZStack {
                         Circle()
                             .fill(Color.white.opacity(0.18))
                             .frame(width: 52, height: 52)
@@ -115,6 +116,8 @@ struct SideDrawer: View {
                         Text("JD")
                             .font(.headlineMd)
                             .foregroundStyle(.white)
+                    }
+                    .overlay(alignment: .bottomTrailing) {
                         ZStack {
                             Circle()
                                 .fill(Color.white)
@@ -668,8 +671,129 @@ private struct CerrarSesionSheet: View {
     }
 }
 
+// MARK: - Image Picker (cámara) wrapper
+struct ImagePicker: UIViewControllerRepresentable {
+    let sourceType: UIImagePickerController.SourceType
+    let onImagePicked: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.allowsEditing = true
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: ImagePicker
+        init(_ parent: ImagePicker) { self.parent = parent }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            let img = (info[.editedImage] as? UIImage) ?? (info[.originalImage] as? UIImage)
+            if let img { parent.onImagePicked(img) }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+}
+
+// MARK: - Persistencia de foto de perfil (Documents)
+enum ProfileImageStore {
+    private static var url: URL {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return dir.appendingPathComponent("perfil_foto.jpg")
+    }
+
+    static func save(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    static func load() -> UIImage? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return UIImage(data: data)
+    }
+}
+
+// MARK: - Lista de parentesco
+enum Parentesco: String, CaseIterable, Identifiable {
+    case padreMadre          = "Padre/Madre"
+    case tutorApoderado      = "Tutor/Apoderado"
+    case conyugePareja       = "Conyuge/Pareja de hecho"
+    case hermano             = "Hermano(a)"
+    case hijo                = "Hijo(a)"
+    case otro                = "Otro"
+
+    var id: String { rawValue }
+}
+
+// MARK: - Selector de parentesco (ventanita)
+private struct ParentescoPickerSheet: View {
+    @Binding var seleccion: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var local: String
+
+    init(seleccion: Binding<String>) {
+        self._seleccion = seleccion
+        self._local = State(initialValue: seleccion.wrappedValue)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SheetHeader(icon: "person.2.fill", iconColor: .appPrimary, title: "Parentesco")
+
+            VStack(spacing: 8) {
+                ForEach(Parentesco.allCases) { op in
+                    Button {
+                        local = op.rawValue
+                    } label: {
+                        HStack {
+                            Image(systemName: local == op.rawValue ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(local == op.rawValue ? Color.appPrimary : Color.onSurfaceVariant)
+                            Text(op.rawValue)
+                                .font(.bodyMd)
+                                .foregroundStyle(.onSurface)
+                            Spacer()
+                        }
+                        .padding(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(local == op.rawValue ? Color.primaryContainer.opacity(0.25) : Color.surfaceContainerLow)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Spacer()
+
+            Button {
+                seleccion = local
+                dismiss()
+            } label: {
+                Text("Aceptar")
+                    .font(.headlineSm)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(20)
+    }
+}
+
 // MARK: - 7. DATOS PERSONALES SHEET
-private struct DatosPersonalesSheet: View {
+struct DatosPersonalesSheet: View {
     // Datos institucionales (solo lectura)
     private let nombresCompletos = "Joaquín Díaz"
     private let carrera = "Ingeniería de Software"
@@ -683,10 +807,27 @@ private struct DatosPersonalesSheet: View {
     @AppStorage("perfil_telefono") private var telefono: String = "999888777"
     @AppStorage("perfil_correoPersonal") private var correoPersonal: String = "joaquin.diaz@gmail.com"
 
+    // Datos del contacto de emergencia (persisten)
+    @AppStorage("emergencia_nombre") private var emergenciaNombre: String = ""
+    @AppStorage("emergencia_parentesco") private var emergenciaParentesco: String = ""
+    @AppStorage("emergencia_numero") private var emergenciaNumero: String = ""
+
+    // Edición datos personales
     @State private var editandoDatos: Bool = false
     @State private var telefonoInput: String = ""
     @State private var correoPersonalInput: String = ""
     @State private var showCorreoTooltip: Bool = false
+
+    // Foto de perfil
+    @State private var perfilImage: UIImage? = nil
+    @State private var showCamera: Bool = false
+
+    // Edición contacto de emergencia
+    @State private var editandoEmergencia: Bool = false
+    @State private var emergenciaNombreInput: String = ""
+    @State private var emergenciaParentescoInput: String = ""
+    @State private var emergenciaNumeroInput: String = ""
+    @State private var showParentescoPicker: Bool = false
 
     private let boxShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
 
@@ -707,10 +848,37 @@ private struct DatosPersonalesSheet: View {
                                 ))
                                 .frame(width: 80, height: 80)
                                 .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                            Text("JD")
-                                .font(.headlineMd)
-                                .foregroundStyle(.white)
+                            if let img = perfilImage {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                            } else {
+                                Text("JD")
+                                    .font(.headlineMd)
+                                    .foregroundStyle(.white)
+                            }
                         }
+                        .overlay(alignment: .bottomTrailing) {
+                            Button {
+                                showCamera = true
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 26, height: 26)
+                                        .overlay(Circle().stroke(Color.purple, lineWidth: 1.5))
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(Color.purple)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .offset(x: 4, y: 4)
+                        }
+
                         VStack(alignment: .leading, spacing: 4) {
                             Text(nombresCompletos)
                                 .font(.headlineSm)
@@ -872,6 +1040,136 @@ private struct DatosPersonalesSheet: View {
                     .transition(.opacity)
                 }
 
+                // ── Contacto de Emergencia + editar ──
+                HStack {
+                    Text("Contacto de Emergencia")
+                        .font(.headlineXs)
+                        .foregroundStyle(.onSurface)
+                    Spacer()
+                    Button {
+                        toggleEdicionEmergencia()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: editandoEmergencia ? "checkmark" : "pencil")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(editandoEmergencia ? "Listo" : "editar datos")
+                                .font(.labelCapsSm)
+                                .appTracking(AppTracking.wideLabel)
+                        }
+                        .foregroundStyle(Color.purple)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if editandoEmergencia {
+                    // ── Formulario inline de contacto de emergencia ──
+                    VStack(alignment: .leading, spacing: 14) {
+                        // Nombre del contacto
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Nombre del contacto")
+                                .font(.bodySmMedium)
+                                .foregroundStyle(.onSurface)
+                            TextField("Ingresa el nombre del contacto", text: Binding(
+                                get: { emergenciaNombreInput },
+                                set: { newValue in
+                                    let filtrado = newValue.filter { $0.isLetter || $0.isWhitespace }
+                                    emergenciaNombreInput = String(filtrado.prefix(20))
+                                }
+                            ))
+                            .font(.bodyMd)
+                            .foregroundStyle(.onSurface)
+                            .textInputAutocapitalization(.words)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(boxShape.fill(Color.surfaceContainerLow))
+                            .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.6), lineWidth: 1))
+                        }
+
+                        // Parentesco (combo box)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Parentesco")
+                                .font(.bodySmMedium)
+                                .foregroundStyle(.onSurface)
+                            Button {
+                                showParentescoPicker = true
+                            } label: {
+                                HStack {
+                                    Text(emergenciaParentescoInput.isEmpty ? "Seleccionar" : emergenciaParentescoInput)
+                                        .font(.bodyMd)
+                                        .foregroundStyle(emergenciaParentescoInput.isEmpty ? Color.onSurfaceVariant : Color.onSurface)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(Color.purple)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                                .background(boxShape.fill(Color.surfaceContainerLow))
+                                .overlay(boxShape.stroke(Color.purple.opacity(0.5), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        // Número del contacto
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Número del Contacto")
+                                .font(.bodySmMedium)
+                                .foregroundStyle(.onSurface)
+                            TextField("99999999999", text: Binding(
+                                get: { emergenciaNumeroInput },
+                                set: { newValue in
+                                    let filtrado = newValue.filter { $0.isNumber }
+                                    emergenciaNumeroInput = String(filtrado.prefix(11))
+                                }
+                            ))
+                            .font(.bodyMd)
+                            .foregroundStyle(.onSurface)
+                            .keyboardType(.numberPad)
+                            .textInputAutocapitalization(.never)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(boxShape.fill(Color.surfaceContainerLow))
+                            .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.6), lineWidth: 1))
+                        }
+
+                        // Botones Guardar / Cancelar
+                        Button {
+                            guardarEmergencia()
+                        } label: {
+                            Text("Guardar")
+                                .font(.bodyMdMedium)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.purple))
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            cancelarEmergencia()
+                        } label: {
+                            Text("Cancelar")
+                                .font(.bodyMdMedium)
+                                .foregroundStyle(Color.purple)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple, lineWidth: 1.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    // ── Datos guardados del contacto de emergencia ──
+                    VStack(spacing: 12) {
+                        emergenciaFila(icon: "person.fill", titulo: "Nombre", valor: emergenciaNombre)
+                        Divider().padding(.leading, 48)
+                        emergenciaFila(icon: "person.2.fill", titulo: "Parentesco", valor: emergenciaParentesco)
+                        Divider().padding(.leading, 48)
+                        emergenciaFila(icon: "phone.fill", titulo: "Número", valor: emergenciaNumero)
+                    }
+                    .padding(14)
+                    .background(boxShape.fill(Color.surfaceContainerLow))
+                    .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.25), lineWidth: 1))
+                }
+
                 Spacer(minLength: 24)
 
                 // ── Cerrar sesión (solo de diseño) ──
@@ -898,6 +1196,21 @@ private struct DatosPersonalesSheet: View {
         .onAppear {
             telefonoInput = telefono
             correoPersonalInput = correoPersonal
+            emergenciaNombreInput = emergenciaNombre
+            emergenciaParentescoInput = emergenciaParentesco
+            emergenciaNumeroInput = emergenciaNumero
+            if perfilImage == nil {
+                perfilImage = ProfileImageStore.load()
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            ImagePicker(sourceType: .camera) { img in
+                perfilImage = img
+                ProfileImageStore.save(img)
+            }
+        }
+        .sheet(isPresented: $showParentescoPicker) {
+            ParentescoPickerSheet(seleccion: $emergenciaParentescoInput)
         }
     }
 
@@ -943,6 +1256,53 @@ private struct DatosPersonalesSheet: View {
             correoPersonalInput = correoPersonal
             editandoDatos = true
         }
+    }
+
+    @ViewBuilder
+    private func emergenciaFila(icon: String, titulo: String, valor: String) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(Color.appPrimary.opacity(0.12)).frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.appPrimary)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(titulo)
+                    .font(.bodyXs)
+                    .foregroundStyle(.onSurfaceVariant)
+                Text(valor.isEmpty ? "—" : valor)
+                    .font(.bodyMdMedium)
+                    .foregroundStyle(.onSurface)
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Contacto de emergencia: acciones
+    private func toggleEdicionEmergencia() {
+        if editandoEmergencia {
+            editandoEmergencia = false
+        } else {
+            emergenciaNombreInput = emergenciaNombre
+            emergenciaParentescoInput = emergenciaParentesco
+            emergenciaNumeroInput = emergenciaNumero
+            editandoEmergencia = true
+        }
+    }
+
+    private func guardarEmergencia() {
+        emergenciaNombre = emergenciaNombreInput
+        emergenciaParentesco = emergenciaParentescoInput
+        emergenciaNumero = emergenciaNumeroInput
+        editandoEmergencia = false
+    }
+
+    private func cancelarEmergencia() {
+        emergenciaNombreInput = emergenciaNombre
+        emergenciaParentescoInput = emergenciaParentesco
+        emergenciaNumeroInput = emergenciaNumero
+        editandoEmergencia = false
     }
 }
 

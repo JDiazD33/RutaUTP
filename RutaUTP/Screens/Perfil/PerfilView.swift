@@ -21,6 +21,7 @@ struct PerfilView: View {
     @State private var ubicacionPopupSubtitulo: String = ""
     @State private var showEditAlert: Bool = false
     @State private var newNameInput: String = ""
+    @State private var showDatosPersonales: Bool = false
     //  CORREGIDO V3: estado para Wallet
     @State private var showTarjetaSheet: Bool = false
     @State private var showCarnetScanner: Bool = false
@@ -105,6 +106,12 @@ struct PerfilView: View {
             CarnetScannerView {
                 carnetVerificado = true
             }
+        }
+        // Sheet de Datos Personales (reutilizado del SideDrawer)
+        .sheet(isPresented: $showDatosPersonales) {
+            DatosPersonalesSheet()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         // Sheet Modal de Descarga de Mapas Offline
         .sheet(isPresented: $showOfflineMapPopup) {
@@ -362,16 +369,9 @@ struct PerfilView: View {
                 toggleRow(icon: "wifi.slash", iconColor: .orange,
                           label: "Modo offline", isOn: $modoOffline)
                 Divider().padding(.leading, 56)
-                chevronRow(icon: "person.crop.circle.fill", iconColor: .appPrimary,
-                           label: "Nombre: \(nombre)") {
-                    newNameInput = nombre
-                    showEditAlert = true
-                }
-                Divider().padding(.leading, 56)
                 chevronRow(icon: "pencil", iconColor: .onSurfaceVariant,
                            label: "Editar perfil") {
-                    newNameInput = nombre
-                    showEditAlert = true
+                    showDatosPersonales = true
                 }
             }
             .background(
