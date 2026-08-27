@@ -2,6 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>es</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>es</string>
+		<string>es-MX</string>
+	</array>
+	<key>CFBundleDisplayName</key>
+	<string>Ruta UTP</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>tel</string>

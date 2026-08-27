@@ -12,42 +12,89 @@ import MapKit
 
 // MARK: - Modelo
 struct RutaOpcion: Identifiable, Equatable {
-    let id: Int
-    let linea: String
-    let empresa: String
-    let recorrido: String
-    let llegaEn: String
-    let tiempo: String
-    let costo: String
-    let congestion: String
-    let colorLinea: Color
+    let id: String              // route_id del feed GTFS
+    let linea: String           // "C-01"
+    let empresa: String         // agencia GTFS
+    let recorrido: String       // "Av. Grau → Av. Libertad"
+    let frecuenciaMin: Int      // headway GTFS (sale uno cada N min)
+    let duracionMin: Int        // duración del viaje según stop_times
+    let costo: String           // tarifa fare_attributes
+    let numParaderos: Int
+    let distanciaKm: Double
+    let colorLinea: Color       // route_color del feed
+    let shape: [CLLocationCoordinate2D]   // recorrido real (shapes.txt)
+    let paraderos: [ParaderoGTFS]         // paraderos en orden (stops + stop_times)
+    let paradaInicio: String
+    let paradaFin: String
+
+    var frecuenciaTexto: String {
+        frecuenciaMin > 0 ? "cada \(frecuenciaMin) min" : "—"
+    }
+
+    var tiempoTexto: String {
+        duracionMin > 0 ? "\(duracionMin) min" : "—"
+    }
+
+    // Identidad por route_id: el shape no participa en la comparación.
+    static func == (lhs: RutaOpcion, rhs: RutaOpcion) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+// MARK: - ViewModel (carga GTFS)
+@MainActor
+final class RutasViewModel: ObservableObject {
+    @Published private(set) var rutas: [RutaOpcion] = []
+    @Published private(set) var cargando: Bool = true
+    @Published var textoBusqueda: String = ""
+
+    var rutasFiltradas: [RutaOpcion] {
+        let t = textoBusqueda.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty else { return rutas }
+        return rutas.filter {
+            $0.linea.localizedCaseInsensitiveContains(t)
+            || $0.empresa.localizedCaseInsensitiveContains(t)
+            || $0.recorrido.localizedCaseInsensitiveContains(t)
+        }
+    }
+
+    func cargar() async {
+        guard cargando else { return }
+        let feed = await GTFSRepository.shared.rutas()
+        rutas = feed.map { ruta in
+            RutaOpcion(
+                id: ruta.id,
+                linea: ruta.linea,
+                empresa: ruta.empresa,
+                recorrido: ruta.recorrido,
+                frecuenciaMin: ruta.headwayMin,
+                duracionMin: ruta.duracionMin,
+                costo: ruta.precioTexto,
+                numParaderos: ruta.paraderos.count,
+                distanciaKm: ruta.distanciaKm,
+                colorLinea: ruta.color,
+                shape: ruta.shape,
+                paraderos: ruta.paraderos,
+                paradaInicio: ruta.paraderos.first?.nombre ?? "Paradero inicial",
+                paradaFin: ruta.paraderos.last?.nombre ?? "Paradero final"
+            )
+        }
+        cargando = false
+    }
 }
 
 // MARK: - Vista principal
 struct RutasView: View {
     @EnvironmentObject var router: AppRouter
+    @StateObject private var viewModel = RutasViewModel()
     @State private var rutaSeleccionada: RutaOpcion? = nil
 
-    private let tabBarHeight: CGFloat = 64
+    #if DEBUG
+    @State private var debugExplorador: Bool = false
+    @State private var debugNavegacion: Bool = false
+    #endif
 
-    let rutas: [RutaOpcion] = [
-        RutaOpcion(id: 1, linea: "B",  empresa: "Empresa Salaverry",
-                   recorrido: "Salaverry → UTP → Centro",
-                   llegaEn: "4 min",   tiempo: "20 min", costo: "S/ 1.50",
-                   congestion: "Media", colorLinea: .appPrimary),
-        RutaOpcion(id: 2, linea: "10", empresa: "El Cortijo",
-                   recorrido: "El Cortijo → Av. España → UTP",
-                   llegaEn: "7 min",   tiempo: "25 min", costo: "S/ 1.00",
-                   congestion: "Baja",  colorLinea: .secondary),
-        RutaOpcion(id: 3, linea: "4",  empresa: "Trans Salaverry",
-                   recorrido: "Huanchaco → Centro → UTP",
-                   llegaEn: "12 min",  tiempo: "30 min", costo: "S/ 1.50",
-                   congestion: "Alta",  colorLinea: .tertiary),
-        RutaOpcion(id: 4, linea: "C",  empresa: "Trans Moche",
-                   recorrido: "Moche → Av. España → Plaza Mayor",
-                   llegaEn: "18 min",  tiempo: "35 min", costo: "S/ 1.00",
-                   congestion: "Media", colorLinea: Color(hex: "#6750a4"))
-    ]
+    private let tabBarHeight: CGFloat = 64
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -67,13 +114,49 @@ struct RutasView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .animation(.spring(response: 0.3), value: rutaSeleccionada == nil)
+        .task {
+            await viewModel.cargar()
+            procesarHookDebug()
+        }
+        #if DEBUG
+        .fullScreenCover(isPresented: $debugExplorador) {
+            if let ruta = rutaSeleccionada { ExploradorRutaView(ruta: ruta) }
+        }
+        .fullScreenCover(isPresented: $debugNavegacion) {
+            if let ruta = rutaSeleccionada {
+                NavegacionRutaView(ruta: ruta, onFinish: { debugNavegacion = false })
+            }
+        }
+        #endif
     }
+
+    #if DEBUG
+    /// Hook de pruebas: `--ruta <n>` abre el detalle; `--vista explorador|navegacion`
+    /// abre esa pantalla directamente sobre la ruta elegida.
+    private func procesarHookDebug() {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "--ruta"), i + 1 < args.count,
+              let indice = Int(args[i + 1]),
+              viewModel.rutas.indices.contains(indice) else { return }
+        rutaSeleccionada = viewModel.rutas[indice]
+        if let j = args.firstIndex(of: "--vista"), j + 1 < args.count {
+            switch args[j + 1] {
+            case "explorador":  debugExplorador = true
+            case "navegacion":  debugNavegacion = true
+            default: break
+            }
+        }
+    }
+    #else
+    private func procesarHookDebug() {}
+    #endif
 
     // MARK: - Lista screen
     private var listaScreen: some View {
         VStack(spacing: 0) {
             // Header
             header
+            buscador
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
                     RutasMapView()
@@ -85,7 +168,9 @@ struct RutasView: View {
                                 Text("Elige tu ruta")
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
-                                Text("Toca una ruta para ver el detalle")
+                                Text(viewModel.cargando
+                                     ? "Cargando rutas oficiales (GTFS)…"
+                                     : "\(viewModel.rutas.count) rutas oficiales · ordenadas por cercanía a UTP")
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
                             }
@@ -93,14 +178,31 @@ struct RutasView: View {
                         }
                         .padding(.top, 20)
 
-                        ForEach(rutas) { ruta in
-                            RutaOpcionCard(ruta: ruta)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.3)) {
-                                        rutaSeleccionada = ruta
+                        if viewModel.cargando {
+                            HStack(spacing: 12) {
+                                ProgressView()
+                                Text("Parseando feed GTFS…")
+                                    .font(.bodySm)
+                                    .foregroundStyle(.onSurfaceVariant)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 32)
+                        } else if viewModel.rutasFiltradas.isEmpty {
+                            Text("No hay rutas que coincidan con “\(viewModel.textoBusqueda)”")
+                                .font(.bodySm)
+                                .foregroundStyle(.onSurfaceVariant)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 32)
+                        } else {
+                            ForEach(viewModel.rutasFiltradas) { ruta in
+                                RutaOpcionCard(ruta: ruta)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        withAnimation(.spring(response: 0.3)) {
+                                            rutaSeleccionada = ruta
+                                        }
                                     }
-                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
@@ -109,6 +211,40 @@ struct RutasView: View {
             }
         }
         .background(Color.appBackground.ignoresSafeArea())
+    }
+
+    // MARK: - Buscador de rutas
+    private var buscador: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.onSurfaceVariant)
+            TextField("Buscar línea, empresa o avenida", text: $viewModel.textoBusqueda)
+                .font(.bodySm)
+                .autocorrectionDisabled()
+            if !viewModel.textoBusqueda.isEmpty {
+                Button {
+                    viewModel.textoBusqueda = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.surfaceContainerLowest)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.outlineVariant.opacity(0.40), lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Header
@@ -121,18 +257,6 @@ struct RutasView: View {
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
             Spacer()
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(Color.appPrimary)
-                    .frame(width: 7, height: 7)
-                Text("EN VIVO")
-                    .font(.labelCapsSm)
-                    .foregroundStyle(.appPrimary)
-                    .appTracking(AppTracking.wideLabel)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(Color.primaryFixed))
         }
         .padding(.horizontal, 20)
         .frame(height: 56)
@@ -162,7 +286,9 @@ private struct RutaOpcionCard: View {
                     .fill(ruta.colorLinea.opacity(0.12))
                     .frame(width: 44, height: 44)
                 Text(ruta.linea)
-                    .font(.system(size: 16, weight: .heavy))
+                    .font(.system(size: 14, weight: .heavy))
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
                     .foregroundStyle(ruta.colorLinea)
             }
 
@@ -170,19 +296,26 @@ private struct RutaOpcionCard: View {
                 Text(ruta.empresa)
                     .font(.bodyMdMedium)
                     .foregroundStyle(.onSurface)
+                    .lineLimit(1)
                 Text(ruta.recorrido)
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .lineLimit(1)
+                Text("\(ruta.numParaderos) paraderos · \(String(format: "%.1f", ruta.distanciaKm)) km")
+                    .font(.labelCapsSm)
+                    .foregroundStyle(.onSurfaceVariant.opacity(0.8))
+                    .lineLimit(1)
+                    .appTracking(AppTracking.wideLabel)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(ruta.llegaEn)
+                Text(ruta.frecuenciaTexto)
                     .font(.bodyMdMedium)
                     .foregroundStyle(ruta.colorLinea)
-                Text("llegada")
+                Text("frecuencia")
                     .font(.labelCapsSm)
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabel)
@@ -252,20 +385,34 @@ private struct DetalleRutaView: View {
     let onBack: () -> Void
 
     @State private var showCarPlay: Bool = false
+    @State private var showExplorador: Bool = false
     private let tabBarHeight: CGFloat = 64
     private let ctaHeight: CGFloat = 88
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            
+
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // ✅ CORREGIDO V4: mapa real con MapKit (reemplaza contenedor azul decorativo)
+                    // Mapa con el recorrido real: tocable → explorador fullscreen
                     RutaMapKitView(ruta: ruta)
+                        .overlay(alignment: .bottom) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text("Toca para ver el recorrido completo")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color.black.opacity(0.55)))
+                            .padding(.bottom, 10)
+                        }
                         .frame(height: 280)
-                        .disabled(true)            // no captura gestos de scroll
-                        .allowsHitTesting(false)   // tampoco los de toque
+                        .contentShape(Rectangle())
+                        .onTapGesture { showExplorador = true }
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
 
@@ -279,17 +426,17 @@ private struct DetalleRutaView: View {
                                 Text("\(ruta.empresa)")
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
-                                Text("Destino: UTP Trujillo")
+                                Text(ruta.recorrido)
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 2) {
-                                Text("LLEGA EN")
+                                Text("FRECUENCIA")
                                     .font(.labelCapsMd)
                                     .foregroundStyle(.onPrimaryContainer)
                                     .appTracking(AppTracking.wideLabel)
-                                Text(ruta.llegaEn)
+                                Text(ruta.frecuenciaTexto)
                                     .font(.displayNumberMd)
                                     .foregroundStyle(.onPrimaryContainer)
                             }
@@ -308,17 +455,18 @@ private struct DetalleRutaView: View {
                                 .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
                         )
 
-                        // Stats grid
+                        // Stats grid (datos del feed GTFS)
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                                   spacing: 12) {
                             StatTile(icon: "clock.fill", iconColor: .appPrimary,
-                                     label: "TIEMPO", value: ruta.tiempo)
+                                     label: "TIEMPO VIAJE", value: ruta.tiempoTexto)
                             StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
                                      label: "COSTO", value: ruta.costo)
-                            StatTile(icon: "arrow.triangle.2.circlepath", iconColor: .appPrimary,
-                                     label: "TRANSBORDOS", value: "0")
-                            StatTile(icon: "chart.bar.fill", iconColor: .secondary,
-                                     label: "CONGESTIÓN", value: ruta.congestion)
+                            StatTile(icon: "mappin.and.ellipse", iconColor: .appPrimary,
+                                     label: "PARADEROS", value: "\(ruta.numParaderos)")
+                            StatTile(icon: "point.topleft.down.curvedto.point.bottomright.up",
+                                     iconColor: .secondary,
+                                     label: "RECORRIDO", value: String(format: "%.1f km", ruta.distanciaKm))
                         }
 
                         // Pasos
@@ -328,15 +476,15 @@ private struct DetalleRutaView: View {
                                 .foregroundStyle(.onSurface)
 
                             VStack(spacing: 0) {
-                                pasoRow("1", "Camina al paradero Av. España",
-                                        "250 metros • 3 min aprox.",
+                                pasoRow("1", "Ve al paradero \(ruta.paradaInicio)",
+                                        "Sale uno \(ruta.frecuenciaTexto)",
                                         "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
                                 pasoRow("2", "Sube a la línea \(ruta.linea)",
-                                        "\(ruta.empresa) • 15 min de viaje",
-                                        "bus.fill", .appPrimary, .white, isLast: false)
-                                pasoRow("3", "Baja en frontis UTP",
-                                        "Llegada a destino final",
-                                        "graduationcap.fill", .tertiary, .white, isLast: true)
+                                        "\(ruta.empresa) • \(ruta.tiempoTexto) de viaje",
+                                        "bus.fill", ruta.colorLinea, .white, isLast: false)
+                                pasoRow("3", "Baja en \(ruta.paradaFin)",
+                                        "Fin del recorrido",
+                                        "flag.checkered.fill", .tertiary, .white, isLast: true)
                             }
                         }
 
@@ -352,10 +500,14 @@ private struct DetalleRutaView: View {
             .padding(.bottom, bottomSafeArea() > 0 ? bottomSafeArea() + 64 : 68)
         }
         .background(Color.appBackground.ignoresSafeArea())
-        // ✅ CORREGIDO V3: fullScreenCover para modo CarPlay
+        // Explorador del recorrido (se abre tocando el mapa)
+        .fullScreenCover(isPresented: $showExplorador) {
+            ExploradorRutaView(ruta: ruta)
+        }
+        // Navegación activa sobre el recorrido GTFS
         .fullScreenCover(isPresented: $showCarPlay) {
-            CarPlayNavegacionView(
-                rutaNombre: "Ruta \(ruta.linea) - \(ruta.empresa)",
+            NavegacionRutaView(
+                ruta: ruta,
                 onFinish: { showCarPlay = false }
             )
         }
@@ -492,4 +644,3 @@ private struct StatTile: View {
 #Preview {
     RutasView().environmentObject(AppRouter())
 }
-

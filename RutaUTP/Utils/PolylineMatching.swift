@@ -134,6 +134,34 @@ enum PolylineMatching {
         return coords
     }
 
+    // MARK: - Decimación y longitudes
+
+    /// Reduce la densidad de puntos conservando el orden y el punto final.
+    /// Útil para matching en tiempo real (menos segmentos por fix) y para
+    /// animaciones, sin pérdida visual perceptible.
+    static func decimate(_ puntos: [CLLocationCoordinate2D],
+                         maxPoints: Int) -> [CLLocationCoordinate2D] {
+        guard puntos.count > maxPoints, maxPoints >= 2 else { return puntos }
+        let paso = Double(puntos.count) / Double(maxPoints)
+        var resultado = (0..<maxPoints).map {
+            puntos[min(Int(Double($0) * paso), puntos.count - 1)]
+        }
+        if let ultima = puntos.last {
+            resultado[resultado.count - 1] = ultima
+        }
+        return resultado
+    }
+
+    /// Longitud total de la polyline en metros (suma haversine por segmento).
+    static func totalLengthMeters(_ puntos: [CLLocationCoordinate2D]) -> Double {
+        guard puntos.count > 1 else { return 0 }
+        var total = 0.0
+        for i in 1..<puntos.count {
+            total += distanceMeters(puntos[i - 1], puntos[i])
+        }
+        return total
+    }
+
     // MARK: - Distancias (haversine) y proyecciones
 
     /// Distancia en metros entre dos coords (haversine). Sin depender de CLLocation涨幅.

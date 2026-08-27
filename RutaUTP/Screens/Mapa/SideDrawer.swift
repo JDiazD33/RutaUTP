@@ -9,6 +9,29 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Haptics (feedback no visual para accesibilidad y acciones clave)
+enum AppHaptics {
+    static func selection() {
+        guard UIAccessibility.isVoiceOverRunning else {
+            UISelectionFeedbackGenerator().selectionChanged()
+            return
+        }
+        // Con VoiceOver, el dispositivo ya vibra por defecto: evitamos duplicar.
+    }
+
+    static func impact(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .light) {
+        UIImpactFeedbackGenerator(style: style).impactOccurred()
+    }
+
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    static func warning() {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+    }
+}
+
 // MARK: - Menu Item Identifier
 enum DrawerItem: String, Identifiable {
     case notificaciones
@@ -40,6 +63,8 @@ struct SideDrawer: View {
                 .ignoresSafeArea()
                 .onTapGesture { close() }
                 .animation(.easeInOut(duration: 0.28), value: isOpen)
+                .accessibilityLabel("Cerrar menú")
+                .accessibilityHint("Doble toque para cerrar el panel lateral")
 
             // Panel
             drawerContent
@@ -106,6 +131,7 @@ struct SideDrawer: View {
             // Header
             VStack(alignment: .leading, spacing: 4) {
                 Button {
+                    AppHaptics.impact(.light)
                     activeSheet = .datosPersonales
                 } label: {
                     ZStack {
@@ -128,9 +154,12 @@ struct SideDrawer: View {
                                 .foregroundStyle(Color.appPrimary)
                         }
                         .offset(x: 2, y: 2)
+                        .accessibilityHidden(true)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Foto de perfil, JD")
+                .accessibilityHint("Doble toque para ver y editar tus datos personales")
 
                 Text("Ruta UTP Trujillo")
                     .font(.headlineSm)
@@ -192,12 +221,16 @@ private struct DrawerItemRow: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            AppHaptics.impact(.light)
+            action()
+        } label: {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(iconColor)
                     .frame(width: 28)
+                    .accessibilityHidden(true)
                 Text(label)
                     .font(.bodySmMedium)
                     .foregroundStyle(destructive ? Color.appPrimary : Color.onSurface)
@@ -207,6 +240,7 @@ private struct DrawerItemRow: View {
             .padding(.vertical, 14)
         }
         .buttonStyle(.plain)
+        .accessibilityHint("Doble toque para abrir \(label)")
     }
 }
 
@@ -754,11 +788,13 @@ private struct ParentescoPickerSheet: View {
             VStack(spacing: 8) {
                 ForEach(Parentesco.allCases) { op in
                     Button {
+                        AppHaptics.selection()
                         local = op.rawValue
                     } label: {
                         HStack {
                             Image(systemName: local == op.rawValue ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(local == op.rawValue ? Color.appPrimary : Color.onSurfaceVariant)
+                                .accessibilityHidden(true)
                             Text(op.rawValue)
                                 .font(.bodyMd)
                                 .foregroundStyle(.onSurface)
@@ -771,12 +807,17 @@ private struct ParentescoPickerSheet: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(op.rawValue)
+                    .accessibilityValue(local == op.rawValue ? "Seleccionado" : "No seleccionado")
+                    .accessibilityHint("Doble toque para elegir \(op.rawValue)")
+                    .accessibilityAddTraits(local == op.rawValue ? [.isButton, .isSelected] : .isButton)
                 }
             }
 
             Spacer()
 
             Button {
+                AppHaptics.success()
                 seleccion = local
                 dismiss()
             } label: {
@@ -787,6 +828,8 @@ private struct ParentescoPickerSheet: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Aceptar parentesco")
+            .accessibilityHint("Doble toque para confirmar la selección")
         }
         .padding(20)
     }
@@ -848,6 +891,7 @@ struct DatosPersonalesSheet: View {
                                 ))
                                 .frame(width: 80, height: 80)
                                 .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                                .accessibilityHidden(true)
                             if let img = perfilImage {
                                 Image(uiImage: img)
                                     .resizable()
@@ -855,14 +899,18 @@ struct DatosPersonalesSheet: View {
                                     .frame(width: 80, height: 80)
                                     .clipShape(Circle())
                                     .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                                    .accessibilityLabel("Foto de perfil")
+                                    .accessibilityAddTraits(.isImage)
                             } else {
                                 Text("JD")
                                     .font(.headlineMd)
                                     .foregroundStyle(.white)
+                                    .accessibilityHidden(true)
                             }
                         }
                         .overlay(alignment: .bottomTrailing) {
                             Button {
+                                AppHaptics.impact(.light)
                                 showCamera = true
                             } label: {
                                 ZStack {
@@ -870,13 +918,17 @@ struct DatosPersonalesSheet: View {
                                         .fill(Color.white)
                                         .frame(width: 26, height: 26)
                                         .overlay(Circle().stroke(Color.purple, lineWidth: 1.5))
+                                        .accessibilityHidden(true)
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(Color.purple)
+                                        .accessibilityHidden(true)
                                 }
                             }
                             .buttonStyle(.plain)
                             .offset(x: 4, y: 4)
+                            .accessibilityLabel("Tomar foto de perfil")
+                            .accessibilityHint("Doble toque para abrir la cámara y capturar tu foto")
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
@@ -887,6 +939,7 @@ struct DatosPersonalesSheet: View {
                                 .font(.bodySmMedium)
                                 .foregroundStyle(.onSurfaceVariant)
                         }
+                        .accessibilityElement(children: .combine)
                         Spacer()
                     }
 
@@ -894,10 +947,13 @@ struct DatosPersonalesSheet: View {
                         Image(systemName: "envelope.fill")
                             .font(.system(size: 14))
                             .foregroundStyle(.appPrimary)
+                            .accessibilityHidden(true)
                         Text(correoInstitucional)
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Correo institucional: \(correoInstitucional)")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -928,6 +984,9 @@ struct DatosPersonalesSheet: View {
                                 .stroke(Color.outlineVariant.opacity(0.25), lineWidth: 0.5)
                         )
                 )
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Datos institucionales")
+                .accessibilityValue("Código UTP \(codigoUTP), DNI \(dni), modalidad \(modalidad), campus \(campus)")
 
                 // ── Mis datos personales + editar ──
                 HStack {
@@ -936,11 +995,13 @@ struct DatosPersonalesSheet: View {
                         .foregroundStyle(.onSurface)
                     Spacer()
                     Button {
+                        AppHaptics.impact(.light)
                         toggleEdicion()
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: editandoDatos ? "checkmark" : "pencil")
                                 .font(.system(size: 12, weight: .semibold))
+                                .accessibilityHidden(true)
                             Text(editandoDatos ? "Listo" : "editar datos")
                                 .font(.labelCapsSm)
                                 .appTracking(AppTracking.wideLabel)
@@ -948,6 +1009,8 @@ struct DatosPersonalesSheet: View {
                         .foregroundStyle(Color.purple)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(editandoDatos ? "Listo" : "Editar datos personales")
+                    .accessibilityHint(editandoDatos ? "Doble toque para guardar los cambios" : "Doble toque para editar tu teléfono y correo personal")
                 }
 
                 // ── Cuadro teléfono ──
@@ -958,6 +1021,7 @@ struct DatosPersonalesSheet: View {
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.appPrimary)
                     }
+                    .accessibilityHidden(true)
                     if editandoDatos {
                         TextField("999 888 777", text: Binding(
                             get: { telefonoInput },
@@ -970,6 +1034,7 @@ struct DatosPersonalesSheet: View {
                         .foregroundStyle(.onSurface)
                         .keyboardType(.numberPad)
                         .textInputAutocapitalization(.never)
+                        .accessibilityLabel("Teléfono, 9 dígitos")
                     } else {
                         Text(telefono)
                             .font(.bodyMd)
@@ -980,6 +1045,8 @@ struct DatosPersonalesSheet: View {
                 .padding(14)
                 .background(boxShape.fill(Color.surfaceContainerLow))
                 .overlay(boxShape.stroke(Color.outlineVariant.opacity(editandoDatos ? 0.6 : 0.25), lineWidth: 1))
+                .accessibilityElement(children: editandoDatos ? .contain : .combine)
+                .accessibilityLabel(editandoDatos ? "Teléfono" : "Teléfono: \(telefono)")
 
                 // ── Cuadro correo personal + signo de exclamación ──
                 HStack(spacing: 12) {
@@ -989,12 +1056,14 @@ struct DatosPersonalesSheet: View {
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.appPrimary)
                     }
+                    .accessibilityHidden(true)
                     if editandoDatos {
                         TextField("correo@ejemplo.com", text: $correoPersonalInput)
                             .font(.bodyMd)
                             .foregroundStyle(.onSurface)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
+                            .accessibilityLabel("Correo personal")
                     } else {
                         Text(correoPersonal)
                             .font(.bodyMd)
@@ -1002,6 +1071,7 @@ struct DatosPersonalesSheet: View {
                     }
                     Spacer()
                     Button {
+                        AppHaptics.impact(.light)
                         withAnimation(.easeInOut(duration: 0.2)) {
                             showCorreoTooltip.toggle()
                         }
@@ -1011,10 +1081,15 @@ struct DatosPersonalesSheet: View {
                             .foregroundStyle(Color.purple.opacity(0.85))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Información sobre el correo personal")
+                    .accessibilityHint("Doble toque para leer para qué se usa este correo")
+                    .accessibilityAddTraits(.isButton)
                 }
                 .padding(14)
                 .background(boxShape.fill(Color.surfaceContainerLow))
                 .overlay(boxShape.stroke(Color.outlineVariant.opacity(editandoDatos ? 0.6 : 0.25), lineWidth: 1))
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(editandoDatos ? "Correo personal" : "Correo personal: \(correoPersonal)")
 
                 // Tooltip del correo personal
                 if showCorreoTooltip {
@@ -1022,6 +1097,7 @@ struct DatosPersonalesSheet: View {
                         Image(systemName: "info.circle.fill")
                             .font(.system(size: 12))
                             .foregroundStyle(Color.purple)
+                            .accessibilityHidden(true)
                         Text("Correo personal utilizado para recuperar contraseña del correo institucional")
                             .font(.bodyXs)
                             .foregroundStyle(.onSurfaceVariant)
@@ -1038,6 +1114,8 @@ struct DatosPersonalesSheet: View {
                             )
                     )
                     .transition(.opacity)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Correo personal utilizado para recuperar contraseña del correo institucional")
                 }
 
                 // ── Contacto de Emergencia + editar ──
@@ -1047,11 +1125,13 @@ struct DatosPersonalesSheet: View {
                         .foregroundStyle(.onSurface)
                     Spacer()
                     Button {
+                        AppHaptics.impact(.light)
                         toggleEdicionEmergencia()
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: editandoEmergencia ? "checkmark" : "pencil")
                                 .font(.system(size: 12, weight: .semibold))
+                                .accessibilityHidden(true)
                             Text(editandoEmergencia ? "Listo" : "editar datos")
                                 .font(.labelCapsSm)
                                 .appTracking(AppTracking.wideLabel)
@@ -1059,6 +1139,8 @@ struct DatosPersonalesSheet: View {
                         .foregroundStyle(Color.purple)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(editandoEmergencia ? "Listo" : "Editar contacto de emergencia")
+                    .accessibilityHint(editandoEmergencia ? "Doble toque para cerrar la edición" : "Doble toque para editar el contacto de emergencia")
                 }
 
                 if editandoEmergencia {
@@ -1083,6 +1165,7 @@ struct DatosPersonalesSheet: View {
                             .padding(.vertical, 12)
                             .background(boxShape.fill(Color.surfaceContainerLow))
                             .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.6), lineWidth: 1))
+                            .accessibilityLabel("Nombre del contacto, solo letras, máximo 20")
                         }
 
                         // Parentesco (combo box)
@@ -1091,6 +1174,7 @@ struct DatosPersonalesSheet: View {
                                 .font(.bodySmMedium)
                                 .foregroundStyle(.onSurface)
                             Button {
+                                AppHaptics.impact(.light)
                                 showParentescoPicker = true
                             } label: {
                                 HStack {
@@ -1101,6 +1185,7 @@ struct DatosPersonalesSheet: View {
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundStyle(Color.purple)
+                                        .accessibilityHidden(true)
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 12)
@@ -1108,6 +1193,10 @@ struct DatosPersonalesSheet: View {
                                 .overlay(boxShape.stroke(Color.purple.opacity(0.5), lineWidth: 1))
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Parentesco del contacto")
+                            .accessibilityValue(emergenciaParentescoInput.isEmpty ? "No seleccionado" : emergenciaParentescoInput)
+                            .accessibilityHint("Doble toque para elegir una opción de parentesco")
+                            .accessibilityAddTraits(.isButton)
                         }
 
                         // Número del contacto
@@ -1130,10 +1219,12 @@ struct DatosPersonalesSheet: View {
                             .padding(.vertical, 12)
                             .background(boxShape.fill(Color.surfaceContainerLow))
                             .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.6), lineWidth: 1))
+                            .accessibilityLabel("Número del contacto, solo números, máximo 11 dígitos")
                         }
 
                         // Botones Guardar / Cancelar
                         Button {
+                            AppHaptics.success()
                             guardarEmergencia()
                         } label: {
                             Text("Guardar")
@@ -1143,8 +1234,11 @@ struct DatosPersonalesSheet: View {
                                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.purple))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Guardar contacto de emergencia")
+                        .accessibilityHint("Doble toque para guardar los datos del contacto")
 
                         Button {
+                            AppHaptics.impact(.light)
                             cancelarEmergencia()
                         } label: {
                             Text("Cancelar")
@@ -1155,30 +1249,37 @@ struct DatosPersonalesSheet: View {
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple, lineWidth: 1.5))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Cancelar edición del contacto")
+                        .accessibilityHint("Doble toque para descartar los cambios")
                     }
                 } else {
                     // ── Datos guardados del contacto de emergencia ──
                     VStack(spacing: 12) {
                         emergenciaFila(icon: "person.fill", titulo: "Nombre", valor: emergenciaNombre)
-                        Divider().padding(.leading, 48)
+                        Divider().padding(.leading, 48).accessibilityHidden(true)
                         emergenciaFila(icon: "person.2.fill", titulo: "Parentesco", valor: emergenciaParentesco)
-                        Divider().padding(.leading, 48)
+                        Divider().padding(.leading, 48).accessibilityHidden(true)
                         emergenciaFila(icon: "phone.fill", titulo: "Número", valor: emergenciaNumero)
                     }
                     .padding(14)
                     .background(boxShape.fill(Color.surfaceContainerLow))
                     .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.25), lineWidth: 1))
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Contacto de emergencia guardado")
+                    .accessibilityValue("Nombre \(emergenciaNombre.isEmpty ? "vacío" : emergenciaNombre), parentesco \(emergenciaParentesco.isEmpty ? "vacío" : emergenciaParentesco), número \(emergenciaNumero.isEmpty ? "vacío" : emergenciaNumero)")
                 }
 
                 Spacer(minLength: 24)
 
                 // ── Cerrar sesión (solo de diseño) ──
                 Button {
+                    AppHaptics.warning()
                     // Solo de diseño: no ejecuta acción real
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .font(.system(size: 16, weight: .bold))
+                            .accessibilityHidden(true)
                         Text("Cerrar sesión")
                             .font(.bodyMdMedium)
                     }
@@ -1190,6 +1291,8 @@ struct DatosPersonalesSheet: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Cerrar sesión")
+                .accessibilityHint("Botón de diseño, sin acción real en este prototipo")
             }
             .padding(20)
         }
@@ -1267,6 +1370,7 @@ struct DatosPersonalesSheet: View {
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.appPrimary)
             }
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(titulo)
                     .font(.bodyXs)
@@ -1277,6 +1381,8 @@ struct DatosPersonalesSheet: View {
             }
             Spacer()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(titulo): \(valor.isEmpty ? "vacío" : valor)")
     }
 
     // MARK: - Contacto de emergencia: acciones
@@ -1322,12 +1428,15 @@ private struct SheetHeader: View {
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(iconColor)
             }
+            .accessibilityHidden(true)
             Text(title)
                 .font(.headlineMd)
                 .foregroundStyle(.onSurface)
             Spacer()
         }
         .padding(.bottom, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 

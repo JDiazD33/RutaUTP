@@ -418,60 +418,60 @@ struct MapaView: View {
 
                 Spacer()
 
-                HStack(spacing: 6) {
-                    Text("Transportes cercanos")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.onSurface.opacity(0.85))
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.appPrimary)
-                            .frame(width: 7, height: 7)
-                        Text("En vivo")
-                            .font(.labelCapsSm)
-                            .foregroundStyle(.appPrimary)
-                            .appTracking(AppTracking.wideLabel)
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.primaryContainer)
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "bus.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.onPrimaryContainer)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.primaryFixed)
-                    )
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Transportes cercanos")
+                            .font(.system(size: 15, weight: .heavy))
+                            .foregroundStyle(.onSurface)
+                        Text(vm.busesAnimados.isEmpty
+                             ? "Buscando líneas cerca del campus…"
+                             : "\(vm.busesAnimados.count) líneas operando ahora")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.onSurfaceVariant)
+                    }
                 }
             }
             .padding(.horizontal, 20)
 
-            // Cards de buses con altura suficiente
+            // Cards de buses con altura suficiente (rutas reales del feed GTFS)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    BusCard(
-                        linea: "LÍNEA 10", empresa: "El Cortijo",
-                        minutos: "4 MIN", tipo: "Micro",
-                        placa: "T1B-721", colorLinea: .appPrimary
-                    )
-                    .frame(height: 100)
-                    .onTapGesture {
-                        if let bus = vm.busesAnimados.first(where: { $0.linea == "10" }) {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                vm.busSeleccionado = bus
-                            }
-                        } else {
-                            router.navigate(to: .rutas)
+                    if vm.busesAnimados.isEmpty {
+                        ForEach(0..<2, id: \.self) { _ in
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.surfaceContainerLow)
+                                .frame(width: 180, height: 100)
+                                .overlay(
+                                    ProgressView()
+                                        .tint(.onSurfaceVariant)
+                                )
                         }
-                    }
-                    BusCard(
-                        linea: "LÍNEA 4", empresa: "Salaverry",
-                        minutos: "12 MIN", tipo: "Combi",
-                        placa: "A6N-450", colorLinea: .secondary
-                    )
-                    .frame(height: 100)
-                    .onTapGesture {
-                        if let bus = vm.busesAnimados.first(where: { $0.linea == "4" }) {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                vm.busSeleccionado = bus
+                    } else {
+                        ForEach(vm.busesAnimados) { bus in
+                            BusCard(
+                                linea: "LÍNEA \(bus.linea)",
+                                empresa: bus.empresa,
+                                minutos: "\(bus.minutosLlegada) MIN",
+                                tipo: bus.tipo,
+                                placa: bus.placa,
+                                colorLinea: bus.color
+                            )
+                            .frame(height: 100)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    vm.busSeleccionado = bus
+                                }
                             }
-                        } else {
-                            router.navigate(to: .rutas)
                         }
                     }
                 }
@@ -480,6 +480,17 @@ struct MapaView: View {
             .frame(height: 112)
         }
         .frame(height: 168)
+        // Fondo con degradado para separar el panel de las etiquetas del mapa
+        .background(
+            LinearGradient(
+                colors: [Color.appBackground.opacity(0.0),
+                         Color.appBackground.opacity(0.92),
+                         Color.appBackground],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .bottom)
+            .allowsHitTesting(false)
+        )
     }
 }
 

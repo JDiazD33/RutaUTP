@@ -83,6 +83,8 @@ struct MapaRutaRepresentable: UIViewRepresentable {
     let coordenadas: [CLLocationCoordinate2D]
     let colorLinea: UIColor
     let linea: String
+    var tituloOrigen: String? = nil
+    var tituloDestino: String? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(color: colorLinea, linea: linea)
@@ -107,12 +109,13 @@ struct MapaRutaRepresentable: UIViewRepresentable {
             animated: false
         )
 
-        // Anotaciones
+        // Anotaciones (origen y destino según el feed GTFS)
         if let primero = coordenadas.first {
             mapView.addAnnotation(MarcadorRutaAnnotation(
                 coordinate: primero,
                 tipo: .origen,
-                color: colorLinea
+                color: colorLinea,
+                title: tituloOrigen
             ))
         }
         if let ultimo = coordenadas.last {
@@ -120,12 +123,14 @@ struct MapaRutaRepresentable: UIViewRepresentable {
                 coordinate: ultimo,
                 tipo: .destino,
                 color: .systemRed,
-                title: "UTP Trujillo"
+                title: tituloDestino ?? "UTP Trujillo"
             ))
         }
+        // Bus decorativo a mitad del recorrido
         if coordenadas.count > 2 {
+            let medio = coordenadas[coordenadas.count / 2]
             mapView.addAnnotation(MarcadorRutaAnnotation(
-                coordinate: coordenadas[1],
+                coordinate: medio,
                 tipo: .bus,
                 color: colorLinea,
                 linea: linea
@@ -196,8 +201,9 @@ struct MapaRutaRepresentable: UIViewRepresentable {
 struct RutaMapKitView: View {
     let ruta: RutaOpcion
 
+    /// Shape real del feed GTFS; fallback a las líneas demo si la ruta no trae shape.
     private var coordenadas: [CLLocationCoordinate2D] {
-        RutaCoordenadas.para(linea: ruta.linea)
+        ruta.shape.count >= 2 ? ruta.shape : RutaCoordenadas.para(linea: ruta.linea)
     }
 
     var body: some View {
@@ -205,7 +211,9 @@ struct RutaMapKitView: View {
             MapaRutaRepresentable(
                 coordenadas: coordenadas,
                 colorLinea: UIColor(ruta.colorLinea),
-                linea: ruta.linea
+                linea: ruta.linea,
+                tituloOrigen: ruta.paradaInicio,
+                tituloDestino: ruta.paradaFin
             )
 
             // Badge "RUTA SEGURA"
@@ -234,10 +242,12 @@ struct RutaMapKitView: View {
 
 #Preview {
     RutaMapKitView(ruta: RutaOpcion(
-        id: 2, linea: "10", empresa: "El Cortijo",
-        recorrido: "El Cortijo → Av. España → UTP",
-        llegaEn: "7 min", tiempo: "25 min", costo: "S/ 1.00",
-        congestion: "Baja", colorLinea: .secondary
+        id: "17419574", linea: "C-06", empresa: "Titanic Express",
+        recorrido: "Vía Panamericana Norte (ramal circular)",
+        frecuenciaMin: 5, duracionMin: 45, costo: "S/ 2.00",
+        numParaderos: 120, distanciaKm: 18.4, colorLinea: Color(hex: "#9999FF"),
+        shape: RutaCoordenadas.linea10, paraderos: [],
+        paradaInicio: "Panamericana Norte", paradaFin: "Av. América"
     ))
     .frame(height: 280)
     .padding()

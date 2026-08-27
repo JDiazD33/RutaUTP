@@ -18,7 +18,18 @@ enum AppScreen: Equatable {
 }
 
 final class AppRouter: ObservableObject {
-    @Published var currentScreen: AppScreen = .bienvenida
+    /// Pantalla de arranque (solo la cambia el hook DEBUG de RootView).
+    #if DEBUG
+    static var pantallaInicial: AppScreen = .bienvenida
+    #endif
+
+    @Published var currentScreen: AppScreen = {
+        #if DEBUG
+        return AppRouter.pantallaInicial
+        #else
+        return .bienvenida
+        #endif
+    }()
 
     func navigate(to screen: AppScreen) {
         withAnimation(.easeInOut(duration: 0.25)) {

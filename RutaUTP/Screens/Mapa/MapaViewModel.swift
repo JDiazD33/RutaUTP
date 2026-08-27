@@ -167,50 +167,70 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     }
 
     // MARK: - Simulación de Buses Animados
+    //
+    // Los recorridos (shapes) son REALES del feed GTFS embebido; las
+    // posiciones son SIMULADAS porque el feed estático no incluye GPS.
     func iniciarSimulacionBuses() {
+        cargarBusesDesdeGTFS()
+
         guard busSimulationTimer == nil else { return }
-
-        let coords10 = RutaCoordenadas.linea10
-        let coords4 = RutaCoordenadas.linea4
-
-        guard !coords10.isEmpty, !coords4.isEmpty else { return }
-
-        let bus10 = BusAnimado(
-            id: 1,
-            linea: "10",
-            empresa: "El Cortijo",
-            tipo: "Micro",
-            placa: "T1B-721",
-            minutosLlegada: 4,
-            color: .appPrimary,
-            lat: coords10.first!.latitude,
-            lon: coords10.first!.longitude,
-            heading: 0,
-            rutaCoordenadas: coords10
-        )
-
-        let bus4 = BusAnimado(
-            id: 2,
-            linea: "4",
-            empresa: "Salaverry",
-            tipo: "Combi",
-            placa: "A6N-450",
-            minutosLlegada: 12,
-            color: .secondary,
-            lat: coords4.first!.latitude,
-            lon: coords4.first!.longitude,
-            heading: 0,
-            rutaCoordenadas: coords4
-        )
-
-        busesAnimados = [bus10, bus4]
-
         busSimulationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             DispatchQueue.main.async {
                 self.actualizarPosicionBuses()
             }
         }
+    }
+
+    /// Carga las 4 rutas más cercanas a UTP y crea un bus animado por ruta.
+    private func cargarBusesDesdeGTFS() {
+        guard busesAnimados.isEmpty else { return }
+        Task { @MainActor [weak self] in
+            let feed = await GTFSRepository.shared.rutasCercaDeUTP(n: 4)
+            guard let self, self.busesAnimados.isEmpty, !feed.isEmpty else { return }
+
+            let n = feed.count
+            self.busesAnimados = feed.enumerated().map { index, ruta in
+                var waypoints = Self.decimarCoordenadas(ruta.shape, maximoPuntos: 240)
+                if waypoints.count < 2 { waypoints = RutaCoordenadas.linea10 }
+
+                var bus = BusAnimado(
+                    id: index + 1,
+                    linea: ruta.linea,
+                    empresa: ruta.empresa,
+                    tipo: "Bus",
+                    placa: ruta.variante.isEmpty ? "S/D" : "Ramal \(ruta.variante)",
+                    minutosLlegada: max(1, 2 + index * max(1, ruta.headwayMin / max(n, 1))),
+                    color: ruta.color,
+                    lat: waypoints[0].latitude,
+                    lon: waypoints[0].longitude,
+                    heading: 0,
+                    rutaCoordenadas: waypoints
+                )
+                // Reparte los buses a lo largo del recorrido para que
+                // no salgan todos amontonados en el mismo punto.
+                bus.currentSegmentIndex = min(index * max(1, waypoints.count / (n + 1)),
+                                              max(0, waypoints.count - 2))
+                return bus
+            }
+        }
+    }
+
+    /// Reduce la densidad de un shape conservando el orden (perf del timer).
+    private static func decimarCoordenadas(_ puntos: [CLLocationCoordinate2D],
+                                           maximoPuntos: Int) -> [CLLocationCoordinate2D] {
+        guard puntos.count > maximoPuntos else { return puntos }
+        let paso = Double(puntos.count) / Double(maximoPuntos)
+        var resultado: [CLLocationCoordinate2D] = []
+        resultado.reserveCapacity(maximoPuntos)
+        for j in 0..<maximoPuntos {
+            resultado.append(puntos[min(Int(Double(j) * paso), puntos.count - 1)])
+        }
+        if let ultima = puntos.last, resultado.last?.latitude != ultima.latitude
+                                                || resultado.last?.longitude != ultima.longitude {
+            resultado.append(ultima)
+        }
+        return resultado
     }
 
     func detenerSimulacionBuses() {

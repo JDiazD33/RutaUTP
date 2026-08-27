@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct PerfilView: View {
     @EnvironmentObject private var router: AppRouter
@@ -22,6 +23,7 @@ struct PerfilView: View {
     @State private var showEditAlert: Bool = false
     @State private var newNameInput: String = ""
     @State private var showDatosPersonales: Bool = false
+    @State private var showVoiceOverHelp: Bool = false
     //  CORREGIDO V3: estado para Wallet
     @State private var showTarjetaSheet: Bool = false
     @State private var showCarnetScanner: Bool = false
@@ -118,6 +120,12 @@ struct PerfilView: View {
             OfflineMapSheet(mapsDownloaded: $mapsDownloaded)
                 .presentationDetents([.medium, .large])
         }
+        // Sheet con instrucciones para activar VoiceOver
+        .sheet(isPresented: $showVoiceOverHelp) {
+            VoiceOverHelpSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Banner Sin Conexión (Top)
@@ -131,6 +139,7 @@ struct PerfilView: View {
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.orange)
             }
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text("SIN CONEXIÓN")
@@ -147,11 +156,13 @@ struct PerfilView: View {
             }
             Spacer()
             Button {
+                AppHaptics.impact(.light)
                 showOfflineMapPopup = true
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : "arrow.down.circle.fill")
                         .font(.system(size: 12, weight: .semibold))
+                        .accessibilityHidden(true)
                     Text(mapsDownloaded ? "Mapas OK" : "Descargar")
                         .font(.system(size: 11, weight: .bold))
                 }
@@ -161,6 +172,8 @@ struct PerfilView: View {
                 .background(Capsule().fill(Color.orange))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(mapsDownloaded ? "Mapas descargados correctamente" : "Descargar mapas offline")
+            .accessibilityHint("Doble toque para administrar los mapas locales")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -175,6 +188,9 @@ struct PerfilView: View {
         )
         .padding(.horizontal, 16)
         .padding(.top, 50)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Aviso: sin conexión, modo offline activo")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
     // MARK: - Hero
@@ -185,15 +201,18 @@ struct PerfilView: View {
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
             .frame(height: 420)
+            .accessibilityHidden(true)
 
             Circle()
                 .fill(Color.white.opacity(0.10))
                 .frame(width: 220, height: 220)
                 .offset(x: 230, y: -70)
+                .accessibilityHidden(true)
             Circle()
                 .fill(Color.white.opacity(0.06))
                 .frame(width: 150, height: 150)
                 .offset(x: -50, y: 50)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 0) {
                 Spacer().frame(height: 56)
@@ -209,6 +228,8 @@ struct PerfilView: View {
                             .font(.headlineMd)
                             .foregroundStyle(.white)
                     }
+                    .accessibilityLabel("Foto de perfil, \(iniciales(nombre))")
+                    .accessibilityAddTraits(.isImage)
                     VStack(alignment: .leading, spacing: 6) {
                         Text(nombre)
                             .font(.headlineLgMobile)
@@ -225,6 +246,7 @@ struct PerfilView: View {
                                 HStack(spacing: 3) {
                                     Image(systemName: "checkmark.seal.fill")
                                         .font(.system(size: 10, weight: .bold))
+                                        .accessibilityHidden(true)
                                     Text("VERIFICADO")
                                         .font(.labelCapsSm)
                                         .appTracking(AppTracking.wideLabel)
@@ -239,6 +261,9 @@ struct PerfilView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 20)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(nombre), estudiante UTP\(carnetVerificado ? ", carnet verificado" : "")")
+                .accessibilityAddTraits(.isHeader)
 
                 // Mi Wallet integrado debajo del nombre
                 VStack(alignment: .leading, spacing: 10) {
@@ -247,16 +272,19 @@ struct PerfilView: View {
                         .foregroundStyle(.white.opacity(0.85))
                         .appTracking(AppTracking.wideLabel)
                         .padding(.horizontal, 4)
+                        .accessibilityAddTraits(.isHeader)
 
                     HStack(spacing: 12) {
                         // Tarjeta de pago translúcida
                         Button {
+                            AppHaptics.impact(.light)
                             showTarjetaSheet = true
                         } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: "creditcard.fill")
                                     .font(.system(size: 18))
                                     .foregroundStyle(.white)
+                                    .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Método Pago")
                                         .font(.system(size: 13, weight: .bold))
@@ -276,15 +304,20 @@ struct PerfilView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Método de pago")
+                        .accessibilityValue(metodoPagoGuardado.map { "Visa terminación \($0)" } ?? "Sin tarjeta, agregar")
+                        .accessibilityHint("Doble toque para administrar tu tarjeta")
 
                         // Carnet UTP translúcido
                         Button {
+                            AppHaptics.impact(.light)
                             showCarnetScanner = true
                         } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: "person.text.rectangle.fill")
                                     .font(.system(size: 18))
                                     .foregroundStyle(.white)
+                                    .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Carnet UTP")
                                         .font(.system(size: 13, weight: .bold))
@@ -329,12 +362,15 @@ struct PerfilView: View {
                 .fill(Color.surfaceContainerLowest)
                 .shadow(color: .black.opacity(0.10), radius: 12, x: 0, y: 6)
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Estadísticas")
     }
 
     private var divider: some View {
         Rectangle()
             .fill(Color.outlineVariant.opacity(0.50))
             .frame(width: 1, height: 36)
+            .accessibilityHidden(true)
     }
 
     private func statColumn(value: String, label: String) -> some View {
@@ -348,6 +384,8 @@ struct PerfilView: View {
                 .appTracking(AppTracking.wideLabel)
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label.capitalized): \(value)")
     }
 
     // MARK: - Configuración
@@ -358,19 +396,21 @@ struct PerfilView: View {
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
                 .padding(.leading, 4)
+                .accessibilityAddTraits(.isHeader)
 
             VStack(spacing: 0) {
                 toggleRow(icon: "bell.fill", iconColor: .appPrimary,
                           label: "Notificaciones", isOn: $notifOn)
-                Divider().padding(.leading, 56)
+                Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "mappin.circle.fill", iconColor: .secondary,
                           label: "Compartir ubicación", isOn: $ubicacionOn)
-                Divider().padding(.leading, 56)
+                Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "wifi.slash", iconColor: .orange,
                           label: "Modo offline", isOn: $modoOffline)
-                Divider().padding(.leading, 56)
+                Divider().padding(.leading, 56).accessibilityHidden(true)
                 chevronRow(icon: "pencil", iconColor: .onSurfaceVariant,
                            label: "Editar perfil") {
+                    AppHaptics.impact(.light)
                     showDatosPersonales = true
                 }
             }
@@ -382,7 +422,82 @@ struct PerfilView: View {
                             .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
                     )
             )
+
+            // ── Accesibilidad (VoiceOver) ──
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Accesibilidad")
+                    .font(.labelCapsLg)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .appTracking(AppTracking.wideLabel)
+                    .padding(.leading, 4)
+                    .accessibilityAddTraits(.isHeader)
+
+                VStack(spacing: 0) {
+                    accesibilidadRow()
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.surfaceContainerLowest)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
+                        )
+                )
+            }
         }
+    }
+
+    // MARK: - Fila Accesibilidad (VoiceOver)
+    @ViewBuilder
+    private func accesibilidadRow() -> some View {
+        let voiceOverOn = UIAccessibility.isVoiceOverRunning
+        Button {
+            AppHaptics.impact(.light)
+            if voiceOverOn {
+                // Ya está activo: abrir ajustes de la app (por si quiere ajustar algo)
+                abrirAjustesIOS()
+            } else {
+                // Mostrar instrucciones + botón a Ajustes
+                showVoiceOverHelp = true
+            }
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.appPrimary.opacity(0.14))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: voiceOverOn ? "speaker.wave.3.fill" : "speaker.slash.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.appPrimary)
+                }
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("VoiceOver")
+                        .font(.bodyMdMedium)
+                        .foregroundStyle(.onSurface)
+                    Text(voiceOverOn ? "Activado" : "Desactivado")
+                        .font(.bodySm)
+                        .foregroundStyle(.onSurfaceVariant)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.onSurfaceVariant)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("VoiceOver")
+        .accessibilityValue(voiceOverOn ? "Activado" : "Desactivado")
+        .accessibilityHint("Doble toque para ver cómo activar VoiceOver en tu iPhone")
+    }
+
+    private func abrirAjustesIOS() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func toggleRow(icon: String, iconColor: Color, label: String, isOn: Binding<Bool>) -> some View {
@@ -393,6 +508,7 @@ struct PerfilView: View {
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(iconColor)
             }
+            .accessibilityHidden(true)
             Text(label)
                 .font(.bodyMdMedium)
                 .foregroundStyle(.onSurface)
@@ -403,6 +519,11 @@ struct PerfilView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(label)
+        .accessibilityValue(isOn.wrappedValue ? "Activado" : "Desactivado")
+        .accessibilityHint("Doble toque para cambiar")
+        .accessibilityAddTraits(.isButton)
     }
 
     private func chevronRow(icon: String, iconColor: Color, label: String, action: @escaping () -> Void) -> some View {
@@ -414,6 +535,7 @@ struct PerfilView: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(iconColor)
                 }
+                .accessibilityHidden(true)
                 Text(label)
                     .font(.bodyMdMedium)
                     .foregroundStyle(.onSurface)
@@ -421,11 +543,14 @@ struct PerfilView: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.onSurfaceVariant)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityHint("Doble toque para abrir")
     }
 
     // MARK: - Helpers
@@ -588,6 +713,99 @@ private struct OfflineMapSheet: View {
                 mapsDownloaded = true
             }
         }
+    }
+}
+
+// MARK: - Sheet de ayuda para activar VoiceOver
+private struct VoiceOverHelpSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let pasos: [(icon: String, texto: String)] = [
+        ("gearshape.fill", "Abre la app Ajustes de tu iPhone"),
+        ("hand.point.right.fill", "Toca Accesibilidad"),
+        ("speaker.wave.2.fill", "Toca VoiceOver, primera opción"),
+        ("togglepower", "Activa el interruptor VoiceOver")
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.appPrimary.opacity(0.12))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "speaker.wave.3.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.appPrimary)
+                }
+                .accessibilityHidden(true)
+                Text("Activar VoiceOver")
+                    .font(.headlineMd)
+                    .foregroundStyle(.onSurface)
+                Spacer()
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+
+            Text("VoiceOver lee en voz alta lo que tocas en pantalla. Sigue estos pasos para activarlo en tu iPhone:")
+                .font(.bodySm)
+                .foregroundStyle(.onSurfaceVariant)
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(pasos.indices, id: \.self) { i in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.appPrimary.opacity(0.10))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: pasos[i].icon)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.appPrimary)
+                        }
+                        .accessibilityHidden(true)
+                        Text("\(i + 1). \(pasos[i].texto)")
+                            .font(.bodyMd)
+                            .foregroundStyle(.onSurface)
+                        Spacer()
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Paso \(i + 1): \(pasos[i].texto)")
+                }
+            }
+
+            Spacer()
+
+            Button {
+                AppHaptics.impact(.light)
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "gearshape.fill")
+                        .accessibilityHidden(true)
+                    Text("Abrir Ajustes del iPhone")
+                }
+                .font(.bodyMdMedium)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Abrir Ajustes del iPhone")
+            .accessibilityHint("Doble toque para ir directamente a la configuración de la app")
+
+            Button {
+                dismiss()
+            } label: {
+                Text("Cerrar")
+                    .font(.bodyMdMedium)
+                    .foregroundStyle(.onSurfaceVariant)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Cerrar instrucciones")
+        }
+        .padding(20)
     }
 }
 
