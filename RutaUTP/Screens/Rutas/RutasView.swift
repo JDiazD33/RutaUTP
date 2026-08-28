@@ -48,7 +48,18 @@ final class RutasViewModel: ObservableObject {
     @Published private(set) var cargando: Bool = true
     @Published var textoBusqueda: String = ""
 
+    /// Filtro "rutas que pasan cerca de X" (activado desde Guardado).
+    @Published var filtroCerca: DestinoPendiente?
+    @Published private(set) var distanciaALugar: [String: Double] = [:]
+
+    static let radioCercaMetros: Double = 300
+
     var rutasFiltradas: [RutaOpcion] {
+        if filtroCerca != nil {
+            return rutas
+                .filter { (distanciaALugar[$0.id] ?? .infinity) <= Self.radioCercaMetros }
+                .sorted { (distanciaALugar[$0.id] ?? .infinity) < (distanciaALugar[$1.id] ?? .infinity) }
+        }
         let t = textoBusqueda.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return rutas }
         return rutas.filter {
@@ -58,10 +69,24 @@ final class RutasViewModel: ObservableObject {
         }
     }
 
+    /// Texto "a X m del lugar" para la card bajo el filtro.
+    func distanciaTexto(ruta: RutaOpcion) -> String? {
+        guard filtroCerca != nil, let d = distanciaALugar[ruta.id] else { return nil }
+        return d < 1000 ? "a \(Int((d / 10).rounded() * 10)) m del lugar"
+                        : String(format: "a %.1f km del lugar", d / 1000)
+    }
+
     func cargar() async {
         guard cargando else { return }
         let feed = await GTFSRepository.shared.rutas()
-        rutas = feed.map { ruta in
+        rutas = Self.convertir(feed)
+        cargando = false
+    }
+
+    /// Convierte el feed GTFS en el modelo de lista. Reutilizado por
+    /// GuardadoView para las líneas guardadas.
+    static func convertir(_ feed: [RutaGTFS]) -> [RutaOpcion] {
+        feed.map { ruta in
             RutaOpcion(
                 id: ruta.id,
                 linea: ruta.linea,
@@ -79,7 +104,27 @@ final class RutasViewModel: ObservableObject {
                 paradaFin: ruta.paraderos.last?.nombre ?? "Paradero final"
             )
         }
-        cargando = false
+    }
+
+    /// Activa el filtro "cerca de": mide la distancia de cada shape al lugar.
+    func activarFiltroCerca(destino: DestinoPendiente) {
+        filtroCerca = destino
+        var distancias: [String: Double] = [:]
+        for ruta in rutas where ruta.shape.count >= 2 {
+            var minima = Double.greatestFiniteMagnitude
+            for punto in ruta.shape {
+                let d = PolylineMatching.distanceMeters(punto, destino.coordinate)
+                if d < minima { minima = d }
+                if d < Self.radioCercaMetros { break }   // ya califica; no seguir
+            }
+            distancias[ruta.id] = minima
+        }
+        distanciaALugar = distancias
+    }
+
+    func limpiarFiltroCerca() {
+        filtroCerca = nil
+        distanciaALugar = [:]
     }
 }
 
@@ -117,6 +162,10 @@ struct RutasView: View {
         .task {
             await viewModel.cargar()
             procesarHookDebug()
+            consumirLugarCercano()
+        }
+        .onChange(of: router.lugarCercanoPendiente) { _ in
+            consumirLugarCercano()
         }
         #if DEBUG
         .fullScreenCover(isPresented: $debugExplorador) {
@@ -128,6 +177,15 @@ struct RutasView: View {
             }
         }
         #endif
+    }
+
+    /// Recibe el "Buscar transporte cercano" de Guardado y filtra el GTFS.
+    private func consumirLugarCercano() {
+        guard let lugar = router.lugarCercanoPendiente else { return }
+        router.lugarCercanoPendiente = nil
+        viewModel.limpiarFiltroCerca()
+        viewModel.textoBusqueda = ""
+        viewModel.activarFiltroCerca(destino: lugar)
     }
 
     #if DEBUG
@@ -169,8 +227,10 @@ struct RutasView: View {
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
                                 Text(viewModel.cargando
-                                     ? "Cargando rutas oficiales (GTFS)…"
-                                     : "\(viewModel.rutas.count) rutas oficiales · ordenadas por cercanía a UTP")
+                                     ? "Cargando rutas oficiales…"
+                                     : (viewModel.filtroCerca != nil
+                                        ? "Líneas que pasan cerca de \(viewModel.filtroCerca!.titulo)"
+                                        : "\(viewModel.rutas.count) rutas oficiales · ordenadas por cercanía a UTP"))
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
                             }
@@ -188,14 +248,17 @@ struct RutasView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 32)
                         } else if viewModel.rutasFiltradas.isEmpty {
-                            Text("No hay rutas que coincidan con “\(viewModel.textoBusqueda)”")
+                            Text(viewModel.filtroCerca != nil
+                                 ? "Ninguna línea pasa a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar"
+                                 : "No hay rutas que coincidan con “\(viewModel.textoBusqueda)”")
                                 .font(.bodySm)
                                 .foregroundStyle(.onSurfaceVariant)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 32)
+                                .multilineTextAlignment(.center)
                         } else {
                             ForEach(viewModel.rutasFiltradas) { ruta in
-                                RutaOpcionCard(ruta: ruta)
+                                RutaOpcionCard(ruta: ruta, distanciaLugar: viewModel.distanciaTexto(ruta: ruta))
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         withAnimation(.spring(response: 0.3)) {
@@ -215,34 +278,68 @@ struct RutasView: View {
 
     // MARK: - Buscador de rutas
     private var buscador: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.onSurfaceVariant)
-            TextField("Buscar línea, empresa o avenida", text: $viewModel.textoBusqueda)
-                .font(.bodySm)
-                .autocorrectionDisabled()
-            if !viewModel.textoBusqueda.isEmpty {
-                Button {
-                    viewModel.textoBusqueda = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+        VStack(spacing: 8) {
+            if let cerca = viewModel.filtroCerca {
+                HStack(spacing: 8) {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Líneas cerca de \(cerca.titulo)")
+                            .font(.bodySm)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.onPrimaryContainer)
+                        Text("\(viewModel.rutasFiltradas.count) de \(viewModel.rutas.count) rutas pasan a menos de \(Int(RutasViewModel.radioCercaMetros)) m")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.onPrimaryContainer.opacity(0.8))
+                    }
+                    Spacer()
+                    Button {
+                        withAnimation { viewModel.limpiarFiltroCerca() }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 17))
+                            .foregroundStyle(.onPrimaryContainer.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Quitar filtro")
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.primaryContainer)
+                )
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.onSurfaceVariant)
+                    TextField("Buscar línea, empresa o avenida", text: $viewModel.textoBusqueda)
+                        .font(.bodySm)
+                        .autocorrectionDisabled()
+                    if !viewModel.textoBusqueda.isEmpty {
+                        Button {
+                            viewModel.textoBusqueda = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 15))
+                                .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.surfaceContainerLowest)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.outlineVariant.opacity(0.40), lineWidth: 1)
+                )
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.surfaceContainerLowest)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.outlineVariant.opacity(0.40), lineWidth: 1)
-        )
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
     }
@@ -274,6 +371,7 @@ struct RutasView: View {
 // MARK: - Ruta Opcion Card
 private struct RutaOpcionCard: View {
     let ruta: RutaOpcion
+    var distanciaLugar: String? = nil
 
     var body: some View {
         HStack(spacing: 14) {
@@ -301,11 +399,19 @@ private struct RutaOpcionCard: View {
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .lineLimit(1)
-                Text("\(ruta.numParaderos) paraderos · \(String(format: "%.1f", ruta.distanciaKm)) km")
-                    .font(.labelCapsSm)
-                    .foregroundStyle(.onSurfaceVariant.opacity(0.8))
-                    .lineLimit(1)
-                    .appTracking(AppTracking.wideLabel)
+                if let distanciaLugar {
+                    Text(distanciaLugar)
+                        .font(.labelCapsSm)
+                        .foregroundStyle(ruta.colorLinea)
+                        .lineLimit(1)
+                        .appTracking(AppTracking.wideLabel)
+                } else {
+                    Text("\(ruta.numParaderos) paraderos · \(String(format: "%.1f", ruta.distanciaKm)) km")
+                        .font(.labelCapsSm)
+                        .foregroundStyle(.onSurfaceVariant.opacity(0.8))
+                        .lineLimit(1)
+                        .appTracking(AppTracking.wideLabel)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 

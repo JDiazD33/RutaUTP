@@ -19,6 +19,9 @@ struct MapaView: View {
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     @State private var showReportSuccess = false
+    /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
+    /// debajo del botón de mi ubicación.
+    @State private var panelColapsado = false
     @FocusState private var campoEnfocado: Bool
 
     @State private var cameraPosition: MapCameraPosition = .region(
@@ -154,26 +157,16 @@ struct MapaView: View {
 
                 Spacer()
 
-                // Botón "Mi Ubicación" GPS
+                // Botón "Mi Ubicación" GPS: siempre en la misma posición.
                 HStack {
                     Spacer()
-                    Button {
-                        vm.recenterOnUser()
-                    } label: {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(vm.userRealCoordinate != nil ? Color.appPrimary : Color.onSurfaceVariant)
-                            .frame(width: 44, height: 44)
-                            .background(Circle().fill(Color.surfaceContainerLowest))
-                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Centrar en mi ubicación")
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 8)
+                    botonMiUbicacion
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 8)
                 }
 
-                // Bottom panel
+                // Bottom panel: REPORTAR + cards siempre visibles; solo el
+                // encabezado "Transportes cercanos" se desliza al colapsar.
                 bottomPanel
                     .padding(.bottom, tabBarHeight + 8)
             }
@@ -212,10 +205,33 @@ struct MapaView: View {
             BottomNavBar()
         }
         .ignoresSafeArea(edges: .bottom)
-        .onAppear { vm.iniciarGPS() }
+        .onAppear {
+            vm.iniciarGPS()
+            consumirDestinoPendiente()
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--colapsar") {
+                panelColapsado = true
+            }
+            #endif
+        }
         .onDisappear { vm.detenerSimulacionBuses() }
+        .onChange(of: router.destinoPendiente) { _ in
+            consumirDestinoPendiente()
+        }
         .onChange(of: vm.region.center.latitude) { _ in
             withAnimation {
+                cameraPosition = .region(vm.region)
+            }
+        }
+        .onChange(of: vm.region.center.longitude) { _ in
+            withAnimation {
+                cameraPosition = .region(vm.region)
+            }
+        }
+        .onChange(of: vm.recentrarToken) { _ in
+            // Recentrado explícito (botón flecha): siempre mueve la cámara,
+            // sin depender de que `region` cambie de valor.
+            withAnimation(.spring(response: 0.5)) {
                 cameraPosition = .region(vm.region)
             }
         }
@@ -390,6 +406,34 @@ struct MapaView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Destino pendiente (desde Guardado u otras pantallas)
+    private func consumirDestinoPendiente() {
+        guard let destino = router.destinoPendiente else { return }
+        router.destinoPendiente = nil
+        #if DEBUG
+        print("[Mapa] consumiendo destino pendiente: \(destino.titulo)")
+        #endif
+        vm.seleccionarLugar(titulo: destino.titulo, coordenada: destino.coordinate)
+        vm.textoBusqueda = destino.titulo
+    }
+
+    // MARK: - Botón Mi Ubicación (centra el mapa en el GPS real)
+    private var botonMiUbicacion: some View {
+        Button {
+            AppHaptics.impact(.light)
+            vm.recenterOnUser()
+        } label: {
+            Image(systemName: "location.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(vm.userRealCoordinate != nil ? Color.appPrimary : Color.onSurfaceVariant)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(Color.surfaceContainerLowest))
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(PressableCapsuleStyle())
+        .accessibilityLabel("Centrar en mi ubicación")
+    }
+
     // MARK: - Bottom panel
     // CORREGIDO V3: frame explicito de 168pt para que las cards no se corten
     private var bottomPanel: some View {
@@ -418,7 +462,14 @@ struct MapaView: View {
 
                 Spacer()
 
-                HStack(spacing: 10) {
+                // Ícono de bus: fijo en su lugar (nivel REPORTAR). Solo los
+                // textos se deslizan a la derecha al colapsar.
+                Button {
+                    AppHaptics.impact(.light)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        panelColapsado.toggle()
+                    }
+                } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.primaryContainer)
@@ -427,7 +478,11 @@ struct MapaView: View {
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.onPrimaryContainer)
                     }
+                }
+                .buttonStyle(PressableCapsuleStyle())
+                .accessibilityLabel(panelColapsado ? "Mostrar transportes cercanos" : "Ocultar transportes cercanos")
 
+                if !panelColapsado {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Transportes cercanos")
                             .font(.system(size: 15, weight: .heavy))
@@ -438,6 +493,10 @@ struct MapaView: View {
                             .font(.system(size: 11))
                             .foregroundStyle(.onSurfaceVariant)
                     }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .leading).combined(with: .opacity),
+                        removal:   .move(edge: .trailing).combined(with: .opacity)
+                    ))
                 }
             }
             .padding(.horizontal, 20)

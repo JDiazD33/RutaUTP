@@ -119,6 +119,11 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var busSeleccionado: BusAnimado? = nil
     private var busSimulationTimer: Timer?
 
+    /// Se incrementa cada vez que el usuario pide recentrar; la vista lo
+    /// observa para mover la cámara aunque la región no haya cambiado de
+    /// valor (el usuario puede haber arrastrado el mapa sin pasar por aquí).
+    @Published var recentrarToken = 0
+
     private let locationService: LocationServiceProtocol
     private let routeService: RouteCalculationService
     private let completer = MKLocalSearchCompleter()
@@ -159,6 +164,16 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                     self.userRealCoordinate = location.coordinate
                     if isInitialFix {
                         self.recenterOnUser()
+
+                        // Si ya había un destino trazado desde el origen mock
+                        // (el usuario llegó antes que el primer fix del GPS),
+                        // recalcular la ruta desde la posición REAL del teléfono.
+                        if let destino = self.busquedaResultado {
+                            #if DEBUG
+                            print("[Ruta] primer fix GPS real → recalculando desde (\(location.coordinate.latitude), \(location.coordinate.longitude)) hacia \(destino.titulo)")
+                            #endif
+                            self.calcularRutaHacia(destino.coordenada)
+                        }
                     }
                 }
             }
@@ -287,6 +302,10 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     func recenterOnUser() {
         if let userCoord = userRealCoordinate {
+            // Token: garantiza que la vista mueva la cámara aunque la
+            // región ya tuviera ese valor (tras arrastrar el mapa, la
+            // cámara local cambia pero `region` no se entera).
+            recentrarToken += 1
             withAnimation(.spring(response: 0.5)) {
                 region = MKCoordinateRegion(
                     center: userCoord,
@@ -404,7 +423,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
     }
 
-    private func seleccionarLugar(titulo: String, coordenada: CLLocationCoordinate2D) {
+    func seleccionarLugar(titulo: String, coordenada: CLLocationCoordinate2D) {
         destinoSeleccionado = nil
         busquedaResultado = (titulo: titulo, coordenada: coordenada)
 
@@ -422,24 +441,50 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         let origen = userRealCoordinate ?? CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)
         calculandoRuta = true
 
+        #if DEBUG
+        print("[Ruta] calculando desde (\(origen.latitude), \(origen.longitude)) hacia (\(destinoCoord.latitude), \(destinoCoord.longitude))")
+        #endif
+
         Task { @MainActor in
+            var route: CalculatedRoute? = nil
             do {
-                let route: CalculatedRoute
+                route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .transit)
+            } catch {
+                #if DEBUG
+                print("[Ruta] transit falló: \(error.localizedDescription)")
+                #endif
+            }
+            if route == nil {
                 do {
-                    route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .transit)
-                } catch {
                     route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .automobile)
+                } catch {
+                    #if DEBUG
+                    print("[Ruta] automobile falló: \(error.localizedDescription)")
+                    #endif
                 }
+            }
+
+            if let route {
+                #if DEBUG
+                print("[Ruta] OK por calles: \(Int(route.distance)) m, \(Int(route.expectedTravelTime/60)) min")
+                #endif
                 self.routePolyline = route.polyline
                 self.etaMinutos = Int(ceil(route.expectedTravelTime / 60.0))
                 self.distanciaKm = Double(round(10 * (route.distance / 1000.0)) / 10)
-                self.calculandoRuta = false
-            } catch {
+            } else {
+                // Fallback: MKDirections sin respuesta (sin red, región sin
+                // cobertura, etc). Trazamos la línea directa para que el
+                // usuario SIEMPRE vea origen → destino en el mapa.
                 #if DEBUG
-                print("[MapaViewModel] Error calculando ruta: \(error.localizedDescription)")
+                print("[Ruta] sin respuesta de MKDirections → trazo directo")
                 #endif
-                self.calculandoRuta = false
+                var coords = [origen, destinoCoord]
+                self.routePolyline = MKPolyline(coordinates: &coords, count: 2)
+                let metros = PolylineMatching.distanceMeters(origen, destinoCoord)
+                self.distanciaKm = Double(round(10 * (metros / 1000.0)) / 10)
+                self.etaMinutos = Int(ceil(metros / 83.0))   // ~5 km/h caminando
             }
+            self.calculandoRuta = false
         }
     }
 
