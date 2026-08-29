@@ -17,6 +17,19 @@ struct SeguridadView: View {
     @State private var selectedReporte: ReporteComunidad?
     @State private var selectedRutaIndex: Int? = nil
 
+    // Lugares guardados (mismos datos que GuardadoView, vía LugaresStore)
+    @State private var lugares: [LugarGuardado] = []
+    @State private var selectedLugar: LugarGuardado?
+    @State private var showElegirLugares = false
+
+    // Modo edición (estilo Springboard): jiggle + borrar + reordenar
+    @State private var modoEdicion = false
+    @State private var tilesActuales: [LugarGuardado] = []
+    @State private var arrastrando: LugarGuardado?
+
+    private static let tilesKey = "seguridad.tiles.v1"
+    private static let ordenKey = "seguridad.tiles.orden.v1"
+
     private let tabBarHeight: CGFloat = 64
 
     private let reportes: [ReporteComunidad] = [
@@ -81,6 +94,15 @@ struct SeguridadView: View {
             BottomNavBar()
         }
         .ignoresSafeArea(edges: .bottom)
+        .onAppear {
+            lugares = LugaresStore.cargar()
+            reconstruirTiles()
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--editar") {
+                modoEdicion = true
+            }
+            #endif
+        }
         .sheet(isPresented: $showReportarSheet) {
             ReportarSheet()
                 .presentationDetents([.medium, .large])
@@ -113,6 +135,29 @@ struct SeguridadView: View {
             if let idx = selectedRutaIndex {
                 Text(rutasSeguras[idx].descripcion)
             }
+        }
+        // Detalle del lugar (mismo sheet que Guardado: info + acciones reales)
+        .sheet(item: $selectedLugar) { lugar in
+            LugarDetailSheet(lugar: lugar) {
+                LugaresStore.eliminar(lugar)
+                lugares = LugaresStore.cargar()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    tilesActuales.removeAll { $0.id == lugar.id }
+                }
+                persistirOrden()
+            }
+            .presentationDetents([.medium, .large])
+        }
+        // Añadir: elegir qué lugares guardados aparecen como tiles
+        .sheet(isPresented: $showElegirLugares) {
+            ElegirLugaresSheet(
+                lugares: lugares.filter { !$0.esFijo },
+                seleccion: Set(tilesActuales.filter { !$0.esFijo }.map(\.id)),
+                irAGuardado: { showElegirLugares = false; router.navigate(to: .guardado) }
+            ) { nuevaSeleccion in
+                reconstruirTiles(seleccion: nuevaSeleccion)
+            }
+            .presentationDetents([.medium])
         }
     }
 
@@ -226,7 +271,8 @@ struct SeguridadView: View {
         )
     }
 
-    // MARK: - Lugares guardados
+    // MARK: - Lugares guardados (reales, vía LugaresStore)
+
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -235,34 +281,171 @@ struct SeguridadView: View {
                     .foregroundStyle(.onSurface)
                 Spacer()
                 Button {
-                    router.navigate(to: .guardado)
+                    AppHaptics.impact(.medium)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        modoEdicion.toggle()
+                    }
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "pencil")
+                        Image(systemName: modoEdicion ? "checkmark.circle.fill" : "pencil")
                             .font(.system(size: 14, weight: .semibold))
-                        Text("EDITAR")
+                        Text(modoEdicion ? "LISTO" : "EDITAR")
                             .font(.labelCapsSm)
                             .appTracking(AppTracking.wideLabel)
                     }
-                    .foregroundStyle(.onSurfaceVariant)
+                    .foregroundStyle(modoEdicion ? Color.appPrimary : Color.onSurfaceVariant)
                 }
                 .buttonStyle(.plain)
             }
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-                lugarTile(nombre: "Casa", icon: "house.fill", bg: Color.primaryContainer.opacity(0.12), fg: .appPrimary, border: false) {
-                    router.navigate(to: .guardado)
+                ForEach(tilesActuales) { lugar in
+                    lugarTileLugar(lugar)
+                        .onDrag {
+                            AppHaptics.impact(.light)
+                            arrastrando = lugar
+                            return NSItemProvider(object: lugar.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.text],
+                                delegate: TileDropDelegate(
+                                    destino: lugar,
+                                    tiles: $tilesActuales,
+                                    arrastrando: $arrastrando,
+                                    onPersistir: persistirOrden))
                 }
-                lugarTile(nombre: "UTP Trujillo", icon: "graduationcap.fill", bg: .appPrimary, fg: .white, border: true) {
-                    router.navigate(to: .mapaPrincipal)
-                }
-                lugarTile(nombre: "Añadir", icon: "plus", bg: Color.surfaceContainerLow, fg: .outline, border: false, dashed: true) {
-                    router.navigate(to: .guardado)
-                }
+                lugarTileAñadir
             }
         }
     }
 
-    private func lugarTile(nombre: String, icon: String, bg: Color, fg: Color, border: Bool, dashed: Bool = false, action: @escaping () -> Void) -> some View {
+    /// UTP fijo primero + extras en el orden guardado por el usuario.
+    private func reconstruirTiles(seleccion: Set<UUID>? = nil) {
+        let utp = lugares.first(where: { $0.esFijo })
+        let noFijos = lugares.filter { !$0.esFijo }
+
+        let elegidos: [LugarGuardado]
+        if let seleccion, !seleccion.isEmpty {
+            elegidos = noFijos.filter { seleccion.contains($0.id) }
+        } else if let idsGuardados = idsTilesGuardados(), !idsGuardados.isEmpty {
+            let porId = Dictionary(uniqueKeysWithValues: noFijos.map { ($0.id, $0) })
+            elegidos = idsGuardados.compactMap { porId[$0] }
+        } else {
+            elegidos = Array(noFijos.prefix(2))
+        }
+
+        // Orden guardado por el usuario (arrastrar en modo edición)
+        var resultado: [LugarGuardado] = []
+        if let utp { resultado.append(utp) }
+        if let orden = idsOrdenGuardados(), !orden.isEmpty {
+            let porId = Dictionary(uniqueKeysWithValues: elegidos.map { ($0.id, $0) })
+            var ordenados = orden.compactMap { porId[$0] }
+            // Los que no tenían posición guardada van al final, en su orden natural.
+            ordenados += elegidos.filter { s in !ordenados.contains(where: { $0.id == s.id }) }
+            resultado += ordenados
+        } else {
+            resultado += elegidos
+        }
+        tilesActuales = resultado
+    }
+
+    private func idsTilesGuardados() -> [UUID]? {
+        guard let data = UserDefaults.standard.data(forKey: Self.tilesKey),
+              let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
+        return ids
+    }
+
+    private func idsOrdenGuardados() -> [UUID]? {
+        guard let data = UserDefaults.standard.data(forKey: Self.ordenKey),
+              let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
+        return ids
+    }
+
+    private func persistirOrden() {
+        let ids = tilesActuales.filter { !$0.esFijo }.map(\.id)
+        if let data = try? JSONEncoder().encode(ids) {
+            UserDefaults.standard.set(data, forKey: Self.ordenKey)
+        }
+    }
+
+    private func guardarTilesSeleccion(_ ids: Set<UUID>) {
+        if let data = try? JSONEncoder().encode(Array(ids)) {
+            UserDefaults.standard.set(data, forKey: Self.tilesKey)
+        }
+    }
+
+    private func lugarTileLugar(_ lugar: LugarGuardado) -> some View {
+        let esArrastrado = arrastrando?.id == lugar.id
+        return lugarTile(nombre: lugar.nombre,
+                         icon: lugar.categoria.icono,
+                         bg: lugar.esFijo ? Color.appPrimary : Color.primaryContainer.opacity(0.12),
+                         fg: lugar.esFijo ? .white : .appPrimary,
+                         border: lugar.esFijo,
+                         badgeFrecuente: lugar.esFrecuente,
+                         faseJiggle: Double(tilesActuales.firstIndex(where: { $0.id == lugar.id }) ?? 0) * 1.7)
+        {
+            if modoEdicion {
+                AppHaptics.impact(.light)
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    modoEdicion = false
+                }
+            }
+            selectedLugar = lugar
+        }
+        .overlay(alignment: .topLeading) {
+            if modoEdicion {
+                if lugar.esFijo {
+                    // UTP es fijo: no se puede borrar ni mover
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.onSurfaceVariant)
+                        .frame(width: 18, height: 18)
+                        .background(Circle().fill(Color.surfaceContainerHigh))
+                        .overlay(Circle().stroke(Color.surfaceContainerLowest, lineWidth: 1.5))
+                        .offset(x: -6, y: -6)
+                        .transition(.scale(scale: 0.3).combined(with: .opacity))
+                } else {
+                    Button {
+                        AppHaptics.warning()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            tilesActuales.removeAll { $0.id == lugar.id }
+                        }
+                        LugaresStore.eliminar(lugar)
+                        lugares = LugaresStore.cargar()
+                        persistirOrden()
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 10, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .frame(width: 20, height: 20)
+                            .background(Circle().fill(Color.appError))
+                            .overlay(Circle().stroke(Color.surfaceContainerLowest, lineWidth: 1.5))
+                            .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .offset(x: -7, y: -7)
+                    .transition(.scale(scale: 0.3).combined(with: .opacity))
+                    .accessibilityLabel("Eliminar \(lugar.nombre)")
+                }
+            }
+        }
+        .scaleEffect(esArrastrado ? 1.08 : (modoEdicion ? 0.97 : 1.0))
+        .opacity(esArrastrado ? 0.75 : 1.0)
+        .zIndex(esArrastrado ? 10 : 0)
+    }
+
+    private var lugarTileAñadir: some View {
+        lugarTile(nombre: modoEdicion ? "Añadir" : (tilesActuales.count <= 1 ? "Añadir" : "Elegir"),
+                  icon: "plus",
+                  bg: Color.surfaceContainerLow,
+                  fg: .outline,
+                  border: false,
+                  dashed: true) {
+            AppHaptics.selection()
+            showElegirLugares = true
+        }
+    }
+
+    private func lugarTile(nombre: String, icon: String, bg: Color, fg: Color, border: Bool, badgeFrecuente: Bool = false, faseJiggle: Double = 0, dashed: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 10) {
                 ZStack {
@@ -275,6 +458,15 @@ struct SeguridadView: View {
                     Image(systemName: icon)
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(fg)
+                }
+                .overlay(alignment: .topTrailing) {
+                    if badgeFrecuente {
+                        Circle()
+                            .fill(Color.tertiary)
+                            .frame(width: 10, height: 10)
+                            .overlay(Circle().stroke(Color.surfaceContainerLowest, lineWidth: 2))
+                            .offset(x: 3, y: -3)
+                    }
                 }
                 Text(nombre)
                     .font(.labelCapsMd)
@@ -291,6 +483,7 @@ struct SeguridadView: View {
             )
         }
         .buttonStyle(.plain)
+        .modifier(JiggleEffect(active: modoEdicion && !dashed, fase: faseJiggle))
     }
 
     // MARK: - Rutas seguras
@@ -652,6 +845,190 @@ private struct ReportarSheet: View {
         } message: {
             Text("Gracias por colaborar con la comunidad.")
         }
+    }
+}
+
+// MARK: - Elegir Lugares sheet (tiles de Seguridad)
+private struct ElegirLugaresSheet: View {
+    let lugares: [LugarGuardado]          // sin incluir UTP (fijo, siempre está)
+    let seleccion: Set<UUID>
+    var irAGuardado: () -> Void
+    var onGuardar: (Set<UUID>) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var elegidos: Set<UUID> = []
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Elige los lugares que verás aquí")
+                    .font(.headlineMd)
+                Text("Tus lugares guardados de la pestaña Guardado. UTP siempre aparece.")
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+
+                if lugares.isEmpty {
+                    VStack(spacing: 14) {
+                        Image(systemName: "bookmark.slash")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundStyle(.onSurfaceVariant)
+                        Text("Aún no tienes lugares guardados")
+                            .font(.bodyMdMedium)
+                            .foregroundStyle(.onSurface)
+                        Button {
+                            irAGuardado()
+                        } label: {
+                            Label("Ir a Guardado", systemImage: "plus.circle.fill")
+                                .font(.headlineSm)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    Spacer()
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 8) {
+                            ForEach(lugares) { lugar in
+                                filaLugar(lugar)
+                            }
+                        }
+                    }
+                    botonListo
+                }
+            }
+            .padding(20)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+            }
+            .onAppear { elegidos = seleccion }
+        }
+    }
+
+    private func filaLugar(_ lugar: LugarGuardado) -> some View {
+        Button {
+            AppHaptics.selection()
+            if elegidos.contains(lugar.id) {
+                elegidos.remove(lugar.id)
+            } else {
+                elegidos.insert(lugar.id)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.primaryContainer.opacity(0.12)).frame(width: 40, height: 40)
+                    Image(systemName: lugar.categoria.icono)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.appPrimary)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(lugar.nombre)
+                        .font(.bodyMdMedium)
+                        .foregroundStyle(.onSurface)
+                    Text(lugar.direccion)
+                        .font(.bodySm)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: elegidos.contains(lugar.id)
+                      ? "checkmark.circle.fill"
+                      : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(elegidos.contains(lugar.id) ? Color.appPrimary : Color.outlineVariant)
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(elegidos.contains(lugar.id)
+                          ? Color.primaryContainer.opacity(0.25)
+                          : Color.surfaceContainerLowest)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var botonListo: some View {
+        Button {
+            AppHaptics.success()
+            onGuardar(elegidos)
+            dismiss()
+        } label: {
+            Text("Guardar selección")
+                .font(.headlineSm)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Efecto jiggle (estilo pantalla de inicio del iPhone)
+/// Rotación oscilante con desfase por tile para que se muevan "en ola".
+struct JiggleEffect: ViewModifier {
+    let active: Bool
+    var fase: Double = 0
+
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(active ? jiggleAngle : 0))
+            .animation(
+                active
+                ? Animation.easeInOut(duration: 0.12)
+                    .repeatForever(autoreverses: true)
+                    .delay(fase * 0.0)
+                : .default,
+                value: active
+            )
+    }
+
+    /// Para el efecto "ola" real usamos una fase fija por tile en el ángulo.
+    private var jiggleAngle: Double {
+        1.6 * (fase.truncatingRemainder(dividingBy: 2) == 0 ? 1 : -1)
+    }
+}
+
+// MARK: - Drop delegate para reordenar tiles
+private struct TileDropDelegate: DropDelegate {
+    let destino: LugarGuardado
+    @Binding var tiles: [LugarGuardado]
+    @Binding var arrastrando: LugarGuardado?
+    var onPersistir: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let arrastrando,
+              arrastrando.id != destino.id,
+              !destino.esFijo, !arrastrando.esFijo,
+              let desde = tiles.firstIndex(where: { $0.id == arrastrando.id }),
+              let hasta = tiles.firstIndex(where: { $0.id == destino.id })
+        else { return }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            let movido = tiles.remove(at: desde)
+            // Tras remover, el índice destino puede correrse: recalculamos.
+            if let nuevoHasta = tiles.firstIndex(where: { $0.id == destino.id }) {
+                tiles.insert(movido, at: nuevoHasta)
+            } else {
+                tiles.insert(movido, at: hasta)
+            }
+        }
+        onPersistir()
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        DispatchQueue.main.async { arrastrando = nil }
+        return true
     }
 }
 

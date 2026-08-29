@@ -89,3 +89,59 @@ struct LineaGuardadaRef: Identifiable, Codable, Equatable {
     let routeId: String
     var id: String { routeId }
 }
+
+/// Fuente única de lugares guardados (UserDefaults). La usan GuardadoView
+/// y SeguridadView para leer/escribir los mismos datos.
+enum LugaresStore {
+    static let key = "lugares.guardados.v2"
+
+    static func cargar() -> [LugarGuardado] {
+        var resultado: [LugarGuardado]
+        if let data = UserDefaults.standard.data(forKey: key),
+           let decodificados = try? JSONDecoder().decode([LugarGuardado].self, from: data),
+           !decodificados.isEmpty {
+            resultado = decodificados
+        } else {
+            // Seed: UTP (fijo) + Plaza de Armas; el resto los agrega el usuario.
+            resultado = [lugarUTP(),
+                         LugarGuardado(nombre: "Plaza de Armas",
+                                       direccion: "Centro Histórico de Trujillo",
+                                       categoria: .plaza,
+                                       lat: -8.1096, lon: -79.0287)]
+            guardar(resultado)
+            return resultado
+        }
+
+        // El campus UTP es un lugar fijo de la app: siempre presente y primero.
+        if let indiceUTP = resultado.firstIndex(where: { $0.esFijo }) {
+            if indiceUTP != 0 {
+                let utp = resultado.remove(at: indiceUTP)
+                resultado.insert(utp, at: 0)
+                guardar(resultado)
+            }
+        } else {
+            resultado.insert(lugarUTP(), at: 0)
+            guardar(resultado)
+        }
+        return resultado
+    }
+
+    static func guardar(_ lugares: [LugarGuardado]) {
+        if let data = try? JSONEncoder().encode(lugares) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    static func eliminar(_ lugar: LugarGuardado) {
+        var actuales = cargar()
+        actuales.removeAll { $0.id == lugar.id }
+        guardar(actuales)
+    }
+
+    static func lugarUTP() -> LugarGuardado {
+        LugarGuardado(nombre: "UTP",
+                      direccion: "Av. Nicolás de Piérola 1221, Trujillo",
+                      categoria: .universidad, esFrecuente: true,
+                      lat: -8.098247879173792, lon: -79.03818104755645)
+    }
+}

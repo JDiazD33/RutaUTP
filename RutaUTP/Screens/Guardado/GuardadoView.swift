@@ -31,7 +31,6 @@ struct GuardadoView: View {
     @State private var selectedLinea: RutaOpcion?
     @State private var rutaParaExplorar: RutaOpcion?
 
-    private static let lugaresKey = "lugares.guardados.v2"
     private static let lineasKey = "lineas.guardadas.v1"
 
     enum Tab: String, CaseIterable, Identifiable {
@@ -118,34 +117,13 @@ struct GuardadoView: View {
         lugares.firstIndex { !$0.esFijo } ?? lugares.count
     }
 
-    // MARK: - Persistencia
+    // MARK: - Persistencia (delegada en LugaresStore)
     private func cargarLugares() {
-        if let data = UserDefaults.standard.data(forKey: Self.lugaresKey),
-           let decodificados = try? JSONDecoder().decode([LugarGuardado].self, from: data),
-           !decodificados.isEmpty {
-            lugares = decodificados
-        } else {
-            lugares = Self.sampleLugares()
-            guardarLugares()
-            return
-        }
-        // El campus UTP es un lugar fijo de la app: siempre presente y primero.
-        if let indiceUTP = lugares.firstIndex(where: { $0.esFijo }) {
-            if indiceUTP != 0 {
-                let utp = lugares.remove(at: indiceUTP)
-                lugares.insert(utp, at: 0)
-                guardarLugares()
-            }
-        } else {
-            lugares.insert(Self.lugarUTP(), at: 0)
-            guardarLugares()
-        }
+        lugares = LugaresStore.cargar()
     }
 
     private func guardarLugares() {
-        if let data = try? JSONEncoder().encode(lugares) {
-            UserDefaults.standard.set(data, forKey: Self.lugaresKey)
-        }
+        LugaresStore.guardar(lugares)
     }
 
     private func cargarLineas() {
@@ -486,24 +464,7 @@ struct GuardadoView: View {
     }
 
     // MARK: - Sample data
-    // Predefinidos de la app: UTP (fijo) y Plaza de Armas.
-    // "Casa" y el resto los agrega cada usuario con Añadir lugar.
-    private static func sampleLugares() -> [LugarGuardado] {
-        [
-            lugarUTP(),
-            LugarGuardado(nombre: "Plaza de Armas",
-                          direccion: "Centro Histórico de Trujillo",
-                          categoria: .plaza,
-                          lat: -8.1096, lon: -79.0287)
-        ]
-    }
-
-    private static func lugarUTP() -> LugarGuardado {
-        LugarGuardado(nombre: "UTP",
-                      direccion: "Av. Nicolás de Piérola 1221, Trujillo",
-                      categoria: .universidad, esFrecuente: true,
-                      lat: -8.098247879173792, lon: -79.03818104755645)
-    }
+    // El seed vive en LugaresStore (compartido con SeguridadView).
 }
 
 // MARK: - Estilo presionable del botón Añadir
@@ -610,7 +571,7 @@ private struct MapaElegirLugar: UIViewRepresentable {
 }
 
 // MARK: - Lugar Detail Sheet
-private struct LugarDetailSheet: View {
+struct LugarDetailSheet: View {
     let lugar: LugarGuardado
     var onEliminar: () -> Void
     @Environment(\.dismiss) private var dismiss
