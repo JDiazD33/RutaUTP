@@ -1,0 +1,2 @@
+feed_publisher_url,feed_publisher_name,feed_lang,feed_version,feed_contact_email,feed_contact_url,feed_start_date,feed_end_date,feed_id
+https://omus-dev.trufi.dev,Arequipa Bus,es,"Tue, 12 Nov 2024 19:01:28 GMT",email@omus-dev.trufi.dev,http://omus-dev.trufi.dev,20000101,21000101,omus-dev.trufi.dev

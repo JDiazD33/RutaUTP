@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Xcode (userdata local, no debe ir al repo)
+xcuserdata/
+*.xcuserstate
+
+# Build
+build/
+DerivedData/
+
+# Swift Package Manager
+.build/

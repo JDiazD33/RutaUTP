@@ -1,0 +1,103 @@
+route_id,agency_id,route_short_name,route_long_name,route_color,route_type
+17350695,0,C-01 "B",C-01 "B" : Av. Miguel Grau → Av. Miguel Grau,00CC00,3
+17419574,1,C-06 "K",C-06 "K" : Vía Panamericana Norte → Vía Panamericana Norte,9999FF,3
+17434299,2,M-07 "V",M-07 "V" : Av. Libertad → Av. Libertad,009900,3
+17434307,1,C-07 "Z1",C-07 "Z1" : Vía Panamericana Norte → Vía Panamericana Norte,9999FF,3
+17434313,3,C-09 "E",C-09 "E" : Pasaje A → Pasaje A,3366FF,3
+17434314,4,M-21 "A",M-21 "A" : Prolong. Av. 12 de Noviembre → Prolong. Av. 12 de Noviembre,3399FF,3
+17434330,4,M-22 "F",M-22 "F" : Prolong. Av. 12 de Noviembre → Prolong. Av. 12 de Noviembre,3399FF,3
+17434332,5,C-20 "UI",C-20 "UI" : Ca. Del Cacicazgo Mansiche → Ca. Del Cacicazgo Mansiche,00FF00,3
+17434339,6,C-11 "T1",C-11 "T1" : Miguel Grau → Panamericana Norte,FF0000,3
+17434457,7,M-34 "A",M-34 "A" : Calle San Judas Tadeo → Calle San Judas Tadeo,CC3333,3
+17434472,4,M-20 "C",M-20 "C" : Prolong. Av. 12 de Noviembre → Prolong. Av. 12 de Noviembre,3399FF,3
+17463346,8,C-10 "M",C-10 "M" : E. Campiña de Moche → E. Campiña de Moche,CC9900,3
+17463348,9,C-14 "S",C-14 "S" : E. Campiña de Moche → E. Campiña de Moche,FFCC00,3
+17463362,5,C-20 "UI",C-20 "UI" : Alto Trujillo Barrio 6D → Alto Trujillo Barrio 6D,00FF00,3
+17463369,5,C-21 "R",C-21 "R" : Ca. Del Cacicazgo Mansiche → Ca. Del Cacicazgo Mansiche,00FF00,3
+17463385,5,C-22 "M",C-22 "M" : Alto Trujillo Barrio 6D → Alto Trujillo Barrio 6D,00FF00,3
+17463445,10,M-23 "B <3",M-23 "B <3" : Calle Desamparados → Calle Desamparados,0066FF,3
+17463462,10,M-23 "B",M-23 "B" : Calle Desamparados → Calle Desamparados,0066FF,3
+17491518,0,C-03 "JJ",C-03 "JJ" : Av. César Vallejo → Av. César Vallejo,00CC00,3
+17492018,11,C-05 "B1",C-05 "B1" : Av. José Faustino Sánchez Carrión → Av. José Faustino Sánchez Carrión,FFFF00,3
+17508289,12,C-12 "B",C-12 "B" : Via Evitamiento Milagro → Via Evitamiento Milagro,FF6633,3
+17508499,6,C-11 "T1",C-11 "T1" : Panamericana Norte → Miguel Grau,FF0000,3
+17508501,13,C-13 "D",C-13 "D" : Av. Dinamarca → Av. Albania,006600,3
+17508505,14,C-13 "D",C-13 "D" : Av. Albania → Av. Albania,FF6633,3
+17508507,15,C-16 "I",C-16 "I" : Alto Trujillo → Alto Trujillo,CC3333,3
+17520880,16,C-23 "S1",C-23 "S1" : Av. Julián Arce → Av. Julián Arce,CC0099,3
+17520994,15,C-18 "P",C-18 "P" : Alto Trujillo → Alto Trujillo,CC3333,3
+17521004,16,C-24 "H2",C-24 "H2" : Av. Julián Arce → Av. Julián Arce,CC0099,3
+17521008,16,C-24 "H1",C-24 "H1" : Av. Julián Arce → Av. Julián Arce,CC0099,3
+17521009,17,C-25 "S2",C-25 "S2" : Av. Julián Arce → Av. Julián Arce,0000FF,3
+17521112,18,C-27 "B",C-27 "B" : Av. José María Eguren → Av. José María Eguren,000099,3
+17521114,18,C-28 "C",C-28 "C" : Av. José María Eguren → Av. José María Eguren,000099,3
+17521119,5,C-22 "M",C-22 "M" : Ca. Del Cacicazgo Mansiche → Ca. Del Cacicazgo Mansiche,00FF00,3
+17521145,19,C-35 "S3",C-35 "S3" : Av. Julián Arce → Av. Julián Arce,660066,3
+17521283,20,C-38 "S4",C-38 "S4" : Av. Julián Arce → Av. Julián Arce,FFFFFF,3
+17521284,7,M-33 "B<3",M-33 "B<3" : Calle San Judas Tadeo → Calle San Judas Tadeo,CC3333,3
+17522621,21,C-42 "B2",C-42 "B2" : Ca. Los Robles → Ca. Los Robles,FFFF66,3
+17522670,22,M-02 "A",M-02 "A" : Calle Libertad → Calle Libertad,006600,3
+17522705,23,C-44 "T2",C-44 "T2" : Vía Panamericana → Av. Dinamarca,3399FF,3
+17522721,24,M-05 "H",M-05 "H" : Av. La Paz → Av. La Paz,FF9966,3
+17522730,23,C-44 "T2",C-44 "T2" : Av. Dinamarca → Vía Panamericana,,3
+17527168,25,CT-23 AC,CT-23 AC : Jirón Rimac → Jirón Rimac,808080,3
+17527200,25,CT-23 BC,CT-23 BC : Calle Panamá → Calle Panamá,808080,3
+17527270,26,CT-24 A,CT-24 A : Jirón Rimac → Jirón Rimac,808080,3
+17527397,26,CT-24 B,CT-24 B : Calle Panamá → Calle Panamá,808080,3
+17527405,22,M-01 "C",M-01 "C" : Panamericana Norte → Panamericana Norte,006600,3
+17549691,25,CT-23 A,CT-23 A : Jirón Rimac → Jirón Rimac,808080,3
+17549744,25,CT-23 B,CT-23 B : Calle Panamá → Calle Panamá,808080,3
+17550302,24,M-05 "H <3",M-05 "H <3" : Av. La Paz → Av. La Paz,FF9966,3
+17551463,24,M-06 "B",M-06 "B" : Av. La Paz → Av. La Paz,FF9966,3
+17554401,2,M-08 "A",M-08 "A" : Av. Libertad → Av. Libertad,009900,3
+17554410,2,M-09 "BC",M-09 "BC" : Av. Libertad → Av. Libertad,009900,3
+17554571,2,M-10 "B1",M-10 "B1" : Av. Libertad → Av. Libertad,009900,3
+17554572,2,M-12 "C",M-12 "C" : Av. Libertad → Av. Libertad,009900,3
+17554576,27,M-13 "C1",M-13 "C1" : Calle Luis Alberto Sanchez → Calle Luis Alberto Sanchez,FFFF33,3
+17554620,27,M-15 "C2",M-15 "C2" : Calle Luis Alberto Sanchez → Calle Luis Alberto Sanchez,FFFF33,3
+17554634,27,M-15 "C2VR",M-15 "C2VR" : Calle Luis Alberto Sanchez → Calle Luis Alberto Sanchez,FFFF33,3
+17554640,28,M-17 "C2",M-17 "C2" : Prolongación Avenida A → Prolongación Avenida A,009999,3
+17554644,28,M-18 "C1",M-18 "C1" : Prolongación Avenida A → Prolongación Avenida A,009999,3
+17554645,28,M-19 "A",M-19 "A" : Prolongación Avenida A → Prolongación Avenida A,009999,3
+17554649,29,M-31 "A",M-31 "A" : Calle Los Rosales → Calle Los Rosales,660066,3
+17554667,29,M-32 "A1",M-32 "A1" : Calle Los Rosales → Calle Los Rosales,660066,3
+17554683,7,M-33 "B",M-33 "B" : Calle San Judas Tadeo → Calle San Judas Tadeo,CC3333,3
+17554691,7,M-34 "A<3",M-34 "A<3" : Calle San Judas Tadeo → Calle San Judas Tadeo,CC3333,3
+17554694,2,M-36 "LV",M-36 "LV" : Av. Libertad → Av. Libertad,990000,3
+17569670,30,CT-01 A,CT-01 A : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17573616,31,CT-02 A,CT-02 A : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17580756,32,CT-15 A,CT-15 A : Avenida D → Avenida D,808080,3
+17580790,33,CT-19 H,CT-19 H : Av. Dinamarca → Av. Dinamarca,808080,3
+17581473,34,CT-26 BU,CT-26 BU : Calle Panamá → Calle Panamá,808080,3
+17581474,35,CT-28 T.S.,CT-28 T.S. : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17581475,36,CT-27 L,CT-27 L : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17581510,37,CT-29 TA,CT-29 TA : Av. Gerónimo de la Torre → Av. Gerónimo de la Torre,808080,3
+17581512,38,CT-09 A,CT-09 A : Av. Perú → Av. Perú,808080,3
+17581515,39,CT-10 A,CT-10 A : Av. Albania → Av. Albania,808080,3
+17581560,40,M-35 "D",M-35 "D" : Av. Las Orquideas → Av. Las Orquideas,990000,3
+17581631,41,CT-21 F,CT-21 F : Jirón Rimac → Jirón Rimac,808080,3
+17581635,42,CT-22 B,CT-22 B : Calle Amazonas → Calle Amazonas,808080,3
+17581639,42,CT-22 C,CT-22 C : Calle Amazonas → Calle Amazonas,808080,3
+17581646,42,CT-22 D,CT-22 D : Calle Amazonas → Calle Amazonas,808080,3
+17581709,43,CT-05 V-A,CT-05 V-A : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17581730,34,CT-26 AU,CT-26 AU : Jirón Rimac → Jirón Rimac,808080,3
+17581737,44,CT-03 A,CT-03 A : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17581738,45,CT-04 A,CT-04 A : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17595670,46,CT-08 AM,CT-08 AM : A.A.H.H. Victor Raul Haya de la Torre → A.A.H.H. Victor Raul Haya de la Torre,808080,3
+17595746,47,CT-14 SL,CT-14 SL : Calle 20 de Febrero → Calle 20 de Febrero,808080,3
+17595748,48,CT-12 SL,CT-12 SL : Calle 20 de Setiembre → Calle 20 de Setiembre,808080,3
+17595839,39,CT-10 B,CT-10 B : Av. Albania → Av. Albania,808080,3
+17595870,49,CT-11 E,CT-11 E : Avenida B → Avenida B,808080,3
+17605269,50,CT-16 F,CT-16 F : Av. Los Laureles → Av. Los Laureles,808080,3
+17612352,3,C-41 "Z2",C-41 "Z2" : Pasaje A → Pasaje A,3366FF,3
+17612420,51,C-43 "A",C-43 "A" : Av. Albania → Av. Albania,FF3300,3
+17612564,40,M-35 "D<3",M-35 "D<3" : Av. Las Orquideas → Av. Las Orquideas,990000,3
+17669816,52,CT-06 V-A,CT-06 V-A : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17669832,53,CT-07 V-A,CT-07 V-A : Jr. Sinchi Roca → Jr. Sinchi Roca,808080,3
+17669993,42,CT-22 A,CT-22 A : Calle Amazonas → Calle Amazonas,808080,3
+17670001,54,CT-25 A,CT-25 A : Jirón Rimac → Jirón Rimac,808080,3
+17670006,34,CT-26 A,CT-26 A : Jirón Rimac → Jirón Rimac,808080,3
+17670087,54,CT-25 B,CT-25 B : Calle Panamá → Calle Panamá,808080,3
+17670089,34,CT-26 B,CT-26 B : Calle Panamá → Calle Panamá,808080,3
+17670129,26,CT-24 AU,CT-24 AU : Jirón Rimac → Jirón Rimac,808080,3
+17670295,55,CT-17 H,CT-17 H : Av. Los Laureles → Av. Los Laureles,808080,3
