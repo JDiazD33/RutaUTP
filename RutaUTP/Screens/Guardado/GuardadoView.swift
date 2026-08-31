@@ -188,7 +188,7 @@ struct GuardadoView: View {
             Image(systemName: "bookmark.fill")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.appPrimary)
-            Text("Guardado")
+            Text(L.t("Guardado", "Saved"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
             Spacer()
@@ -220,7 +220,7 @@ struct GuardadoView: View {
                 Image(systemName: selectedTab == .lugares ? "plus.circle.fill" : "bus.doubledecker.fill")
                     .font(.system(size: 15, weight: .bold))
                     .symbolRenderingMode(.hierarchical)
-                Text(selectedTab == .lugares ? "Añadir lugar" : "Añadir línea")
+                Text(selectedTab == .lugares ? L.t("Añadir lugar", "Add place") : L.t("Añadir línea", "Add line"))
                     .font(.labelCapsMd)
                     .appTracking(AppTracking.wideLabel)
             }
@@ -279,7 +279,7 @@ struct GuardadoView: View {
     // MARK: - Lugares section
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Toca un lugar para ver más opciones.")
+            Text(L.t("Toca un lugar para ver más opciones.", "Tap a place for more options."))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .padding(.horizontal, 20)
@@ -287,8 +287,8 @@ struct GuardadoView: View {
 
             if lugares.isEmpty {
                 emptyState(icono: "bookmark.slash",
-                           titulo: "Aún no tienes lugares guardados",
-                           subtitulo: "Toca Añadir lugar para guardar tu primer lugar.")
+                           titulo: L.t("Aún no tienes lugares guardados", "No saved places yet"),
+                           subtitulo: L.t("Toca Añadir lugar para guardar tu primer lugar.", "Tap Add place to save your first place."))
                     .padding(.top, 60)
             } else {
                 VStack(spacing: 12) {
@@ -612,7 +612,7 @@ struct LugarDetailSheet: View {
                 if buscandoCoord {
                     HStack(spacing: 6) {
                         ProgressView()
-                        Text("Buscando ubicación…")
+                        Text(L.t("Buscando ubicación…", "Finding location…"))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.onSurface)
                     }
@@ -673,7 +673,7 @@ struct LugarDetailSheet: View {
                     } label: {
                         HStack {
                             Image(systemName: "map.fill")
-                            Text("Ver ruta desde mi posición")
+                            Text(L.t("Ver ruta desde mi posición", "See route from my location"))
                         }
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
@@ -695,8 +695,8 @@ struct LugarDetailSheet: View {
                         HStack {
                             Image(systemName: "bus.fill")
                             Text(lugar.coordinate == nil
-                                 ? "Ver rutas disponibles"
-                                 : "Buscar transporte cercano")
+                                 ? L.t("Ver rutas disponibles", "See available routes")
+                                 : L.t("Buscar transporte cercano", "Find nearby transport"))
                         }
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryContainer))
@@ -708,7 +708,7 @@ struct LugarDetailSheet: View {
                     if lugar.esFijo {
                         HStack(spacing: 8) {
                             Image(systemName: "pin.fill")
-                            Text("Lugar fijo de la app · no se puede eliminar")
+                            Text(L.t("Lugar fijo de la app · no se puede eliminar", "Fixed app place · cannot be removed"))
                         }
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
@@ -721,7 +721,7 @@ struct LugarDetailSheet: View {
                         } label: {
                             HStack {
                                 Image(systemName: "trash.fill")
-                                Text("Eliminar de guardados")
+                                Text(L.t("Eliminar de guardados", "Remove from saved"))
                             }
                             .frame(maxWidth: .infinity, minHeight: 48)
                             .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
@@ -853,7 +853,7 @@ private struct LineaDetailSheet: View {
                 } label: {
                     HStack {
                         Image(systemName: "map.fill")
-                        Text("Ver recorrido en el mapa")
+                        Text(L.t("Ver recorrido en el mapa", "View route on map"))
                     }
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
@@ -868,7 +868,7 @@ private struct LineaDetailSheet: View {
                 } label: {
                     HStack {
                         Image(systemName: "trash.fill")
-                        Text("Quitar de guardados")
+                        Text(L.t("Quitar de guardados", "Remove from saved"))
                     }
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
@@ -925,7 +925,7 @@ private struct AddLugarSheet: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Guardar lugar")
+                    Text(coordElegida == nil ? L.t("Ubica el lugar para guardar", "Pin the place to save") : L.t("Guardar lugar", "Save place"))
                         .font(.headlineMd)
 
                     campoNombre
@@ -953,11 +953,11 @@ private struct AddLugarSheet: View {
     // MARK: Campos
     private var campoNombre: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("NOMBRE")
+            Text(L.t("NOMBRE", "NAME"))
                 .font(.labelCapsMd)
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
-            TextField("Ej. Mi trabajo", text: $nombre)
+            TextField(L.t("Ej. Mi trabajo", "e.g. My job"), text: $nombre)
                 .textFieldStyle(.plain)
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
@@ -966,7 +966,7 @@ private struct AddLugarSheet: View {
 
     private var campoDireccion: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("DIRECCIÓN")
+            Text(L.t("DIRECCIÓN", "ADDRESS"))
                 .font(.labelCapsMd)
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
@@ -974,7 +974,7 @@ private struct AddLugarSheet: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.onSurfaceVariant)
-                TextField("Ej. Av. España 123, Trujillo", text: $direccion)
+                TextField(L.t("Ej. Av. España 123, Trujillo", "e.g. 123 España Ave, Trujillo"), text: $direccion)
                     .font(.bodySm)
                     .autocorrectionDisabled()
                     .onChange(of: direccion) { _ in programarGeocodificacion() }
@@ -1048,7 +1048,7 @@ private struct AddLugarSheet: View {
 
     private var selectorCategoria: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("CATEGORÍA")
+            Text(L.t("CATEGORÍA", "CATEGORY"))
                 .font(.labelCapsMd)
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
@@ -1084,7 +1084,7 @@ private struct AddLugarSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: coordElegida == nil ? "location.slash.fill" : "mappin.and.ellipse")
                     .font(.system(size: 16, weight: .bold))
-                Text(coordElegida == nil ? "Ubica el lugar para guardar" : "Guardar lugar")
+                Text(coordElegida == nil ? L.t("Ubica el lugar para guardar", "Pin the place to save") : L.t("Guardar lugar", "Save place"))
                     .font(.headlineSm)
             }
             .foregroundStyle(.white)
@@ -1173,14 +1173,14 @@ private struct AddLineaSheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Guardar línea")
+                Text(L.t("Guardar línea", "Save line"))
                     .font(.headlineMd)
 
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.onSurfaceVariant)
-                    TextField("Buscar línea, empresa o avenida", text: $texto)
+                    TextField(L.t("Buscar línea, empresa o avenida", "Search line, company or avenue"), text: $texto)
                         .font(.bodySm)
                         .autocorrectionDisabled()
                     if !texto.isEmpty {

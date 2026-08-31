@@ -66,21 +66,21 @@ struct BienvenidaView: View {
 
     private var header: some View {
         HStack(alignment: .center) {
-            Text("Ruta UTP Trujillo")
+            Text(L.t("Ruta UTP Trujillo", "Ruta UTP Trujillo"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
             Spacer()
             Button {
                 router.navigate(to: .mapaPrincipal)
             } label: {
-                Text("Saltar")
+                Text(L.t("Saltar", "Skip"))
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 4)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Saltar introducción")
+            .accessibilityLabel(L.t("Saltar introducción", "Skip intro"))
         }
         .padding(.horizontal, 20)
         .frame(height: 56)
@@ -99,11 +99,11 @@ struct BienvenidaView: View {
                     .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text("LLEGANDO EN")
+                Text(L.t("LLEGANDO EN", "ARRIVING IN"))
                     .font(.labelCapsSm)
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabelCaps)
-                Text("3 min")
+                Text(L.t("3 min", "3 min"))
                     .font(.displayNumberLg)
                     .foregroundStyle(.appPrimary)
                     .lineSpacing(-2)
@@ -140,13 +140,13 @@ struct BienvenidaView: View {
 
     private var heroText: some View {
         VStack(spacing: 12) {
-            Text("Llega a la UTP sin perderte")
+            Text(L.t("Llega a la UTP sin perderte", "Get to UTP without getting lost"))
                 .font(.displayLg)
                 .foregroundStyle(.onSurface)
                 .multilineTextAlignment(.center)
                 .lineSpacing(-2)
                 .frame(maxWidth: .infinity)
-            Text("Encuentra la ruta exacta desde tu ubicación hasta el campus sin complicaciones.")
+            Text(L.t("Encuentra la ruta exacta desde tu ubicación hasta el campus sin complicaciones.", "Find the exact route from your location to campus, hassle-free."))
                 .font(.bodyLg)
                 .foregroundStyle(.onSurfaceVariant)
                 .multilineTextAlignment(.center)
@@ -171,14 +171,14 @@ struct BienvenidaView: View {
             FeatureCard(
                 icon: "heart.shield.fill",
                 iconColor: .appPrimary,
-                label: "SEGURIDAD",
-                title: "Rutas nocturnas monitoreadas."
+                label: L.t("SEGURIDAD", "SAFETY"),
+                title: L.t("Rutas nocturnas monitoreadas.", "Monitored night routes.")
             )
             FeatureCard(
                 icon: "creditcard.fill",
                 iconColor: .tertiary,
-                label: "AHORRO",
-                title: "Precios de micros y combis actualizados."
+                label: L.t("AHORRO", "SAVINGS"),
+                title: L.t("Precios de micros y combis actualizados.", "Updated bus and van fares.")
             )
         }
     }
@@ -188,7 +188,7 @@ struct BienvenidaView: View {
             router.navigate(to: .mapaPrincipal)
         } label: {
             HStack(spacing: 8) {
-                Text("Comenzar")
+                Text(L.t("Comenzar", "Get Started"))
                     .font(.displayLgPhone)
                     .foregroundStyle(.white)
                 Image(systemName: "arrow.right")
@@ -203,14 +203,14 @@ struct BienvenidaView: View {
             )
         }
         .buttonStyle(PressableButtonStyle())
-        .accessibilityLabel("Comenzar a usar la aplicación")
+        .accessibilityLabel(L.t("Comenzar a usar la aplicación", "Start using the app"))
     }
 
     private var legalFooter: some View {
         (
-            Text("Al continuar, aceptas nuestros ")
+            Text(L.t("Al continuar, aceptas nuestros ", "By continuing, you accept our "))
                 .foregroundStyle(.onSurfaceVariant)
-            + Text("Términos de Servicio")
+            + Text(L.t("Términos de Servicio", "Terms of Service"))
                 .foregroundStyle(.appPrimary)
                 .underline()
         )
@@ -268,11 +268,11 @@ private struct LegalSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Términos de Servicio")
+                Text(L.t("Términos de Servicio", "Terms of Service"))
                     .font(.headlineMd)
                 Text("Ruta UTP Trujillo es una aplicación prototipo que facilita la orientación de transporte público hacia el campus de la Universidad Tecnológica del Perú (sede Trujillo). Al usar esta app aceptas las condiciones aquí descritas.")
                     .font(.bodyMd)
-                Text("Privacidad")
+                Text(L.t("Privacidad", "Privacy"))
                     .font(.headlineSm)
                 Text("Los datos de ubicación y reportes comunitarios son simulados para efectos de demostración. No se comparte información con terceros.")
                     .font(.bodyMd)

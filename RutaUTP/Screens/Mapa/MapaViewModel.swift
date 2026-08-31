@@ -319,10 +319,10 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     // Destinos conocidos (Coordenadas UTP actualizadas a Av. Nicolás de Piérola 1221, Trujillo)
     let destinos: [DestinoChip] = [
-        DestinoChip(id: 1, label: "Casa",      icon: "house.fill",         lat: -8.1180, lon: -79.0350),
+        DestinoChip(id: 1, label: L.t("Casa", "Home"),      icon: "house.fill",         lat: -8.1180, lon: -79.0350),
         DestinoChip(id: 2, label: "UTP",       icon: "graduationcap.fill", lat: -8.098247879173792, lon: -79.03818104755645),
-        DestinoChip(id: 3, label: "Trabajo",   icon: "briefcase.fill",     lat: -8.1050, lon: -79.0200),
-        DestinoChip(id: 4, label: "Centro",    icon: "building.2.fill",    lat: -8.1090, lon: -79.0270),
+        DestinoChip(id: 3, label: L.t("Trabajo", "Work"),   icon: "briefcase.fill",     lat: -8.1050, lon: -79.0200),
+        DestinoChip(id: 4, label: L.t("Centro", "Downtown"),    icon: "building.2.fill",    lat: -8.1090, lon: -79.0270),
         DestinoChip(id: 5, label: "Huanchaco", icon: "water.waves",        lat: -8.0825, lon: -79.1197)
     ]
 

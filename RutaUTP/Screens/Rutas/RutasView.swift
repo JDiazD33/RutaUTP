@@ -28,7 +28,7 @@ struct RutaOpcion: Identifiable, Equatable {
     let paradaFin: String
 
     var frecuenciaTexto: String {
-        frecuenciaMin > 0 ? "cada \(frecuenciaMin) min" : "—"
+        frecuenciaMin > 0 ? L.t("cada \(frecuenciaMin) min", "every \(frecuenciaMin) min") : "—"
     }
 
     var tiempoTexto: String {
@@ -72,7 +72,7 @@ final class RutasViewModel: ObservableObject {
     /// Texto "a X m del lugar" para la card bajo el filtro.
     func distanciaTexto(ruta: RutaOpcion) -> String? {
         guard filtroCerca != nil, let d = distanciaALugar[ruta.id] else { return nil }
-        return d < 1000 ? "a \(Int((d / 10).rounded() * 10)) m del lugar"
+        return d < 1000 ? L.t("a \(Int((d / 10).rounded() * 10)) m del lugar", "\(Int((d / 10).rounded() * 10)) m from place")
                         : String(format: "a %.1f km del lugar", d / 1000)
     }
 
@@ -100,8 +100,8 @@ final class RutasViewModel: ObservableObject {
                 colorLinea: ruta.color,
                 shape: ruta.shape,
                 paraderos: ruta.paraderos,
-                paradaInicio: ruta.paraderos.first?.nombre ?? "Paradero inicial",
-                paradaFin: ruta.paraderos.last?.nombre ?? "Paradero final"
+                paradaInicio: ruta.paraderos.first?.nombre ?? L.t("Paradero inicial", "First stop"),
+                paradaFin: ruta.paraderos.last?.nombre ?? L.t("Paradero final", "Last stop")
             )
         }
     }
@@ -223,14 +223,14 @@ struct RutasView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Elige tu ruta")
+                                Text(L.t("Elige tu ruta", "Pick your route"))
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
                                 Text(viewModel.cargando
-                                     ? "Cargando rutas oficiales…"
+                                     ? L.t("Cargando rutas oficiales…", "Loading official routes…")
                                      : (viewModel.filtroCerca != nil
-                                        ? "Líneas que pasan cerca de \(viewModel.filtroCerca!.titulo)"
-                                        : "\(viewModel.rutas.count) rutas oficiales · ordenadas por cercanía a UTP"))
+                                        ? L.t("Líneas que pasan cerca de", "Lines passing near") + " \(viewModel.filtroCerca!.titulo)"
+                                        : L.t("\(viewModel.rutas.count) rutas oficiales · ordenadas por cercanía a UTP", "\(viewModel.rutas.count) official routes · sorted by distance to UTP")))
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
                             }
@@ -249,7 +249,7 @@ struct RutasView: View {
                             .padding(.vertical, 32)
                         } else if viewModel.rutasFiltradas.isEmpty {
                             Text(viewModel.filtroCerca != nil
-                                 ? "Ninguna línea pasa a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar"
+                                 ? L.t("Ninguna línea pasa a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar", "No line passes within \(Int(RutasViewModel.radioCercaMetros)) m of this place")
                                  : "No hay rutas que coincidan con “\(viewModel.textoBusqueda)”")
                                 .font(.bodySm)
                                 .foregroundStyle(.onSurfaceVariant)
@@ -284,11 +284,11 @@ struct RutasView: View {
                     Image(systemName: "location.fill")
                         .font(.system(size: 13, weight: .semibold))
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Líneas cerca de \(cerca.titulo)")
+                        Text(L.t("Líneas cerca de", "Lines near") + " \(cerca.titulo)")
                             .font(.bodySm)
                             .fontWeight(.semibold)
                             .foregroundStyle(.onPrimaryContainer)
-                        Text("\(viewModel.rutasFiltradas.count) de \(viewModel.rutas.count) rutas pasan a menos de \(Int(RutasViewModel.radioCercaMetros)) m")
+                        Text(String(format: L.t("%1$d of %2$d routes pass within %3$d m", "%1$d of %2$d routes pass within %3$d m"), viewModel.rutasFiltradas.count, viewModel.rutas.count, Int(RutasViewModel.radioCercaMetros)))
                             .font(.system(size: 10))
                             .foregroundStyle(.onPrimaryContainer.opacity(0.8))
                     }
@@ -314,7 +314,7 @@ struct RutasView: View {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.onSurfaceVariant)
-                    TextField("Buscar línea, empresa o avenida", text: $viewModel.textoBusqueda)
+                    TextField(L.t("Buscar línea, empresa o avenida", "Search line, company or avenue"), text: $viewModel.textoBusqueda)
                         .font(.bodySm)
                         .autocorrectionDisabled()
                     if !viewModel.textoBusqueda.isEmpty {
@@ -350,7 +350,7 @@ struct RutasView: View {
             Image(systemName: "bus.fill")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.appPrimary)
-            Text("Rutas")
+            Text(L.t("Rutas", "Routes"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
             Spacer()
@@ -406,7 +406,7 @@ private struct RutaOpcionCard: View {
                         .lineLimit(1)
                         .appTracking(AppTracking.wideLabel)
                 } else {
-                    Text("\(ruta.numParaderos) paraderos · \(String(format: "%.1f", ruta.distanciaKm)) km")
+                    Text(L.t("\(ruta.numParaderos) paraderos", "\(ruta.numParaderos) stops") + " · \(String(format: "%.1f", ruta.distanciaKm)) km")
                         .font(.labelCapsSm)
                         .foregroundStyle(.onSurfaceVariant.opacity(0.8))
                         .lineLimit(1)
@@ -421,7 +421,7 @@ private struct RutaOpcionCard: View {
                 Text(ruta.frecuenciaTexto)
                     .font(.bodyMdMedium)
                     .foregroundStyle(ruta.colorLinea)
-                Text("frecuencia")
+                Text(L.t("frecuencia", "frequency"))
                     .font(.labelCapsSm)
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabel)
@@ -507,7 +507,7 @@ private struct DetalleRutaView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                                     .font(.system(size: 11, weight: .bold))
-                                Text("Toca para ver el recorrido completo")
+                                Text(L.t("Toca para ver el recorrido completo", "Tap to see the full route"))
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .foregroundStyle(.white)
@@ -538,7 +538,7 @@ private struct DetalleRutaView: View {
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 2) {
-                                Text("FRECUENCIA")
+                                Text(L.t("FRECUENCIA", "FREQUENCY"))
                                     .font(.labelCapsMd)
                                     .foregroundStyle(.onPrimaryContainer)
                                     .appTracking(AppTracking.wideLabel)
@@ -565,31 +565,31 @@ private struct DetalleRutaView: View {
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                                   spacing: 12) {
                             StatTile(icon: "clock.fill", iconColor: .appPrimary,
-                                     label: "TIEMPO VIAJE", value: ruta.tiempoTexto)
+                                     label: L.t("TIEMPO VIAJE", "TRIP TIME"), value: ruta.tiempoTexto)
                             StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
-                                     label: "COSTO", value: ruta.costo)
+                                     label: L.t("COSTO", "FARE"), value: ruta.costo)
                             StatTile(icon: "mappin.and.ellipse", iconColor: .appPrimary,
-                                     label: "PARADEROS", value: "\(ruta.numParaderos)")
+                                     label: L.t("PARADEROS", "STOPS"), value: "\(ruta.numParaderos)")
                             StatTile(icon: "point.topleft.down.curvedto.point.bottomright.up",
                                      iconColor: .secondary,
-                                     label: "RECORRIDO", value: String(format: "%.1f km", ruta.distanciaKm))
+                                     label: L.t("RECORRIDO", "DISTANCE"), value: String(format: "%.1f km", ruta.distanciaKm))
                         }
 
                         // Pasos
                         VStack(alignment: .leading, spacing: 18) {
-                            Text("Guía paso a paso")
+                            Text(L.t("Guía paso a paso", "Step-by-step guide"))
                                 .font(.headlineXs)
                                 .foregroundStyle(.onSurface)
 
                             VStack(spacing: 0) {
-                                pasoRow("1", "Ve al paradero \(ruta.paradaInicio)",
-                                        "Sale uno \(ruta.frecuenciaTexto)",
+                                pasoRow("1", L.t("Ve al paradero \(ruta.paradaInicio)", "Go to \(ruta.paradaInicio) stop"),
+                                        L.t("Sale uno \(ruta.frecuenciaTexto)", "One departs \(ruta.frecuenciaTexto)"),
                                         "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
-                                pasoRow("2", "Sube a la línea \(ruta.linea)",
-                                        "\(ruta.empresa) • \(ruta.tiempoTexto) de viaje",
+                                pasoRow("2", L.t("Sube a la línea \(ruta.linea)", "Board line \(ruta.linea)"),
+                                        L.t("\(ruta.empresa) • \(ruta.tiempoTexto) de viaje", "\(ruta.empresa) • \(ruta.tiempoTexto) trip"),
                                         "bus.fill", ruta.colorLinea, .white, isLast: false)
-                                pasoRow("3", "Baja en \(ruta.paradaFin)",
-                                        "Fin del recorrido",
+                                pasoRow("3", L.t("Baja en \(ruta.paradaFin)", "Get off at \(ruta.paradaFin)"),
+                                        L.t("Fin del recorrido", "End of the route"),
                                         "flag.checkered.fill", .tertiary, .white, isLast: true)
                             }
                         }
@@ -659,7 +659,7 @@ private struct DetalleRutaView: View {
             HStack(spacing: 10) {
                 Image(systemName: "location.fill")
                     .font(.system(size: 22, weight: .bold))
-                Text("Iniciar Navegación")
+                Text(L.t("Iniciar Navegación", "Start Navigation"))
                     .font(.headlineSm)
             }
             .foregroundStyle(.onPrimaryContainer)

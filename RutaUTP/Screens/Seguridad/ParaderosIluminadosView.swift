@@ -260,7 +260,7 @@ struct ParaderosIluminadosView: View {
                 .onAppear { pulso = true }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Paradero con iluminación verificada")
+                    Text(L.t("Paradero con iluminación verificada", "Stop with verified lighting"))
                         .font(.bodySm)
                         .fontWeight(.semibold)
                         .foregroundStyle(.onSurface)

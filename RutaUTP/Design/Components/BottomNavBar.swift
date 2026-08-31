@@ -16,11 +16,11 @@ enum NavTab: CaseIterable, Hashable {
 
     var label: String {
         switch self {
-        case .mapa:      return "Mapa"
-        case .rutas:     return "Rutas"
-        case .guardado:  return "Guardado"
-        case .seguridad: return "Seguridad"
-        case .perfil:    return "Perfil"
+        case .mapa:      return L.t("Mapa", "Map")
+        case .rutas:     return L.t("Rutas", "Routes")
+        case .guardado:  return L.t("Guardado", "Saved")
+        case .seguridad: return L.t("Seguridad", "Safety")
+        case .perfil:    return L.t("Perfil", "Profile")
         }
     }
 

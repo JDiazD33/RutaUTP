@@ -48,6 +48,7 @@ enum DrawerItem: String, Identifiable {
 struct SideDrawer: View {
     @Binding var isOpen: Bool
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var idioma: IdiomaManager
 
     @State private var dragOffset: CGFloat = 0
     @State private var activeSheet: DrawerItem? = nil
@@ -177,20 +178,63 @@ struct SideDrawer: View {
 
             // Items
             VStack(spacing: 0) {
-                DrawerItemRow(icon: "bell.fill", iconColor: .tertiary, label: "Notificaciones") {
+                // Cambio de idioma ES/EN (aplica al instante en toda la app)
+                Button {
+                    AppHaptics.impact(.medium)
+                    idioma.alternar()
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.primaryContainer)
+                                .frame(width: 38, height: 38)
+                            Image(systemName: "globe")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(.onPrimaryContainer)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(L.t("Idioma", "Language"))
+                                .font(.bodyMdMedium)
+                                .foregroundStyle(.onSurface)
+                            Text(idioma.esIngles ? "Switch to Español" : "Switch to English")
+                                .font(.bodySm)
+                                .foregroundStyle(.onSurfaceVariant)
+                        }
+                        Spacer()
+                        Text(idioma.etiqueta)
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(.onPrimaryContainer)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(Color.primaryContainer))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.surfaceContainerLow)
+                    )
+                    .padding(.horizontal, 8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Cambiar idioma", "Change language"))
+
+                Divider().padding(.leading, 56).padding(.top, 6)
+
+                DrawerItemRow(icon: "bell.fill", iconColor: .tertiary, label: L.t("Notificaciones", "Notifications")) {
                     activeSheet = .notificaciones
                 }
-                DrawerItemRow(icon: "building.2.fill", iconColor: .secondary, label: "Ciudad") {
+                DrawerItemRow(icon: "building.2.fill", iconColor: .secondary, label: L.t("Ciudad", "City")) {
                     activeSheet = .ciudad
                 }
                 Divider().padding(.leading, 56)
-                DrawerItemRow(icon: "gearshape.fill", iconColor: .onSurfaceVariant, label: "Ajustes") {
+                DrawerItemRow(icon: "gearshape.fill", iconColor: .onSurfaceVariant, label: L.t("Ajustes", "Settings")) {
                     activeSheet = .ajustes
                 }
-                DrawerItemRow(icon: "headphones", iconColor: .onSurfaceVariant, label: "Soporte") {
+                DrawerItemRow(icon: "headphones", iconColor: .onSurfaceVariant, label: L.t("Soporte", "Support")) {
                     activeSheet = .soporte
                 }
-                DrawerItemRow(icon: "info.circle.fill", iconColor: .onSurfaceVariant, label: "Sobre Nosotros") {
+                DrawerItemRow(icon: "info.circle.fill", iconColor: .onSurfaceVariant, label: L.t("Sobre Nosotros", "About Us")) {
                     activeSheet = .sobreNosotros
                 }
                 // TEMPORAL: botón para abrir la pantalla de prueba de tracking real.
@@ -411,36 +455,23 @@ private struct CiudadSheet: View {
 // MARK: - 3. AJUSTES SHEET
 private struct AjustesSheet: View {
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
-    @AppStorage("lenguajeApp") private var lenguajeApp: String = "es"
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            SheetHeader(icon: "gearshape.fill", iconColor: .onSurfaceVariant, title: "Ajustes")
+            SheetHeader(icon: "gearshape.fill", iconColor: .onSurfaceVariant,
+                        title: L.t("Ajustes", "Settings"))
 
             // Tema
             VStack(alignment: .leading, spacing: 8) {
-                Text("APARIENCIA")
+                Text(L.t("APARIENCIA", "APPEARANCE"))
                     .font(.labelCapsMd)
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabel)
                 HStack(spacing: 12) {
-                    temaButton(.light, icon: "sun.max.fill", label: "Claro")
-                    temaButton(.dark, icon: "moon.fill", label: "Oscuro")
+                    temaButton(.light, icon: "sun.max.fill", label: L.t("Claro", "Light"))
+                    temaButton(.dark, icon: "moon.fill", label: L.t("Oscuro", "Dark"))
                 }
-            }
-
-            // Idioma
-            VStack(alignment: .leading, spacing: 8) {
-                Text("IDIOMA")
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                Picker("Idioma", selection: $lenguajeApp) {
-                    Text("Español").tag("es")
-                    Text("English").tag("en")
-                }
-                .pickerStyle(.segmented)
             }
 
             Spacer()

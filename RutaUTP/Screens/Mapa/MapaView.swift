@@ -46,11 +46,11 @@ struct MapaView: View {
 
                 // 2. Marcador del Usuario (GPS Real o Peatón)
                 if let userCoord = vm.userRealCoordinate {
-                    Annotation("Mi Ubicación", coordinate: userCoord) {
+                    Annotation(L.t("Mi Ubicación", "My Location"), coordinate: userCoord) {
                         PulsingUserMarker()
                     }
                 } else {
-                    Annotation("Mi Ubicación", coordinate: CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)) {
+                    Annotation(L.t("Mi Ubicación", "My Location"), coordinate: CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)) {
                         PulsingUserMarker()
                     }
                 }
@@ -70,7 +70,7 @@ struct MapaView: View {
 
                 // 5. Marcadores de Buses Animados en Tiempo Real
                 ForEach(vm.busesAnimados) { bus in
-                    Annotation("Línea \(bus.linea)", coordinate: bus.coordinate) {
+                    Annotation(L.t("Línea", "Line") + " \(bus.linea)", coordinate: bus.coordinate) {
                         AnimatedBusMarker(
                             linea: bus.linea,
                             color: bus.color,
@@ -113,7 +113,7 @@ struct MapaView: View {
                                 .foregroundStyle(Color.onPrimaryContainer)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Ruta hacia \(res.titulo)")
+                            Text(L.t("Ruta hacia", "Route to") + " \(res.titulo)")
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(.onSurface)
                                 .lineLimit(1)
@@ -125,7 +125,7 @@ struct MapaView: View {
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(RoundedRectangle(cornerRadius: 4).fill(Color.primaryContainer))
-                                Text("\(dist, specifier: "%.1f") km • Ruta activa")
+                                Text("\(dist, specifier: "%.1f") km • \(L.t("Ruta activa", "Active route"))")
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
                             }
@@ -264,7 +264,7 @@ struct MapaView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Abrir menú")
 
-            Text("Mapa")
+            Text(L.t("Mapa", "Map"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
 
@@ -289,7 +289,7 @@ struct MapaView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.onSurfaceVariant)
                     .font(.system(size: 16))
-                TextField("¿A dónde vas hoy?", text: $vm.textoBusqueda)
+                TextField(L.t("¿A dónde vas hoy?", "Where to today?"), text: $vm.textoBusqueda)
                     .font(.system(size: 15))
                     .foregroundStyle(.onSurface)
                     .focused($campoEnfocado)
@@ -445,7 +445,7 @@ struct MapaView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 14, weight: .semibold))
-                        Text("REPORTAR")
+                        Text(L.t("REPORTAR", "REPORT"))
                             .font(.labelCapsMd)
                             .appTracking(AppTracking.wideLabel)
                     }
@@ -484,12 +484,12 @@ struct MapaView: View {
 
                 if !panelColapsado {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Transportes cercanos")
+                        Text(L.t("Transportes cercanos", "Nearby transport"))
                             .font(.system(size: 15, weight: .heavy))
                             .foregroundStyle(.onSurface)
                         Text(vm.busesAnimados.isEmpty
-                             ? "Buscando líneas cerca del campus…"
-                             : "\(vm.busesAnimados.count) líneas operando ahora")
+                             ? L.t("Buscando líneas cerca del campus…", "Finding lines near campus…")
+                             : String(format: L.t("%d líneas operando ahora", "%d lines running now"), vm.busesAnimados.count))
                             .font(.system(size: 11))
                             .foregroundStyle(.onSurfaceVariant)
                     }
@@ -631,7 +631,7 @@ private struct BusDetailPopup: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("LÍNEA \(bus.linea)")
+                        Text(L.t("LÍNEA", "LINE") + " \(bus.linea)")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.onSurface)
                         Text("\(bus.minutosLlegada) MIN")

@@ -93,7 +93,7 @@ struct PerfilView: View {
             }
             Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("Ingresa tu nuevo nombre para actualizar tu perfil.")
+            Text(L.t("Ingresa tu nuevo nombre para actualizar tu perfil.", "Enter your new name to update your profile."))
         }
         // Sheet de Tarjeta
         .sheet(isPresented: $showTarjetaSheet) {
@@ -142,11 +142,11 @@ struct PerfilView: View {
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text("SIN CONEXIÓN")
+                    Text(L.t("SIN CONEXIÓN", "OFFLINE"))
                         .font(.labelCapsSm)
                         .foregroundStyle(Color.orange)
                         .appTracking(AppTracking.wideLabel)
-                    Text("• Modo Offline")
+                    Text(L.t("• Modo Offline", "• Offline Mode"))
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                 }
@@ -235,7 +235,7 @@ struct PerfilView: View {
                             .font(.headlineLgMobile)
                             .foregroundStyle(.white)
                         HStack(spacing: 6) {
-                            Text("ESTUDIANTE UTP")
+                            Text(L.t("ESTUDIANTE UTP", "UTP STUDENT"))
                                 .font(.labelCapsSm)
                                 .foregroundStyle(.white.opacity(0.95))
                                 .appTracking(AppTracking.wideLabel)
@@ -247,7 +247,7 @@ struct PerfilView: View {
                                     Image(systemName: "checkmark.seal.fill")
                                         .font(.system(size: 10, weight: .bold))
                                         .accessibilityHidden(true)
-                                    Text("VERIFICADO")
+                                    Text(L.t("VERIFICADO", "VERIFIED"))
                                         .font(.labelCapsSm)
                                         .appTracking(AppTracking.wideLabel)
                                 }
@@ -267,7 +267,7 @@ struct PerfilView: View {
 
                 // Mi Wallet integrado debajo del nombre
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("MI BILLETERA")
+                    Text(L.t("MI BILLETERA", "MY WALLET"))
                         .font(.labelCapsSm)
                         .foregroundStyle(.white.opacity(0.85))
                         .appTracking(AppTracking.wideLabel)
@@ -286,10 +286,10 @@ struct PerfilView: View {
                                     .foregroundStyle(.white)
                                     .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Método Pago")
+                                    Text(L.t("Método Pago", "Payment"))
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(.white)
-                                    Text(metodoPagoGuardado.map { "Visa •••• \($0)" } ?? "Agregar tarjeta")
+                                    Text(metodoPagoGuardado.map { "Visa •••• \($0)" } ?? L.t("Agregar tarjeta", "Add card"))
                                         .font(.system(size: 10))
                                         .foregroundStyle(.white.opacity(0.8))
                                         .lineLimit(1)
@@ -319,10 +319,10 @@ struct PerfilView: View {
                                     .foregroundStyle(.white)
                                     .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Carnet UTP")
+                                    Text(L.t("Carnet UTP", "UTP Card"))
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(.white)
-                                    Text(carnetVerificado ? "Verificado" : "Escanear ahora")
+                                    Text(carnetVerificado ? "Verificado" : L.t("Escanear ahora", "Scan now"))
                                         .font(.system(size: 10))
                                         .foregroundStyle(.white.opacity(0.8))
                                         .lineLimit(1)
@@ -350,11 +350,11 @@ struct PerfilView: View {
     // MARK: - Stats
     private var statsCard: some View {
         HStack(spacing: 0) {
-            statColumn(value: "47", label: "VIAJES")
+            statColumn(value: "47", label: L.t("VIAJES", "TRIPS"))
             divider
-            statColumn(value: "12", label: "RUTAS")
+            statColumn(value: "12", label: L.t("RUTAS", "ROUTES"))
             divider
-            statColumn(value: "3", label: "LOGROS")
+            statColumn(value: "3", label: L.t("LOGROS", "AWARDS"))
         }
         .padding(16)
         .background(
@@ -391,7 +391,7 @@ struct PerfilView: View {
     // MARK: - Configuración
     private var configuracion: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Preferencias")
+            Text(L.t("Preferencias", "Preferences"))
                 .font(.labelCapsLg)
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
@@ -400,16 +400,16 @@ struct PerfilView: View {
 
             VStack(spacing: 0) {
                 toggleRow(icon: "bell.fill", iconColor: .appPrimary,
-                          label: "Notificaciones", isOn: $notifOn)
+                          label: L.t("Notificaciones", "Notifications"), isOn: $notifOn)
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "mappin.circle.fill", iconColor: .secondary,
-                          label: "Compartir ubicación", isOn: $ubicacionOn)
+                          label: L.t("Compartir ubicación", "Share location"), isOn: $ubicacionOn)
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "wifi.slash", iconColor: .orange,
-                          label: "Modo offline", isOn: $modoOffline)
+                          label: L.t("Modo offline", "Offline mode"), isOn: $modoOffline)
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 chevronRow(icon: "pencil", iconColor: .onSurfaceVariant,
-                           label: "Editar perfil") {
+                           label: L.t("Editar perfil", "Edit profile")) {
                     AppHaptics.impact(.light)
                     showDatosPersonales = true
                 }
@@ -425,7 +425,7 @@ struct PerfilView: View {
 
             // ── Accesibilidad (VoiceOver) ──
             VStack(alignment: .leading, spacing: 12) {
-                Text("Accesibilidad")
+                Text(L.t("Accesibilidad", "Accessibility"))
                     .font(.labelCapsLg)
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabel)
@@ -473,7 +473,7 @@ struct PerfilView: View {
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("VoiceOver")
+                    Text(L.t("VoiceOver", "VoiceOver"))
                         .font(.bodyMdMedium)
                         .foregroundStyle(.onSurface)
                     Text(voiceOverOn ? "Activado" : "Desactivado")
@@ -616,7 +616,7 @@ private struct OfflineMapSheet: View {
             if isDownloading {
                 VStack(spacing: 8) {
                     HStack {
-                        Text("Descargando mapas locales...")
+                        Text(L.t("Descargando mapas locales...", "Downloading local maps..."))
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.onSurface)
                         Spacer()
@@ -642,7 +642,7 @@ private struct OfflineMapSheet: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : (isDownloading ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill"))
-                        Text(mapsDownloaded ? "Entendido, cerrar" : (isDownloading ? "Descargando..." : "Descargar Mapas (40 MB)"))
+                        Text(mapsDownloaded ? L.t("Entendido, cerrar", "Got it, close") : (isDownloading ? L.t("Descargando...", "Downloading...") : L.t("Descargar Mapas (40 MB)", "Download Maps (40 MB)")))
                     }
                     .font(.headlineSm)
                     .foregroundStyle(.white)
@@ -659,7 +659,7 @@ private struct OfflineMapSheet: View {
                     Button {
                         dismiss()
                     } label: {
-                        Text("Ahora no")
+                        Text(L.t("Ahora no", "Not now"))
                             .font(.bodyMdMedium)
                             .foregroundStyle(.onSurfaceVariant)
                     }
@@ -721,10 +721,10 @@ private struct VoiceOverHelpSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private let pasos: [(icon: String, texto: String)] = [
-        ("gearshape.fill", "Abre la app Ajustes de tu iPhone"),
-        ("hand.point.right.fill", "Toca Accesibilidad"),
-        ("speaker.wave.2.fill", "Toca VoiceOver, primera opción"),
-        ("togglepower", "Activa el interruptor VoiceOver")
+        ("gearshape.fill", L.t("Abre la app Ajustes de tu iPhone", "Open your iPhone Settings app")),
+        ("hand.point.right.fill", L.t("Toca Accesibilidad", "Tap Accessibility")),
+        ("speaker.wave.2.fill", L.t("Toca VoiceOver, primera opción", "Tap VoiceOver, first option")),
+        ("togglepower", L.t("Activa el interruptor VoiceOver", "Turn on the VoiceOver switch"))
     ]
 
     var body: some View {
@@ -739,7 +739,7 @@ private struct VoiceOverHelpSheet: View {
                         .foregroundStyle(.appPrimary)
                 }
                 .accessibilityHidden(true)
-                Text("Activar VoiceOver")
+                Text(L.t("Activar VoiceOver", "Enable VoiceOver"))
                     .font(.headlineMd)
                     .foregroundStyle(.onSurface)
                 Spacer()
@@ -747,7 +747,7 @@ private struct VoiceOverHelpSheet: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
 
-            Text("VoiceOver lee en voz alta lo que tocas en pantalla. Sigue estos pasos para activarlo en tu iPhone:")
+            Text(L.t("VoiceOver lee en voz alta lo que tocas en pantalla. Sigue estos pasos para activarlo en tu iPhone:", "VoiceOver reads aloud what you touch on screen. Follow these steps to enable it on your iPhone:"))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
 
@@ -784,7 +784,7 @@ private struct VoiceOverHelpSheet: View {
                 HStack(spacing: 8) {
                     Image(systemName: "gearshape.fill")
                         .accessibilityHidden(true)
-                    Text("Abrir Ajustes del iPhone")
+                    Text(L.t("Abrir Ajustes del iPhone", "Open iPhone Settings"))
                 }
                 .font(.bodyMdMedium)
                 .foregroundStyle(.white)
@@ -798,7 +798,7 @@ private struct VoiceOverHelpSheet: View {
             Button {
                 dismiss()
             } label: {
-                Text("Cerrar")
+                Text(L.t("Cerrar", "Close"))
                     .font(.bodyMdMedium)
                     .foregroundStyle(.onSurfaceVariant)
             }

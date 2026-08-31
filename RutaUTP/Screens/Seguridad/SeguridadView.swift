@@ -142,53 +142,53 @@ struct SeguridadView: View {
     // 10 puntos/zonas de seguridad de Trujillo; se deslizan como carrusel.
     private let rutasSeguras: [RutaSegura] = [
         RutaSegura(id: 0,
-                   titulo: "Zona Segura: Óvalo Papal",
-                   descripcion: "Patrullaje activo y alta iluminación hasta las 11:00 PM.",
+                   titulo: L.t("Zona Segura: Óvalo Papal", "Safe Zone: Óvalo Papal"),
+                   descripcion: L.t("Patrullaje activo y alta iluminación hasta las 11:00 PM.", "Active patrol and high lighting until 11:00 PM."),
                    icono: "moon.zzz.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: .tertiary),
         RutaSegura(id: 1,
-                   titulo: "Serenazgo más cercano: Av. España 1450",
-                   descripcion: "Punto del serenazgo municipal a 2 cuadras del campus. Atiende 24 h.",
+                   titulo: L.t("Serenazgo más cercano: Av. España 1450", "Nearest city patrol: Av. España 1450"),
+                   descripcion: L.t("Punto del serenazgo municipal a 2 cuadras del campus. Atiende 24 h.", "City patrol point 2 blocks from campus. Open 24 h."),
                    icono: "shield.lefthalf.filled", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil),
         RutaSegura(id: 2,
-                   titulo: "Comisaría Víctor Larco",
-                   descripcion: "A 1.5 km del campus por Mansiche. Emergencias: 105.",
+                   titulo: L.t("Comisaría Víctor Larco", "Víctor Larco Police Station"),
+                   descripcion: L.t("A 1.5 km del campus por Mansiche. Emergencias: 105.", "1.5 km from campus via Mansiche. Emergencies: 105."),
                    icono: "lock.shield.fill", iconoBg: .appPrimary, iconoFg: .white,
                    accent: .appPrimary),
         RutaSegura(id: 3,
-                   titulo: "Av. América – Real Plaza",
-                   descripcion: "Zona comercial vigilada con cámaras, bien iluminada hasta tarde.",
+                   titulo: L.t("Av. América – Real Plaza", "Av. América – Real Plaza Mall"),
+                   descripcion: L.t("Zona comercial vigilada con cámaras, bien iluminada hasta tarde.", "Commercial area with cameras, well lit until late."),
                    icono: "camera.on.rectangle.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: nil),
         RutaSegura(id: 4,
-                   titulo: "Plaza de Armas (Centro Histórico)",
-                   descripcion: "Serenazgo 24 h y alta afluencia de personas todo el día.",
+                   titulo: L.t("Plaza de Armas (Centro Histórico)", "Main Square (Historic Downtown)"),
+                   descripcion: L.t("Serenazgo 24 h y alta afluencia de personas todo el día.", "24 h city patrol and busy foot traffic all day."),
                    icono: "building.columns.fill", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil),
         RutaSegura(id: 5,
-                   titulo: "Mall Aventura – Av. América Sur",
-                   descripcion: "Seguridad privada y botón de emergencia en estacionamientos.",
+                   titulo: L.t("Mall Aventura – Av. América Sur", "Mall Aventura – Av. América Sur"),
+                   descripcion: L.t("Seguridad privada y botón de emergencia en estacionamientos.", "Private security and emergency button in parking lots."),
                    icono: "storefront.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: nil),
         RutaSegura(id: 6,
-                   titulo: "Av. Mansiche – Paseo de los Héroes",
-                   descripcion: "Corredor iluminado y transitado hasta las 11:00 PM.",
+                   titulo: L.t("Av. Mansiche – Paseo de los Héroes", "Av. Mansiche – Paseo de los Héroes"),
+                   descripcion: L.t("Corredor iluminado y transitado hasta las 11:00 PM.", "Lit, busy corridor until 11:00 PM."),
                    icono: "lightbulb.fill", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil),
         RutaSegura(id: 7,
-                   titulo: "Hospital Belén – Emergencias 24 h",
-                   descripcion: "Urgencias a 1.8 km del campus. Referencia segura de noche.",
+                   titulo: L.t("Hospital Belén – Emergencias 24 h", "Hospital Belén – 24 h ER"),
+                   descripcion: L.t("Urgencias a 1.8 km del campus. Referencia segura de noche.", "ER 1.8 km from campus. Safe reference at night."),
                    icono: "cross.case.fill", iconoBg: .errorContainer, iconoFg: .onErrorContainer,
                    accent: nil),
         RutaSegura(id: 8,
-                   titulo: "Estadio Mansiche – Perímetro",
-                   descripcion: "Luces perimetrales y guardias durante eventos y entrenamientos.",
+                   titulo: L.t("Estadio Mansiche – Perímetro", "Mansiche Stadium – Perimeter"),
+                   descripcion: L.t("Luces perimetrales y guardias durante eventos y entrenamientos.", "Perimeter lights and guards during events and training."),
                    icono: "sportscourt.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: nil),
         RutaSegura(id: 9,
-                   titulo: "Frente a CinePlanet Trujillo",
-                   descripcion: "Área vigilada por cámaras privadas, con movimiento constante.",
+                   titulo: L.t("Frente a CinePlanet Trujillo", "Across from CinePlanet Trujillo"),
+                   descripcion: L.t("Área vigilada por cámaras privadas, con movimiento constante.", "Area monitored by private cameras, constant foot traffic."),
                    icono: "video.fill", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil)
     ]
@@ -257,7 +257,7 @@ struct SeguridadView: View {
             ReporteDetailSheet(reporte: reporte)
                 .presentationDetents([.medium, .large])
         }
-        .alert("Llamar al 105", isPresented: $showLlamarAlert) {
+        .alert(L.t("Llamar al 105", "Call 911"), isPresented: $showLlamarAlert) {
             Button("Llamar") {
                 if let url = URL(string: "tel://105") {
                     UIApplication.shared.open(url)
@@ -315,7 +315,7 @@ struct SeguridadView: View {
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(.appPrimary)
                 }
-                Text("Seguridad")
+                Text(L.t("Seguridad", "Safety"))
                     .font(.headlineLgMobile)
                     .foregroundStyle(.appPrimary)
             }
@@ -327,7 +327,7 @@ struct SeguridadView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Reportar")
+                    Text(L.t("Reportar", "Report"))
                         .font(.labelCapsMd)
                         .appTracking(AppTracking.wideLabel)
                 }
@@ -354,7 +354,7 @@ struct SeguridadView: View {
     private var summaryBar: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Alertas hoy: **2**")
+                Text(L.t("Alertas hoy:", "Alerts today:") + " **2**")
                     .font(.bodySmMedium)
                 Text("Paraderos iluminados: **\(paraderosIluminados.count)**")
                     .font(.bodySmMedium)
@@ -363,7 +363,7 @@ struct SeguridadView: View {
             Button {
                 showLlamarAlert = true
             } label: {
-                Text("Llamar 105")
+                Text(L.t("Llamar 105", "Call 911"))
                     .font(.bodyXsMedium)
                     .foregroundStyle(.onSurface)
                     .padding(.horizontal, 12)
@@ -417,7 +417,7 @@ struct SeguridadView: View {
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Lugares Guardados")
+                Text(L.t("Lugares Guardados", "Saved Places"))
                     .font(.headlineSm)
                     .foregroundStyle(.onSurface)
                 Spacer()
@@ -430,7 +430,7 @@ struct SeguridadView: View {
                     HStack(spacing: 4) {
                         Image(systemName: modoEdicion ? "checkmark.circle.fill" : "pencil")
                             .font(.system(size: 14, weight: .semibold))
-                        Text(modoEdicion ? "LISTO" : "EDITAR")
+                        Text(modoEdicion ? L.t("LISTO", "DONE") : L.t("EDITAR", "EDIT"))
                             .font(.labelCapsSm)
                             .appTracking(AppTracking.wideLabel)
                     }
@@ -575,7 +575,7 @@ struct SeguridadView: View {
     }
 
     private var lugarTileAñadir: some View {
-        lugarTile(nombre: modoEdicion ? "Añadir" : (tilesActuales.count <= 1 ? "Añadir" : "Elegir"),
+        lugarTile(nombre: modoEdicion ? "Añadir" : (tilesActuales.count <= 1 ? "Añadir" : L.t("Elegir", "Choose")),
                   icon: "plus",
                   bg: Color.surfaceContainerLow,
                   fg: .outline,
@@ -633,7 +633,7 @@ struct SeguridadView: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.shield.fill")
                     .foregroundStyle(.tertiary)
-                Text("Rutas Seguras Hoy")
+                Text(L.t("Rutas Seguras Hoy", "Safe Routes Today"))
                     .font(.headlineSm)
             }
 
@@ -714,9 +714,9 @@ struct SeguridadView: View {
                     Image(systemName: "person.3.fill")
                         .foregroundStyle(.appPrimary)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Comunidad")
+                        Text(L.t("Comunidad", "Community"))
                             .font(.headlineSm)
-                        Text("Opiniones frescas · cambian cada 5 min")
+                        Text(L.t("Opiniones frescas · cambian cada 5 min", "Fresh takes · rotate every 5 min"))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                     }
@@ -725,7 +725,7 @@ struct SeguridadView: View {
                 Button {
                     showReportarSheet = true
                 } label: {
-                    Text("AÑADIR")
+                    Text(L.t("AÑADIR", "ADD"))
                         .font(.labelCapsSm)
                         .foregroundStyle(.appPrimary)
                         .appTracking(AppTracking.wideLabel)
@@ -761,9 +761,9 @@ struct SeguridadView: View {
     private var saludoDinamico: String {
         let h = Calendar.current.component(.hour, from: Date())
         switch h {
-        case 5..<12:  return "Buenos días"
-        case 12..<19: return "Buenas tardes"
-        default:      return "Buenas noches"
+        case 5..<12:  return L.t("Buenos días", "Good morning")
+        case 12..<19: return L.t("Buenas tardes", "Good afternoon")
+        default:      return L.t("Buenas noches", "Good evening")
         }
     }
 
@@ -1085,7 +1085,7 @@ private struct ElegirLugaresSheet: View {
             onGuardar(elegidos)
             dismiss()
         } label: {
-            Text("Guardar selección")
+            Text(L.t("Guardar selección", "Save selection"))
                 .font(.headlineSm)
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 52)
