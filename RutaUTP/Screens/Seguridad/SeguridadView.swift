@@ -15,7 +15,8 @@ struct SeguridadView: View {
     @State private var showReportarSheet = false
     @State private var showLlamarAlert = false
     @State private var selectedReporte: ReporteComunidad?
-    @State private var selectedRutaIndex: Int? = nil
+    @State private var paginaZona: Int? = 0            // página del carrusel
+    @State private var zonaSeleccionada: RutaSegura? = nil  // detalle (alert)
 
     // Lugares guardados (mismos datos que GuardadoView, vía LugaresStore)
     @State private var lugares: [LugarGuardado] = []
@@ -32,29 +33,105 @@ struct SeguridadView: View {
 
     private let tabBarHeight: CGFloat = 64
 
-    private let reportes: [ReporteComunidad] = [
-        ReporteComunidad(
-            iniciales: "JD", nombre: "Jorge D.", hace: "HACE 5 MIN",
-            tipo: .alerta,
-            cuerpo: "Micro lleno en Av. Larco. Pasaron 3 sin parar hacia la UTP.",
-            utiles: 12, comentarios: 2
-        ),
-        ReporteComunidad(
-            iniciales: "MA", nombre: "Maria A.", hace: "HACE 15 MIN",
-            tipo: .trafico,
-            cuerpo: "Demora en Óvalo Papal por obras. Considerar 10 min adicionales.",
-            utiles: 45, comentarios: 8, utilMarcado: true,
-            avatarColor: .secondaryContainer, avatarForeground: .onSecondaryContainer
-        ),
-        ReporteComunidad(
-            iniciales: "RC", nombre: "Rosa C.", hace: "HACE 1 HORA",
-            tipo: .sugerencia,
-            cuerpo: "Tomar Av. Miraflores a las 7:30 AM evita el tráfico de España.",
-            utiles: 28, comentarios: 5,
-            avatarColor: .tertiaryContainer, avatarForeground: .onTertiaryContainer
-        )
-    ]
+    /// DEBUG: --comunidad N (solo comunidad) / --zonas (solo zonas seguras).
+    private static let soloComunidadDebug = ProcessInfo.processInfo.arguments.contains("--comunidad")
+    private var soloComunidadDebug: Bool { Self.soloComunidadDebug }
+    private static let soloZonasDebug = ProcessInfo.processInfo.arguments.contains("--zonas")
+    private var soloZonasDebug: Bool { Self.soloZonasDebug }
 
+    // Pool de 30 opiniones de la comunidad; se muestran 3 por vez y la
+    // ventana rota cada 5 minutos (10 ventanas antes de repetir).
+    private static let reportes: [ReporteComunidad] = {
+        let nombres: [(String, String)] = [
+            ("Jorge D.", "JD"), ("Maria A.", "MA"), ("Rosa C.", "RC"),
+            ("Luis F.", "LF"), ("Ana P.", "AP"), ("Carlos M.", "CM"),
+            ("Gabriela S.", "GS"), ("Pedro L.", "PL"), ("Fernanda R.", "FR"),
+            ("Diego V.", "DV"), ("Lucía T.", "LT"), ("Marco E.", "ME"),
+            ("Karla B.", "KB"), ("Renzo Q.", "RQ"), ("Valeria H.", "VH"),
+            ("Oscar N.", "ON"), ("Pamela G.", "PG"), ("Julio C.", "JC"),
+            ("Andrea M.", "AM"), ("Victor S.", "VS"), ("Rocío F.", "RF"),
+            ("Héctor Z.", "HZ"), ("Natalia O.", "NO"), ("Iván P.", "IP"),
+            ("Silvia R.", "SR"), ("Bruno A.", "BA"), ("Katia L.", "KL"),
+            ("Ricardo T.", "RT"), ("Elena V.", "EV"), ("Fausto M.", "FM")
+        ]
+        let cuerpos: [(String, TipoReporte)] = [
+            ("Micro lleno en Av. Larco. Pasaron 3 sin parar hacia la UTP.", .alerta),
+            ("Demora en Óvalo Papal por obras. Considerar 10 min adicionales.", .trafico),
+            ("Tomar Av. Miraflores a las 7:30 AM evita el tráfico de España.", .sugerencia),
+            ("El chofer de la C-01 muy amable, esperó a una señora mayor que corría.", .otro),
+            ("Cuidado con los carteristas en el paradero del Mercado Mayorista, hora punta.", .alerta),
+            ("Colapso total en Av. América Sur desde las 6 PM, mejor ir por Mansiche.", .trafico),
+            ("La línea C-07 va despejada sábados por la mañana, casi siempre hay asiento.", .sugerencia),
+            ("Paradero frente a la UTP sin luz desde el lunes, Reporté al 105.", .alerta),
+            ("Tráfico lento en Av. César Vallejo por desfile, tomar La Ribera.", .trafico),
+            ("Tip: bajarse 1 cuadra antes de la UTP por Piérola ahorra 5 min de embotellamiento.", .sugerencia),
+            ("Moto-taxista se pasó el semáforo en España con Mansiche. Suerte que frenó a tiempo.", .alerta),
+            ("En Huanchaco hay tráfico pesado los domodos por el malecón, ir temprano.", .trafico),
+            ("El micro de las 6:20 AM llega vacío al paradero de Urb. El Recreo.", .sugerencia),
+            ("Se accidentó un combi cerca del Óvalo Faustino Sánchez, colapso 40 min.", .alerta),
+            ("Ruta M-05 toma caminos raros para evitar tráfico, pero llega rápido.", .otro),
+            ("Tarifa S/ 2.50 en la C-01 confirmado. Algunos intentan cobrar más de noche.", .alerta),
+            ("Av. Larco de Huanchaco congestionada al mediodía por turistas.", .trafico),
+            ("Los paraderos nuevos de Av. España tienen techo y cámaras, bien ahí.", .otro),
+            ("Consejo: apps de mapa no reflejan el desvío en Prolongación Unión, ojo.", .sugerencia),
+            ("Robo de celulares reportado en la C-28 cerca de Balazar. Guarden sus cosas.", .alerta),
+            ("Obras en Av. Frecuencia España: solo un carril, agregar 15 min.", .trafico),
+            ("Sábado por la mañana es lo más fluido: 20 min desde La Esperanza a UTP.", .sugerencia),
+            ("El fiscal de la M-34 hace respetar la fila de preferencia, felicidades.", .otro),
+            ("Choca-choque en Av. Nicolás de Piérola frente al campus, tráfico lento.", .trafico),
+            ("Bajan muy rápido en las curvas de Víctor Larco, debería haber fiscalización.", .alerta),
+            ("Irse temprano de clase evita la avalancha de micros entre 7 y 8 PM.", .sugerencia),
+            ("Policía de tránsito nuevo en el cruce de América con César Vallejo, fluye mejor.", .otro),
+            ("Cuidado al bajar en el paradero del Americano, acera estrecha y motores acelerando.", .alerta),
+            ("El tramo Mansiche–España amanece despejado, viaje de 15 min.", .trafico),
+            ("Sugerencia para la app: avisar cuando el micro va lleno antes de que llegue.", .sugerencia)
+        ]
+        let tiempos = ["HACE 3 MIN", "HACE 8 MIN", "HACE 12 MIN", "HACE 20 MIN",
+                       "HACE 35 MIN", "HACE 1 HORA", "HACE 2 HORAS"]
+        let avatares: [(Color, Color)] = [
+            (.primaryContainer, .onPrimaryContainer),
+            (.secondaryContainer, .onSecondaryContainer),
+            (.tertiaryContainer, .onTertiaryContainer)
+        ]
+
+        return cuerpos.enumerated().map { i, par in
+            let persona = nombres[i % nombres.count]
+            let avatar = avatares[i % avatares.count]
+            return ReporteComunidad(
+                iniciales: persona.1,
+                nombre: persona.0,
+                hace: tiempos[(i * 7 + 3) % tiempos.count],
+                tipo: par.1,
+                cuerpo: par.0,
+                utiles: 6 + (i * 13) % 78,
+                comentarios: (i * 5) % 11,
+                utilMarcado: i % 6 == 0,
+                avatarColor: avatar.0,
+                avatarForeground: avatar.1
+            )
+        }
+    }()
+
+    /// Índice de ventana de 5 minutos (10 ventanas para 30 reportes de a 3).
+    /// DEBUG: --comunidad N fuerza la ventana para pruebas visuales.
+    private var indiceVentana: Int {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "--comunidad"), i + 1 < args.count,
+           let n = Int(args[i + 1]) {
+            return n % (Self.reportes.count / 3)
+        }
+        #endif
+        let epoch = Int(Date().timeIntervalSinceReferenceDate)
+        return (epoch / 300) % (Self.reportes.count / 3)
+    }
+
+    private var reportesVisibles: [ReporteComunidad] {
+        let inicio = indiceVentana * 3
+        return Array(Self.reportes[inicio..<(inicio + 3)])
+    }
+
+    // 10 puntos/zonas de seguridad de Trujillo; se deslizan como carrusel.
     private let rutasSeguras: [RutaSegura] = [
         RutaSegura(id: 0,
                    titulo: "Zona Segura: Óvalo Papal",
@@ -62,9 +139,49 @@ struct SeguridadView: View {
                    icono: "moon.zzz.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: .tertiary),
         RutaSegura(id: 1,
-                   titulo: "Paradero UTP (Entrada)",
-                   descripcion: "Monitoreo por cámaras de seguridad municipal.",
-                   icono: "eye.fill", iconoBg: .secondary, iconoFg: .onSecondary,
+                   titulo: "Serenazgo más cercano: Av. España 1450",
+                   descripcion: "Punto del serenazgo municipal a 2 cuadras del campus. Atiende 24 h.",
+                   icono: "shield.lefthalf.filled", iconoBg: .secondary, iconoFg: .onSecondary,
+                   accent: nil),
+        RutaSegura(id: 2,
+                   titulo: "Comisaría Víctor Larco",
+                   descripcion: "A 1.5 km del campus por Mansiche. Emergencias: 105.",
+                   icono: "lock.shield.fill", iconoBg: .appPrimary, iconoFg: .white,
+                   accent: .appPrimary),
+        RutaSegura(id: 3,
+                   titulo: "Av. América – Real Plaza",
+                   descripcion: "Zona comercial vigilada con cámaras, bien iluminada hasta tarde.",
+                   icono: "camera.on.rectangle.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
+                   accent: nil),
+        RutaSegura(id: 4,
+                   titulo: "Plaza de Armas (Centro Histórico)",
+                   descripcion: "Serenazgo 24 h y alta afluencia de personas todo el día.",
+                   icono: "building.columns.fill", iconoBg: .secondary, iconoFg: .onSecondary,
+                   accent: nil),
+        RutaSegura(id: 5,
+                   titulo: "Mall Aventura – Av. América Sur",
+                   descripcion: "Seguridad privada y botón de emergencia en estacionamientos.",
+                   icono: "storefront.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
+                   accent: nil),
+        RutaSegura(id: 6,
+                   titulo: "Av. Mansiche – Paseo de los Héroes",
+                   descripcion: "Corredor iluminado y transitado hasta las 11:00 PM.",
+                   icono: "lightbulb.fill", iconoBg: .secondary, iconoFg: .onSecondary,
+                   accent: nil),
+        RutaSegura(id: 7,
+                   titulo: "Hospital Belén – Emergencias 24 h",
+                   descripcion: "Urgencias a 1.8 km del campus. Referencia segura de noche.",
+                   icono: "cross.case.fill", iconoBg: .errorContainer, iconoFg: .onErrorContainer,
+                   accent: nil),
+        RutaSegura(id: 8,
+                   titulo: "Estadio Mansiche – Perímetro",
+                   descripcion: "Luces perimetrales y guardias durante eventos y entrenamientos.",
+                   icono: "sportscourt.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
+                   accent: nil),
+        RutaSegura(id: 9,
+                   titulo: "Frente a CinePlanet Trujillo",
+                   descripcion: "Área vigilada por cámaras privadas, con movimiento constante.",
+                   icono: "video.fill", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil)
     ]
 
@@ -78,10 +195,16 @@ struct SeguridadView: View {
                 summaryBar
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 28) {
-                        greetingCard
-                        lugaresSection
-                        rutasSegurasSection
-                        comunidadSection
+                        if soloComunidadDebug {
+                            comunidadSection
+                        } else if soloZonasDebug {
+                            rutasSegurasSection
+                        } else {
+                            greetingCard
+                            lugaresSection
+                            rutasSegurasSection
+                            comunidadSection
+                        }
                         Spacer(minLength: 20)
                     }
                     .padding(.horizontal, 20)
@@ -121,20 +244,15 @@ struct SeguridadView: View {
         } message: {
             Text("Se abrirá la aplicación de teléfono para llamar a la central de emergencias.")
         }
-        .alert(selectedRutaIndex != nil ? rutasSeguras[selectedRutaIndex ?? 0].titulo : "",
-               isPresented: Binding(
-                get: { selectedRutaIndex != nil },
-                set: { if !$0 { selectedRutaIndex = nil } }
-               )) {
-            Button("Ver en mapa") {
-                router.navigate(to: .mapaPrincipal)
-                selectedRutaIndex = nil
-            }
-            Button("Cerrar", role: .cancel) { selectedRutaIndex = nil }
-        } message: {
-            if let idx = selectedRutaIndex {
-                Text(rutasSeguras[idx].descripcion)
-            }
+        .alert(item: $zonaSeleccionada) { zona in
+            Alert(
+                title: Text(zona.titulo),
+                message: Text(zona.descripcion),
+                primaryButton: .default(Text("Ver en mapa")) {
+                    router.navigate(to: .mapaPrincipal)
+                },
+                secondaryButton: .cancel(Text("Cerrar"))
+            )
         }
         // Detalle del lugar (mismo sheet que Guardado: info + acciones reales)
         .sheet(item: $selectedLugar) { lugar in
@@ -543,16 +661,21 @@ struct SeguridadView: View {
             }
             .buttonStyle(.plain)
 
-            VStack(spacing: 12) {
+            // Carrusel deslizable: 10 zonas seguras de Trujillo
+            TabView(selection: $paginaZona) {
                 ForEach(rutasSeguras) { ruta in
                     Button {
-                        selectedRutaIndex = ruta.id
+                        zonaSeleccionada = ruta
                     } label: {
                         rutaSeguraRow(ruta: ruta)
                     }
                     .buttonStyle(.plain)
+                    .padding(.horizontal, 2)
+                    .tag(ruta.id)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            .frame(height: 104)
         }
     }
 
@@ -574,9 +697,11 @@ struct SeguridadView: View {
                     Text(ruta.titulo)
                         .font(.bodyMdMedium)
                         .foregroundStyle(.onSurface)
+                        .lineLimit(1)
                     Text(ruta.descripcion)
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
+                        .lineLimit(2)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -596,15 +721,20 @@ struct SeguridadView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    // MARK: - Comunidad
+    // MARK: - Comunidad (30 opiniones, rotan cada 5 minutos)
     private var comunidadSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "person.3.fill")
                         .foregroundStyle(.appPrimary)
-                    Text("Comunidad")
-                        .font(.headlineSm)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Comunidad")
+                            .font(.headlineSm)
+                        Text("Opiniones frescas · cambian cada 5 min")
+                            .font(.bodySm)
+                            .foregroundStyle(.onSurfaceVariant)
+                    }
                 }
                 Spacer()
                 Button {
@@ -617,15 +747,25 @@ struct SeguridadView: View {
                 }
                 .buttonStyle(.plain)
             }
-            VStack(spacing: 12) {
-                ForEach(reportes) { r in
-                    Button {
-                        selectedReporte = r
-                    } label: {
-                        ReporteCard(reporte: r)
+
+            // Se re-evalúa cada 5 min → rota la ventana de opiniones.
+            TimelineView(.periodic(from: .now, by: 300)) { _ in
+                VStack(spacing: 12) {
+                    ForEach(reportesVisibles) { r in
+                        Button {
+                            selectedReporte = r
+                        } label: {
+                            ReporteCard(reporte: r)
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal:   .opacity
+                        ))
                     }
-                    .buttonStyle(.plain)
                 }
+                .id(indiceVentana)
+                .animation(.easeInOut(duration: 0.4), value: indiceVentana)
             }
         }
     }
