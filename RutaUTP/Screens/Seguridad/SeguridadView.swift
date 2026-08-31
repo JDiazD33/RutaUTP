@@ -8,6 +8,7 @@
 
 import SwiftUI
 import UIKit
+import MapKit
 
 struct SeguridadView: View {
     @EnvironmentObject private var router: AppRouter
@@ -17,6 +18,10 @@ struct SeguridadView: View {
     @State private var selectedReporte: ReporteComunidad?
     @State private var paginaZona: Int? = 0            // página del carrusel
     @State private var zonaSeleccionada: RutaSegura? = nil  // detalle (alert)
+
+    // Paraderos iluminados (reales del feed GTFS) + mapa fullscreen
+    @State private var paraderosIluminados: [ParaderoGTFS] = []
+    @State private var showParaderosMap = false
 
     // Lugares guardados (mismos datos que GuardadoView, vía LugaresStore)
     @State private var lugares: [LugarGuardado] = []
@@ -38,6 +43,9 @@ struct SeguridadView: View {
     private var soloComunidadDebug: Bool { Self.soloComunidadDebug }
     private static let soloZonasDebug = ProcessInfo.processInfo.arguments.contains("--zonas")
     private var soloZonasDebug: Bool { Self.soloZonasDebug }
+
+    /// Caché para el preview del banner (BannerParaderosPreview).
+    static var paraderosCache: [ParaderoGTFS]? = nil
 
     // Pool de 30 opiniones de la comunidad; se muestran 3 por vez y la
     // ventana rota cada 5 minutos (10 ventanas antes de repetir).
@@ -224,7 +232,22 @@ struct SeguridadView: View {
             if ProcessInfo.processInfo.arguments.contains("--editar") {
                 modoEdicion = true
             }
+            if ProcessInfo.processInfo.arguments.contains("--paraderos") {
+                showParaderosMap = true
+            }
             #endif
+        }
+        .task {
+            // Paraderos iluminados: selección determinista sobre el feed GTFS.
+            if paraderosIluminados.isEmpty {
+                let feed = await GTFSRepository.shared.rutas()
+                paraderosIluminados = ParaderosIluminados.seleccionar(feed)
+                Self.paraderosCache = paraderosIluminados
+            }
+        }
+        // Mapa fullscreen de paraderos iluminados (desde el banner)
+        .fullScreenCover(isPresented: $showParaderosMap) {
+            ParaderosIluminadosView(paraderos: paraderosIluminados)
         }
         .sheet(isPresented: $showReportarSheet) {
             ReportarSheet()
@@ -333,7 +356,7 @@ struct SeguridadView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Alertas hoy: **2**")
                     .font(.bodySmMedium)
-                Text("Paraderos iluminados: **24**")
+                Text("Paraderos iluminados: **\(paraderosIluminados.count)**")
                     .font(.bodySmMedium)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -615,51 +638,13 @@ struct SeguridadView: View {
             }
 
             Button {
-                router.navigate(to: .mapaPrincipal)
+                AppHaptics.impact(.light)
+                showParaderosMap = true
             } label: {
-                ZStack(alignment: .bottomLeading) {
-                    LinearGradient(
-                        colors: [Color.tertiary.opacity(0.65), Color.secondary.opacity(0.45)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                    GeometryReader { geo in
-                        let w = geo.size.width
-                        let h = geo.size.height
-                        Path { p in
-                            p.move(to: CGPoint(x: 20, y: h * 0.65))
-                            p.addLine(to: CGPoint(x: w * 0.4, y: h * 0.50))
-                            p.addLine(to: CGPoint(x: w * 0.7, y: h * 0.30))
-                            p.addLine(to: CGPoint(x: w - 20, y: h * 0.20))
-                        }
-                        .stroke(Color.tertiaryFixedDim.opacity(0.85), style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 4]))
-                    }
-                    LinearGradient(
-                        colors: [Color.clear, Color.black.opacity(0.60)],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                    HStack(spacing: 6) {
-                        Image(systemName: "lightbulb.fill")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.tertiaryFixedDim)
-                        Text("Paraderos iluminados activos: 24")
-                            .font(.bodySm)
-                            .foregroundStyle(.white)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .opacity(0.85)
-                    )
-                    .padding(12)
-                }
-                .frame(height: 192)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 6)
+                BannerParaderosPreview(cantidad: paraderosIluminados.count)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Ver mapa de paraderos iluminados")
 
             // Carrusel deslizable: 10 zonas seguras de Trujillo
             TabView(selection: $paginaZona) {
@@ -1169,6 +1154,127 @@ private struct TileDropDelegate: DropDelegate {
     func performDrop(info: DropInfo) -> Bool {
         DispatchQueue.main.async { arrastrando = nil }
         return true
+    }
+}
+
+// MARK: - Preview nocturno del banner de paraderos (mini-mapa con focos)
+/// Ilustración animada: calles oscuras + focos azules pulsando en las
+/// posiciones de los paraderos iluminados (si ya cargaron; si no, layout fijo).
+private struct BannerParaderosPreview: View {
+    let cantidad: Int
+
+    // Calles del mini-mapa (proporciones del contenedor)
+    private static let calles: [(from: CGPoint, to: CGPoint)] = {
+        let puntos = [(0.04, 0.78), (0.22, 0.62), (0.42, 0.70), (0.60, 0.46),
+                      (0.78, 0.38), (0.97, 0.22), (0.12, 0.30), (0.35, 0.16),
+                      (0.58, 0.10), (0.88, 0.72), (0.30, 0.90), (0.65, 0.82)]
+        return [
+            (p(0), p(1)), (p(1), p(2)), (p(2), p(3)), (p(3), p(4)), (p(4), p(5)),
+            (p(6), p(7)), (p(7), p(8)), (p(2), p(7)), (p(3), p(8)),
+            (p(1), p(6)), (p(4), p(9)), (p(10), p(2)), (p(11), p(9))
+        ]
+        func p(_ i: Int) -> CGPoint { CGPoint(x: puntos[i].0, y: puntos[i].1) }
+    }()
+
+    /// Focos en fracciones del contenedor: reales si hay paraderos cargados.
+    private var focos: [CGPoint] {
+        if let rutas = SeguridadView.paraderosCache, !rutas.isEmpty {
+            let lats = rutas.map(\.lat)
+            let lons = rutas.map(\.lon)
+            let minLat = lats.min()!, maxLat = lats.max()!
+            let minLon = lons.min()!, maxLon = lons.max()!
+            let rangoLat = max(maxLat - minLat, 0.0001)
+            let rangoLon = max(maxLon - minLon, 0.0001)
+            return rutas.map { p in
+                CGPoint(x: 0.08 + (p.lon - minLon) / rangoLon * 0.84,
+                        y: 0.85 - (p.lat - minLat) / rangoLat * 0.72)
+            }
+        }
+        // Fallback decorativo mientras carga el feed
+        return [(0.14, 0.62), (0.30, 0.48), (0.47, 0.58), (0.63, 0.32),
+                (0.80, 0.26), (0.22, 0.24), (0.55, 0.78), (0.88, 0.55)].map {
+            CGPoint(x: $0.0, y: $0.1)
+        }
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            TimelineView(.animation(minimumInterval: 0.5, paused: false)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                ZStack {
+                    // Noche
+                    LinearGradient(colors: [Color(hex: "#0d1b3d"), Color(hex: "#123061")],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+
+                    // Calles
+                    Path { p in
+                        for calle in Self.calles {
+                            p.move(to: calle.from)
+                            p.addLine(to: calle.to)
+                        }
+                    }
+                    .stroke(Color.white.opacity(0.16), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                    .padding(.horizontal, 8)
+
+                    Path { p in
+                        for calle in Self.calles {
+                            p.move(to: calle.from)
+                            p.addLine(to: calle.to)
+                        }
+                    }
+                    .stroke(Color(hex: "#5cc8ff").opacity(0.35), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [3, 5]))
+                    .padding(.horizontal, 8)
+
+                    // Focos con pulso desfasado
+                    ForEach(Array(focos.enumerated()), id: \.offset) { i, foco in
+                        let fase = Double(i) * 0.9
+                        let brillo = 0.55 + 0.45 * sin(t * 2.2 + fase)
+                        ZStack {
+                            Circle()
+                                .fill(Color(hex: "#7fd4ff").opacity(0.22 * brillo))
+                                .frame(width: 34, height: 34)
+                            Circle()
+                                .fill(Color(hex: "#8fd8ff"))
+                                .frame(width: 12, height: 12)
+                                .shadow(color: Color(hex: "#7fd4ff").opacity(brillo), radius: 6)
+                            Image(systemName: "lightbulb.fill")
+                                .font(.system(size: 7, weight: .bold))
+                                .foregroundStyle(.white)
+                                .opacity(0.95)
+                        }
+                        .position(x: foco.x * geo.size.width, y: foco.y * geo.size.height)
+                    }
+                }
+                .clipped()
+            }
+        }
+        .overlay(alignment: .bottom) {
+            // Cápsula de info
+            HStack(spacing: 6) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color(hex: "#8fd8ff"))
+                Text("Paraderos iluminados activos: \(max(cantidad, 24))")
+                    .font(.bodySm)
+                    .foregroundStyle(.white)
+                Spacer()
+                Image(systemName: "map.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.9))
+                Text("VER MAPA")
+                    .font(.labelCapsSm)
+                    .foregroundStyle(.white)
+                    .appTracking(AppTracking.wideLabel)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(.ultraThinMaterial).opacity(0.9))
+            .padding(12)
+        }
+        .frame(height: 192)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
     }
 }
 
