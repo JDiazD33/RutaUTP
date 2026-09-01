@@ -242,7 +242,7 @@ struct GuardadoView: View {
         }
         .buttonStyle(PressableCapsuleStyle())
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
-        .accessibilityLabel(selectedTab == .lugares ? "Añadir lugar guardado" : "Añadir línea guardada")
+        .accessibilityLabel(selectedTab == .lugares ? L.t("Añadir lugar guardado", "Add saved place") : L.t("Añadir línea guardada", "Add saved line"))
     }
 
     // MARK: - Tabs
@@ -254,7 +254,7 @@ struct GuardadoView: View {
                     withAnimation(.easeInOut(duration: 0.2)) { selectedTab = t }
                 } label: {
                     VStack(spacing: 6) {
-                        Text(t.rawValue)
+                        Text(t == .lugares ? L.t("Lugares", "Places") : L.t("Líneas", "Lines"))
                             .font(.bodyMdMedium)
                             .foregroundStyle(selectedTab == t ? Color.appPrimary : Color.onSurfaceVariant)
                         Rectangle()
@@ -371,8 +371,8 @@ struct GuardadoView: View {
     private var lineasSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(lineasGuardadas.isEmpty
-                 ? "Guarda líneas oficiales del feed para tenerlas a la mano."
-                 : "\(lineasGuardadas.count) línea\(lineasGuardadas.count == 1 ? "" : "s") guardada\(lineasGuardadas.count == 1 ? "" : "s") del feed oficial.")
+                 ? L.t("Guarda líneas oficiales del feed para tenerlas a la mano.", "Save official feed lines to have them handy.")
+                 : String(format: L.t("%d línea(s) guardada(s) del feed oficial.", "%d saved line(s) from the official feed."), lineasGuardadas.count))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .padding(.horizontal, 20)
@@ -380,8 +380,8 @@ struct GuardadoView: View {
 
             if lineasGuardadas.isEmpty {
                 emptyState(icono: "bus.badge.clock",
-                           titulo: "No tienes líneas guardadas",
-                           subtitulo: "Toca Añadir línea y elige una de las \(lineasGTFS.isEmpty ? "102" : "\(lineasGTFS.count)") líneas oficiales.")
+                           titulo: L.t("No tienes líneas guardadas", "No saved lines"),
+                           subtitulo: L.t("Toca Añadir línea y elige una de las \(lineasGTFS.isEmpty ? "102" : "\(lineasGTFS.count)") líneas oficiales.", "Tap Add line and pick one of the \(lineasGTFS.isEmpty ? "102" : "\(lineasGTFS.count)") official lines."))
                     .padding(.top, 60)
             } else {
                 VStack(spacing: 12) {

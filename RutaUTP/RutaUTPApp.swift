@@ -17,12 +17,18 @@ struct RutaUTPApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .id(idioma.codigo)
-                .preferredColorScheme(isDarkMode ? .dark : .light)
-                .tint(.appPrimary)
-                .background(Color.appBackground.ignoresSafeArea())
-                .environmentObject(idioma)
+            // Cambio de idioma suave: cross-fade (+ sutil escala) en vez
+            // del reemplazo seco del árbol de vistas.
+            ZStack {
+                RootView()
+                    .id(idioma.codigo)
+                    .transition(.opacity.combined(with: .scale(scale: 0.985)))
+            }
+            .animation(.easeInOut(duration: 0.35), value: idioma.codigo)
+            .preferredColorScheme(isDarkMode ? .dark : .light)
+            .tint(.appPrimary)
+            .background(Color.appBackground.ignoresSafeArea())
+            .environmentObject(idioma)
         }
     }
 }
