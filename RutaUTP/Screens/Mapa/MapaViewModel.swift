@@ -126,15 +126,23 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     private let locationService: LocationServiceProtocol
     private let routeService: RouteCalculationService
+    private let vehicleTrackingProvier: VehicleTrackingProviding
+    
+
     private let completer = MKLocalSearchCompleter()
+    
     private var locationTask: Task<Void, Never>?
+    private var vehicleTrackingTask: Task<Void, Never>?
+    
 
     init(
         locationService: LocationServiceProtocol = LocationService(),
-        routeService: RouteCalculationService = RouteCalculationService()
+        routeService: RouteCalculationService = RouteCalculationService(),
+        vehicleTrackingProvier: VehicleTrackingProviding = SimulatedTrackingProvider()
     ) {
         self.locationService = locationService
         self.routeService = routeService
+        self.vehicleTrackingProvier = vehicleTrackingProvier
         super.init()
 
         completer.delegate = self
@@ -147,7 +155,12 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     deinit {
         locationTask?.cancel()
+        vehicleTrackingTask?.cancel()
+        
         locationService.stopUpdating()
+        vehicleTrackingProvier.stop()
+        
+        
         detenerSimulacionBuses()
     }
 
