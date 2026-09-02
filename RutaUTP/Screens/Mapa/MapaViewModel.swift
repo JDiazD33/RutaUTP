@@ -118,6 +118,12 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var busesAnimados: [BusAnimado] = []
     @Published var busSeleccionado: BusAnimado? = nil
     private var busSimulationTimer: Timer?
+    
+    // Posiciones recibidas desde VehicleTrackingProviding.
+    // Durante el Paso 1.2 se reciben en paralelo, pero todavía no reemplazan
+    // los buses GTFS que actualmente dibuja el mapa.
+    @Published private(set) var posicionesProveedor: [VehiclePosition] = []
+    
 
     /// Se incrementa cada vez que el usuario pide recentrar; la vista lo
     /// observa para mover la cámara aunque la región no haya cambiado de
@@ -126,11 +132,10 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     private let locationService: LocationServiceProtocol
     private let routeService: RouteCalculationService
-    private let vehicleTrackingProvier: VehicleTrackingProviding
-    
+    private let vehicleTrackingProvider: VehicleTrackingProviding
 
     private let completer = MKLocalSearchCompleter()
-    
+
     private var locationTask: Task<Void, Never>?
     private var vehicleTrackingTask: Task<Void, Never>?
     
@@ -138,11 +143,11 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     init(
         locationService: LocationServiceProtocol = LocationService(),
         routeService: RouteCalculationService = RouteCalculationService(),
-        vehicleTrackingProvier: VehicleTrackingProviding = SimulatedTrackingProvider()
+        vehicleTrackingProvider: VehicleTrackingProviding = SimulatedTrackingProvider()
     ) {
         self.locationService = locationService
         self.routeService = routeService
-        self.vehicleTrackingProvier = vehicleTrackingProvier
+        self.vehicleTrackingProvider = vehicleTrackingProvider
         super.init()
 
         completer.delegate = self
@@ -156,11 +161,10 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     deinit {
         locationTask?.cancel()
         vehicleTrackingTask?.cancel()
-        
+
         locationService.stopUpdating()
-        vehicleTrackingProvier.stop()
-        
-        
+        vehicleTrackingProvider.stop()
+
         detenerSimulacionBuses()
     }
 
@@ -193,6 +197,48 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
         iniciarSimulacionBuses()
     }
+    
+    // MARK: - Proveedor de posiciones de vehículos
+
+    func iniciarProveedorTracking() {
+        guard vehicleTrackingTask == nil else { return }
+        //impide crear varios consumidores si la pantalla aparece mas de una vez
+
+        vehicleTrackingProvider.start()
+        let stream = vehicleTrackingProvider.positions()
+
+        vehicleTrackingTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            var primerLoteRecibido = false
+
+            for await positions in stream {
+                guard !Task.isCancelled else { break }
+
+                self.posicionesProveedor = positions
+
+                #if DEBUG
+                if !primerLoteRecibido {
+                    primerLoteRecibido = true
+                    print(
+                        "[TrackingProvider] Fuente: \(self.vehicleTrackingProvider.source.rawValue), " +
+                        "vehículos recibidos: \(positions.count)"
+                    )
+                }
+                #endif
+            }
+        }
+    }
+
+    func detenerProveedorTracking() {
+        vehicleTrackingTask?.cancel()
+        vehicleTrackingTask = nil
+
+        vehicleTrackingProvider.stop()
+        posicionesProveedor = []
+    }
+    
+    
 
     // MARK: - Simulación de Buses Animados
     //

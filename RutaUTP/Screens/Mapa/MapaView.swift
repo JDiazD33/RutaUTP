@@ -207,6 +207,9 @@ struct MapaView: View {
         .ignoresSafeArea(edges: .bottom)
         .onAppear {
             vm.iniciarGPS()
+            vm.iniciarProveedorTracking()
+            
+            
             consumirDestinoPendiente()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--colapsar") {
@@ -214,7 +217,10 @@ struct MapaView: View {
             }
             #endif
         }
-        .onDisappear { vm.detenerSimulacionBuses() }
+        .onDisappear {
+            vm.detenerProveedorTracking()
+            vm.detenerSimulacionBuses()
+        }
         .onChange(of: router.destinoPendiente) { _ in
             consumirDestinoPendiente()
         }
