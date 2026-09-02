@@ -47,6 +47,8 @@
 		0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F2300AD9FE004E1676 /* Assets.xcassets */; };
 		0A80051F300AD9FE004E1676 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F4300AD9FE004E1676 /* README.md */; };
 		0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */; };
+		2F5EE8013047D6E700B24250 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5EE8003047D6E700B24250 /* Idioma.swift */; };
+		2F5EE8033047D78A00B24250 /* ParaderosIluminadosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -97,8 +99,10 @@
 		0A8004F2300AD9FE004E1676 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A8004F4300AD9FE004E1676 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
-		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
+		2F5EE8003047D6E700B24250 /* Idioma.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
+		2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParaderosIluminadosView.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
+		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A04 /* ExploradorRutaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExploradorRutaView.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A05 /* NavegacionRutaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavegacionRutaView.swift; sourceTree = "<group>"; };
@@ -247,6 +251,7 @@
 		0A8004DC300AD9FE004E1676 /* Seguridad */ = {
 			isa = PBXGroup;
 			children = (
+				2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */,
 				0A8004DB300AD9FE004E1676 /* SeguridadView.swift */,
 			);
 			path = Seguridad;
@@ -337,6 +342,7 @@
 		0A8004F1300AD9FE004E1676 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				2F5EE8003047D6E700B24250 /* Idioma.swift */,
 				0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */,
 			);
 			path = Utils;
@@ -349,7 +355,6 @@
 				0A8004C0300AD9FE004E1676 /* Models */,
 				0A8004C3300AD9FE004E1676 /* Navigation */,
 				0A8004C5300AD9FE004E1676 /* Preview Content */,
-				0A8004C7300AD9FE004E1676 /* Resources */,
 				0A8004E0300AD9FE004E1676 /* Screens */,
 				0A8004EF300AD9FE004E1676 /* Services */,
 				0A8004F1300AD9FE004E1676 /* Utils */,
@@ -466,6 +471,7 @@
 				0A8004FB300AD9FE004E1676 /* Spacing.swift in Sources */,
 				0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */,
 				0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */,
+				2F5EE8013047D6E700B24250 /* Idioma.swift in Sources */,
 				0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */,
 				0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */,
 				0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */,
@@ -478,6 +484,7 @@
 				0A8004FC300AD9FE004E1676 /* Typography.swift in Sources */,
 				0A80050E300AD9FE004E1676 /* TarjetaFormSheet.swift in Sources */,
 				0A800501300AD9FE004E1676 /* RootView.swift in Sources */,
+				2F5EE8033047D78A00B24250 /* ParaderosIluminadosView.swift in Sources */,
 				0A800509300AD9FE004E1676 /* MapMarkers.swift in Sources */,
 				0A800507300AD9FE004E1676 /* MapaView.swift in Sources */,
 				0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */,
@@ -617,7 +624,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RutaUTP/Preview Content\"";
-				DEVELOPMENT_TEAM = 2DB6N5Q47S;
+				DEVELOPMENT_TEAM = S79Y2XCF2U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
@@ -648,7 +655,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RutaUTP/Preview Content\"";
-				DEVELOPMENT_TEAM = 2DB6N5Q47S;
+				DEVELOPMENT_TEAM = S79Y2XCF2U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
