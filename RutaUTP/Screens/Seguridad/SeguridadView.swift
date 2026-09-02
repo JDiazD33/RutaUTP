@@ -327,7 +327,7 @@ struct SeguridadView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 12, weight: .bold))
-                    Text(L.t("Reportar", "Report"))
+                    Text(L.signable("seguridad.reportar", "Reportar", "Report"))
                         .font(.labelCapsMd)
                         .appTracking(AppTracking.wideLabel)
                 }
@@ -338,6 +338,7 @@ struct SeguridadView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Reportar incidente")
+            .seniable("seguridad.reportar")
         }
         .padding(.horizontal, 20)
         .frame(height: 56)
@@ -363,7 +364,7 @@ struct SeguridadView: View {
             Button {
                 showLlamarAlert = true
             } label: {
-                Text(L.t("Llamar 105", "Call 911"))
+                Text(L.signable("seguridad.emergencia", "Llamar 105", "Call 911"))
                     .font(.bodyXsMedium)
                     .foregroundStyle(.onSurface)
                     .padding(.horizontal, 12)
@@ -372,6 +373,7 @@ struct SeguridadView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Llamar al 105 emergencias")
+            .seniable("seguridad.emergencia")
         }
         .padding(12)
         .background(
@@ -417,9 +419,10 @@ struct SeguridadView: View {
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(L.t("Lugares Guardados", "Saved Places"))
+                Text(L.signable("seguridad.lugares_guardados", "Lugares Guardados", "Saved Places"))
                     .font(.headlineSm)
                     .foregroundStyle(.onSurface)
+                    .seniable("seguridad.lugares_guardados")
                 Spacer()
                 Button {
                     AppHaptics.impact(.medium)
@@ -633,8 +636,9 @@ struct SeguridadView: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.shield.fill")
                     .foregroundStyle(.tertiary)
-                Text(L.t("Rutas Seguras Hoy", "Safe Routes Today"))
+                Text(L.signable("seguridad.rutas_seguras", "Rutas Seguras Hoy", "Safe Routes Today"))
                     .font(.headlineSm)
+                    .seniable("seguridad.rutas_seguras")
             }
 
             Button {
@@ -714,8 +718,9 @@ struct SeguridadView: View {
                     Image(systemName: "person.3.fill")
                         .foregroundStyle(.appPrimary)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(L.t("Comunidad", "Community"))
+                        Text(L.signable("seguridad.comunidad", "Comunidad", "Community"))
                             .font(.headlineSm)
+                            .seniable("seguridad.comunidad")
                         Text(L.t("Opiniones frescas · cambian cada 5 min", "Fresh takes · rotate every 5 min"))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
@@ -916,62 +921,8 @@ private struct ReporteDetailSheet: View {
 }
 
 // MARK: - Reportar Sheet
-private struct ReportarSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var tipo: TipoReporte = .alerta
-    @State private var descripcion: String = ""
-    @State private var showSuccess = false
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Reportar incidente")
-                    .font(.headlineMd)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("TIPO DE REPORTE")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    Picker("Tipo", selection: $tipo) {
-                        Text("Alerta").tag(TipoReporte.alerta)
-                        Text("Tráfico").tag(TipoReporte.trafico)
-                        Text("Sugerencia").tag(TipoReporte.sugerencia)
-                    }
-                    .pickerStyle(.segmented)
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("DESCRIPCIÓN")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    TextField("¿Qué sucede?", text: $descripcion, axis: .vertical)
-                        .lineLimit(3...6)
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                }
-                Spacer()
-                Button {
-                    showSuccess = true
-                } label: {
-                    Text("Enviar reporte")
-                        .font(.headlineSm)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                }
-                .buttonStyle(.plain)
-                .disabled(descripcion.isEmpty)
-                .opacity(descripcion.isEmpty ? 0.5 : 1.0)
-            }
-            .padding(20)
-        }
-        .alert("Reporte enviado", isPresented: $showSuccess) {
-            Button("OK") { dismiss() }
-        } message: {
-            Text("Gracias por colaborar con la comunidad.")
-        }
-    }
-}
+// ReportarSheet vive en Design/Components/ReportarSheet.swift (compartido
+// con el Mapa). Ver ahí el diseño completo.
 
 // MARK: - Elegir Lugares sheet (tiles de Seguridad)
 private struct ElegirLugaresSheet: View {

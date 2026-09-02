@@ -47,4 +47,16 @@ enum L {
     static func t(_ es: String, _ en: String) -> String {
         esIngles ? en : es
     }
+
+    /// Igual que `t()`, pero marca el texto como **señable**.
+    ///
+    /// La `clave` es un identificador estable (p. ej. "mapa.destino.casa"),
+    /// NO el texto literal. Así el clip sobrevive a los cambios de copy.
+    ///
+    /// Efecto secundario: registra la clave en `CatalogoSenias` para que el
+    /// overlay pueda mostrar la palabra que se está señando.
+    static func signable(_ clave: String, _ es: String, _ en: String) -> String {
+        CatalogoSenias.shared.registrar(clave: clave, es: es, en: en)
+        return esIngles ? en : es
+    }
 }

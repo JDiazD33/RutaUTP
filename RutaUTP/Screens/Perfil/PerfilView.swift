@@ -2,7 +2,7 @@
 //  PerfilView.swift
 //  RutaUTP
 //
-//  Pantalla de perfil: hero gradient, stats, configuración con toggles.
+//  Pantalla de perfil: hero gradient con billetera, configuración con toggles.
 //
 
 import SwiftUI
@@ -15,6 +15,9 @@ struct PerfilView: View {
     @State private var notifOn: Bool = true
     @State private var ubicacionOn: Bool = true
     @State private var modoOffline: Bool = false
+    /// Modo Señas. Se lee desde varias pantallas, por eso va en AppStorage
+    /// y no en @State: cualquier vista reacciona al cambio al instante.
+    @AppStorage(SeniasService.llaveModo) private var modoSenias: Bool = false
     @State private var showOfflineMapPopup: Bool = false
     @State private var mapsDownloaded: Bool = false
     @State private var showUbicacionPopup: Bool = false
@@ -37,17 +40,11 @@ struct PerfilView: View {
             ZStack(alignment: .bottom) {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 0) {
-                        ZStack(alignment: .bottom) {
-                            hero
-                            statsCard
-                                .padding(.horizontal, 20)
-                                .offset(y: 45)
-                        }
-                        .frame(height: 420)
+                        hero
 
                         configuracion
                             .padding(.horizontal, 20)
-                            .padding(.top, 56)
+                            .padding(.top, 24)
                         Spacer(minLength: 140)
                     }
                 }
@@ -347,47 +344,6 @@ struct PerfilView: View {
         }
     }
 
-    // MARK: - Stats
-    private var statsCard: some View {
-        HStack(spacing: 0) {
-            statColumn(value: "47", label: L.t("VIAJES", "TRIPS"))
-            divider
-            statColumn(value: "12", label: L.t("RUTAS", "ROUTES"))
-            divider
-            statColumn(value: "3", label: L.t("LOGROS", "AWARDS"))
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.surfaceContainerLowest)
-                .shadow(color: .black.opacity(0.10), radius: 12, x: 0, y: 6)
-        )
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Estadísticas")
-    }
-
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.outlineVariant.opacity(0.50))
-            .frame(width: 1, height: 36)
-            .accessibilityHidden(true)
-    }
-
-    private func statColumn(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.displayNumberMd)
-                .foregroundStyle(.onSurface)
-            Text(label)
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label.capitalized): \(value)")
-    }
-
     // MARK: - Configuración
     private var configuracion: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -407,6 +363,10 @@ struct PerfilView: View {
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "wifi.slash", iconColor: .orange,
                           label: L.t("Modo offline", "Offline mode"), isOn: $modoOffline)
+                Divider().padding(.leading, 56).accessibilityHidden(true)
+                toggleRow(icon: "hand.raised.fill", iconColor: .purple,
+                          label: L.signable("perfil.modo_senias", "Modo Señas", "Sign Language Mode"), isOn: $modoSenias)
+                    .seniable("perfil.modo_senias")
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 chevronRow(icon: "pencil", iconColor: .onSurfaceVariant,
                            label: L.t("Editar perfil", "Edit profile")) {

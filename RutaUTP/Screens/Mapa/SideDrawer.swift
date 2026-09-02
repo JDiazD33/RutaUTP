@@ -193,7 +193,7 @@ struct SideDrawer: View {
                                 .foregroundStyle(.onPrimaryContainer)
                         }
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(L.t("Idioma", "Language"))
+                            Text(L.signable("perfil.idioma", "Idioma", "Language"))
                                 .font(.bodyMdMedium)
                                 .foregroundStyle(.onSurface)
                             Text(idioma.esIngles ? "Switch to Español" : "Switch to English")
@@ -218,6 +218,7 @@ struct SideDrawer: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L.t("Cambiar idioma", "Change language"))
+                .seniable("perfil.idioma")
 
                 Divider().padding(.leading, 56).padding(.top, 6)
 

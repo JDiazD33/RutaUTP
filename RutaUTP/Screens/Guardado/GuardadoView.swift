@@ -76,7 +76,8 @@ struct GuardadoView: View {
                 lugares.insert(nuevo, at: lugaresUTPFin() + 1 > lugares.count ? lugares.count : lugaresUTPFin() + 1)
                 guardarLugares()
             }
-            .presentationDetents([.medium])
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedLugar) { lugar in
             LugarDetailSheet(lugar: lugar) {
@@ -188,9 +189,10 @@ struct GuardadoView: View {
             Image(systemName: "bookmark.fill")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.appPrimary)
-            Text(L.t("Guardado", "Saved"))
+            Text(L.signable("guardado.titulo", "Guardado", "Saved"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
+                .seniable("guardado.titulo")
             Spacer()
             botonAñadir
         }
@@ -220,7 +222,9 @@ struct GuardadoView: View {
                 Image(systemName: selectedTab == .lugares ? "plus.circle.fill" : "bus.doubledecker.fill")
                     .font(.system(size: 15, weight: .bold))
                     .symbolRenderingMode(.hierarchical)
-                Text(selectedTab == .lugares ? L.t("Añadir lugar", "Add place") : L.t("Añadir línea", "Add line"))
+                Text(selectedTab == .lugares
+                     ? L.signable("guardado.anadir_lugar", "Añadir lugar", "Add place")
+                     : L.signable("guardado.anadir_linea", "Añadir línea", "Add line"))
                     .font(.labelCapsMd)
                     .appTracking(AppTracking.wideLabel)
             }
@@ -243,6 +247,7 @@ struct GuardadoView: View {
         .buttonStyle(PressableCapsuleStyle())
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .accessibilityLabel(selectedTab == .lugares ? L.t("Añadir lugar guardado", "Add saved place") : L.t("Añadir línea guardada", "Add saved line"))
+        .seniable(selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea")
     }
 
     // MARK: - Tabs
@@ -254,7 +259,9 @@ struct GuardadoView: View {
                     withAnimation(.easeInOut(duration: 0.2)) { selectedTab = t }
                 } label: {
                     VStack(spacing: 6) {
-                        Text(t == .lugares ? L.t("Lugares", "Places") : L.t("Líneas", "Lines"))
+                        Text(t == .lugares
+                             ? L.signable("guardado.lugares", "Lugares", "Places")
+                             : L.signable("guardado.lineas", "Líneas", "Lines"))
                             .font(.bodyMdMedium)
                             .foregroundStyle(selectedTab == t ? Color.appPrimary : Color.onSurfaceVariant)
                         Rectangle()
@@ -265,6 +272,7 @@ struct GuardadoView: View {
                     .padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
+                .seniable(t == .lugares ? "guardado.lugares" : "guardado.lineas")
             }
         }
         .background(Color.appSurface)
@@ -925,8 +933,11 @@ private struct AddLugarSheet: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(coordElegida == nil ? L.t("Ubica el lugar para guardar", "Pin the place to save") : L.t("Guardar lugar", "Save place"))
+                    Text(coordElegida == nil
+                         ? L.t("Ubica el lugar para guardar", "Pin the place to save")
+                         : L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
                         .font(.headlineMd)
+                        .seniable(coordElegida == nil ? nil : "guardado.guardar_lugar")
 
                     campoNombre
                     campoDireccion
@@ -1084,7 +1095,9 @@ private struct AddLugarSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: coordElegida == nil ? "location.slash.fill" : "mappin.and.ellipse")
                     .font(.system(size: 16, weight: .bold))
-                Text(coordElegida == nil ? L.t("Ubica el lugar para guardar", "Pin the place to save") : L.t("Guardar lugar", "Save place"))
+                Text(coordElegida == nil
+                     ? L.t("Ubica el lugar para guardar", "Pin the place to save")
+                     : L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
                     .font(.headlineSm)
             }
             .foregroundStyle(.white)
@@ -1106,6 +1119,7 @@ private struct AddLugarSheet: View {
         .buttonStyle(PressableCapsuleStyle())
         .disabled(!puedeGuardar)
         .animation(.easeInOut(duration: 0.2), value: puedeGuardar)
+        .seniable(puedeGuardar ? "guardado.guardar_lugar" : nil)
     }
 
     // MARK: Geocodificación con debounce

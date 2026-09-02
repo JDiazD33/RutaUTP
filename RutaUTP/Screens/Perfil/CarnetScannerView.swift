@@ -73,11 +73,12 @@ class CameraPreviewController: UIViewController {
 // MARK: - Overlay con cutout (even-odd fill)
 struct ScannerCutout: Shape {
     let cutout: CGRect
+    var cornerRadius: CGFloat = 14
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
         path.addRect(rect)
-        path.addRect(cutout)
+        path.addRoundedRect(in: cutout, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
         return path
     }
 }
@@ -115,6 +116,12 @@ struct CarnetScannerView: View {
     }
 
     // MARK: - Scanner content
+    // El GeometryReader ignora el safe area para que TODAS las piezas del
+    // encuadre (cutout oscuro, borde, esquinas, textos) vivan en el mismo
+    // sistema de coordenadas. Antes el cutout se dibujaba con
+    // .ignoresSafeArea() pero su rect se calculaba en el espacio con
+    // safe area: en iPhones con notch quedaba desfasado ~47pt y el hueco
+    // no coincidía con el marco blanco.
     private var scannerContent: some View {
         GeometryReader { geo in
             let w = geo.size.width
@@ -223,6 +230,7 @@ struct CarnetScannerView: View {
                 }
             }
         }
+        .ignoresSafeArea() // coordenadas a pantalla completa (ver nota arriba)
     }
 
     // MARK: - Permission denied

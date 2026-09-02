@@ -73,7 +73,7 @@ struct BienvenidaView: View {
             Button {
                 router.navigate(to: .mapaPrincipal)
             } label: {
-                Text(L.t("Saltar", "Skip"))
+                Text(L.signable("bienvenida.saltar", "Saltar", "Skip"))
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .padding(.vertical, 8)
@@ -81,6 +81,7 @@ struct BienvenidaView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Saltar introducción", "Skip intro"))
+            .seniable("bienvenida.saltar")
         }
         .padding(.horizontal, 20)
         .frame(height: 56)
@@ -188,7 +189,7 @@ struct BienvenidaView: View {
             router.navigate(to: .mapaPrincipal)
         } label: {
             HStack(spacing: 8) {
-                Text(L.t("Comenzar", "Get Started"))
+                Text(L.signable("bienvenida.comenzar", "Comenzar", "Get Started"))
                     .font(.displayLgPhone)
                     .foregroundStyle(.white)
                 Image(systemName: "arrow.right")
@@ -204,6 +205,7 @@ struct BienvenidaView: View {
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel(L.t("Comenzar a usar la aplicación", "Start using the app"))
+        .seniable("bienvenida.comenzar")
     }
 
     private var legalFooter: some View {

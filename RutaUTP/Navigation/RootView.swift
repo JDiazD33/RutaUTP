@@ -44,6 +44,9 @@ struct RootView: View {
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
         .environmentObject(router)
         .animation(.easeInOut(duration: 0.25), value: router.currentScreen)
+        // Modo Señas: una sola instancia en la raíz, así se dibuja por encima
+        // de cualquier pantalla sin duplicarla en cada vista.
+        .overlay { SeniasOverlay() }
     }
 }
 

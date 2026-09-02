@@ -404,6 +404,7 @@ struct MapaView: View {
             )
         }
         .buttonStyle(.plain)
+        .seniable(destino.claveSenia)
     }
 
     // MARK: - Destino pendiente (desde Guardado u otras pantallas)
@@ -445,7 +446,7 @@ struct MapaView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 14, weight: .semibold))
-                        Text(L.t("REPORTAR", "REPORT"))
+                        Text(L.signable("mapa.reportar", "REPORTAR", "REPORT"))
                             .font(.labelCapsMd)
                             .appTracking(AppTracking.wideLabel)
                     }
@@ -459,6 +460,7 @@ struct MapaView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .seniable("mapa.reportar")
 
                 Spacer()
 
@@ -484,9 +486,10 @@ struct MapaView: View {
 
                 if !panelColapsado {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(L.t("Transportes cercanos", "Nearby transport"))
+                        Text(L.signable("mapa.cercanos", "Transportes cercanos", "Nearby transport"))
                             .font(.system(size: 15, weight: .heavy))
                             .foregroundStyle(.onSurface)
+                            .seniable("mapa.cercanos")
                         Text(vm.busesAnimados.isEmpty
                              ? L.t("Buscando líneas cerca del campus…", "Finding lines near campus…")
                              : String(format: L.t("%d líneas operando ahora", "%d lines running now"), vm.busesAnimados.count))
@@ -688,66 +691,8 @@ private struct BusDetailPopup: View {
 }
 
 // MARK: - Reportar sheet
-private struct ReportarSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var tipo: TipoReporte = .alerta
-    @State private var descripcion: String = ""
-    @State private var showSuccess = false
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Reportar incidente")
-                    .font(.headlineMd)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("TIPO DE REPORTE")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    Picker("Tipo", selection: $tipo) {
-                        Text("Alerta").tag(TipoReporte.alerta)
-                        Text("Tráfico").tag(TipoReporte.trafico)
-                        Text("Sugerencia").tag(TipoReporte.sugerencia)
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("DESCRIPCIÓN")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    TextField("¿Qué sucede?", text: $descripcion, axis: .vertical)
-                        .lineLimit(3...6)
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                }
-
-                Spacer()
-
-                Button {
-                    showSuccess = true
-                } label: {
-                    Text("Enviar reporte")
-                        .font(.headlineSm)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                }
-                .buttonStyle(.plain)
-                .disabled(descripcion.isEmpty)
-                .opacity(descripcion.isEmpty ? 0.5 : 1.0)
-            }
-            .padding(20)
-        }
-        .alert("Reporte enviado", isPresented: $showSuccess) {
-            Button("OK") { dismiss() }
-        } message: {
-            Text("Gracias por colaborar con la comunidad.")
-        }
-    }
-}
+// ReportarSheet vive en Design/Components/ReportarSheet.swift (compartido
+// con Seguridad). Ver ahí el diseño completo.
 
 #Preview {
     MapaView().environmentObject(AppRouter())

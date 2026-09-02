@@ -2,31 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>es</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>es</string>
 		<string>es-MX</string>
 	</array>
-	<key>CFBundleDisplayName</key>
-	<string>Ruta UTP</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>tel</string>
 	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>RutaUTP puede usar tu ubicación en segundo plano para mantener activo el seguimiento de tu ruta incluso con la pantalla bloqueada (funcionalidad futura para el rol conductor).</string>
-	<!-- TODO (futuro): cuando se defina el rol conductor, habilitar background location:
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>location</string>
-	</array>
-	-->
 	<key>UIAppFonts</key>
 	<array>
 		<string>HankenGrotesk-Regular.ttf</string>

@@ -223,9 +223,10 @@ struct RutasView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(L.t("Elige tu ruta", "Pick your route"))
+                                Text(L.signable("rutas.elegir", "Elige tu ruta", "Pick your route"))
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
+                                    .seniable("rutas.elegir")
                                 Text(viewModel.cargando
                                      ? L.t("Cargando rutas oficiales…", "Loading official routes…")
                                      : (viewModel.filtroCerca != nil
@@ -350,9 +351,10 @@ struct RutasView: View {
             Image(systemName: "bus.fill")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.appPrimary)
-            Text(L.t("Rutas", "Routes"))
+            Text(L.signable("rutas.titulo", "Rutas", "Routes"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
+                .seniable("rutas.titulo")
             Spacer()
         }
         .padding(.horizontal, 20)
@@ -538,10 +540,11 @@ private struct DetalleRutaView: View {
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 2) {
-                                Text(L.t("FRECUENCIA", "FREQUENCY"))
+                                Text(L.signable("rutas.frecuencia", "FRECUENCIA", "FREQUENCY"))
                                     .font(.labelCapsMd)
                                     .foregroundStyle(.onPrimaryContainer)
                                     .appTracking(AppTracking.wideLabel)
+                                    .seniable("rutas.frecuencia")
                                 Text(ruta.frecuenciaTexto)
                                     .font(.displayNumberMd)
                                     .foregroundStyle(.onPrimaryContainer)
@@ -565,21 +568,26 @@ private struct DetalleRutaView: View {
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                                   spacing: 12) {
                             StatTile(icon: "clock.fill", iconColor: .appPrimary,
-                                     label: L.t("TIEMPO VIAJE", "TRIP TIME"), value: ruta.tiempoTexto)
+                                     label: L.signable("rutas.tiempo", "TIEMPO VIAJE", "TRIP TIME"), value: ruta.tiempoTexto)
+                                .seniable("rutas.tiempo")
                             StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
-                                     label: L.t("COSTO", "FARE"), value: ruta.costo)
+                                     label: L.signable("rutas.costo", "COSTO", "FARE"), value: ruta.costo)
+                                .seniable("rutas.costo")
                             StatTile(icon: "mappin.and.ellipse", iconColor: .appPrimary,
-                                     label: L.t("PARADEROS", "STOPS"), value: "\(ruta.numParaderos)")
+                                     label: L.signable("rutas.paraderos", "PARADEROS", "STOPS"), value: "\(ruta.numParaderos)")
+                                .seniable("rutas.paraderos")
                             StatTile(icon: "point.topleft.down.curvedto.point.bottomright.up",
                                      iconColor: .secondary,
-                                     label: L.t("RECORRIDO", "DISTANCE"), value: String(format: "%.1f km", ruta.distanciaKm))
+                                     label: L.signable("rutas.recorrido", "RECORRIDO", "DISTANCE"), value: String(format: "%.1f km", ruta.distanciaKm))
+                                .seniable("rutas.recorrido")
                         }
 
                         // Pasos
                         VStack(alignment: .leading, spacing: 18) {
-                            Text(L.t("Guía paso a paso", "Step-by-step guide"))
+                            Text(L.signable("rutas.guia", "Guía paso a paso", "Step-by-step guide"))
                                 .font(.headlineXs)
                                 .foregroundStyle(.onSurface)
+                                .seniable("rutas.guia")
 
                             VStack(spacing: 0) {
                                 pasoRow("1", L.t("Ve al paradero \(ruta.paradaInicio)", "Go to \(ruta.paradaInicio) stop"),
@@ -659,7 +667,7 @@ private struct DetalleRutaView: View {
             HStack(spacing: 10) {
                 Image(systemName: "location.fill")
                     .font(.system(size: 22, weight: .bold))
-                Text(L.t("Iniciar Navegación", "Start Navigation"))
+                Text(L.signable("nav.iniciar", "Iniciar Navegación", "Start Navigation"))
                     .font(.headlineSm)
             }
             .foregroundStyle(.onPrimaryContainer)
@@ -673,6 +681,7 @@ private struct DetalleRutaView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Iniciar navegación")
+        .seniable("nav.iniciar")
     }
 
     private func bottomSafeArea() -> CGFloat {

@@ -64,6 +64,17 @@ struct DestinoChip: Identifiable, Equatable {
     let icon: String
     let lat: Double
     let lon: Double
+    /// Clave estable del Modo Señas (nil = el chip no es señable).
+    let claveSenia: String?
+
+    init(id: Int, label: String, icon: String, lat: Double, lon: Double, claveSenia: String? = nil) {
+        self.id = id
+        self.label = label
+        self.icon = icon
+        self.lat = lat
+        self.lon = lon
+        self.claveSenia = claveSenia
+    }
 }
 
 // MARK: - Anotación unificada para el mapa
@@ -319,11 +330,11 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     // Destinos conocidos (Coordenadas UTP actualizadas a Av. Nicolás de Piérola 1221, Trujillo)
     let destinos: [DestinoChip] = [
-        DestinoChip(id: 1, label: L.t("Casa", "Home"),      icon: "house.fill",         lat: -8.1180, lon: -79.0350),
-        DestinoChip(id: 2, label: "UTP",       icon: "graduationcap.fill", lat: -8.098247879173792, lon: -79.03818104755645),
-        DestinoChip(id: 3, label: L.t("Trabajo", "Work"),   icon: "briefcase.fill",     lat: -8.1050, lon: -79.0200),
-        DestinoChip(id: 4, label: L.t("Centro", "Downtown"),    icon: "building.2.fill",    lat: -8.1090, lon: -79.0270),
-        DestinoChip(id: 5, label: "Huanchaco", icon: "water.waves",        lat: -8.0825, lon: -79.1197)
+        DestinoChip(id: 1, label: L.signable("mapa.destino.casa", "Casa", "Home"), icon: "house.fill", lat: -8.1180, lon: -79.0350, claveSenia: "mapa.destino.casa"),
+        DestinoChip(id: 2, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill", lat: -8.098247879173792, lon: -79.03818104755645, claveSenia: "mapa.destino.utp"),
+        DestinoChip(id: 3, label: L.signable("mapa.destino.trabajo", "Trabajo", "Work"), icon: "briefcase.fill", lat: -8.1050, lon: -79.0200, claveSenia: "mapa.destino.trabajo"),
+        DestinoChip(id: 4, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill", lat: -8.1090, lon: -79.0270, claveSenia: "mapa.destino.centro"),
+        DestinoChip(id: 5, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves", lat: -8.0825, lon: -79.1197, claveSenia: "mapa.destino.huanchaco")
     ]
 
     // MARK: - Búsqueda en tiempo real
