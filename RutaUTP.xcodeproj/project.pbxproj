@@ -52,6 +52,8 @@
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
 		AA6600000000000000000B04 /* ExploradorRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A04 /* ExploradorRutaView.swift */; };
 		AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A05 /* NavegacionRutaView.swift */; };
+		AA6600000000000000000B06 /* ParaderosIluminadosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A06 /* ParaderosIluminadosView.swift */; };
+		AA6600000000000000000F02 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000F01 /* Idioma.swift */; };
 		AA6600000000000000000D02 /* gtfs in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000D01 /* gtfs */; };
 /* End PBXBuildFile section */
 
@@ -102,6 +104,8 @@
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A04 /* ExploradorRutaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExploradorRutaView.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A05 /* NavegacionRutaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavegacionRutaView.swift; sourceTree = "<group>"; };
+		AA6600000000000000000A06 /* ParaderosIluminadosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ParaderosIluminadosView.swift; sourceTree = "<group>"; };
+		AA6600000000000000000F01 /* Idioma.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 		AA6600000000000000000D01 /* gtfs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = gtfs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -248,6 +252,7 @@
 			isa = PBXGroup;
 			children = (
 				0A8004DB300AD9FE004E1676 /* SeguridadView.swift */,
+				AA6600000000000000000A06 /* ParaderosIluminadosView.swift */,
 			);
 			path = Seguridad;
 			sourceTree = "<group>";
@@ -338,6 +343,7 @@
 			isa = PBXGroup;
 			children = (
 				0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */,
+				AA6600000000000000000F01 /* Idioma.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -448,6 +454,8 @@
 				AA6600000000000000000B03 /* GTFSRepository.swift in Sources */,
 				AA6600000000000000000B04 /* ExploradorRutaView.swift in Sources */,
 				AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */,
+				AA6600000000000000000B06 /* ParaderosIluminadosView.swift in Sources */,
+				AA6600000000000000000F02 /* Idioma.swift in Sources */,
 				0A800505300AD9FE004E1676 /* RutaMapKitView.swift in Sources */,
 				0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */,
 				0A800518300AD9FE004E1676 /* VehiclePosition.swift in Sources */,
