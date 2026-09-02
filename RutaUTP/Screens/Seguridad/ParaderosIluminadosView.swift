@@ -72,22 +72,26 @@ private struct MapaParaderosRepresentable: UIViewRepresentable {
         mapView.pointOfInterestFilter = .excludingAll
         mapView.showsUserLocation = true
 
-        let anotaciones = paraderos.map {
-            ParaderoIluminadoAnnotation(coordinate: $0.coordinate, nombre: $0.nombre)
-        }
-        mapView.addAnnotations(anotaciones)
-
         context.coordinator.onTap = { nombre in
             self.onTocar?(nombre)
-        }
-
-        if let primero = paraderos.first {
-            encuadrar(mapView, centro: primero.coordinate)
         }
         return mapView
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Sincroniza anotaciones: el mapa puede abrirse antes de que el feed
+        // cargue (paraderos vacío); al llegar los datos se agregan los focos.
+        if context.coordinator.cantidadAgregada != paraderos.count {
+            context.coordinator.cantidadAgregada = paraderos.count
+            mapView.removeAnnotations(mapView.annotations.filter { $0 is ParaderoIluminadoAnnotation })
+            mapView.addAnnotations(paraderos.map {
+                ParaderoIluminadoAnnotation(coordinate: $0.coordinate, nombre: $0.nombre)
+            })
+            if !paraderos.isEmpty {
+                encuadrar(mapView, centro: paraderos[0].coordinate)
+            }
+        }
+
         guard let reciente, reciente != context.coordinator.ultimoCentro else { return }
         context.coordinator.ultimoCentro = reciente
         if let p = paraderos.first(where: { $0.id == reciente }) {
@@ -107,6 +111,7 @@ private struct MapaParaderosRepresentable: UIViewRepresentable {
 
     final class Coordinator: NSObject, MKMapViewDelegate {
         var ultimoCentro: String?
+        var cantidadAgregada = -1
         var onTap: ((String) -> Void)?
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
