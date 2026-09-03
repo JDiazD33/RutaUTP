@@ -53,6 +53,9 @@ struct SideDrawer: View {
     @State private var dragOffset: CGFloat = 0
     @State private var activeSheet: DrawerItem? = nil
     @State private var showLogoutConfirm = false
+    /// Foto del header: la misma que el usuario sube en Datos Personales
+    /// (ProfileImageStore). Se recarga al abrir el drawer y al cerrar el sheet.
+    @State private var fotoPerfil: UIImage? = nil
 
     private let drawerWidth: CGFloat = 300
 
@@ -94,6 +97,15 @@ struct SideDrawer: View {
             sheetContent(for: item)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        // La foto pudo cambiar en Datos Personales: recargar al abrir el
+        // drawer y cuando vuelve de un sheet.
+        .onAppear { fotoPerfil = ProfileImageStore.load() }
+        .onChange(of: isOpen) { _, abierto in
+            if abierto { fotoPerfil = ProfileImageStore.load() }
+        }
+        .onChange(of: activeSheet) { _, sheet in
+            if sheet == nil { fotoPerfil = ProfileImageStore.load() }
         }
         // Alerta nativa para cerrar sesion
         .alert("¿Te vas?", isPresented: $showLogoutConfirm) {
@@ -140,10 +152,20 @@ struct SideDrawer: View {
                             .fill(Color.white.opacity(0.18))
                             .frame(width: 52, height: 52)
                             .overlay(Circle().stroke(Color.white.opacity(0.55), lineWidth: 2))
-                        Text("JD")
-                            .font(.headlineMd)
-                            .foregroundStyle(.white)
+                        if let fotoPerfil {
+                            Image(uiImage: fotoPerfil)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 52, height: 52)
+                                .clipShape(Circle())
+                        } else {
+                            Text("JD")
+                                .font(.headlineMd)
+                                .foregroundStyle(.white)
+                        }
                     }
+                    .accessibilityLabel(L.t("Foto de perfil", "Profile photo"))
+                    .accessibilityAddTraits(.isImage)
                     .overlay(alignment: .bottomTrailing) {
                         ZStack {
                             Circle()
@@ -159,7 +181,7 @@ struct SideDrawer: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Foto de perfil, JD")
+                .accessibilityLabel(fotoPerfil == nil ? "Foto de perfil, JD" : "Foto de perfil")
                 .accessibilityHint("Doble toque para ver y editar tus datos personales")
 
                 Text("Ruta UTP Trujillo")
@@ -385,22 +407,40 @@ private struct NotificacionesSheet: View {
 }
 
 // MARK: - 2. CIUDAD SHEET
+// La app solo tiene datos GTFS de Trujillo: es la única ciudad seleccionable.
+// Las demás se muestran bloqueadas ("Próximamente") para comunicar la visión
+// del producto sin prometer algo que aún no existe.
 private struct CiudadSheet: View {
     @AppStorage("ciudadSeleccionada") private var ciudadSeleccionada: String = "Trujillo"
     @Environment(\.dismiss) private var dismiss
 
-    private let ciudades = ["Lima", "Chiclayo", "Piura", "Cuzco", "Arequipa"]
+    private struct Ciudad: Identifiable {
+        let nombre: String
+        let disponible: Bool
+        var id: String { nombre }
+    }
+
+    private let ciudades: [Ciudad] = [
+        Ciudad(nombre: "Trujillo", disponible: true),
+        Ciudad(nombre: "Lima", disponible: false),
+        Ciudad(nombre: "Chiclayo", disponible: false),
+        Ciudad(nombre: "Piura", disponible: false),
+        Ciudad(nombre: "Arequipa", disponible: false),
+        Ciudad(nombre: "Cuzco", disponible: false)
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            SheetHeader(icon: "building.2.fill", iconColor: .secondary, title: "Ciudad")
+            SheetHeader(icon: "building.2.fill", iconColor: .secondary,
+                        title: L.t("Ciudad", "City"))
 
-            Text("Selecciona tu ciudad para ver rutas y paraderos actualizados.")
+            Text(L.t("RutaUTP opera con datos de transporte de Trujillo. Estamos trabajando para llegar a más ciudades.",
+                     "RutaUTP runs on Trujillo transit data. We're working on more cities."))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
 
             VStack(spacing: 8) {
-                ForEach(ciudades, id: \.self) { ciudad in
+                ForEach(ciudades) { ciudad in
                     ciudadRow(ciudad)
                 }
             }
@@ -408,7 +448,8 @@ private struct CiudadSheet: View {
             HStack {
                 Image(systemName: "info.circle")
                     .foregroundStyle(.onSurfaceVariant)
-                Text("Pronto añadiremos más ciudades.")
+                Text(L.t("Trujillo es nuestra primera ciudad. ¿Quieres la tuya? Escríbenos desde Soporte.",
+                         "Trujillo is our first city. Want yours? Reach us via Support."))
                     .font(.bodyXs)
                     .foregroundStyle(.onSurfaceVariant)
                 Spacer()
@@ -420,36 +461,72 @@ private struct CiudadSheet: View {
         .padding(20)
     }
 
-    private func ciudadRow(_ ciudad: String) -> some View {
-        let isSelected = (ciudad == ciudadSeleccionada)
-        return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                ciudadSeleccionada = ciudad
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                dismiss()
-            }
-        } label: {
+    @ViewBuilder
+    private func ciudadRow(_ ciudad: Ciudad) -> some View {
+        if ciudad.disponible {
+            // Trujillo: seleccionada y fija (no tiene sentido deseleccionarla)
             HStack {
-                Image(systemName: "building.fill")
-                    .foregroundStyle(isSelected ? Color.appPrimary : Color.onSurfaceVariant)
+                Image(systemName: "building.2.fill")
+                    .foregroundStyle(.appPrimary)
                     .frame(width: 24)
-                Text(ciudad)
-                    .font(.bodyMdMedium)
-                    .foregroundStyle(.onSurface)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.appPrimary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ciudad.nombre)
+                        .font(.bodyMdMedium)
+                        .foregroundStyle(.onSurface)
+                    Text(L.t("Rutas y paraderos activos", "Routes and stops active"))
+                        .font(.bodyXs)
+                        .foregroundStyle(.onSurfaceVariant)
                 }
+                Spacer()
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.appPrimary)
             }
             .padding(14)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.primaryContainer.opacity(0.20) : Color.surfaceContainerLow)
+                    .fill(Color.primaryContainer.opacity(0.20))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.appPrimary.opacity(0.35), lineWidth: 1)
+                    )
             )
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(ciudad.nombre), ciudad actual")
+            .accessibilityAddTraits(.isSelected)
+            .onAppear { ciudadSeleccionada = "Trujillo" }
+        } else {
+            // Bloqueada: próximamente
+            Button {
+                AppHaptics.warning()
+            } label: {
+                HStack {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+                        .frame(width: 24)
+                    Text(ciudad.nombre)
+                        .font(.bodyMdMedium)
+                        .foregroundStyle(.onSurfaceVariant.opacity(0.7))
+                    Spacer()
+                    Text(L.t("PRÓXIMAMENTE", "COMING SOON"))
+                        .font(.system(size: 10, weight: .bold))
+                        .appTracking(AppTracking.wideLabel)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule().fill(Color.surfaceContainerHigh)
+                        )
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.surfaceContainerLow.opacity(0.6))
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(ciudad.nombre), próximamente")
+            .accessibilityHint("Esta ciudad aún no está disponible")
         }
-        .buttonStyle(.plain)
     }
 }
 
