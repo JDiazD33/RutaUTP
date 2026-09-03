@@ -41,6 +41,9 @@ struct ReporteComunidad: Identifiable, Equatable {
     let tipo: TipoReporte
     let cuerpo: String
     let utiles: Int
+    /// Conteo base de "no me gusta". El voto del usuario se suma en vivo
+    /// vía `ComunidadReacciones` (no se persiste, es demo).
+    let dislikes: Int
     let comentarios: Int
     let utilMarcado: Bool
     let avatarColor: Color
@@ -53,6 +56,7 @@ struct ReporteComunidad: Identifiable, Equatable {
          tipo: TipoReporte,
          cuerpo: String,
          utiles: Int,
+         dislikes: Int = 0,
          comentarios: Int,
          utilMarcado: Bool = false,
          avatarColor: Color = .surfaceContainerHigh,
@@ -64,6 +68,7 @@ struct ReporteComunidad: Identifiable, Equatable {
         self.tipo = tipo
         self.cuerpo = cuerpo
         self.utiles = utiles
+        self.dislikes = dislikes
         self.comentarios = comentarios
         self.utilMarcado = utilMarcado
         self.avatarColor = avatarColor
