@@ -219,7 +219,6 @@ struct MapaView: View {
         }
         .onDisappear {
             vm.detenerProveedorTracking()
-            vm.detenerSimulacionBuses()
         }
         .onChange(of: router.destinoPendiente) { _ in
             consumirDestinoPendiente()

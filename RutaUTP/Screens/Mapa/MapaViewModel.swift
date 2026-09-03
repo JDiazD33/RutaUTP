@@ -27,26 +27,25 @@ struct BusSimulado: Identifiable, Equatable {
     let velocidad: Double
 }
 
-// MARK: - Bus animado sobre ruta real
+// MARK: - Representación visual de un vehículo
 struct BusAnimado: Identifiable, Equatable {
-    let id: Int
-    let linea: String        // "10", "4"
-    let empresa: String      // "El Cortijo", "Salaverry"
-    let tipo: String          // "Micro", "Combi"
-    let placa: String         // "T1B-721"
-    let minutosLlegada: Int   // 4, 12
-    let color: Color          // .appPrimary, .secondary
-    var lat: Double           // posición actual (animada)
-    var lon: Double
-    var heading: Double       // ángulo de dirección
-    let rutaCoordenadas: [CLLocationCoordinate2D]  // waypoints
+    let id: String
+    let linea: String
+    let empresa: String
+    let tipo: String
+    let placa: String
+    let minutosLlegada: Int
+    let color: Color
 
-    var currentSegmentIndex: Int = 0
-    var segmentProgress: Double = 0.0
-    var isMovingForward: Bool = true
+    var lat: Double
+    var lon: Double
+    var heading: Double
 
     var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        CLLocationCoordinate2D(
+            latitude: lat,
+            longitude: lon
+        )
     }
 
     static func == (lhs: BusAnimado, rhs: BusAnimado) -> Bool {
@@ -117,13 +116,12 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // Buses Animados en Tiempo Real
     @Published var busesAnimados: [BusAnimado] = []
     @Published var busSeleccionado: BusAnimado? = nil
-    private var busSimulationTimer: Timer?
     
     // Posiciones recibidas desde VehicleTrackingProviding.
     // Durante el Paso 1.2 se reciben en paralelo, pero todavía no reemplazan
     // los buses GTFS que actualmente dibuja el mapa.
     @Published private(set) var posicionesProveedor: [VehiclePosition] = []
-    
+    private var rutasGTFSPorLinea: [String: RutaGTFS] = [:]
 
     /// Se incrementa cada vez que el usuario pide recentrar; la vista lo
     /// observa para mover la cámara aunque la región no haya cambiado de
@@ -164,8 +162,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
         locationService.stopUpdating()
         vehicleTrackingProvider.stop()
-
-        detenerSimulacionBuses()
     }
 
     // MARK: - Ubicación GPS Real
@@ -195,36 +191,38 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 }
             }
         }
-        iniciarSimulacionBuses()
     }
     
     // MARK: - Proveedor de posiciones de vehículos
 
     func iniciarProveedorTracking() {
-        guard vehicleTrackingTask == nil else { return }
-        //impide crear varios consumidores si la pantalla aparece mas de una vez
-
-        vehicleTrackingProvider.start()
-        let stream = vehicleTrackingProvider.positions()
+        vehicleTrackingTask?.cancel()
 
         vehicleTrackingTask = Task { @MainActor [weak self] in
             guard let self else { return }
 
-            var primerLoteRecibido = false
+            let rutas = await GTFSRepository.shared.rutasCercaDeUTP(n: 4)
 
-            for await positions in stream {
+            self.rutasGTFSPorLinea = Dictionary(
+                rutas.map { ($0.linea, $0) },
+                uniquingKeysWith: { primera, _ in primera }
+            )
+
+            guard !Task.isCancelled else { return }
+
+            self.vehicleTrackingProvider.start()
+
+            for await posiciones in self.vehicleTrackingProvider.positions() {
                 guard !Task.isCancelled else { break }
 
-                self.posicionesProveedor = positions
+                self.posicionesProveedor = posiciones
+                self.actualizarBusesDesdeProveedor(posiciones)
 
                 #if DEBUG
-                if !primerLoteRecibido {
-                    primerLoteRecibido = true
-                    print(
-                        "[TrackingProvider] Fuente: \(self.vehicleTrackingProvider.source.rawValue), " +
-                        "vehículos recibidos: \(positions.count)"
-                    )
-                }
+                print(
+                    "[TrackingProvider] Fuente: \(self.vehicleTrackingProvider.source.rawValue), " +
+                    "vehículos recibidos: \(posiciones.count)"
+                )
                 #endif
             }
         }
@@ -235,129 +233,52 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         vehicleTrackingTask = nil
 
         vehicleTrackingProvider.stop()
+
         posicionesProveedor = []
+        busesAnimados = []
+        busSeleccionado = nil
     }
     
-    
+    @MainActor
+    private func actualizarBusesDesdeProveedor(
+        _ posiciones: [VehiclePosition]
+    ) {
+        let cantidad = max(posiciones.count, 1)
 
-    // MARK: - Simulación de Buses Animados
-    //
-    // Los recorridos (shapes) son REALES del feed GTFS embebido; las
-    // posiciones son SIMULADAS porque el feed estático no incluye GPS.
-    func iniciarSimulacionBuses() {
-        cargarBusesDesdeGTFS()
+        busesAnimados = posiciones.enumerated().map { index, posicion in
+            let ruta = rutasGTFSPorLinea[posicion.linea]
 
-        guard busSimulationTimer == nil else { return }
-        busSimulationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                self.actualizarPosicionBuses()
+            return BusAnimado(
+                id: posicion.id,
+                linea: posicion.linea,
+                empresa: ruta?.empresa ?? "Empresa no disponible",
+                tipo: "Bus",
+                placa: ruta?.variante.isEmpty == false
+                    ? "Ramal \(ruta?.variante ?? "")"
+                    : "S/D",
+                minutosLlegada: max(
+                    1,
+                    2 + index * max(
+                        1,
+                        (ruta?.headwayMin ?? 4) / cantidad
+                    )
+                ),
+                color: ruta?.color ?? .appPrimary,
+                lat: posicion.lat,
+                lon: posicion.lon,
+                heading: posicion.heading >= 0
+                    ? posicion.heading
+                    : 0
+            )
+        }
+
+        if let seleccionado = busSeleccionado {
+            busSeleccionado = busesAnimados.first {
+                $0.id == seleccionado.id
             }
         }
     }
 
-    /// Carga las 4 rutas más cercanas a UTP y crea un bus animado por ruta.
-    private func cargarBusesDesdeGTFS() {
-        guard busesAnimados.isEmpty else { return }
-        Task { @MainActor [weak self] in
-            let feed = await GTFSRepository.shared.rutasCercaDeUTP(n: 4)
-            guard let self, self.busesAnimados.isEmpty, !feed.isEmpty else { return }
-
-            let n = feed.count
-            self.busesAnimados = feed.enumerated().map { index, ruta in
-                var waypoints = Self.decimarCoordenadas(ruta.shape, maximoPuntos: 240)
-                if waypoints.count < 2 { waypoints = RutaCoordenadas.linea10 }
-
-                var bus = BusAnimado(
-                    id: index + 1,
-                    linea: ruta.linea,
-                    empresa: ruta.empresa,
-                    tipo: "Bus",
-                    placa: ruta.variante.isEmpty ? "S/D" : "Ramal \(ruta.variante)",
-                    minutosLlegada: max(1, 2 + index * max(1, ruta.headwayMin / max(n, 1))),
-                    color: ruta.color,
-                    lat: waypoints[0].latitude,
-                    lon: waypoints[0].longitude,
-                    heading: 0,
-                    rutaCoordenadas: waypoints
-                )
-                // Reparte los buses a lo largo del recorrido para que
-                // no salgan todos amontonados en el mismo punto.
-                bus.currentSegmentIndex = min(index * max(1, waypoints.count / (n + 1)),
-                                              max(0, waypoints.count - 2))
-                return bus
-            }
-        }
-    }
-
-    /// Reduce la densidad de un shape conservando el orden (perf del timer).
-    private static func decimarCoordenadas(_ puntos: [CLLocationCoordinate2D],
-                                           maximoPuntos: Int) -> [CLLocationCoordinate2D] {
-        guard puntos.count > maximoPuntos else { return puntos }
-        let paso = Double(puntos.count) / Double(maximoPuntos)
-        var resultado: [CLLocationCoordinate2D] = []
-        resultado.reserveCapacity(maximoPuntos)
-        for j in 0..<maximoPuntos {
-            resultado.append(puntos[min(Int(Double(j) * paso), puntos.count - 1)])
-        }
-        if let ultima = puntos.last, resultado.last?.latitude != ultima.latitude
-                                                || resultado.last?.longitude != ultima.longitude {
-            resultado.append(ultima)
-        }
-        return resultado
-    }
-
-    func detenerSimulacionBuses() {
-        busSimulationTimer?.invalidate()
-        busSimulationTimer = nil
-    }
-
-    private func actualizarPosicionBuses() {
-        for i in busesAnimados.indices {
-            var bus = busesAnimados[i]
-            let waypoints = bus.rutaCoordenadas
-            guard waypoints.count >= 2 else { continue }
-
-            let step: Double = 0.012
-
-            bus.segmentProgress += step
-            if bus.segmentProgress >= 1.0 {
-                bus.segmentProgress = 0.0
-                if bus.isMovingForward {
-                    if bus.currentSegmentIndex + 1 < waypoints.count - 1 {
-                        bus.currentSegmentIndex += 1
-                    } else {
-                        bus.isMovingForward = false
-                    }
-                } else {
-                    if bus.currentSegmentIndex > 0 {
-                        bus.currentSegmentIndex -= 1
-                    } else {
-                        bus.isMovingForward = true
-                    }
-                }
-            }
-
-            let idxA = bus.currentSegmentIndex
-            let idxB = idxA + 1
-            guard idxB < waypoints.count else { continue }
-
-            let pA = waypoints[idxA]
-            let pB = waypoints[idxB]
-
-            let fromCoord = bus.isMovingForward ? pA : pB
-            let toCoord = bus.isMovingForward ? pB : pA
-
-            bus.lat = fromCoord.latitude + (toCoord.latitude - fromCoord.latitude) * bus.segmentProgress
-            bus.lon = fromCoord.longitude + (toCoord.longitude - fromCoord.longitude) * bus.segmentProgress
-
-            let dLat = toCoord.latitude - fromCoord.latitude
-            let dLon = toCoord.longitude - fromCoord.longitude
-            bus.heading = atan2(dLon, dLat) * 180 / .pi
-
-            busesAnimados[i] = bus
-        }
-    }
 
     func recenterOnUser() {
         if let userCoord = userRealCoordinate {
@@ -592,6 +513,3 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         return items
     }
 }
-
-
-
