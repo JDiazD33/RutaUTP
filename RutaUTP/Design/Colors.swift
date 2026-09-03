@@ -3,7 +3,10 @@
 //  RutaUTP
 //
 //  Paleta de colores oficial del Design System RutaUTP.
-//  Fuente de verdad: NO modificar hexes — heredados del prototipo HTML.
+//  Fuente de verdad: NO modificar hexes CLAROS — heredados del prototipo HTML.
+//  Los tokens de superficie/texto son adaptativos claro/oscuro: el toggle
+//  de Ajustes (.preferredColorScheme en RutaUTPApp) los voltea solos.
+//  Los colores de marca (rojo UTP, azul, teal) se mantienen en ambos modos.
 //
 
 import SwiftUI
@@ -33,35 +36,35 @@ extension Color {
     static let tertiaryFixed       = Color(hex: "#b3ebff")
     static let tertiaryFixedDim    = Color(hex: "#4cd6fb")
 
-    // MARK: - Superficie
-    static let appBackground             = Color(hex: "#f7f9fb")
-    static let appSurface                = Color(hex: "#f7f9fb")
-    static let surfaceContainer          = Color(hex: "#eceef0")
-    static let surfaceContainerLow       = Color(hex: "#f2f4f6")
-    static let surfaceContainerHigh      = Color(hex: "#e6e8ea")
-    static let surfaceContainerHighest   = Color(hex: "#e0e3e5")
-    static let surfaceContainerLowest    = Color.white
-    static let surfaceDim                = Color(hex: "#d8dadc")
-    static let surfaceBright             = Color(hex: "#f7f9fb")
-    static let surfaceVariant            = Color(hex: "#e4bdbf")
+    // MARK: - Superficie (adaptativas)
+    static let appBackground             = Color(light: "#f7f9fb", dark: "#101314")
+    static let appSurface                = Color(light: "#f7f9fb", dark: "#141719")
+    static let surfaceContainer          = Color(light: "#eceef0", dark: "#1e2225")
+    static let surfaceContainerLow       = Color(light: "#f2f4f6", dark: "#1a1d20")
+    static let surfaceContainerHigh      = Color(light: "#e6e8ea", dark: "#26292c")
+    static let surfaceContainerHighest   = Color(light: "#e0e3e5", dark: "#313537")
+    static let surfaceContainerLowest    = Color(light: "#ffffff", dark: "#0b0d0e")
+    static let surfaceDim                = Color(light: "#d8dadc", dark: "#3c4143")
+    static let surfaceBright             = Color(light: "#f7f9fb", dark: "#2a2e30")
+    static let surfaceVariant            = Color(light: "#e4bdbf", dark: "#4a3537")
 
-    // MARK: - On-Surface
-    static let onSurface           = Color(hex: "#191c1e")
-    static let onSurfaceVariant    = Color(hex: "#5c3f41")
-    static let inverseSurface      = Color(hex: "#2d3133")
-    static let inverseOnSurface    = Color(hex: "#eff1f3")
+    // MARK: - On-Surface (adaptativos)
+    static let onSurface           = Color(light: "#191c1e", dark: "#e4e8ea")
+    static let onSurfaceVariant    = Color(light: "#5c3f41", dark: "#c9adaf")
+    static let inverseSurface      = Color(light: "#2d3133", dark: "#e3e6e8")
+    static let inverseOnSurface    = Color(light: "#eff1f3", dark: "#1c2022")
 
-    // MARK: - Outline
-    static let outline             = Color(hex: "#906f70")
-    static let outlineVariant      = Color(hex: "#e4bdbf")
+    // MARK: - Outline (adaptativos)
+    static let outline             = Color(light: "#906f70", dark: "#a98b8c")
+    static let outlineVariant      = Color(light: "#e4bdbf", dark: "#4a3f40")
 
     // MARK: - Error
-    static let appError            = Color(hex: "#ba1a1a")
-    static let errorContainer      = Color(hex: "#ffdad6")
-    static let onErrorContainer    = Color(hex: "#93000a")
+    static let appError            = Color(light: "#ba1a1a", dark: "#ff6b6b")
+    static let errorContainer      = Color(light: "#ffdad6", dark: "#5c2224")
+    static let onErrorContainer    = Color(light: "#93000a", dark: "#ffd7d3")
 }
 
-// MARK: - Helper: inicializador desde hex
+// MARK: - Helpers: inicializadores desde hex
 extension Color {
     init(hex: String) {
         let clean = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -71,6 +74,14 @@ extension Color {
         let g = Double((int >> 8) & 0xFF) / 255
         let b = Double(int & 0xFF) / 255
         self.init(red: r, green: g, blue: b)
+    }
+
+    /// Color adaptativo: usa el hex claro u oscuro según el esquema activo.
+    /// Recalcula solo cuando cambia el colorScheme — costo cero en render.
+    init(light: String, dark: String) {
+        self.init(UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(Color(hex: dark)) : UIColor(Color(hex: light))
+        })
     }
 }
 

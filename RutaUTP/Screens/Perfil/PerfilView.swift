@@ -32,6 +32,8 @@ struct PerfilView: View {
     @State private var showCarnetScanner: Bool = false
     @State private var carnetVerificado: Bool = false
     @State private var metodoPagoGuardado: String? = nil
+    /// Misma foto que en el drawer: ProfileImageStore es la fuente única.
+    @State private var fotoPerfil: UIImage? = nil
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -65,6 +67,11 @@ struct PerfilView: View {
             if activo {
                 showOfflineMapPopup = true
             }
+        }
+        // Foto de perfil: recargar al entrar y al volver de Datos Personales.
+        .onAppear { fotoPerfil = ProfileImageStore.load() }
+        .onChange(of: showDatosPersonales) { abierto in
+            if !abierto { fotoPerfil = ProfileImageStore.load() }
         }
         .onChange(of: ubicacionOn) { activo in
             if activo {
@@ -221,9 +228,19 @@ struct PerfilView: View {
                             .fill(Color.inversePrimary)
                             .frame(width: 72, height: 72)
                             .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                        Text(iniciales(nombre))
-                            .font(.headlineMd)
-                            .foregroundStyle(.white)
+                        if let fotoPerfil {
+                            Image(uiImage: fotoPerfil)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 72, height: 72)
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                                .accessibilityHidden(true)
+                        } else {
+                            Text(iniciales(nombre))
+                                .font(.headlineMd)
+                                .foregroundStyle(.white)
+                        }
                     }
                     .accessibilityLabel("Foto de perfil, \(iniciales(nombre))")
                     .accessibilityAddTraits(.isImage)
