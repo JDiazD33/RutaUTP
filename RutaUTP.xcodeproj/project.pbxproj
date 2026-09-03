@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -57,6 +57,16 @@
 		AA6600000000000000000D02 /* gtfs in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000D01 /* gtfs */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		2F5242C33049046300D850E9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0A40D90C2FDE5E7D00F79FBC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0A40D9132FDE5E7D00F79FBC;
+			remoteInfo = RutaUTP;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RutaUTP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BottomNavBar.swift; sourceTree = "<group>"; };
@@ -99,6 +109,7 @@
 		0A8004F2300AD9FE004E1676 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A8004F4300AD9FE004E1676 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
+		2F5242BF3049046300D850E9 /* RutaUTPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RutaUTPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F5EE8003047D6E700B24250 /* Idioma.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 		2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParaderosIluminadosView.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
@@ -109,8 +120,19 @@
 		AA6600000000000000000D01 /* gtfs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = gtfs; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		2F5242C03049046300D850E9 /* RutaUTPTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RutaUTPTests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		0A40D9112FDE5E7D00F79FBC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2F5242BC3049046300D850E9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -125,6 +147,7 @@
 			children = (
 				0A8004F6300AD9FE004E1676 /* RutaUTP */,
 				AA6600000000000000000D01 /* gtfs */,
+				2F5242C03049046300D850E9 /* RutaUTPTests */,
 				0A40D9152FDE5E7D00F79FBC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -133,6 +156,7 @@
 			isa = PBXGroup;
 			children = (
 				0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */,
+				2F5242BF3049046300D850E9 /* RutaUTPTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -395,6 +419,29 @@
 			productReference = 0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */;
 			productType = "com.apple.product-type.application";
 		};
+		2F5242BE3049046300D850E9 /* RutaUTPTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2F5242C73049046300D850E9 /* Build configuration list for PBXNativeTarget "RutaUTPTests" */;
+			buildPhases = (
+				2F5242BB3049046300D850E9 /* Sources */,
+				2F5242BC3049046300D850E9 /* Frameworks */,
+				2F5242BD3049046300D850E9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2F5242C43049046300D850E9 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				2F5242C03049046300D850E9 /* RutaUTPTests */,
+			);
+			name = RutaUTPTests;
+			packageProductDependencies = (
+			);
+			productName = RutaUTPTests;
+			productReference = 2F5242BF3049046300D850E9 /* RutaUTPTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -402,11 +449,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1540;
+				LastSwiftUpdateCheck = 1620;
 				LastUpgradeCheck = 1540;
 				TargetAttributes = {
 					0A40D9132FDE5E7D00F79FBC = {
 						CreatedOnToolsVersion = 15.4;
+					};
+					2F5242BE3049046300D850E9 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 0A40D9132FDE5E7D00F79FBC;
 					};
 				};
 			};
@@ -424,6 +475,7 @@
 			projectRoot = "";
 			targets = (
 				0A40D9132FDE5E7D00F79FBC /* RutaUTP */,
+				2F5242BE3049046300D850E9 /* RutaUTPTests */,
 			);
 		};
 /* End PBXProject section */
@@ -437,6 +489,13 @@
 				0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */,
 				0A80051F300AD9FE004E1676 /* README.md in Resources */,
 				AA6600000000000000000D02 /* gtfs in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2F5242BD3049046300D850E9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -494,7 +553,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		2F5242BB3049046300D850E9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2F5242C43049046300D850E9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0A40D9132FDE5E7D00F79FBC /* RutaUTP */;
+			targetProxy = 2F5242C33049046300D850E9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0A40D9202FDE5E7F00F79FBC /* Debug */ = {
@@ -678,6 +752,44 @@
 			};
 			name = Release;
 		};
+		2F5242C53049046300D850E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S79Y2XCF2U;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = kenzo.RutaUTPTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";
+			};
+			name = Debug;
+		};
+		2F5242C63049046300D850E9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S79Y2XCF2U;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = kenzo.RutaUTPTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -695,6 +807,15 @@
 			buildConfigurations = (
 				0A40D9232FDE5E7F00F79FBC /* Debug */,
 				0A40D9242FDE5E7F00F79FBC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2F5242C73049046300D850E9 /* Build configuration list for PBXNativeTarget "RutaUTPTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2F5242C53049046300D850E9 /* Debug */,
+				2F5242C63049046300D850E9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
