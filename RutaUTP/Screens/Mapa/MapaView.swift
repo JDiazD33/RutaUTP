@@ -207,6 +207,7 @@ struct MapaView: View {
         .ignoresSafeArea(edges: .bottom)
         .onAppear {
             vm.iniciarGPS()
+            vm.refrescarDestinos() // chips: refleja lo guardado en Guardado
             consumirDestinoPendiente()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--colapsar") {

@@ -524,7 +524,7 @@ private struct SoporteSheet: View {
          "En la pantalla de Guardado, presiona + Añadir y completa los datos."),
         ("location.fill",
          "¿Cómo cambio mi destino?",
-         "En el mapa, toca los chips de Casa / UTP / Trabajo para cambiar rápido."),
+         "En el mapa, toca un chip (UTP, Centro, Huanchaco o tus lugares guardados) para cambiar rápido."),
         ("arrow.triangle.2.circlepath",
          "¿Cómo actualizo una ruta?",
          "Las rutas se actualizan automáticamente cada pocos segundos.")

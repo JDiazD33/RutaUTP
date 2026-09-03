@@ -154,6 +154,46 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
             span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
         )
+
+        refrescarDestinos()
+    }
+
+    /// Reconstruye los chips: fijos + lugares guardados por el usuario.
+    ///
+    /// Llamar al aparecer la pantalla (onAppear): si el usuario guardó o
+    /// eliminó un lugar en la pestaña Guardado, el chip aparece/desaparece
+    /// aquí sin reiniciar la app. LugaresStore es la misma fuente que
+    /// GuardadoView, así ambos siempre ven lo mismo.
+    func refrescarDestinos() {
+        let nombresFijos = Set(destinosFijos.map { $0.label.lowercased() })
+
+        let guardados = LugaresStore.cargar()
+            .filter { lugar in
+                // Solo lugares con coordenadas y que no dupliquen un chip fijo.
+                guard lugar.coordinate != nil else { return false }
+                return !nombresFijos.contains(lugar.nombre.lowercased())
+            }
+            .prefix(Self.maxDestinos - destinosFijos.count)
+            .enumerated()
+            .map { indice, lugar in
+                DestinoChip(id: 100 + indice,
+                            label: lugar.nombre,
+                            icon: lugar.categoria.icono,
+                            lat: lugar.lat ?? 0,
+                            lon: lugar.lon ?? 0)
+            }
+
+        destinos = destinosFijos + guardados
+
+        // Si el destino seleccionado era un chip guardado que ya no existe,
+        // limpiarlo para no mostrar una ruta hacia un lugar eliminado.
+        if let seleccionado = destinoSeleccionado,
+           seleccionado.id >= 100,
+           !destinos.contains(where: { $0.id == seleccionado.id && $0.label == seleccionado.label }) {
+            destinoSeleccionado = nil
+            busquedaResultado = nil
+            routePolyline = nil
+        }
     }
 
     deinit {
@@ -328,14 +368,20 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
     }
 
-    // Destinos conocidos (Coordenadas UTP actualizadas a Av. Nicolás de Piérola 1221, Trujillo)
-    let destinos: [DestinoChip] = [
-        DestinoChip(id: 1, label: L.signable("mapa.destino.casa", "Casa", "Home"), icon: "house.fill", lat: -8.1180, lon: -79.0350, claveSenia: "mapa.destino.casa"),
-        DestinoChip(id: 2, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill", lat: -8.098247879173792, lon: -79.03818104755645, claveSenia: "mapa.destino.utp"),
-        DestinoChip(id: 3, label: L.signable("mapa.destino.trabajo", "Trabajo", "Work"), icon: "briefcase.fill", lat: -8.1050, lon: -79.0200, claveSenia: "mapa.destino.trabajo"),
-        DestinoChip(id: 4, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill", lat: -8.1090, lon: -79.0270, claveSenia: "mapa.destino.centro"),
-        DestinoChip(id: 5, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves", lat: -8.0825, lon: -79.1197, claveSenia: "mapa.destino.huanchaco")
+    // Máximo de chips visibles en el panel del mapa (fijos + guardados).
+    static let maxDestinos = 6
+
+    /// Chips FIJOS de la app: puntos de referencia conocidos de Trujillo.
+    /// Casa/Trabajo ya no son fijos: si el usuario los guarda, aparecen solos.
+    private let destinosFijos: [DestinoChip] = [
+        DestinoChip(id: 1, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill", lat: -8.098247879173792, lon: -79.03818104755645, claveSenia: "mapa.destino.utp"),
+        DestinoChip(id: 2, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill", lat: -8.1090, lon: -79.0270, claveSenia: "mapa.destino.centro"),
+        DestinoChip(id: 3, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves", lat: -8.0825, lon: -79.1197, claveSenia: "mapa.destino.huanchaco")
     ]
+
+    /// Chips visibles: fijos primero, luego los lugares que el usuario guardó
+    /// en la pestaña Guardado (vía LugaresStore), hasta un total de 6.
+    @Published private(set) var destinos: [DestinoChip] = []
 
     // MARK: - Búsqueda en tiempo real
     func actualizarTextoBusqueda(_ nuevoTexto: String) {
