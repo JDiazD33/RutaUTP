@@ -53,8 +53,13 @@
 		AA6600000000000000000B04 /* ExploradorRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A04 /* ExploradorRutaView.swift */; };
 		AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A05 /* NavegacionRutaView.swift */; };
 		AA6600000000000000000B06 /* ParaderosIluminadosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A06 /* ParaderosIluminadosView.swift */; };
-		AA6600000000000000000F02 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000F01 /* Idioma.swift */; };
 		AA6600000000000000000D02 /* gtfs in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000D01 /* gtfs */; };
+		AA6600000000000000000E02 /* Senia.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E01 /* Senia.swift */; };
+		AA6600000000000000000E04 /* SeniasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E03 /* SeniasService.swift */; };
+		AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E05 /* SeniasOverlay.swift */; };
+		AA6600000000000000000E08 /* senias in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E07 /* senias */; };
+		AA6600000000000000000E10 /* ReportarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E09 /* ReportarSheet.swift */; };
+		AA6600000000000000000F02 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000F01 /* Idioma.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -99,14 +104,19 @@
 		0A8004F2300AD9FE004E1676 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A8004F4300AD9FE004E1676 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
-		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
+		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A04 /* ExploradorRutaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExploradorRutaView.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A05 /* NavegacionRutaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavegacionRutaView.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A06 /* ParaderosIluminadosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ParaderosIluminadosView.swift; sourceTree = "<group>"; };
-		AA6600000000000000000F01 /* Idioma.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 		AA6600000000000000000D01 /* gtfs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = gtfs; sourceTree = "<group>"; };
+		AA6600000000000000000E01 /* Senia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Senia.swift; sourceTree = "<group>"; };
+		AA6600000000000000000E03 /* SeniasService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasService.swift; sourceTree = "<group>"; };
+		AA6600000000000000000E05 /* SeniasOverlay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlay.swift; sourceTree = "<group>"; };
+		AA6600000000000000000E07 /* senias */ = {isa = PBXFileReference; lastKnownFileType = folder; path = senias; sourceTree = "<group>"; };
+		AA6600000000000000000E09 /* ReportarSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportarSheet.swift; sourceTree = "<group>"; };
+		AA6600000000000000000F01 /* Idioma.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +135,7 @@
 			children = (
 				0A8004F6300AD9FE004E1676 /* RutaUTP */,
 				AA6600000000000000000D01 /* gtfs */,
+				AA6600000000000000000E07 /* senias */,
 				0A40D9152FDE5E7D00F79FBC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -141,7 +152,9 @@
 			isa = PBXGroup;
 			children = (
 				0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */,
+				AA6600000000000000000E09 /* ReportarSheet.swift */,
 				0A8004B6300AD9FE004E1676 /* RouteCard.swift */,
+				AA6600000000000000000E05 /* SeniasOverlay.swift */,
 				0A8004B7300AD9FE004E1676 /* TopAppBar.swift */,
 			);
 			path = Components;
@@ -164,6 +177,7 @@
 				0A8004BD300AD9FE004E1676 /* LugarGuardado.swift */,
 				0A8004BE300AD9FE004E1676 /* ReporteComunidad.swift */,
 				0A8004BF300AD9FE004E1676 /* Ruta.swift */,
+				AA6600000000000000000E01 /* Senia.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -335,6 +349,7 @@
 				0A8004E3300AD9FE004E1676 /* Location */,
 				0A8004E5300AD9FE004E1676 /* Routing */,
 				0A8004EE300AD9FE004E1676 /* Tracking */,
+				AA6600000000000000000E03 /* SeniasService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -355,7 +370,6 @@
 				0A8004C0300AD9FE004E1676 /* Models */,
 				0A8004C3300AD9FE004E1676 /* Navigation */,
 				0A8004C5300AD9FE004E1676 /* Preview Content */,
-				0A8004C7300AD9FE004E1676 /* Resources */,
 				0A8004E0300AD9FE004E1676 /* Screens */,
 				0A8004EF300AD9FE004E1676 /* Services */,
 				0A8004F1300AD9FE004E1676 /* Utils */,
@@ -438,6 +452,7 @@
 				0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */,
 				0A80051F300AD9FE004E1676 /* README.md in Resources */,
 				AA6600000000000000000D02 /* gtfs in Resources */,
+				AA6600000000000000000E08 /* senias in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -449,6 +464,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A8004F7300AD9FE004E1676 /* BottomNavBar.swift in Sources */,
+				AA6600000000000000000E02 /* Senia.swift in Sources */,
+				AA6600000000000000000E04 /* SeniasService.swift in Sources */,
+				AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */,
+				AA6600000000000000000E10 /* ReportarSheet.swift in Sources */,
 				AA6600000000000000000B01 /* GTFSModels.swift in Sources */,
 				AA6600000000000000000B02 /* GTFSCSV.swift in Sources */,
 				AA6600000000000000000B03 /* GTFSRepository.swift in Sources */,
@@ -629,7 +648,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Necesitamos acceso a la camara para escanear tu carnet universitario";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "RutaUTP puede usar tu ubicación en segundo plano para mantener activo el seguimiento de tu ruta incluso con la pantalla bloqueada (funcionalidad futura para el rol conductor).";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -640,7 +662,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = apolito.RutaUTP;
+				PRODUCT_BUNDLE_IDENTIFIER = "apolito.RutaUTP.dev-o-joaquindiaz.RutaUTP";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -660,7 +682,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Necesitamos acceso a la camara para escanear tu carnet universitario";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "RutaUTP puede usar tu ubicación en segundo plano para mantener activo el seguimiento de tu ruta incluso con la pantalla bloqueada (funcionalidad futura para el rol conductor).";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -671,7 +696,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = apolito.RutaUTP;
+				PRODUCT_BUNDLE_IDENTIFIER = "apolito.RutaUTP.dev-o-joaquindiaz.RutaUTP";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
