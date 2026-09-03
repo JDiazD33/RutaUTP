@@ -95,6 +95,9 @@ struct SideDrawer: View {
         // Sheets para cada item del menu
         .sheet(item: $activeSheet) { item in
             sheetContent(for: item)
+                // El sheet vive en su propia UIWindow: se le fuerza el tema
+                // elegido en Ajustes (no hereda el de la ventana principal).
+                .seguirTemaForzado()
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -567,9 +570,10 @@ private struct AjustesSheet: View {
             }
         }()
         return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isDarkMode = (tema == .dark)
-            }
+            // Sin withAnimation: animar la escritura de isDarkMode es parte
+            // de lo que dejaba el tema "pegado" en oscuro. El cross-fade
+            // visual lo pone UIKit; aquí solo se anima el resaltado.
+            isDarkMode = (tema == .dark)
         } label: {
             VStack(spacing: 8) {
                 Image(systemName: icon)
@@ -583,6 +587,7 @@ private struct AjustesSheet: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(isSelected ? Color.primaryContainer : Color.surfaceContainerLow)
             )
+            .animation(.easeInOut(duration: 0.2), value: isSelected)
         }
         .buttonStyle(.plain)
     }
@@ -1420,9 +1425,11 @@ struct DatosPersonalesSheet: View {
                 perfilImage = img
                 ProfileImageStore.save(img)
             }
+            .seguirTemaForzado()
         }
         .sheet(isPresented: $showParentescoPicker) {
             ParentescoPickerSheet(seleccion: $emergenciaParentescoInput)
+                .seguirTemaForzado()
         }
     }
 

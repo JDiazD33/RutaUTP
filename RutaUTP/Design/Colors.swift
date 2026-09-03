@@ -4,8 +4,9 @@
 //
 //  Paleta de colores oficial del Design System RutaUTP.
 //  Fuente de verdad: NO modificar hexes CLAROS — heredados del prototipo HTML.
-//  Los tokens de superficie/texto son adaptativos claro/oscuro: el toggle
-//  de Ajustes (.preferredColorScheme en RootView) los voltea solos.
+//  Los tokens de superficie/texto son adaptativos claro/oscuro: el override
+//  de overrideUserInterfaceStyle que aplica RootView (desde Ajustes) los
+//  voltea solos.
 //  Los colores de marca (rojo UTP, azul, teal) se mantienen en ambos modos.
 //
 
@@ -83,6 +84,25 @@ extension Color {
             traits.userInterfaceStyle == .dark ? UIColor(Color(hex: dark)) : UIColor(Color(hex: light))
         })
     }
+}
+
+// MARK: - Tema forzado en sheets
+//
+// Los sheets de SwiftUI (iOS 16+) se presentan en su PROPIA UIWindow, que
+// nace con estilo .unspecified y NO hereda el overrideUserInterfaceStyle
+// que RootView aplica a las demás ventanas: sin esto, un sheet abierto
+// después de un cambio de tema aparecería con el tema del SISTEMA.
+private struct TemaForzado: ViewModifier {
+    @AppStorage("isDarkMode") private var isDarkMode = false
+
+    func body(content: Content) -> some View {
+        content.preferredColorScheme(isDarkMode ? .dark : .light)
+    }
+}
+
+extension View {
+    /// Aplica a un sheet el tema claro/oscuro elegido en Ajustes.
+    func seguirTemaForzado() -> some View { modifier(TemaForzado()) }
 }
 
 // MARK: - ShapeStyle: permite usar los colores en .foregroundStyle(.appPrimary) etc.

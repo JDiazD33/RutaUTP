@@ -7,15 +7,31 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct RootView: View {
     @StateObject private var router = AppRouter()
 
-    /// Tema claro/oscuro. Se lee AQUÍ (no solo en el App): @AppStorage
-    /// dentro de un struct App no siempre re-renderiza la escena al
-    /// cambiar, y el toggle de Ajustes parecía "no hacer nada". En una
-    /// View normal la invalidación es inmediata y se aplica a todo el árbol.
+    /// Tema claro/oscuro. Se aplica SOLO con aplicarTemaEnVentanas (abajo):
+    /// un único escritor de overrideUserInterfaceStyle. No volver a añadir
+    /// .preferredColorScheme aquí ni animar el cambio de isDarkMode —
+    /// cuando ambos canales escriben la misma propiedad de la ventana y el
+    /// cambio va dentro de una animación, SwiftUI deja de re-aplicar el
+    /// estilo al VOLVER a claro (el tema quedaba "pegado" en oscuro).
     @AppStorage("isDarkMode") private var isDarkMode = false
+
+    /// Fuerza el tema a nivel de VENTANA (UIKit), en todas las ventanas de
+    /// todas las escenas — incluye la ventana propia de los sheets (iOS 16+).
+    /// Al ser imperativo pisa el trait collection completo en ambas
+    /// direcciones (claro ↔ oscuro) sin depender de la invalidación de
+    /// SwiftUI.
+    private func aplicarTemaEnVentanas(_ oscuro: Bool) {
+        let estilo: UIUserInterfaceStyle = oscuro ? .dark : .light
+        for escena in UIApplication.shared.connectedScenes {
+            guard let windowScene = escena as? UIWindowScene else { continue }
+            windowScene.windows.forEach { $0.overrideUserInterfaceStyle = estilo }
+        }
+    }
 
     init() {
         // Solo DEBUG: permite abrir directo en una pantalla desde consola,
@@ -49,9 +65,17 @@ struct RootView: View {
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
         .environmentObject(router)
-        .preferredColorScheme(isDarkMode ? .dark : .light)
         .animation(.easeInOut(duration: 0.25), value: router.currentScreen)
-        .animation(.easeInOut(duration: 0.3), value: isDarkMode)
+        .onAppear { aplicarTemaEnVentanas(isDarkMode) }
+        .onChange(of: isDarkMode) { _, nuevo in
+            // Un único escritor del tema: inmediato y en ambos sentidos.
+            aplicarTemaEnVentanas(nuevo)
+        }
+        .onChange(of: router.currentScreen) { _, _ in
+            // Pantallas como NavegaciónRuta fuerzan .dark sobre la ventana;
+            // al salir de ellas se re-afirma el tema elegido por el usuario.
+            aplicarTemaEnVentanas(isDarkMode)
+        }
         // Modo Señas: una sola instancia en la raíz, así se dibuja por encima
         // de cualquier pantalla sin duplicarla en cada vista.
         .overlay { SeniasOverlay() }
