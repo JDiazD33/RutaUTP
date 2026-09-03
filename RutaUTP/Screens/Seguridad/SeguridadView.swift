@@ -16,6 +16,9 @@ struct SeguridadView: View {
     @State private var showReportarSheet = false
     @State private var showLlamarAlert = false
     @State private var selectedReporte: ReporteComunidad?
+    /// Likes/dislikes de la sección Comunidad (compartido entre las cards
+    /// y el detalle para que el conteo coincida).
+    @StateObject private var reacciones = ComunidadReacciones()
     @State private var paginaZona: Int? = 0            // página del carrusel
     @State private var zonaSeleccionada: RutaSegura? = nil  // detalle (alert)
 
@@ -80,19 +83,7 @@ struct SeguridadView: View {
             ("Ruta M-05 toma caminos raros para evitar tráfico, pero llega rápido.", .otro),
             ("Tarifa S/ 2.50 en la C-01 confirmado. Algunos intentan cobrar más de noche.", .alerta),
             ("Av. Larco de Huanchaco congestionada al mediodía por turistas.", .trafico),
-            ("Los paraderos nuevos de Av. España tienen techo y cámaras, bien ahí.", .otro),
-            ("Consejo: apps de mapa no reflejan el desvío en Prolongación Unión, ojo.", .sugerencia),
-            ("Robo de celulares reportado en la C-28 cerca de Balazar. Guarden sus cosas.", .alerta),
-            ("Obras en Av. Frecuencia España: solo un carril, agregar 15 min.", .trafico),
-            ("Sábado por la mañana es lo más fluido: 20 min desde La Esperanza a UTP.", .sugerencia),
-            ("El fiscal de la M-34 hace respetar la fila de preferencia, felicidades.", .otro),
-            ("Choca-choque en Av. Nicolás de Piérola frente al campus, tráfico lento.", .trafico),
-            ("Bajan muy rápido en las curvas de Víctor Larco, debería haber fiscalización.", .alerta),
-            ("Irse temprano de clase evita la avalancha de micros entre 7 y 8 PM.", .sugerencia),
-            ("Policía de tránsito nuevo en el cruce de América con César Vallejo, fluye mejor.", .otro),
-            ("Cuidado al bajar en el paradero del Americano, acera estrecha y motores acelerando.", .alerta),
-            ("El tramo Mansiche–España amanece despejado, viaje de 15 min.", .trafico),
-            ("Sugerencia para la app: avisar cuando el micro va lleno antes de que llegue.", .sugerencia)
+            ("Los paraderos nuevos de Av. España tienen techo y cámaras, bien ahí.", .otro)
         ]
         let tiempos = ["HACE 3 MIN", "HACE 8 MIN", "HACE 12 MIN", "HACE 20 MIN",
                        "HACE 35 MIN", "HACE 1 HORA", "HACE 2 HORAS"]
@@ -112,6 +103,7 @@ struct SeguridadView: View {
                 tipo: par.1,
                 cuerpo: par.0,
                 utiles: 6 + (i * 13) % 78,
+                dislikes: 1 + (i * 7) % 9,
                 comentarios: (i * 5) % 11,
                 utilMarcado: i % 6 == 0,
                 avatarColor: avatar.0,
@@ -120,7 +112,7 @@ struct SeguridadView: View {
         }
     }()
 
-    /// Índice de ventana de 5 minutos (10 ventanas para 30 reportes de a 3).
+    /// Índice de ventana de 4 minutos (6 ventanas para 18 reportes de a 3).
     /// DEBUG: --comunidad N fuerza la ventana para pruebas visuales.
     private var indiceVentana: Int {
         #if DEBUG
@@ -131,7 +123,7 @@ struct SeguridadView: View {
         }
         #endif
         let epoch = Int(Date().timeIntervalSinceReferenceDate)
-        return (epoch / 300) % (Self.reportes.count / 3)
+        return (epoch / 240) % (Self.reportes.count / 3)
     }
 
     private var reportesVisibles: [ReporteComunidad] {
@@ -254,8 +246,9 @@ struct SeguridadView: View {
                 .presentationDetents([.medium, .large])
         }
         .sheet(item: $selectedReporte) { reporte in
-            ReporteDetailSheet(reporte: reporte)
+            ReporteDetailSheet(reporte: reporte, reacciones: reacciones)
                 .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .alert(L.t("Llamar al 105", "Call 911"), isPresented: $showLlamarAlert) {
             Button("Llamar") {
@@ -710,7 +703,7 @@ struct SeguridadView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    // MARK: - Comunidad (30 opiniones, rotan cada 5 minutos)
+    // MARK: - Comunidad (18 opiniones, rotan cada 4 minutos)
     private var comunidadSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -721,7 +714,7 @@ struct SeguridadView: View {
                         Text(L.signable("seguridad.comunidad", "Comunidad", "Community"))
                             .font(.headlineSm)
                             .seniable("seguridad.comunidad")
-                        Text(L.t("Opiniones frescas · cambian cada 5 min", "Fresh takes · rotate every 5 min"))
+                        Text(L.t("18 opiniones que cambian cada 4 min", "18 posts · rotate every 4 min"))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                     }
@@ -738,14 +731,14 @@ struct SeguridadView: View {
                 .buttonStyle(.plain)
             }
 
-            // Se re-evalúa cada 5 min → rota la ventana de opiniones.
-            TimelineView(.periodic(from: .now, by: 300)) { _ in
+            // Se re-evalúa cada 4 min → rota la ventana de opiniones.
+            TimelineView(.periodic(from: .now, by: 240)) { _ in
                 VStack(spacing: 12) {
                     ForEach(reportesVisibles) { r in
                         Button {
                             selectedReporte = r
                         } label: {
-                            ReporteCard(reporte: r)
+                            ReporteCard(reporte: r, reacciones: reacciones)
                         }
                         .buttonStyle(.plain)
                         .transition(.asymmetric(
@@ -791,9 +784,36 @@ private struct RutaSegura: Identifiable {
     let accent: Color?
 }
 
+// MARK: - Votos de la comunidad (like / dislike)
+/// Reacción del usuario por reporte. Vive en la sesión (demo; no persiste).
+/// Tocar el mismo voto lo retira; votar el lado opuesto cambia el voto.
+final class ComunidadReacciones: ObservableObject {
+    enum Voto { case ninguno, util, noUtil }
+
+    @Published private var votos: [UUID: Voto] = [:]
+
+    func voto(para reporte: ReporteComunidad) -> Voto {
+        votos[reporte.id] ?? .ninguno
+    }
+
+    func votar(_ reporte: ReporteComunidad, a nuevo: Voto) {
+        votos[reporte.id] = (voto(para: reporte) == nuevo) ? .ninguno : nuevo
+        AppHaptics.selection()
+    }
+
+    func utiles(_ reporte: ReporteComunidad) -> Int {
+        reporte.utiles + (voto(para: reporte) == .util ? 1 : 0)
+    }
+
+    func noUtiles(_ reporte: ReporteComunidad) -> Int {
+        reporte.dislikes + (voto(para: reporte) == .noUtil ? 1 : 0)
+    }
+}
+
 // MARK: - Reporte card
 private struct ReporteCard: View {
     let reporte: ReporteComunidad
+    @ObservedObject var reacciones: ComunidadReacciones
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -827,26 +847,25 @@ private struct ReporteCard: View {
                 .font(.bodyMd)
                 .foregroundStyle(.onSurface)
 
-            HStack(spacing: 16) {
-                HStack(spacing: 6) {
-                    Image(systemName: reporte.utilMarcado ? "hand.thumbsup.fill" : "hand.thumbsup")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(reporte.utilMarcado ? Color.appPrimary : Color.onSurfaceVariant)
-                    Text("Útil (\(reporte.utiles))")
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                }
-                HStack(spacing: 6) {
+            HStack(spacing: 8) {
+                votoButton(.util)
+                votoButton(.noUtil)
+
+                HStack(spacing: 5) {
                     Image(systemName: "bubble.left")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.onSurfaceVariant)
+                        .font(.system(size: 13, weight: .semibold))
                     Text("\(reporte.comentarios)")
                         .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
                 }
+                .foregroundStyle(.onSurfaceVariant)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(L.t("\(reporte.comentarios) comentarios", "\(reporte.comentarios) comments"))
+
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.onSurfaceVariant)
             }
         }
@@ -860,63 +879,212 @@ private struct ReporteCard: View {
                 )
         )
     }
+
+    @ViewBuilder
+    private func votoButton(_ tipo: ComunidadReacciones.Voto) -> some View {
+        let esUtil = tipo == .util
+        let activo = reacciones.voto(para: reporte) == tipo
+        let cantidad = esUtil ? reacciones.utiles(reporte) : reacciones.noUtiles(reporte)
+        let color: Color = esUtil ? .appPrimary : .appError
+
+        Button {
+            reacciones.votar(reporte, a: tipo)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: esUtil
+                      ? (activo ? "hand.thumbsup.fill" : "hand.thumbsup")
+                      : (activo ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
+                    .font(.system(size: 13, weight: .semibold))
+                if esUtil {
+                    Text(L.t("Útil", "Useful") + " (\(cantidad))")
+                        .font(.bodySm)
+                } else {
+                    Text("\(cantidad)")
+                        .font(.bodySm)
+                }
+            }
+            .foregroundStyle(activo ? color : Color.onSurfaceVariant)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule().fill(activo ? color.opacity(0.10) : Color.surfaceContainerLow)
+            )
+            .overlay(
+                Capsule().stroke(activo ? color.opacity(0.35) : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(esUtil ? L.t("Me es útil", "Helpful") : L.t("No me es útil", "Not helpful"))
+        .accessibilityValue(L.t("\(cantidad) votos", "\(cantidad) votes"))
+        .accessibilityAddTraits(activo ? .isSelected : [])
+    }
 }
 
 // MARK: - Reporte Detail Sheet
 private struct ReporteDetailSheet: View {
     let reporte: ReporteComunidad
+    @ObservedObject var reacciones: ComunidadReacciones
     @Environment(\.dismiss) private var dismiss
 
+    /// Comentarios de muestra, deterministas por reporte (misma semilla →
+    /// mismos comentarios mientras la sesión esté viva).
+    private var comentariosMuestra: [(nombre: String, iniciales: String, texto: String)] {
+        let semilla = reporte.id.uuidString.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        let autores = [("Luisa P.", "LP"), ("Marco T.", "MT"), ("Diana R.", "DR"),
+                       ("Sergio V.", "SV"), ("Pilar A.", "PA"), ("César H.", "CH")]
+        let textos = [
+            L.t("Totalmente de acuerdo.", "Totally agree."),
+            L.t("Gracias por avisar a tiempo.", "Thanks for the heads-up."),
+            L.t("Me pasó igual ayer por la mañana.", "Same thing happened to me yesterday morning."),
+            L.t("Justo venía de ahí, horrible.", "I was just there, it was awful."),
+            L.t("Buen dato, no lo sabía.", "Good to know, I had no idea."),
+            L.t("Hay que tener cuidado ahí siempre.", "We always have to be careful there."),
+            L.t("Confirmo, sigue igual.", "Confirmed, still the same.")
+        ]
+        return (0..<reporte.comentarios).map { k in
+            let autor = autores[(semilla + k) % autores.count]
+            let texto = textos[(semilla + k * 2) % textos.count]
+            return (autor.0, autor.1, texto)
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
-                    Text(reporte.iniciales)
-                        .font(.headlineSm)
-                        .foregroundStyle(reporte.avatarForeground)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(reporte.nombre)
-                        .font(.headlineSm)
-                    Text(reporte.hace)
-                        .font(.labelCapsSm)
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Autor
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
+                            Text(reporte.iniciales)
+                                .font(.headlineSm)
+                                .foregroundStyle(reporte.avatarForeground)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(reporte.nombre)
+                                .font(.headlineSm)
+                            Text(reporte.hace)
+                                .font(.labelCapsSm)
+                                .foregroundStyle(.onSurfaceVariant)
+                                .appTracking(AppTracking.wideLabel)
+                        }
+                        Spacer()
+                        Text(reporte.tipo.rawValue)
+                            .font(.labelCapsMd)
+                            .foregroundStyle(reporte.tipo.foreground)
+                            .appTracking(AppTracking.wideLabel)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
+                    }
+
+                    Text(reporte.cuerpo)
+                        .font(.bodyLg)
+                        .foregroundStyle(.onSurface)
+
+                    // Votos interactivos
+                    HStack(spacing: 10) {
+                        votoButton(.util)
+                        votoButton(.noUtil)
+                        Spacer()
+                    }
+
+                    Divider()
+
+                    // Comentarios
+                    Text(L.t("COMENTARIOS (\(reporte.comentarios))", "COMMENTS (\(reporte.comentarios))"))
+                        .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
                         .appTracking(AppTracking.wideLabel)
+
+                    if reporte.comentarios == 0 {
+                        HStack(spacing: 10) {
+                            Image(systemName: "bubble.left")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.onSurfaceVariant.opacity(0.5))
+                            Text(L.t("Aún no hay comentarios. Sé el primero en comentar.",
+                                     "No comments yet. Be the first to comment."))
+                                .font(.bodySm)
+                                .foregroundStyle(.onSurfaceVariant)
+                        }
+                        .padding(.vertical, 8)
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(comentariosMuestra, id: \.nombre) { c in
+                                HStack(alignment: .top, spacing: 10) {
+                                    ZStack {
+                                        Circle().fill(Color.surfaceContainerHigh).frame(width: 30, height: 30)
+                                        Text(c.iniciales)
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundStyle(.onSurfaceVariant)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(c.nombre)
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(.onSurface)
+                                        Text(c.texto)
+                                            .font(.bodySm)
+                                            .foregroundStyle(.onSurfaceVariant)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.surfaceContainerLow)
+                                )
+                            }
+                        }
+                    }
                 }
-                Spacer()
-                Text(reporte.tipo.rawValue)
-                    .font(.labelCapsMd)
-                    .foregroundStyle(reporte.tipo.foreground)
-                    .appTracking(AppTracking.wideLabel)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
+                .padding(20)
             }
-            Divider()
-            Text(reporte.cuerpo)
-                .font(.bodyLg)
-                .foregroundStyle(.onSurface)
-            Divider()
-            HStack(spacing: 24) {
-                Label("Útil (\(reporte.utiles))", systemImage: reporte.utilMarcado ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    .foregroundStyle(reporte.utilMarcado ? .appPrimary : .onSurfaceVariant)
-                Label("\(reporte.comentarios)", systemImage: "bubble.left")
-                    .foregroundStyle(.onSurfaceVariant)
-                Spacer()
-            }
-            .font(.bodyMdMedium)
-            Spacer()
+
             Button { dismiss() } label: {
-                Text("Cerrar")
+                Text(L.t("Cerrar", "Close"))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
                     .foregroundStyle(.white)
                     .font(.bodyMdMedium)
             }
             .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
         }
-        .padding(20)
+    }
+
+    @ViewBuilder
+    private func votoButton(_ tipo: ComunidadReacciones.Voto) -> some View {
+        let esUtil = tipo == .util
+        let activo = reacciones.voto(para: reporte) == tipo
+        let cantidad = esUtil ? reacciones.utiles(reporte) : reacciones.noUtiles(reporte)
+        let color: Color = esUtil ? .appPrimary : .appError
+
+        Button {
+            reacciones.votar(reporte, a: tipo)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: esUtil
+                      ? (activo ? "hand.thumbsup.fill" : "hand.thumbsup")
+                      : (activo ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
+                    .font(.system(size: 14, weight: .semibold))
+                Text(esUtil
+                     ? L.t("Útil", "Useful") + " (\(cantidad))"
+                     : L.t("No útil", "Not helpful") + " (\(cantidad))")
+                    .font(.bodySmMedium)
+            }
+            .foregroundStyle(activo ? color : Color.onSurfaceVariant)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(
+                Capsule().fill(activo ? color.opacity(0.10) : Color.surfaceContainerLow)
+            )
+            .overlay(
+                Capsule().stroke(activo ? color.opacity(0.35) : Color.outlineVariant.opacity(0.30), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(activo ? .isSelected : [])
     }
 }
 
