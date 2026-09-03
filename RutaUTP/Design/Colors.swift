@@ -5,7 +5,7 @@
 //  Paleta de colores oficial del Design System RutaUTP.
 //  Fuente de verdad: NO modificar hexes CLAROS — heredados del prototipo HTML.
 //  Los tokens de superficie/texto son adaptativos claro/oscuro: el toggle
-//  de Ajustes (.preferredColorScheme en RutaUTPApp) los voltea solos.
+//  de Ajustes (.preferredColorScheme en RootView) los voltea solos.
 //  Los colores de marca (rojo UTP, azul, teal) se mantienen en ambos modos.
 //
 

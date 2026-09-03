@@ -3,7 +3,8 @@
 //  RutaUTP
 //
 //  Punto de entrada de la aplicación.
-//  - Modo oscuro/claro persistido con @AppStorage.
+//  - Modo oscuro/claro persistido con @AppStorage; se APLICA en RootView
+//    (@AppStorage dentro del App no siempre invalida la escena).
 //  - Idioma ES/EN vía IdiomaManager; cambiarlo reconstruye el árbol
 //    (.id(idioma.codigo)) para que todas las vistas se re-rendericen.
 //
