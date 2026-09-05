@@ -31,6 +31,7 @@ struct BusSimulado: Identifiable, Equatable {
 struct BusAnimado: Identifiable, Equatable {
     let id: Int
     let linea: String        // "10", "4"
+    let rutaId: String       // route_id GTFS: enlaza con el detalle de RutasView
     let empresa: String      // "El Cortijo", "Salaverry"
     let tipo: String          // "Micro", "Combi"
     let placa: String         // "T1B-721"
@@ -128,7 +129,13 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // Buses Animados en Tiempo Real
     @Published var busesAnimados: [BusAnimado] = []
     @Published var busSeleccionado: BusAnimado? = nil
+    /// True mientras se consulta el feed por las líneas del punto actual.
+    @Published private(set) var cargandoLineas: Bool = false
     private var busSimulationTimer: Timer?
+    /// Punto de interés actual del panel (destino elegido o campus UTP).
+    /// Evita relanzar la consulta GTFS si el ancla no cambió y permite
+    /// descartar resultados obsoletos si el usuario cambió de destino.
+    private var anclaLineas: (lat: Double, lon: Double)? = nil
 
     /// Se incrementa cada vez que el usuario pide recentrar; la vista lo
     /// observa para mover la cámara aunque la región no haya cambiado de
@@ -237,7 +244,9 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // Los recorridos (shapes) son REALES del feed GTFS embebido; las
     // posiciones son SIMULADAS porque el feed estático no incluye GPS.
     func iniciarSimulacionBuses() {
-        cargarBusesDesdeGTFS()
+        // Sin destino: líneas que pasan por el campus (comportamiento
+        // original del panel "Transportes cercanos").
+        recargarLineas(cercaDe: nil)
 
         guard busSimulationTimer == nil else { return }
         busSimulationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
@@ -248,38 +257,83 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
     }
 
-    /// Carga las 4 rutas más cercanas a UTP y crea un bus animado por ruta.
-    private func cargarBusesDesdeGTFS() {
-        guard busesAnimados.isEmpty else { return }
+    /// Recarga las líneas del panel según un punto de interés: el destino
+    /// seleccionado (chip, Guardado, búsqueda) o, por defecto, el campus.
+    /// El contador del panel ("N líneas operando ahora") pasa a reflejar
+    /// cuántas líneas del feed REALMENTE pasan por ese punto.
+    func recargarLineas(cercaDe ancla: CLLocationCoordinate2D?) {
+        let punto = ancla ?? GTFSRepository.coordenadaUTP
+        let clave = (lat: punto.latitude, lon: punto.longitude)
+        if let previa = anclaLineas,
+           abs(previa.lat - clave.lat) < 1e-9,
+           abs(previa.lon - clave.lon) < 1e-9 { return }
+        anclaLineas = clave
+
+        cargandoLineas = true
         Task { @MainActor [weak self] in
-            let feed = await GTFSRepository.shared.rutasCercaDeUTP(n: 4)
-            guard let self, self.busesAnimados.isEmpty, !feed.isEmpty else { return }
-
-            let n = feed.count
-            self.busesAnimados = feed.enumerated().map { index, ruta in
-                var waypoints = Self.decimarCoordenadas(ruta.shape, maximoPuntos: 240)
-                if waypoints.count < 2 { waypoints = RutaCoordenadas.linea10 }
-
-                var bus = BusAnimado(
-                    id: index + 1,
-                    linea: ruta.linea,
-                    empresa: ruta.empresa,
-                    tipo: "Bus",
-                    placa: ruta.variante.isEmpty ? "S/D" : "Ramal \(ruta.variante)",
-                    minutosLlegada: max(1, 2 + index * max(1, ruta.headwayMin / max(n, 1))),
-                    color: ruta.color,
-                    lat: waypoints[0].latitude,
-                    lon: waypoints[0].longitude,
-                    heading: 0,
-                    rutaCoordenadas: waypoints
-                )
-                // Reparte los buses a lo largo del recorrido para que
-                // no salgan todos amontonados en el mismo punto.
-                bus.currentSegmentIndex = min(index * max(1, waypoints.count / (n + 1)),
-                                              max(0, waypoints.count - 2))
-                return bus
+            // 400 m cubre "pasa por la puerta"; si el punto quedó algo
+            // alejado del recorrido se amplía a 800 m antes de declarar
+            // que no pasa ninguna línea.
+            var feed = await GTFSRepository.shared.rutasQuePasanPor(punto, radioMetros: 400)
+            if feed.isEmpty {
+                feed = await GTFSRepository.shared.rutasQuePasanPor(punto, radioMetros: 800)
             }
+            // El usuario pudo cambiar de destino mientras consultaba.
+            guard let self, self.anclaLineas?.lat == clave.lat,
+                  self.anclaLineas?.lon == clave.lon else { return }
+
+            self.busesAnimados = Self.busesDesde(feed, ancla: punto)
+            self.busSeleccionado = nil
+            self.cargandoLineas = false
         }
+    }
+
+    /// Construye un bus animado por ruta del feed.
+    private static func busesDesde(_ feed: [RutaGTFS],
+                                   ancla: CLLocationCoordinate2D) -> [BusAnimado] {
+        let n = max(feed.count, 1)
+        return feed.enumerated().map { index, ruta in
+            var waypoints = decimarCoordenadas(ruta.shape, maximoPuntos: 240)
+            if waypoints.count < 2 { waypoints = RutaCoordenadas.linea10 }
+
+            var bus = BusAnimado(
+                id: index + 1,
+                linea: ruta.linea,
+                rutaId: ruta.id,
+                empresa: ruta.empresa,
+                tipo: "Bus",
+                placa: ruta.variante.isEmpty ? "S/D" : "Ramal \(ruta.variante)",
+                minutosLlegada: max(1, 2 + index * max(1, ruta.headwayMin / n)),
+                color: ruta.color,
+                lat: waypoints[0].latitude,
+                lon: waypoints[0].longitude,
+                heading: 0,
+                rutaCoordenadas: waypoints
+            )
+            // Nace en el tramo más cercano al punto consultado: se le ve
+            // pasar por la zona del destino, no amontonado al inicio del
+            // recorrido.
+            let idx = min(waypointMasCercano(waypoints, a: ancla),
+                          max(0, waypoints.count - 2))
+            bus.currentSegmentIndex = idx
+            bus.lat = waypoints[idx].latitude
+            bus.lon = waypoints[idx].longitude
+            return bus
+        }
+    }
+
+    /// Índice del waypoint más cercano a un punto (distancia planar:
+    /// solo sirve para elegir un índice, no para medir).
+    private static func waypointMasCercano(_ puntos: [CLLocationCoordinate2D],
+                                           a destino: CLLocationCoordinate2D) -> Int {
+        var mejor = 0
+        var mejorD = Double.greatestFiniteMagnitude
+        for (i, p) in puntos.enumerated() {
+            let d = (p.latitude - destino.latitude) * (p.latitude - destino.latitude)
+                  + (p.longitude - destino.longitude) * (p.longitude - destino.longitude)
+            if d < mejorD { mejorD = d; mejor = i }
+        }
+        return mejor
     }
 
     /// Reduce la densidad de un shape conservando el orden (perf del timer).
@@ -424,6 +478,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             )
         }
         calcularRutaHacia(destCoord)
+        recargarLineas(cercaDe: destCoord)
     }
 
     func seleccionarSugerencia(_ completion: MKLocalSearchCompletion) {
@@ -491,6 +546,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             )
         }
         calcularRutaHacia(coordenada)
+        recargarLineas(cercaDe: coordenada)
     }
 
     // MARK: - Ruteo Real (Polilínea MKDirections)
@@ -554,6 +610,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         routePolyline = nil
         etaMinutos = nil
         distanciaKm = nil
+        // Sin destino: el panel vuelve a las líneas del campus.
+        recargarLineas(cercaDe: nil)
 
         withAnimation(.spring(response: 0.5)) {
             region = MKCoordinateRegion(

@@ -94,16 +94,51 @@ final class SeniasPresenter: ObservableObject {
 
     static let shared = SeniasPresenter()
 
-    @Published var claveVisible: String?
+    @Published var claveVisible: String? {
+        didSet {
+            // El miniplayer vive en su propia UIWindow (por encima de sheets
+            // y covers): la ventana aparece con la seña y se esconde al cerrar.
+            SeniasOverlayVentana.shared.actualizar(hayClave: claveVisible != nil)
+        }
+    }
+
+    /// Momento del último tap que mostró una seña. Las acciones que también
+    /// disparan una transición (navegación, sheets, covers) lo consultan para
+    /// saber si vienen del MISMO tap y darle tiempo al miniplayer.
+    private var momentoUltimaSenia: Date?
+
+    /// Ventana en la que una acción cuenta como hija del mismo tap que mostró
+    /// la seña (el gesto y la acción del botón se disparan juntos).
+    private static let ventanaMismoTap: TimeInterval = 0.5
+
+    /// Cuánto tiempo se deja para ver el videito antes de que corra una
+    /// transición disparada por el mismo tap (ej. CTA "Comenzar").
+    static let pausaParaVerSenia: TimeInterval = 3.0
 
     private init() {}
 
     func mostrar(clave: String) {
         guard SeniasService.shared.modoActivo else { return }
+        momentoUltimaSenia = Date()
         claveVisible = clave
     }
 
     func ocultar() {
         claveVisible = nil
+    }
+
+    /// Ejecuta la acción de inmediato, salvo que el tap que la originó acaba
+    /// de mostrar una seña: entonces espera `pausaParaVerSenia` para que el
+    /// miniplayer sea visible antes de que corra la transición. Con el modo
+    /// señas apagado no añade ninguna espera.
+    func ejecutarTrasVerSenia(_ accion: @escaping () -> Void) {
+        guard SeniasService.shared.modoActivo,
+              let momento = momentoUltimaSenia,
+              Date().timeIntervalSince(momento) < Self.ventanaMismoTap else {
+            accion()
+            return
+        }
+        momentoUltimaSenia = nil // la pausa se consume una sola vez por tap
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pausaParaVerSenia, execute: accion)
     }
 }

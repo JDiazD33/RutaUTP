@@ -68,8 +68,10 @@ struct MapaView: View {
                     }
                 }
 
-                // 5. Marcadores de Buses Animados en Tiempo Real
-                ForEach(vm.busesAnimados) { bus in
+                // 5. Marcadores de Buses Animados en Tiempo Real.
+                // Tope de 8 en el mapa por rendimiento; las cards del panel
+                // muestran TODAS las líneas que pasan por el punto.
+                ForEach(vm.busesAnimados.prefix(8)) { bus in
                     Annotation(L.t("Línea", "Line") + " \(bus.linea)", coordinate: bus.coordinate) {
                         AnimatedBusMarker(
                             linea: bus.linea,
@@ -184,6 +186,9 @@ struct MapaView: View {
                         },
                         onVerRuta: {
                             vm.busSeleccionado = nil
+                            // Abre el detalle de ESA línea en Rutas, no la
+                            // lista genérica.
+                            router.rutaPendiente = bus.rutaId
                             router.navigate(to: .rutas)
                         }
                     )
@@ -442,7 +447,8 @@ struct MapaView: View {
         VStack(spacing: 10) {
             HStack(alignment: .center) {
                 Button {
-                    showReportarSheet = true
+                    // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
+                    SeniasPresenter.shared.ejecutarTrasVerSenia { showReportarSheet = true }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -491,11 +497,10 @@ struct MapaView: View {
                             .font(.system(size: 15, weight: .heavy))
                             .foregroundStyle(.onSurface)
                             .seniable("mapa.cercanos")
-                        Text(vm.busesAnimados.isEmpty
-                             ? L.t("Buscando líneas cerca del campus…", "Finding lines near campus…")
-                             : String(format: L.t("%d líneas operando ahora", "%d lines running now"), vm.busesAnimados.count))
+                        Text(textoEstadoLineas)
                             .font(.system(size: 11))
                             .foregroundStyle(.onSurfaceVariant)
+                            .lineLimit(1)
                     }
                     .transition(.asymmetric(
                         insertion: .move(edge: .leading).combined(with: .opacity),
@@ -508,7 +513,7 @@ struct MapaView: View {
             // Cards de buses con altura suficiente (rutas reales del feed GTFS)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    if vm.busesAnimados.isEmpty {
+                    if vm.busesAnimados.isEmpty && vm.cargandoLineas {
                         ForEach(0..<2, id: \.self) { _ in
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .fill(Color.surfaceContainerLow)
@@ -518,6 +523,23 @@ struct MapaView: View {
                                         .tint(.onSurfaceVariant)
                                 )
                         }
+                    } else if vm.busesAnimados.isEmpty {
+                        // Consulta terminada y sin resultado: el feed no
+                        // tiene ninguna línea que pase por el punto.
+                        HStack(spacing: 8) {
+                            Image(systemName: "bus")
+                                .foregroundStyle(.onSurfaceVariant)
+                            Text(L.t("Ninguna línea pasa por aquí todavía",
+                                     "No lines pass by here yet"))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.onSurfaceVariant)
+                        }
+                        .padding(14)
+                        .frame(width: 256, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.surfaceContainerLow)
+                        )
                     } else {
                         ForEach(vm.busesAnimados) { bus in
                             BusCard(
@@ -554,6 +576,28 @@ struct MapaView: View {
             .ignoresSafeArea(edges: .bottom)
             .allowsHitTesting(false)
         )
+    }
+    /// Subtítulo del panel "Transportes cercanos": refleja las líneas del
+    /// feed GTFS que realmente pasan por el punto actual (destino elegido
+    /// o campus UTP si no hay destino).
+    private var textoEstadoLineas: String {
+        if vm.cargandoLineas {
+            return L.t("Buscando líneas…", "Finding lines…")
+        }
+        let cantidad = vm.busesAnimados.count
+        if cantidad == 0 {
+            return vm.busquedaResultado != nil
+                ? L.t("Ninguna línea pasa por aquí", "No lines pass by here")
+                : L.t("Buscando líneas cerca del campus…", "Finding lines near campus…")
+        }
+        if let destino = vm.busquedaResultado {
+            return cantidad == 1
+                ? String(format: L.t("1 línea pasa por %@", "1 line passes by %@"), destino.titulo)
+                : String(format: L.t("%d líneas pasan por %@", "%d lines pass by %@"), cantidad, destino.titulo)
+        }
+        return cantidad == 1
+            ? L.t("1 línea operando ahora", "1 line running now")
+            : String(format: L.t("%d líneas operando ahora", "%d lines running now"), cantidad)
     }
 }
 

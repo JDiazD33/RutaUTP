@@ -163,9 +163,13 @@ struct RutasView: View {
             await viewModel.cargar()
             procesarHookDebug()
             consumirLugarCercano()
+            consumirRutaPendiente()
         }
         .onChange(of: router.lugarCercanoPendiente) { _ in
             consumirLugarCercano()
+        }
+        .onChange(of: router.rutaPendiente) { _ in
+            consumirRutaPendiente()
         }
         #if DEBUG
         .fullScreenCover(isPresented: $debugExplorador) {
@@ -186,6 +190,18 @@ struct RutasView: View {
         viewModel.limpiarFiltroCerca()
         viewModel.textoBusqueda = ""
         viewModel.activarFiltroCerca(destino: lugar)
+    }
+
+    /// Recibe el "Ver Ruta Completa" del popup de bus del Mapa y abre el
+    /// detalle de esa línea exacta (route_id; por defecto, por línea).
+    private func consumirRutaPendiente() {
+        guard let id = router.rutaPendiente else { return }
+        router.rutaPendiente = nil
+        guard let ruta = viewModel.rutas.first(where: { $0.id == id })
+                ?? viewModel.rutas.first(where: { $0.linea == id }) else { return }
+        withAnimation(.spring(response: 0.3)) {
+            rutaSeleccionada = ruta
+        }
     }
 
     #if DEBUG
@@ -662,7 +678,8 @@ private struct DetalleRutaView: View {
     // MARK: - CTA (dentro del ScrollView)
     private var ctaButton: some View {
         Button {
-            showCarPlay = true
+            // Modo Señas: deja ver el videito antes de que el cover tape el miniplayer.
+            SeniasPresenter.shared.ejecutarTrasVerSenia { showCarPlay = true }
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "location.fill")

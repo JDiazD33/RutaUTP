@@ -50,6 +50,20 @@ actor GTFSRepository {
     func rutasCercaDeUTP(n: Int) async -> [RutaGTFS] {
         Array(await rutas().prefix(n))
     }
+
+    /// Rutas cuyo recorrido pasa a `radioMetros` o menos de `punto`,
+    /// ordenadas por cercanía: la consulta "¿qué líneas pasan por aquí?".
+    /// Es lo que alimenta el panel del mapa cuando el usuario elige o
+    /// escribe un destino (chips, Guardado, búsqueda).
+    func rutasQuePasanPor(_ punto: CLLocationCoordinate2D,
+                          radioMetros: Double = 400) async -> [RutaGTFS] {
+        let todas = await rutas()
+        return todas
+            .map { ($0, Self.distanciaMinima($0.shape, a: punto)) }
+            .filter { $0.1 <= radioMetros }
+            .sorted { $0.1 < $1.1 }
+            .map(\.0)
+    }
 }
 
 // MARK: - Parseo del feed

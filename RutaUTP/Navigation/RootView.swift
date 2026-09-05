@@ -76,9 +76,10 @@ struct RootView: View {
             // al salir de ellas se re-afirma el tema elegido por el usuario.
             aplicarTemaEnVentanas(isDarkMode)
         }
-        // Modo Señas: una sola instancia en la raíz, así se dibuja por encima
-        // de cualquier pantalla sin duplicarla en cada vista.
-        .overlay { SeniasOverlay() }
+        // Modo Señas: el miniplayer NO va en overlay aquí — vive en su propia
+        // UIWindow a nivel .alert (SeniasOverlayVentana) para verse por encima
+        // de sheets y fullScreenCovers. La ventana sigue el estado de
+        // SeniasPresenter y sólo se muestra mientras hay una seña visible.
     }
 }
 

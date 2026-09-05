@@ -206,7 +206,11 @@ struct SideDrawer: View {
                 // Cambio de idioma ES/EN (aplica al instante en toda la app)
                 Button {
                     AppHaptics.impact(.medium)
-                    idioma.alternar()
+                    // Modo Señas: deja ver el videito antes de que la app
+                    // entera se re-traduzca alrededor del miniplayer.
+                    SeniasPresenter.shared.ejecutarTrasVerSenia {
+                        idioma.alternar()
+                    }
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {

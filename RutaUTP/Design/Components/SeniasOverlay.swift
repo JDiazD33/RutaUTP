@@ -6,8 +6,12 @@
 //
 //  Tres piezas:
 //   1. SeniasPlayerView  -> reproduce el clip en bucle (AVPlayerLooper).
-//   2. SeniasOverlay     -> tarjeta que se muestra sobre toda la app.
+//   2. SeniasOverlay     -> tarjeta del miniplayer.
 //   3. .seniable(clave:) -> modificador que se aplica al texto.
+//
+//  La tarjeta vive en SU PROPIA UIWindow a nivel .alert (SeniasOverlayVentana),
+//  así se ve por encima de TODO, incluidos sheets y fullScreenCovers — que de
+//  otro modo tapan el miniplayer y las señas dentro de un sheet no se ven.
 //
 //  Si no hay clip, NO se inventa una seña: se muestra un estado honesto de
 //  "pendiente de grabación". El contenido real se añade después en senias/clips
@@ -46,7 +50,7 @@ final class SeniasPlayerUIView: UIView {
         let layer = AVPlayerLayer(player: queue)
         layer.videoGravity = .resizeAspectFill
         layer.frame = bounds
-        layer.cornerRadius = 14
+        layer.cornerRadius = 16
         layer.masksToBounds = true
         self.layer.addSublayer(layer)
 
@@ -130,10 +134,10 @@ struct SeniasOverlay: View {
             encabezado(clave: clave)
             contenido(clave: clave)
         }
-        .padding(10)
-        .frame(width: 152)
+        .padding(12)
+        .frame(width: 180)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
         )
@@ -144,11 +148,11 @@ struct SeniasOverlay: View {
     private func encabezado(clave: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: "hand.raised.fill")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.appPrimary)
 
             Text(servicio.texto(clave: clave))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .lineLimit(1)
                 .foregroundStyle(.primary)
         }
@@ -161,8 +165,8 @@ struct SeniasOverlay: View {
         case .clip(let url, let senia):
             VStack(spacing: 6) {
                 SeniasPlayerView(url: url)
-                    .frame(width: 128, height: 128)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: 156, height: 156)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 if senia.esPlaceholder {
                     etiqueta(L.t("Clip de prueba", "Test clip"), sistema: "exclamationmark.triangle.fill", color: .orange)
@@ -172,24 +176,24 @@ struct SeniasOverlay: View {
         case .pendiente(let motivo):
             VStack(spacing: 8) {
                 Image(systemName: "video.slash.fill")
-                    .font(.system(size: 24))
+                    .font(.system(size: 28))
                     .foregroundStyle(.onSurfaceVariant.opacity(0.5))
 
                 Text(L.t("Seña pendiente de grabación", "Sign not recorded yet"))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.primary)
 
                 Text(motivo)
-                    .font(.system(size: 9))
+                    .font(.system(size: 10))
                     .foregroundStyle(.onSurfaceVariant)
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
             }
             .padding(8)
-            .frame(width: 128, height: 128)
+            .frame(width: 156, height: 156)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.surfaceContainerLow)
             )
         }
@@ -209,13 +213,85 @@ struct SeniasOverlay: View {
     private var botonCerrar: some View {
         Button { presenter.ocultar() } label: {
             Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 17))
+                .font(.system(size: 19))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.onSurfaceVariant)
                 .background(Circle().fill(Color(.systemBackground)))
         }
         .padding(6)
         .accessibilityLabel(L.t("Cerrar", "Close"))
+    }
+}
+
+// MARK: - 2b. Ventana propia (por encima de sheets y covers)
+
+/// Muestra `SeniasOverlay` en una UIWindow dedicada a nivel `.alert + 1`.
+///
+/// Los sheets y fullScreenCovers se presentan por encima del contenido de la
+/// ventana principal, así que el overlay raíz quedaba DEBAJO y las señas
+/// dentro de un sheet (ej. "Guardar lugar") no se veían. Una ventana a nivel
+/// alert flota sobre todo eso. Sólo hilo principal (se llama desde
+/// SeniasPresenter, que siempre se toca desde la UI).
+final class SeniasOverlayVentana {
+
+    static let shared = SeniasOverlayVentana()
+
+    private var ventana: VentanaSenias?
+
+    private init() {}
+
+    /// Sincroniza la ventana con el estado del presentador.
+    func actualizar(hayClave: Bool) {
+        if hayClave {
+            mostrar()
+        } else {
+            ventana?.isHidden = true
+        }
+    }
+
+    private func mostrar() {
+        guard let escena = escenaActiva() else { return }
+
+        if let ventana {
+            // Reubica por si hubo rotación desde la última vez.
+            ventana.frame = escena.coordinateSpace.bounds
+            ventana.isHidden = false
+            return
+        }
+
+        let ventana = VentanaSenias(frame: escena.coordinateSpace.bounds)
+        ventana.windowScene = escena
+        ventana.windowLevel = .alert + 1
+        ventana.backgroundColor = .clear
+        // La ventana se crea tarde (primer seña visible) y ya se perdió el
+        // onChange del tema: aplica el mismo escritor que usa RootView.
+        ventana.overrideUserInterfaceStyle =
+            UserDefaults.standard.bool(forKey: "isDarkMode") ? .dark : .light
+
+        let controlador = UIHostingController(rootView: SeniasOverlay().ignoresSafeArea())
+        controlador.view.backgroundColor = .clear
+        ventana.rootViewController = controlador
+
+        self.ventana = ventana
+        ventana.isHidden = false
+    }
+
+    private func escenaActiva() -> UIWindowScene? {
+        let escenas = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return escenas.first {
+            $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive
+        } ?? escenas.first
+    }
+}
+
+/// UIWindow del miniplayer: transparente y con toque libre — los toques que
+/// no caen sobre la tarjeta pasan a la app de debajo sin bloquear nada.
+private final class VentanaSenias: UIWindow {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let vista = super.hitTest(point, with: event) else { return nil }
+        // Si SwiftUI no reclama el toque, hitTest devuelve la vista raíz del
+        // hosting controller (o nil): en ambos casos se deja pasar.
+        return vista === rootViewController?.view ? nil : vista
     }
 }
 

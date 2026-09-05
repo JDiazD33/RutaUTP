@@ -315,7 +315,8 @@ struct SeguridadView: View {
             Spacer()
             // Lado derecho: boton Reportar
             Button {
-                showReportarSheet = true
+                // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
+                SeniasPresenter.shared.ejecutarTrasVerSenia { showReportarSheet = true }
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -355,7 +356,8 @@ struct SeguridadView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button {
-                showLlamarAlert = true
+                // Modo Señas: deja ver el videito antes de que la alerta tape el miniplayer.
+                SeniasPresenter.shared.ejecutarTrasVerSenia { showLlamarAlert = true }
             } label: {
                 Text(L.signable("seguridad.emergencia", "Llamar 105", "Call 911"))
                     .font(.bodyXsMedium)

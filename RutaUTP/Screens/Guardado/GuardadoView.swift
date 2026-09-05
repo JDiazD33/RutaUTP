@@ -211,10 +211,13 @@ struct GuardadoView: View {
     private var botonAñadir: some View {
         Button {
             AppHaptics.impact(.medium)
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                switch selectedTab {
-                case .lugares: showAddLugar = true
-                case .lineas:  showAddLinea = true
+            // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
+            SeniasPresenter.shared.ejecutarTrasVerSenia {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    switch selectedTab {
+                    case .lugares: showAddLugar = true
+                    case .lineas:  showAddLinea = true
+                    }
                 }
             }
         } label: {
@@ -928,6 +931,7 @@ private struct AddLugarSheet: View {
     @State private var recentrarTrigger = 0
     @State private var geocodeTask: Task<Void, Never>?
     @State private var ajusteManual = false
+    @State private var mapaExpandido = false
 
     var body: some View {
         NavigationStack {
@@ -1051,10 +1055,43 @@ private struct AddLugarSheet: View {
         }
         .frame(height: 210)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(alignment: .topTrailing) { botonExpandirMapa }
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.outlineVariant.opacity(0.4), lineWidth: 1)
         )
+        .fullScreenCover(isPresented: $mapaExpandido) {
+            MapaElegirExpandido(
+                coordenada: $coordElegida,
+                onTocar: {
+                    AppHaptics.impact(.light)
+                    geocodeTask?.cancel()
+                    buscandoUbicacion = false
+                    ajusteManual = true
+                },
+                onCerrar: { mapaExpandido = false }
+            )
+        }
+    }
+
+    /// Abre el mismo selector de ubicación a pantalla completa.
+    private var botonExpandirMapa: some View {
+        Button {
+            AppHaptics.impact(.light)
+            mapaExpandido = true
+        } label: {
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.onSurface)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(.ultraThinMaterial))
+                .overlay(
+                    Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(.plain)
+        .padding(8)
+        .accessibilityLabel(L.t("Expandir mapa", "Expand map"))
     }
 
     private var selectorCategoria: some View {
@@ -1161,6 +1198,109 @@ private struct AddLugarSheet: View {
             }
         } else {
             direccionNoEncontrada = true
+        }
+    }
+}
+
+// MARK: - Mapa expandido para elegir ubicación (desde AddLugarSheet)
+/// El mismo selector `MapaElegirLugar` a pantalla completa: comparte la
+/// coordenada con el formulario vía binding y sincroniza cada toque.
+private struct MapaElegirExpandido: View {
+    @Binding var coordenada: CLLocationCoordinate2D?
+    /// Se dispara en cada toque del mapa, después de actualizar la coordenada.
+    var onTocar: () -> Void
+    var onCerrar: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            MapaElegirLugar(
+                coordenada: coordenada,
+                onTocar: { coord in
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        coordenada = coord
+                    }
+                    onTocar()
+                }
+            )
+            .ignoresSafeArea()
+
+            VStack {
+                barraSuperior
+                Spacer()
+                pie
+            }
+            .animation(.easeInOut(duration: 0.2), value: coordenada == nil)
+        }
+    }
+
+    private var barraSuperior: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.system(size: 13, weight: .bold))
+                Text(L.t("Elige la ubicación", "Pick the location"))
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Capsule().fill(Color.black.opacity(0.55)))
+
+            Spacer()
+
+            Button {
+                onCerrar()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.onSurface)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(.ultraThinMaterial))
+                    .overlay(
+                        Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.t("Cerrar", "Close"))
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+    }
+
+    /// Abajo: instrucción mientras no haya pin; botón de confirmar cuando sí.
+    @ViewBuilder
+    private var pie: some View {
+        if coordenada != nil {
+            Button {
+                onCerrar()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .bold))
+                    Text(L.t("Usar esta ubicación", "Use this location"))
+                        .font(.headlineSm)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.appPrimary)
+                        .shadow(color: .appPrimary.opacity(0.35), radius: 12, x: 0, y: 6)
+                )
+            }
+            .buttonStyle(PressableCapsuleStyle())
+            .padding(.horizontal, 20)
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.tap.fill")
+                    .font(.system(size: 12, weight: .bold))
+                Text(L.t("Toca el mapa para ubicar el lugar", "Tap the map to pin the location"))
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(Color.black.opacity(0.55)))
         }
     }
 }

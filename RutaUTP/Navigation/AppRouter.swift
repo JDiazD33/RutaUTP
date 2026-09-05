@@ -52,15 +52,25 @@ final class AppRouter: ObservableObject {
     /// Consume en RutasView: filtrar rutas que pasan cerca del lugar.
     @Published var lugarCercanoPendiente: DestinoPendiente?
 
+    /// Consume en RutasView: abrir el detalle de esta ruta (route_id GTFS).
+    /// Lo publica el popup de bus del Mapa ("Ver Ruta Completa").
+    @Published var rutaPendiente: String?
+
     func navigate(to screen: AppScreen) {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            currentScreen = screen
+        // Modo Señas: si el mismo tap mostró una seña, la transición de
+        // pantalla espera para que se vea el videito del miniplayer.
+        SeniasPresenter.shared.ejecutarTrasVerSenia {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                self.currentScreen = screen
+            }
         }
     }
 
     func reset() {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            currentScreen = .mapaPrincipal
+        SeniasPresenter.shared.ejecutarTrasVerSenia {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                self.currentScreen = .mapaPrincipal
+            }
         }
     }
 }

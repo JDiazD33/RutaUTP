@@ -1,11 +1,9 @@
 {
-  "version": 2,
+  "version": 3,
   "señas": [
     { "clave": "bienvenida.comenzar",    "archivo": "comenzar.mp4",           "fuente": "pendiente" },
     { "clave": "bienvenida.saltar",      "archivo": "saltar.mp4",             "fuente": "pendiente" },
-    { "clave": "mapa.destino.casa",      "archivo": "casa.mp4",               "fuente": "pendiente" },
     { "clave": "mapa.destino.utp",       "archivo": "utp.mp4",                "fuente": "pendiente" },
-    { "clave": "mapa.destino.trabajo",   "archivo": "trabajo.mp4",            "fuente": "pendiente" },
     { "clave": "mapa.destino.centro",    "archivo": "centro.mp4",             "fuente": "pendiente" },
     { "clave": "mapa.destino.huanchaco", "archivo": "huanchaco.mp4",          "fuente": "pendiente" },
     { "clave": "mapa.reportar",          "archivo": "reportar.mp4",           "fuente": "pendiente" },
