@@ -1,7 +1,7 @@
 # macOS
 .DS_Store
 
-# Xcode (userdata local, no debe ir al repo)
+# Xcode
 xcuserdata/
 *.xcuserstate
 
@@ -11,3 +11,10 @@ DerivedData/
 
 # Swift Package Manager
 .build/
+
+# MQTT local
+mqtt/config/passwords
+mqtt/data/
+
+# Esquema local con variables MQTT
+RutaUTP.xcodeproj/xcshareddata/

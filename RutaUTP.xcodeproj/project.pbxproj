@@ -49,6 +49,10 @@
 		0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */; };
 		2F5EE8013047D6E700B24250 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5EE8003047D6E700B24250 /* Idioma.swift */; };
 		2F5EE8033047D78A00B24250 /* ParaderosIluminadosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */; };
+		2F87EE07304DE59800E2F5F2 /* CocoaMQTT in Frameworks */ = {isa = PBXBuildFile; productRef = 2F87EE06304DE59800E2F5F2 /* CocoaMQTT */; };
+		2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */; };
+		2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */; };
+		2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -112,6 +116,9 @@
 		2F5242BF3049046300D850E9 /* RutaUTPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RutaUTPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F5EE8003047D6E700B24250 /* Idioma.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 		2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParaderosIluminadosView.swift; sourceTree = "<group>"; };
+		2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfiguration.swift; sourceTree = "<group>"; };
+		2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTTrackingProvider.swift; sourceTree = "<group>"; };
+		2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingProviderFactory.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
@@ -129,6 +136,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F87EE07304DE59800E2F5F2 /* CocoaMQTT in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -336,6 +344,8 @@
 		0A8004ED300AD9FE004E1676 /* Providers */ = {
 			isa = PBXGroup;
 			children = (
+				2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */,
+				2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */,
 				0A8004EA300AD9FE004E1676 /* RealTrackingProvider.swift */,
 				0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */,
 				0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */,
@@ -346,6 +356,7 @@
 		0A8004EE300AD9FE004E1676 /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */,
 				0A8004E9300AD9FE004E1676 /* Models */,
 				0A8004ED300AD9FE004E1676 /* Providers */,
 			);
@@ -470,6 +481,9 @@
 				Base,
 			);
 			mainGroup = 0A40D90B2FDE5E7D00F79FBC;
+			packageReferences = (
+				2F87EE05304DE59800E2F5F2 /* XCRemoteSwiftPackageReference "CocoaMQTT" */,
+			);
 			productRefGroup = 0A40D9152FDE5E7D00F79FBC /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -506,6 +520,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */,
 				0A8004F7300AD9FE004E1676 /* BottomNavBar.swift in Sources */,
 				AA6600000000000000000B01 /* GTFSModels.swift in Sources */,
 				AA6600000000000000000B02 /* GTFSCSV.swift in Sources */,
@@ -535,6 +550,7 @@
 				0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */,
 				0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */,
 				0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */,
+				2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */,
 				0A8004FF300AD9FE004E1676 /* Ruta.swift in Sources */,
 				0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */,
 				0A8004F8300AD9FE004E1676 /* RouteCard.swift in Sources */,
@@ -548,6 +564,7 @@
 				0A800507300AD9FE004E1676 /* MapaView.swift in Sources */,
 				0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */,
 				0A800510300AD9FE004E1676 /* SeguridadView.swift in Sources */,
+				2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */,
 				0A800519300AD9FE004E1676 /* RealTrackingProvider.swift in Sources */,
 				0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */,
 			);
@@ -821,6 +838,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2F87EE05304DE59800E2F5F2 /* XCRemoteSwiftPackageReference "CocoaMQTT" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/emqx/CocoaMQTT.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2F87EE06304DE59800E2F5F2 /* CocoaMQTT */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2F87EE05304DE59800E2F5F2 /* XCRemoteSwiftPackageReference "CocoaMQTT" */;
+			productName = CocoaMQTT;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0A40D90C2FDE5E7D00F79FBC /* Project object */;
 }

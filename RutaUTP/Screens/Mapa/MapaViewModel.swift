@@ -141,7 +141,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     init(
         locationService: LocationServiceProtocol = LocationService(),
         routeService: RouteCalculationService = RouteCalculationService(),
-        vehicleTrackingProvider: VehicleTrackingProviding = SimulatedTrackingProvider()
+        vehicleTrackingProvider: VehicleTrackingProviding = TrackingProviderFactory.makeDefault()
     ) {
         self.locationService = locationService
         self.routeService = routeService
