@@ -53,6 +53,8 @@
 		2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */; };
 		2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */; };
 		2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */; };
+		2F87EE12304E036B00E2F5F2 /* PassengerDetectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */; };
+		2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -119,6 +121,8 @@
 		2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfiguration.swift; sourceTree = "<group>"; };
 		2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTTrackingProvider.swift; sourceTree = "<group>"; };
 		2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingProviderFactory.swift; sourceTree = "<group>"; };
+		2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionModels.swift; sourceTree = "<group>"; };
+		2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngine.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
@@ -356,6 +360,7 @@
 		0A8004EE300AD9FE004E1676 /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				2F87EE10304E032300E2F5F2 /* Detection */,
 				2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */,
 				0A8004E9300AD9FE004E1676 /* Models */,
 				0A8004ED300AD9FE004E1676 /* Providers */,
@@ -398,6 +403,15 @@
 				0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */,
 			);
 			path = RutaUTP;
+			sourceTree = "<group>";
+		};
+		2F87EE10304E032300E2F5F2 /* Detection */ = {
+			isa = PBXGroup;
+			children = (
+				2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */,
+				2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */,
+			);
+			path = Detection;
 			sourceTree = "<group>";
 		};
 		AA6600000000000000000C01 /* GTFS */ = {
@@ -540,6 +554,7 @@
 				0A80050B300AD9FE004E1676 /* CarPlayNavegacionView.swift in Sources */,
 				0A80051A300AD9FE004E1676 /* SimulatedTrackingProvider.swift in Sources */,
 				0A800517300AD9FE004E1676 /* TripSession.swift in Sources */,
+				2F87EE12304E036B00E2F5F2 /* PassengerDetectionModels.swift in Sources */,
 				0A800513300AD9FE004E1676 /* LocationService.swift in Sources */,
 				0A800500300AD9FE004E1676 /* AppRouter.swift in Sources */,
 				0A8004FB300AD9FE004E1676 /* Spacing.swift in Sources */,
@@ -550,6 +565,7 @@
 				0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */,
 				0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */,
 				0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */,
+				2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */,
 				2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */,
 				0A8004FF300AD9FE004E1676 /* Ruta.swift in Sources */,
 				0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */,
