@@ -55,6 +55,8 @@
 		2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */; };
 		2F87EE12304E036B00E2F5F2 /* PassengerDetectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */; };
 		2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */; };
+		2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */; };
+		2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -123,6 +125,8 @@
 		2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingProviderFactory.swift; sourceTree = "<group>"; };
 		2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionModels.swift; sourceTree = "<group>"; };
 		2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngine.swift; sourceTree = "<group>"; };
+		2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityProviding.swift; sourceTree = "<group>"; };
+		2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMotionActivityService.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
@@ -360,6 +364,7 @@
 		0A8004EE300AD9FE004E1676 /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				2F87EE1A304E093D00E2F5F2 /* Motion */,
 				2F87EE10304E032300E2F5F2 /* Detection */,
 				2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */,
 				0A8004E9300AD9FE004E1676 /* Models */,
@@ -412,6 +417,15 @@
 				2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */,
 			);
 			path = Detection;
+			sourceTree = "<group>";
+		};
+		2F87EE1A304E093D00E2F5F2 /* Motion */ = {
+			isa = PBXGroup;
+			children = (
+				2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */,
+				2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */,
+			);
+			path = Motion;
 			sourceTree = "<group>";
 		};
 		AA6600000000000000000C01 /* GTFS */ = {
@@ -548,6 +562,7 @@
 				0A800506300AD9FE004E1676 /* GuardadoView.swift in Sources */,
 				0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */,
 				0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */,
+				2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */,
 				0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */,
 				0A8004F9300AD9FE004E1676 /* TopAppBar.swift in Sources */,
 				0A8004FD300AD9FE004E1676 /* LugarGuardado.swift in Sources */,
@@ -563,6 +578,7 @@
 				2F5EE8013047D6E700B24250 /* Idioma.swift in Sources */,
 				0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */,
 				0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */,
+				2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */,
 				0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */,
 				0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */,
 				2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */,
