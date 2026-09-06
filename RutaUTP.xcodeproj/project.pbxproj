@@ -57,6 +57,7 @@
 		2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */; };
 		2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */; };
 		2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */; };
+		2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -127,6 +128,7 @@
 		2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngine.swift; sourceTree = "<group>"; };
 		2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityProviding.swift; sourceTree = "<group>"; };
 		2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMotionActivityService.swift; sourceTree = "<group>"; };
+		2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcher.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
@@ -413,6 +415,7 @@
 		2F87EE10304E032300E2F5F2 /* Detection */ = {
 			isa = PBXGroup;
 			children = (
+				2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */,
 				2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */,
 				2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */,
 			);
@@ -594,6 +597,7 @@
 				2F5EE8033047D78A00B24250 /* ParaderosIluminadosView.swift in Sources */,
 				0A800509300AD9FE004E1676 /* MapMarkers.swift in Sources */,
 				0A800507300AD9FE004E1676 /* MapaView.swift in Sources */,
+				2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */,
 				0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */,
 				0A800510300AD9FE004E1676 /* SeguridadView.swift in Sources */,
 				2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */,
