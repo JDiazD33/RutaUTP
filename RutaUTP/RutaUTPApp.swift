@@ -14,13 +14,38 @@ import SwiftUI
 struct RutaUTPApp: App {
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     @StateObject private var idioma = IdiomaManager.shared
+    private let locationService: LocationService
 
+    @StateObject private var trackingCoordinator:
+        PassiveTrackingCoordinator
+    
+    init() {
+        let sharedLocationService =
+            LocationService()
+
+        self.locationService =
+            sharedLocationService
+
+        _trackingCoordinator = StateObject(
+            wrappedValue: PassiveTrackingCoordinator(
+                locationService: sharedLocationService
+            )
+        )
+    }
+    
+    
     var body: some Scene {
         WindowGroup {
             // Cambio de idioma suave: cross-fade (+ sutil escala) en vez
             // del reemplazo seco del árbol de vistas.
             ZStack {
-                RootView()
+                RootView(
+                    locationService: locationService
+                )
+                .environmentObject(trackingCoordinator)
+                .task {
+                    await trackingCoordinator.startIfConsented()
+                }
                     .id(idioma.codigo)
                     .transition(.opacity.combined(with: .scale(scale: 0.985)))
             }

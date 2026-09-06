@@ -58,6 +58,7 @@
 		2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */; };
 		2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */; };
 		2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */; };
+		2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -129,6 +130,7 @@
 		2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityProviding.swift; sourceTree = "<group>"; };
 		2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMotionActivityService.swift; sourceTree = "<group>"; };
 		2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcher.swift; sourceTree = "<group>"; };
+		2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinator.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
@@ -366,6 +368,7 @@
 		0A8004EE300AD9FE004E1676 /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				2F87EE24304E0F0A00E2F5F2 /* Coordination */,
 				2F87EE1A304E093D00E2F5F2 /* Motion */,
 				2F87EE10304E032300E2F5F2 /* Detection */,
 				2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */,
@@ -429,6 +432,14 @@
 				2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */,
 			);
 			path = Motion;
+			sourceTree = "<group>";
+		};
+		2F87EE24304E0F0A00E2F5F2 /* Coordination */ = {
+			isa = PBXGroup;
+			children = (
+				2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */,
+			);
+			path = Coordination;
 			sourceTree = "<group>";
 		};
 		AA6600000000000000000C01 /* GTFS */ = {
@@ -558,6 +569,7 @@
 				AA6600000000000000000B03 /* GTFSRepository.swift in Sources */,
 				AA6600000000000000000B04 /* ExploradorRutaView.swift in Sources */,
 				AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */,
+				2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */,
 				0A800505300AD9FE004E1676 /* RutaMapKitView.swift in Sources */,
 				0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */,
 				0A800518300AD9FE004E1676 /* VehiclePosition.swift in Sources */,

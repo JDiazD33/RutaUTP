@@ -15,7 +15,10 @@ import MapKit
 
 struct MapaView: View {
     @EnvironmentObject var router: AppRouter
-    @StateObject private var vm = MapaViewModel()
+    @EnvironmentObject private var trackingCoordinator:
+        PassiveTrackingCoordinator
+    @StateObject private var vm: MapaViewModel
+    @State private var showContributionConsent = false
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     @State private var showReportSuccess = false
@@ -32,6 +35,16 @@ struct MapaView: View {
     )
 
     private let tabBarHeight: CGFloat = 64
+    init(
+        locationService: LocationServiceProtocol =
+            LocationService()
+    ) {
+        _vm = StateObject(
+            wrappedValue: MapaViewModel(
+                locationService: locationService
+            )
+        )
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -102,6 +115,11 @@ struct MapaView: View {
                 searchPanel
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
+                
+                // Panel de Contribucion
+                contributionPanel
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
 
                 // Info de Ruta Calculada (ETA + Distancia)
                 if let eta = vm.etaMinutos, let dist = vm.distanciaKm, let res = vm.busquedaResultado {
@@ -250,6 +268,24 @@ struct MapaView: View {
         } message: {
             Text("Tu reporte fue enviado a la comunidad. Gracias por colaborar.")
         }
+        .confirmationDialog(
+            "Ayudar con ubicaciones en tiempo real",
+            isPresented: $showContributionConsent,
+            titleVisibility: .visible
+        ) {
+            Button("Aceptar y activar") {
+                trackingCoordinator
+                    .setContributionEnabled(true)
+            }
+
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text(
+                "RutaUTP analizará tu ubicación y actividad física " +
+                "para detectar si viajas en una ruta de transporte. " +
+                "En esta etapa de prueba los datos todavía no se enviarán."
+            )
+        }
     }
 
     // MARK: - Header
@@ -286,6 +322,91 @@ struct MapaView: View {
         )
     }
 
+    // MARK: - Contribución pasiva
+
+    private var contributionPanel: some View {
+        HStack(spacing: 12) {
+            Image(
+                systemName: trackingCoordinator.isEnabled
+                    ? "location.fill"
+                    : "location.slash"
+            )
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(
+                trackingCoordinator.isEnabled
+                    ? Color.appPrimary
+                    : Color.onSurfaceVariant
+            )
+            .frame(width: 36, height: 36)
+            .background(
+                Circle().fill(
+                    Color.surfaceContainerLow
+                )
+            )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Ayudar con ubicaciones")
+                    .font(.headlineSm)
+                    .foregroundStyle(.onSurface)
+
+                Text(trackingCoordinator.statusMessage)
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .lineLimit(2)
+
+                if let line =
+                    trackingCoordinator.confirmedLine {
+                    Text("Línea detectada: \(line)")
+                        .font(.labelCapsSm)
+                        .foregroundStyle(.appPrimary)
+                }
+            }
+
+            Spacer()
+
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: {
+                        trackingCoordinator.isEnabled
+                    },
+                    set: { enabled in
+                        if enabled {
+                            showContributionConsent = true
+                        } else {
+                            trackingCoordinator
+                                .setContributionEnabled(false)
+                        }
+                    }
+                )
+            )
+            .labelsHidden()
+            .accessibilityLabel(
+                "Ayudar con ubicaciones en tiempo real"
+            )
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(
+                cornerRadius: 14,
+                style: .continuous
+            )
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: 14,
+                    style: .continuous
+                )
+                .stroke(
+                    Color.outlineVariant.opacity(0.3),
+                    lineWidth: 0.5
+                )
+            )
+        )
+    }
+    
+    
+    
     // MARK: - Search panel
     private var searchPanel: some View {
         VStack(spacing: 10) {
@@ -755,6 +876,16 @@ private struct ReportarSheet: View {
 }
 
 #Preview {
-    MapaView().environmentObject(AppRouter())
+    let locationService = LocationService()
+
+    MapaView(
+        locationService: locationService
+    )
+    .environmentObject(AppRouter())
+    .environmentObject(
+        PassiveTrackingCoordinator(
+            locationService: locationService
+        )
+    )
 }
 

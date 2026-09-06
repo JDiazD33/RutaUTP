@@ -10,8 +10,14 @@ import SwiftUI
 
 struct RootView: View {
     @StateObject private var router = AppRouter()
+    private let locationService:
+        LocationServiceProtocol
 
-    init() {
+    init(
+        locationService: LocationServiceProtocol =
+            LocationService()
+    ) {
+        self.locationService = locationService
         // Solo DEBUG: permite abrir directo en una pantalla desde consola,
         // p.ej. xcrun simctl launch ... apolito.RutaUTP --pantalla rutas
         #if DEBUG
@@ -33,12 +39,18 @@ struct RootView: View {
         ZStack {
             switch router.currentScreen {
             case .bienvenida:    BienvenidaView()
-            case .mapaPrincipal: MapaView()
+            case .mapaPrincipal:
+                MapaView(
+                    locationService: locationService
+                )
             case .rutas:         RutasView()
             case .guardado:      GuardadoView()
             case .seguridad:     SeguridadView()
             case .perfil:        PerfilView()
-            case .trackingDemo:  RouteTrackingDemoView()
+            case .trackingDemo:
+                RouteTrackingDemoView(
+                    locationService: locationService
+                )
             }
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
