@@ -65,9 +65,10 @@ struct PerfilView: View {
                     .transition(
                         .asymmetric(
                             insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .move(edge: .top)
-                                .combined(with: .scale(scale: 0.9, anchor: .top))
-                                .combined(with: .opacity)
+                            removal: .modifier(
+                                active: SalidaBanner(activo: true),
+                                identity: SalidaBanner(activo: false)
+                            )
                         )
                     )
             }
@@ -92,7 +93,7 @@ struct PerfilView: View {
             }
         }
         .onChange(of: mapsDownloaded) { listo in
-            // Tras descargar: el banner pasa a verde unos segundos y se despide con animación
+            // Tras descargar: el banner pasa al color de marca unos segundos y se despide con animación
             if listo { programarSalidaBanner() }
         }
         // Foto de perfil: recargar al entrar y al volver de Datos Personales.
@@ -241,13 +242,13 @@ struct PerfilView: View {
                 .fill(
                     LinearGradient(
                         colors: mapsDownloaded
-                            ? [Color.green, Color(red: 0.0, green: 0.48, blue: 0.26)]
+                            ? [Color.appPrimary, Color.primaryContainer]
                             : [Color.orange, Color(red: 0.80, green: 0.35, blue: 0.02)],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     )
                 )
                 .shadow(
-                    color: (mapsDownloaded ? Color.green : Color.orange).opacity(0.45),
+                    color: (mapsDownloaded ? Color.appPrimary : Color.orange).opacity(0.45),
                     radius: 14, x: 0, y: 8
                 )
         )
@@ -263,10 +264,10 @@ struct PerfilView: View {
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    /// Después de descargar, deja ver el estado verde del banner y lo desvanece hacia arriba.
+    /// Después de descargar, deja ver el estado de éxito del banner y lo desvanece hacia arriba.
     private func programarSalidaBanner() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.85)) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.78)) {
                 bannerVisible = false
             }
         }
@@ -692,6 +693,20 @@ struct PerfilView: View {
     }
 }
 
+// MARK: - Transición de salida del banner offline
+// Al irse, el banner se eleva, se encoge y se disuelve con un desenfoque suave.
+private struct SalidaBanner: ViewModifier {
+    var activo: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .offset(y: activo ? -70 : 0)
+            .scaleEffect(activo ? 0.85 : 1.0, anchor: .top)
+            .opacity(activo ? 0 : 1)
+            .blur(radius: activo ? 5 : 0)
+    }
+}
+
 // MARK: - Sheet Modal de Descarga de Mapas Offline
 private struct OfflineMapSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -794,9 +809,7 @@ private struct OfflineMapSheet: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: fase == .listo
-                                ? [Color.green, Color.green.opacity(0.75)]
-                                : [Color.appPrimary, Color.primaryContainer],
+                            colors: [Color.appPrimary, Color.primaryContainer],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     )
@@ -806,7 +819,7 @@ private struct OfflineMapSheet: View {
                     .foregroundStyle(.white)
             }
             .shadow(
-                color: (fase == .listo ? Color.green : Color.appPrimary).opacity(0.35),
+                color: Color.appPrimary.opacity(0.35),
                 radius: 14, x: 0, y: 6
             )
         }
@@ -866,7 +879,7 @@ private struct OfflineMapSheet: View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 26))
-                .foregroundStyle(Color.green)
+                .foregroundStyle(.appPrimary)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(L.t("40 MB guardados en tu iPhone", "40 MB saved on your iPhone"))
@@ -881,11 +894,11 @@ private struct OfflineMapSheet: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.green.opacity(0.10))
+                .fill(Color.appPrimary.opacity(0.10))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.green.opacity(0.25), lineWidth: 1)
+                .stroke(Color.appPrimary.opacity(0.25), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
     }
@@ -911,7 +924,7 @@ private struct OfflineMapSheet: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(fondoBoton)
                     .shadow(
-                        color: (fase == .listo ? Color.green : Color.appPrimary).opacity(0.30),
+                        color: Color.appPrimary.opacity(0.30),
                         radius: 10, x: 0, y: 4
                     )
             )
@@ -945,7 +958,7 @@ private struct OfflineMapSheet: View {
         case .descargando:
             LinearGradient(colors: [Color.appPrimary.opacity(0.7), Color.primaryContainer.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
         case .listo:
-            LinearGradient(colors: [Color.green, Color.green.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
+            LinearGradient(colors: [Color.appPrimary, Color.primaryContainer], startPoint: .leading, endPoint: .trailing)
         }
     }
 
@@ -981,11 +994,11 @@ private struct OfflineMapSheet: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(fase == .listo ? Color.green.opacity(0.12) : Color.surfaceContainerHigh)
+                    .fill(fase == .listo ? Color.appPrimary.opacity(0.12) : Color.surfaceContainerHigh)
                     .frame(width: 42, height: 42)
                 Image(systemName: icon)
                     .font(.system(size: 18))
-                    .foregroundStyle(fase == .listo ? Color.green : Color.appPrimary)
+                    .foregroundStyle(Color.appPrimary)
             }
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
@@ -1004,7 +1017,7 @@ private struct OfflineMapSheet: View {
                     .opacity(fase == .listo ? 0 : 1)
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(Color.green)
+                    .foregroundStyle(Color.appPrimary)
                     .scaleEffect(fase == .listo ? 1.0 : 0.3)
                     .opacity(fase == .listo ? 1.0 : 0)
             }

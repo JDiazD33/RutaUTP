@@ -19,6 +19,9 @@
 //   6. Vehículos en el mapa vía VehicleTrackingProviding con badge de
 //      fuente (DEMO simulado / EN VIVO backend futuro).
 //   7. Registra el viaje en un TripSession (puntos GPS) listo para backend.
+//   8. Negocios en ruta (fase 1): burbujas de locales promocionados cerca
+//      de la posición que van apareciendo durante el viaje; tap → card
+//      con promo y cupón (JSON local vía NegociosService).
 //
 //  Usa `Map(position:)` con `MapCameraPosition` (iOS 17+), igual que el
 //  resto del módulo.
@@ -39,6 +42,18 @@ struct RouteTrackingDemoView: View {
     @State private var ultimoCentroCamara: CLLocationCoordinate2D?
     @State private var destinoElegido: RouteTrackingViewModel.DestinoDemo
 
+    /// Tema elegido en Ajustes. La pantalla de tracking está estilizada en
+    /// oscuro (navegación), pero la card de negocio es contenido flotante y
+    /// debe seguir el tema del usuario como el resto del app.
+    @AppStorage("isDarkMode") private var isDarkMode = false
+
+    // ── Negocios en ruta (fase 1) ──
+    /// Burbujas visibles: los 4 negocios más cercanos a la posición actual,
+    /// refrescados cada ~120 m para que "vayan apareciendo" en el micro.
+    @State private var negociosCerca: [Negocio] = []
+    @State private var negocioSeleccionado: Negocio?
+    @State private var ultimoRefreshNegocios: CLLocationCoordinate2D?
+
     init(locationService: LocationServiceProtocol = LocationService()) {
         _vm = StateObject(wrappedValue: RouteTrackingViewModel(locationService: locationService))
         _destinoElegido = State(initialValue: RouteTrackingViewModel.destinos[0])
@@ -53,6 +68,26 @@ struct RouteTrackingDemoView: View {
             VStack(spacing: 0) {
                 topBar
                 Spacer()
+
+                // Card del negocio tocado: directamente sobre el panel
+                // inferior, sin taparlo nunca. Sigue el tema elegido en
+                // Ajustes (la pantalla fuerza oscuro; la card no).
+                if let negocio = negocioSeleccionado {
+                    NegocioDetailCard(
+                        negocio: negocio,
+                        ubicacion: vm.posicion,
+                        onClose: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                negocioSeleccionado = nil
+                            }
+                        }
+                    )
+                    .environment(\.colorScheme, isDarkMode ? .dark : .light)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
                 panelInferior
             }
 
@@ -75,6 +110,9 @@ struct RouteTrackingDemoView: View {
             if let ultimo = ultimoCentroCamara,
                PolylineMatching.distanceMeters(ultimo, nueva) < 5 { return }
             moverCamara(a: nueva)
+        }
+        .onChange(of: vm.posicionTick) { _, _ in
+            refrescarNegocios()
         }
     }
 
@@ -117,6 +155,23 @@ struct RouteTrackingDemoView: View {
                     )
                 }
             }
+
+            // Negocios en ruta: burbujas de locales promocionados cerca de
+            // la posición. Tap → card con promo y cupón.
+            ForEach(negociosCerca) { negocio in
+                Annotation(negocio.nombre, coordinate: negocio.coordinate) {
+                    NegocioBubbleMarker(
+                        negocio: negocio,
+                        seleccionado: negocioSeleccionado?.id == negocio.id
+                    )
+                    .onTapGesture {
+                        AppHaptics.impact(.light)
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            negocioSeleccionado = negocio
+                        }
+                    }
+                }
+            }
         }
         .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
         .mapControls {
@@ -124,6 +179,9 @@ struct RouteTrackingDemoView: View {
             MapScaleView()
         }
         .ignoresSafeArea()
+        // SIN .onTapGesture aquí: un gesto de tap sobre el Map entero compite
+        // con los taps de las Annotations y las burbujas dejaban de responder.
+        // La card se cierra con su botón X o tocando otra burbuja.
     }
 
     private func moverCamara(a coord: CLLocationCoordinate2D) {
@@ -538,6 +596,21 @@ struct RouteTrackingDemoView: View {
     }
 
     // MARK: - Helpers
+
+    // MARK: Negocios en ruta
+
+    /// Recarga las burbujas cada 120 m de avance (o la primera vez). En un
+    /// micro a 30 km/h es ~1 refresh cada 14 s: las burbujas van apareciendo
+    /// durante el viaje sin parpadear.
+    private func refrescarNegocios() {
+        guard let pos = vm.posicion else { return }
+        if let ultimo = ultimoRefreshNegocios,
+           NegociosService.distanciaMetros(ultimo, pos) < 120 { return }
+        ultimoRefreshNegocios = pos
+        negociosCerca = NegociosService.shared.cerca(de: pos, radioMetros: 900, limite: 4)
+        // El negocio abierto se mantiene aunque salga del top cercano: el
+        // usuario ya mostró interés; se cierra solo con el botón.
+    }
 
     /// Color estable por línea para los vehículos del provider.
     private func colorDeLinea(_ linea: String) -> Color {
