@@ -14,8 +14,8 @@
 //  otro modo tapan el miniplayer y las señas dentro de un sheet no se ven.
 //
 //  Si no hay clip, NO se inventa una seña: se muestra un estado honesto de
-//  "pendiente de grabación". El contenido real se añade después en senias/clips
-//  sin tocar una línea de este archivo.
+//  "pendiente de grabación". El contenido real se añade después en
+//  senias/clips/<idioma>/ sin tocar una línea de este archivo.
 //
 
 import SwiftUI

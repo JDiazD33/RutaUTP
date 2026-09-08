@@ -14,6 +14,7 @@ struct SeguridadView: View {
     @EnvironmentObject private var router: AppRouter
 
     @State private var showReportarSheet = false
+    @State private var showPublicarComunidad = false
     @State private var showLlamarAlert = false
     @State private var selectedReporte: ReporteComunidad?
     /// Likes/dislikes de la sección Comunidad (compartido entre las cards
@@ -244,6 +245,12 @@ struct SeguridadView: View {
         .sheet(isPresented: $showReportarSheet) {
             ReportarSheet()
                 .presentationDetents([.medium, .large])
+        }
+        // AÑADIR (Comunidad): sheet propio, distinto al de reportar, con foto
+        // (cámara/galería) y ubicación en Apple Maps.
+        .sheet(isPresented: $showPublicarComunidad) {
+            PublicarComunidadSheet()
+                .presentationDetents([.large])
         }
         .sheet(item: $selectedReporte) { reporte in
             ReporteDetailSheet(reporte: reporte, reacciones: reacciones)
@@ -723,7 +730,7 @@ struct SeguridadView: View {
                 }
                 Spacer()
                 Button {
-                    showReportarSheet = true
+                    showPublicarComunidad = true
                 } label: {
                     Text(L.t("AÑADIR", "ADD"))
                         .font(.labelCapsSm)
@@ -731,6 +738,7 @@ struct SeguridadView: View {
                         .appTracking(AppTracking.wideLabel)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Añadir publicación a la comunidad")
             }
 
             // Se re-evalúa cada 4 min → rota la ventana de opiniones.

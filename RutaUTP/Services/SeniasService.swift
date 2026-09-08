@@ -35,7 +35,9 @@ final class SeniasService {
             manifesto = nil
         }
 
-        // Carpeta de clips: senias/clips/
+        // Carpeta de clips: senias/clips/<idioma>/ con idioma = "es" | "en".
+        // Dentro de cada carpeta el archivo tiene el MISMO nombre para ambos
+        // idiomas; el manifest no distingue idiomas.
         carpetaClips = bundle.url(forResource: "clips", withExtension: nil, subdirectory: "senias")
     }
 
@@ -50,10 +52,12 @@ final class SeniasService {
 
     // MARK: - Resolución
 
-    /// Devuelve qué se puede mostrar para una clave.
+    /// Devuelve qué se puede mostrar para una clave, en el idioma activo.
     ///
-    /// Degrada de forma honesta: si no hay clip, devuelve `.pendiente` con el
-    /// motivo. Nunca inventa una seña.
+    /// Cada idioma tiene su propia carpeta (senias/clips/es, senias/clips/en)
+    /// con el mismo nombre de archivo dentro. Degrada de forma honesta: si no
+    /// hay clip para el idioma activo, devuelve `.pendiente` con el motivo.
+    /// Nunca inventa una seña ni recicla la del otro idioma.
     func estado(para clave: String) -> EstadoSenia {
         guard let manifesto else {
             return .pendiente(motivo: "No se encontró senias/manifest.json en el bundle")
@@ -65,9 +69,14 @@ final class SeniasService {
             return .pendiente(motivo: "No se encontró senias/clips/ en el bundle")
         }
 
-        let archivo = carpeta.appendingPathComponent(senia.archivo)
+        let idioma = IdiomaManager.shared.codigo // "es" | "en"
+        let carpetaIdioma = carpeta.appendingPathComponent(idioma)
+        guard FileManager.default.fileExists(atPath: carpetaIdioma.path) else {
+            return .pendiente(motivo: "No se encontró senias/clips/\(idioma)/ en el bundle")
+        }
+        let archivo = carpetaIdioma.appendingPathComponent(senia.archivo)
         guard FileManager.default.fileExists(atPath: archivo.path) else {
-            return .pendiente(motivo: "Falta el archivo \(senia.archivo)")
+            return .pendiente(motivo: "Falta el archivo \(idioma)/\(senia.archivo)")
         }
         return .clip(archivo, senia: senia)
     }

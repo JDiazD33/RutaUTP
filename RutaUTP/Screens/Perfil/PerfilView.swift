@@ -20,6 +20,9 @@ struct PerfilView: View {
     @AppStorage(SeniasService.llaveModo) private var modoSenias: Bool = false
     @State private var showOfflineMapPopup: Bool = false
     @State private var mapsDownloaded: Bool = false
+    @State private var offlineIconBounce: Bool = false
+    @State private var bannerVisible: Bool = true
+    @State private var bannerPulse: Bool = false
     @State private var showUbicacionPopup: Bool = false
     @State private var ubicacionPopupMensaje: String = ""
     @State private var ubicacionPopupSubtitulo: String = ""
@@ -29,6 +32,7 @@ struct PerfilView: View {
     @State private var showVoiceOverHelp: Bool = false
     //  CORREGIDO V3: estado para Wallet
     @State private var showTarjetaSheet: Bool = false
+    @State private var showCarneDigital: Bool = false
     @State private var showCarnetScanner: Bool = false
     @State private var carnetVerificado: Bool = false
     @State private var metodoPagoGuardado: String? = nil
@@ -56,21 +60,55 @@ struct PerfilView: View {
             }
 
             // ── BANNER "SIN CONEXIÓN" (Top Banner en Modo Offline) ──
-            if modoOffline {
+            if modoOffline && bannerVisible {
                 offlineTopBanner
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .move(edge: .top)
+                                .combined(with: .scale(scale: 0.9, anchor: .top))
+                                .combined(with: .opacity)
+                        )
+                    )
             }
         }
         .ignoresSafeArea(edges: .bottom)
         .animation(.easeInOut(duration: 0.28), value: modoOffline)
+        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: mapsDownloaded)
         .onChange(of: modoOffline) { activo in
             if activo {
+                AppHaptics.success()
                 showOfflineMapPopup = true
+                bannerVisible = true
+                if mapsDownloaded { programarSalidaBanner() }
+            } else {
+                AppHaptics.impact(.light)
+                bannerVisible = true
+            }
+            // Rebote del icono de la fila al cambiar el modo
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.5)) { offlineIconBounce = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.55)) { offlineIconBounce = false }
             }
         }
+        .onChange(of: mapsDownloaded) { listo in
+            // Tras descargar: el banner pasa a verde unos segundos y se despide con animación
+            if listo { programarSalidaBanner() }
+        }
         // Foto de perfil: recargar al entrar y al volver de Datos Personales.
-        .onAppear { fotoPerfil = ProfileImageStore.load() }
+        .onAppear {
+            fotoPerfil = ProfileImageStore.load()
+            // Solo DEBUG: abre directo el Carné Digital, p.ej.
+            // xcrun simctl launch ... apolito.RutaUTP --pantalla perfil --carne
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--carne") { showCarneDigital = true }
+            #endif
+        }
         .onChange(of: showDatosPersonales) { abierto in
+            if !abierto { fotoPerfil = ProfileImageStore.load() }
+        }
+        // La foto puede cambiar dentro del Carné Digital: recargar al cerrar.
+        .onChange(of: showCarneDigital) { abierto in
             if !abierto { fotoPerfil = ProfileImageStore.load() }
         }
         .onChange(of: ubicacionOn) { activo in
@@ -107,6 +145,13 @@ struct PerfilView: View {
             }
             .presentationDetents([.large])
         }
+        // Sheet del Carné Digital (identificación con código de barras)
+        .sheet(isPresented: $showCarneDigital) {
+            CarneDigitalView(nombre: nombre)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .seguirTemaForzado()
+        }
         // Scanner de Carnet
         .fullScreenCover(isPresented: $showCarnetScanner) {
             CarnetScannerView {
@@ -119,10 +164,12 @@ struct PerfilView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        // Sheet Modal de Descarga de Mapas Offline
+        // Sheet Modal de Descarga de Mapas Offline (se abre a pantalla completa)
         .sheet(isPresented: $showOfflineMapPopup) {
             OfflineMapSheet(mapsDownloaded: $mapsDownloaded)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .seguirTemaForzado()
         }
         // Sheet con instrucciones para activar VoiceOver
         .sheet(isPresented: $showVoiceOverHelp) {
@@ -137,64 +184,92 @@ struct PerfilView: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.orange.opacity(0.20))
-                    .frame(width: 32, height: 32)
-                Image(systemName: "wifi.slash")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.orange)
+                    .fill(Color.white.opacity(0.22))
+                    .frame(width: 40, height: 40)
+                Image(systemName: mapsDownloaded ? "checkmark.seal.fill" : "wifi.slash")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
             }
             .accessibilityHidden(true)
+
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(L.t("SIN CONEXIÓN", "OFFLINE"))
+                    Text(mapsDownloaded ? "MAPAS LISTOS" : "SIN CONEXIÓN")
                         .font(.labelCapsSm)
-                        .foregroundStyle(Color.orange)
                         .appTracking(AppTracking.wideLabel)
-                    Text(L.t("• Modo Offline", "• Offline Mode"))
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
+                    if !mapsDownloaded {
+                        Text("• Modo Offline")
+                            .font(.bodySm)
+                            .foregroundStyle(.white.opacity(0.90))
+                    }
                 }
-                Text(mapsDownloaded ? "Mapas de Trujillo listos localmente" : "Operando con datos almacenados")
+                Text(mapsDownloaded ? "Navegación sin conexión disponible" : "Operando con datos almacenados")
                     .font(.system(size: 11))
-                    .foregroundStyle(.onSurfaceVariant)
+                    .foregroundStyle(.white.opacity(0.90))
             }
             Spacer()
-            Button {
-                AppHaptics.impact(.light)
-                showOfflineMapPopup = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : "arrow.down.circle.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .accessibilityHidden(true)
-                    Text(mapsDownloaded ? "Mapas OK" : "Descargar")
-                        .font(.system(size: 11, weight: .bold))
+
+            if !mapsDownloaded {
+                Button {
+                    AppHaptics.impact(.light)
+                    showOfflineMapPopup = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .accessibilityHidden(true)
+                        Text("Descargar")
+                            .font(.system(size: 12, weight: .heavy))
+                    }
+                    .foregroundStyle(Color.orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color.white))
+                    .shadow(color: Color.black.opacity(0.14), radius: 4, x: 0, y: 2)
                 }
-                .foregroundStyle(Color.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Capsule().fill(Color.orange))
+                .buttonStyle(.plain)
+                .scaleEffect(bannerPulse ? 1.07 : 1.0)
+                .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: bannerPulse)
+                .accessibilityLabel("Descargar mapas offline")
+                .accessibilityHint("Doble toque para administrar los mapas locales")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(mapsDownloaded ? "Mapas descargados correctamente" : "Descargar mapas offline")
-            .accessibilityHint("Doble toque para administrar los mapas locales")
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 4)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: mapsDownloaded
+                            ? [Color.green, Color(red: 0.0, green: 0.48, blue: 0.26)]
+                            : [Color.orange, Color(red: 0.80, green: 0.35, blue: 0.02)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(
+                    color: (mapsDownloaded ? Color.green : Color.orange).opacity(0.45),
+                    radius: 14, x: 0, y: 8
+                )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.orange.opacity(0.40), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.25), lineWidth: 1)
         )
         .padding(.horizontal, 16)
         .padding(.top, 50)
+        .onAppear { bannerPulse = true }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Aviso: sin conexión, modo offline activo")
+        .accessibilityLabel(mapsDownloaded ? "Mapas offline descargados correctamente" : "Aviso: sin conexión, modo offline activo")
         .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    /// Después de descargar, deja ver el estado verde del banner y lo desvanece hacia arriba.
+    private func programarSalidaBanner() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.85)) {
+                bannerVisible = false
+            }
+        }
     }
 
     // MARK: - Hero
@@ -352,6 +427,43 @@ struct PerfilView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    // Carné Digital: debajo del método de pago
+                    Button {
+                        AppHaptics.impact(.light)
+                        showCarneDigital = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "person.crop.rectangle.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.white)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L.t("Carné Digital", "Digital ID"))
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.white)
+                                Text(L.t("Tu identificación para ingresar al campus", "Your ID to enter the campus"))
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.white.opacity(0.8))
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .accessibilityHidden(true)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.18)))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(.white.opacity(0.25), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Carné Digital", "Digital ID"))
+                    .accessibilityHint(L.t("Doble toque para mostrar tu identificación con código de barras", "Double tap to show your ID with barcode"))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 22)
@@ -378,8 +490,7 @@ struct PerfilView: View {
                 toggleRow(icon: "mappin.circle.fill", iconColor: .secondary,
                           label: L.t("Compartir ubicación", "Share location"), isOn: $ubicacionOn)
                 Divider().padding(.leading, 56).accessibilityHidden(true)
-                toggleRow(icon: "wifi.slash", iconColor: .orange,
-                          label: L.t("Modo offline", "Offline mode"), isOn: $modoOffline)
+                offlineToggleRow
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "hand.raised.fill", iconColor: .purple,
                           label: L.signable("perfil.modo_senias", "Modo Señas", "Sign Language Mode"), isOn: $modoSenias)
@@ -503,6 +614,50 @@ struct PerfilView: View {
         .accessibilityAddTraits(.isButton)
     }
 
+    // MARK: - Fila Modo Offline (icono animado + subtítulo según estado)
+    private var offlineToggleRow: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(modoOffline ? Color.orange : Color.orange.opacity(0.14))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "wifi.slash")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(modoOffline ? Color.white : Color.orange)
+            }
+            .scaleEffect(offlineIconBounce ? 1.2 : 1.0)
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L.t("Modo offline", "Offline mode"))
+                    .font(.bodyMdMedium)
+                    .foregroundStyle(.onSurface)
+                Text(subtituloOffline)
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+            }
+            Spacer()
+            Toggle("", isOn: $modoOffline)
+                .labelsHidden()
+                .tint(Color.orange)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L.t("Modo offline", "Offline mode"))
+        .accessibilityValue(modoOffline ? "Activado" : "Desactivado")
+        .accessibilityHint("Doble toque para cambiar")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var subtituloOffline: String {
+        if !modoOffline {
+            return L.t("Descarga mapas para navegar sin señal", "Download maps to navigate without signal")
+        }
+        return mapsDownloaded
+            ? L.t("Activo • Mapas de Trujillo listos", "Active • Trujillo maps ready")
+            : L.t("Activo • Descarga los mapas locales", "Active • Download local maps")
+    }
+
     private func chevronRow(icon: String, iconColor: Color, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
@@ -541,123 +696,298 @@ struct PerfilView: View {
 private struct OfflineMapSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var mapsDownloaded: Bool
-    @State private var isDownloading: Bool = false
+
+    private enum Fase { case reposo, descargando, listo }
+
+    @State private var fase: Fase = .reposo
     @State private var progress: Double = 0.0
+    @State private var pulso: Bool = false
+    @State private var tarea: Task<Void, Never>? = nil
 
     var body: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.appPrimary.opacity(0.20), Color.orange.opacity(0.20)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 72, height: 72)
-                Image(systemName: mapsDownloaded ? "checkmark.seal.fill" : "map.circle.fill")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(mapsDownloaded ? Color.green : Color.appPrimary)
-            }
-            .padding(.top, 16)
+        VStack(spacing: 0) {
+            Spacer(minLength: 8)
+
+            headerIcono
+                .padding(.top, 20)
 
             VStack(spacing: 6) {
-                Text(mapsDownloaded ? "Mapas Offline Descargados" : "Descargar Mapas Locales")
+                Text(titulo)
                     .font(.headlineLgMobile)
                     .foregroundStyle(.onSurface)
-                Text(
-                    mapsDownloaded
-                    ? "Tienes el mapa de Trujillo y campus UTP guardado. Puedes navegar completamente sin conexión a internet."
-                    : "Descarga los mapas del campus UTP y rutas de Trujillo para continuar navegando aun cuando te quedes sin datos o señal."
-                )
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
+                    .multilineTextAlignment(.center)
+                Text(subtitulo)
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
             }
+            .padding(.top, 14)
 
             VStack(spacing: 10) {
                 mapPackageRow(
                     icon: "graduationcap.fill",
-                    title: "Campus UTP Trujillo",
-                    detail: "Edificios, pabellones y paraderos • 12 MB"
+                    title: L.t("Campus UTP Trujillo", "UTP Trujillo Campus"),
+                    detail: L.t("Edificios, pabellones y paraderos • 12 MB", "Buildings, halls and stops • 12 MB")
                 )
                 mapPackageRow(
                     icon: "bus.fill",
-                    title: "Rutas de Transporte Urbano",
-                    detail: "Líneas 10, 4 y paraderos cercanos • 28 MB"
+                    title: L.t("Rutas de Transporte Urbano", "Urban Transport Routes"),
+                    detail: L.t("Líneas 10, 4 y paraderos cercanos • 28 MB", "Lines 10, 4 and nearby stops • 28 MB")
                 )
             }
+            .padding(.top, 18)
 
-            if isDownloading {
-                VStack(spacing: 8) {
-                    HStack {
-                        Text(L.t("Descargando mapas locales...", "Downloading local maps..."))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.onSurface)
-                        Spacer()
-                        Text("\(Int(progress * 100))%")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.appPrimary)
-                    }
-                    ProgressView(value: progress)
-                        .tint(Color.appPrimary)
-                }
-                .padding(.horizontal, 4)
+            if fase == .descargando {
+                seccionProgreso
+                    .padding(.top, 16)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            Spacer()
+            if fase == .listo {
+                seccionListo
+                    .padding(.top, 16)
+                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+            }
 
-            VStack(spacing: 10) {
+            Spacer(minLength: 20)
+
+            botonPrincipal
+
+            if fase == .reposo {
                 Button {
-                    if mapsDownloaded {
-                        dismiss()
-                    } else {
-                        iniciarDescarga()
-                    }
+                    dismiss()
                 } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : (isDownloading ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill"))
-                        Text(mapsDownloaded ? L.t("Entendido, cerrar", "Got it, close") : (isDownloading ? L.t("Descargando...", "Downloading...") : L.t("Descargar Mapas (40 MB)", "Download Maps (40 MB)")))
-                    }
-                    .font(.headlineSm)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(mapsDownloaded ? Color.green : Color.appPrimary)
-                    )
+                    Text(L.t("Ahora no", "Not now"))
+                        .font(.bodyMdMedium)
+                        .foregroundStyle(.onSurfaceVariant)
                 }
                 .buttonStyle(.plain)
-                .disabled(isDownloading)
-
-                if !isDownloading && !mapsDownloaded {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text(L.t("Ahora no", "Not now"))
-                            .font(.bodyMdMedium)
-                            .foregroundStyle(.onSurfaceVariant)
-                    }
-                    .buttonStyle(.plain)
-                }
+                .padding(.top, 10)
+                .accessibilityLabel(L.t("Cerrar sin descargar", "Close without downloading"))
             }
         }
-        .padding(24)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.appSurface)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: fase)
+        .onChange(of: fase) { nueva in
+            // El pulso se activa DESPUÉS de que los anillos aparecen:
+            // si se asignara en la misma transacción, la animación no correría.
+            pulso = (nueva == .descargando)
+        }
+        .onAppear {
+            if mapsDownloaded { fase = .listo }
+        }
+        .onDisappear { tarea?.cancel() }
+    }
+
+    // MARK: Header con icono y anillos de pulso mientras descarga
+    private var headerIcono: some View {
+        ZStack {
+            if fase == .descargando {
+                anillo(delay: 0)
+                anillo(delay: 0.7)
+            }
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: fase == .listo
+                                ? [Color.green, Color.green.opacity(0.75)]
+                                : [Color.appPrimary, Color.primaryContainer],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 84, height: 84)
+                Image(systemName: fase == .listo ? "checkmark" : "map.fill")
+                    .font(.system(size: 34, weight: .heavy))
+                    .foregroundStyle(.white)
+            }
+            .shadow(
+                color: (fase == .listo ? Color.green : Color.appPrimary).opacity(0.35),
+                radius: 14, x: 0, y: 6
+            )
+        }
+        .frame(height: 110)
+        .accessibilityHidden(true)
+    }
+
+    private func anillo(delay: TimeInterval) -> some View {
+        Circle()
+            .stroke(Color.appPrimary.opacity(0.4), lineWidth: 2)
+            .frame(width: 84, height: 84)
+            .scaleEffect(pulso ? 1.5 : 1.0)
+            .opacity(pulso ? 0.0 : 0.6)
+            .animation(.easeOut(duration: 1.4).repeatForever(autoreverses: false).delay(delay), value: pulso)
+    }
+
+    // MARK: Sección de progreso
+    private var seccionProgreso: some View {
+        let mb = Int((progress * 40).rounded())
+        return VStack(spacing: 8) {
+            HStack {
+                Text(L.t("Descargando paquetes…", "Downloading packages…"))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.onSurface)
+                Spacer()
+                Text("\(Int(progress * 100))%")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(.appPrimary)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.surfaceContainerHigh)
+                    Capsule()
+                        .fill(LinearGradient(colors: [Color.appPrimary, Color.primaryContainer], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: max(8, geo.size.width * progress))
+                        .animation(.linear(duration: 0.15), value: progress)
+                }
+            }
+            .frame(height: 8)
+            HStack {
+                Text(L.t("Mapa de Trujillo", "Trujillo map"))
+                Spacer()
+                Text(L.t("\(mb) MB de 40 MB", "\(mb) MB of 40 MB"))
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.onSurfaceVariant)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.surfaceContainerLow)
+        )
+    }
+
+    // MARK: Sección de éxito
+    private var seccionListo: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 26))
+                .foregroundStyle(Color.green)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L.t("40 MB guardados en tu iPhone", "40 MB saved on your iPhone"))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.onSurface)
+                Text(L.t("Esta ventana se cerrará automáticamente", "This window will close automatically"))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.onSurfaceVariant)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.green.opacity(0.10))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.green.opacity(0.25), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: Botón principal (descargar / descargando / listo)
+    private var botonPrincipal: some View {
+        Button {
+            switch fase {
+            case .reposo: iniciarDescarga()
+            case .descargando: break
+            case .listo: dismiss()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: iconoBoton)
+                    .accessibilityHidden(true)
+                Text(textoBoton)
+            }
+            .font(.headlineSm)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(fondoBoton)
+                    .shadow(
+                        color: (fase == .listo ? Color.green : Color.appPrimary).opacity(0.30),
+                        radius: 10, x: 0, y: 4
+                    )
+            )
+            .opacity(fase == .descargando ? 0.75 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .disabled(fase == .descargando)
+        .accessibilityLabel(textoBoton)
+    }
+
+    private var iconoBoton: String {
+        switch fase {
+        case .reposo: return "arrow.down.circle.fill"
+        case .descargando: return "arrow.triangle.2.circlepath"
+        case .listo: return "checkmark.circle.fill"
+        }
+    }
+
+    private var textoBoton: String {
+        switch fase {
+        case .reposo: return L.t("Descargar Mapas (40 MB)", "Download Maps (40 MB)")
+        case .descargando: return L.t("Descargando…", "Downloading…")
+        case .listo: return L.t("¡Listo!", "Done!")
+        }
+    }
+
+    private var fondoBoton: LinearGradient {
+        switch fase {
+        case .reposo:
+            LinearGradient(colors: [Color.appPrimary, Color.primaryContainer], startPoint: .leading, endPoint: .trailing)
+        case .descargando:
+            LinearGradient(colors: [Color.appPrimary.opacity(0.7), Color.primaryContainer.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
+        case .listo:
+            LinearGradient(colors: [Color.green, Color.green.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
+        }
+    }
+
+    private var titulo: String {
+        switch fase {
+        case .reposo: return L.t("Descargar Mapas Locales", "Download Local Maps")
+        case .descargando: return L.t("Descargando mapas…", "Downloading maps…")
+        case .listo: return L.t("¡Mapas Listos!", "Maps Ready!")
+        }
+    }
+
+    private var subtitulo: String {
+        switch fase {
+        case .reposo:
+            return L.t(
+                "Descarga los mapas del campus UTP y rutas de Trujillo para seguir navegando aun sin datos o señal.",
+                "Download UTP campus and Trujillo route maps to keep navigating without data or signal."
+            )
+        case .descargando:
+            return L.t(
+                "Guardando el mapa de Trujillo en tu iPhone. No cierres esta ventana.",
+                "Saving the Trujillo map to your iPhone. Don't close this window."
+            )
+        case .listo:
+            return L.t(
+                "El mapa de Trujillo y el campus UTP quedaron guardados. Podrás navegar completamente sin conexión.",
+                "Trujillo and UTP campus maps are saved. You can navigate fully offline."
+            )
+        }
     }
 
     private func mapPackageRow(icon: String, title: String, detail: String) -> some View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.surfaceContainerHigh)
+                    .fill(fase == .listo ? Color.green.opacity(0.12) : Color.surfaceContainerHigh)
                     .frame(width: 42, height: 42)
                 Image(systemName: icon)
                     .font(.system(size: 18))
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(fase == .listo ? Color.green : Color.appPrimary)
             }
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
@@ -667,9 +997,18 @@ private struct OfflineMapSheet: View {
                     .foregroundStyle(.onSurfaceVariant)
             }
             Spacer()
-            Image(systemName: mapsDownloaded ? "checkmark.circle.fill" : "arrow.down.circle")
-                .font(.system(size: 18))
-                .foregroundStyle(mapsDownloaded ? Color.green : Color.onSurfaceVariant.opacity(0.5))
+            ZStack {
+                Image(systemName: "arrow.down.circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.onSurfaceVariant.opacity(0.5))
+                    .opacity(fase == .listo ? 0 : 1)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.green)
+                    .scaleEffect(fase == .listo ? 1.0 : 0.3)
+                    .opacity(fase == .listo ? 1.0 : 0)
+            }
+            .accessibilityHidden(true)
         }
         .padding(12)
         .background(
@@ -679,16 +1018,29 @@ private struct OfflineMapSheet: View {
     }
 
     private func iniciarDescarga() {
-        isDownloading = true
+        guard fase == .reposo else { return }
+        fase = .descargando
         progress = 0.0
-        Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { timer in
-            progress += 0.08
-            if progress >= 1.0 {
-                progress = 1.0
-                timer.invalidate()
-                isDownloading = false
-                mapsDownloaded = true
+        AppHaptics.impact(.light)
+
+        tarea = Task {
+            // Progreso simulado: 3.0 s
+            let pasos = 60
+            for _ in 0..<pasos {
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                guard !Task.isCancelled else { return }
+                progress = min(1.0, progress + 1.0 / Double(pasos))
             }
+
+            fase = .listo
+            mapsDownloaded = true
+            pulso = false
+            AppHaptics.success()
+
+            // Cierre automático: la ventana desaparece a los 4 s de presionar Descargar
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            dismiss()
         }
     }
 }

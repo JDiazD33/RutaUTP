@@ -19,6 +19,8 @@ struct MapaView: View {
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     @State private var showReportSuccess = false
+    /// Selector de destino tocando el mapa (botón del buscador).
+    @State private var showElegirEnMapa = false
     /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
     /// debajo del botón de mi ubicación.
     @State private var panelColapsado = false
@@ -246,6 +248,17 @@ struct MapaView: View {
             ReportarSheet()
                 .presentationDetents([.medium, .large])
         }
+        .fullScreenCover(isPresented: $showElegirEnMapa) {
+            ElegirDestinoEnMapa(
+                coordenadaInicial: vm.busquedaResultado?.coordenada,
+                onElegir: { titulo, coordenada in
+                    showElegirEnMapa = false
+                    vm.seleccionarLugar(titulo: titulo, coordenada: coordenada)
+                    vm.textoBusqueda = titulo
+                },
+                onCerrar: { showElegirEnMapa = false }
+            )
+        }
         .alert("Reporte enviado", isPresented: $showReportSuccess) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -287,9 +300,31 @@ struct MapaView: View {
         )
     }
 
+    /// Botón al final del buscador: abre el mapa para elegir el destino
+    /// con un tap (ícono de flecha tipo Google Maps, gris claro).
+    private var botonElegirEnMapa: some View {
+        Button {
+            AppHaptics.impact(.light)
+            campoEnfocado = false
+            showElegirEnMapa = true
+        } label: {
+            Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color(.systemGray2))
+                .frame(width: 34, height: 34)
+                .background(
+                    Circle().fill(Color.surfaceContainerHighest)
+                )
+                .overlay(
+                    Circle().stroke(Color.outlineVariant.opacity(0.5), lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Elegir destino en el mapa", "Pick destination on map"))
+    }
+
     // MARK: - Search panel
-    private var searchPanel: some View {
-        VStack(spacing: 10) {
+    private var searchPanel: some View {        VStack(spacing: 10) {
             // TextField
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
@@ -320,6 +355,9 @@ struct MapaView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                // Elegir destino tocando el mapa (ícono tipo Google Maps).
+                botonElegirEnMapa
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -471,8 +509,29 @@ struct MapaView: View {
 
                 Spacer()
 
-                // Ícono de bus: fijo en su lugar (nivel REPORTAR). Solo los
-                // textos se deslizan a la derecha al colapsar.
+                if !panelColapsado {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(L.signable("mapa.cercanos", "Transportes cercanos", "Nearby transport"))
+                            .font(.system(size: 15, weight: .heavy))
+                            .foregroundStyle(.onSurface)
+                            .seniable("mapa.cercanos")
+                        Text(textoEstadoLineas)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.onSurfaceVariant)
+                            .lineLimit(1)
+                    }
+                    // Al colapsar el texto se desliza a la derecha, hacia el
+                    // ícono de bus (su ancla fija), y se funde detrás de él.
+                    // Al expandir aparece ya en su sitio, sin arrastre.
+                    .transition(.asymmetric(
+                        insertion: .opacity,
+                        removal:   .move(edge: .trailing).combined(with: .opacity)
+                    ))
+                }
+
+                // Ícono de bus: fijo en el borde derecho, centrado bajo el
+                // botón de Mi Ubicación. Los 4pt extra de padding cuadran
+                // centros (36 vs 44pt de ancho) con los 20pt del botón GPS.
                 Button {
                     AppHaptics.impact(.light)
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -489,24 +548,8 @@ struct MapaView: View {
                     }
                 }
                 .buttonStyle(PressableCapsuleStyle())
+                .padding(.trailing, 4)
                 .accessibilityLabel(panelColapsado ? "Mostrar transportes cercanos" : "Ocultar transportes cercanos")
-
-                if !panelColapsado {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(L.signable("mapa.cercanos", "Transportes cercanos", "Nearby transport"))
-                            .font(.system(size: 15, weight: .heavy))
-                            .foregroundStyle(.onSurface)
-                            .seniable("mapa.cercanos")
-                        Text(textoEstadoLineas)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.onSurfaceVariant)
-                            .lineLimit(1)
-                    }
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .leading).combined(with: .opacity),
-                        removal:   .move(edge: .trailing).combined(with: .opacity)
-                    ))
-                }
             }
             .padding(.horizontal, 20)
 
@@ -656,6 +699,140 @@ private struct BusCard: View {
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Elegir destino tocando el mapa
+/// Mapa a pantalla completa lanzado desde el buscador: el usuario toca el
+/// punto exacto y se convierte en el destino (con dirección real vía
+/// geocodificación inversa).
+private struct ElegirDestinoEnMapa: View {
+    /// Destino ya elegido antes de abrir (si existe): centra el mapa ahí.
+    let coordenadaInicial: CLLocationCoordinate2D?
+    /// Devuelve (título, coordenada) del punto elegido.
+    var onElegir: (String, CLLocationCoordinate2D) -> Void
+    var onCerrar: () -> Void
+
+    @State private var coordenada: CLLocationCoordinate2D? = nil
+    @State private var resolviendoDireccion = false
+
+    var body: some View {
+        ZStack {
+            MapaElegirLugar(
+                coordenada: coordenada ?? coordenadaInicial,
+                onTocar: { coord in
+                    AppHaptics.impact(.light)
+                    coordenada = coord
+                }
+            )
+            .ignoresSafeArea()
+
+            VStack {
+                barraSuperior
+                Spacer()
+                pie
+            }
+        }
+    }
+
+    private var barraSuperior: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.system(size: 13, weight: .bold))
+                Text(L.t("¿A dónde vas hoy?", "Where to today?"))
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(Capsule().fill(Color.black.opacity(0.55)))
+
+            Spacer()
+
+            Button(action: onCerrar) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.onSurface)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(.ultraThinMaterial))
+                    .overlay(
+                        Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.t("Cerrar", "Close"))
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+    }
+
+    /// Abajo: instrucción mientras no haya pin; confirmar cuando sí.
+    @ViewBuilder
+    private var pie: some View {
+        if coordenada != nil {
+            Button(action: confirmar) {
+                HStack(spacing: 8) {
+                    if resolviendoDireccion {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    Text(resolviendoDireccion
+                         ? L.t("Buscando dirección…", "Looking up address…")
+                         : L.t("Usar este destino", "Use this destination"))
+                        .font(.headlineSm)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.appPrimary)
+                        .shadow(color: .appPrimary.opacity(0.35), radius: 12, x: 0, y: 6)
+                )
+            }
+            .buttonStyle(PressableCapsuleStyle())
+            .disabled(resolviendoDireccion)
+            .padding(.horizontal, 20)
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "hand.tap.fill")
+                    .font(.system(size: 12, weight: .bold))
+                Text(L.t("Toca el mapa donde quieres ir", "Tap the map where you want to go"))
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(Color.black.opacity(0.55)))
+        }
+    }
+
+    /// Convierte el punto en el destino: resuelve su dirección real (con
+    /// respaldo si el geocoder no responde) y lo entrega al Mapa.
+    private func confirmar() {
+        guard let coordenada, !resolviendoDireccion else { return }
+        resolviendoDireccion = true
+        Task { @MainActor in
+            let titulo = await Self.nombreDelLugar(coordenada)
+            resolviendoDireccion = false
+            onElegir(titulo, coordenada)
+        }
+    }
+
+    static func nombreDelLugar(_ coord: CLLocationCoordinate2D) async -> String {
+        let geocoder = CLGeocoder()
+        let lugar = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+        if let marcas = try? await geocoder.reverseGeocodeLocation(lugar),
+           let marca = marcas.first {
+            // name = calle/número; locality = Trujillo. Prioriza la calle.
+            if let calle = marca.name, !calle.isEmpty { return calle }
+            if let distrito = marca.subLocality, !distrito.isEmpty { return distrito }
+            if let ciudad = marca.locality, !ciudad.isEmpty { return ciudad }
+        }
+        return L.t("Punto en el mapa", "Picked spot")
     }
 }
 

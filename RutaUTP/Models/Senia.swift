@@ -53,7 +53,8 @@ final class CatalogoSenias {
 struct Senia: Codable {
     /// Clave estable, p. ej. "mapa.destino.casa".
     let clave: String
-    /// Nombre del archivo dentro de senias/clips/.
+    /// Nombre del archivo dentro de senias/clips/<idioma>/ (es | en); el
+    /// nombre es el mismo para ambos idiomas.
     let archivo: String
     /// Procedencia del clip. Informativo, para no perder la trazabilidad.
     let fuente: String?

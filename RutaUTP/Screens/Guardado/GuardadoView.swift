@@ -489,7 +489,9 @@ struct PressableCapsuleStyle: ButtonStyle {
 }
 
 // MARK: - Mapa para elegir ubicación (tocable para mover el pin)
-private struct MapaElegirLugar: UIViewRepresentable {
+/// Mapa para elegir un punto con un tap. Compartido por Guardado (elegir
+/// ubicación del lugar) y Mapa (elegir destino en el mapa).
+struct MapaElegirLugar: UIViewRepresentable {
     /// Coordenada actual del pin (nil = sin pin todavía).
     let coordenada: CLLocationCoordinate2D?
     /// Avisa cuando el usuario toca el mapa para mover el pin.

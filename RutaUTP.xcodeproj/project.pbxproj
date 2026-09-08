@@ -28,6 +28,7 @@
 		0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D1300AD9FE004E1676 /* SideDrawer.swift */; };
 		0A80050B300AD9FE004E1676 /* CarPlayNavegacionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D3300AD9FE004E1676 /* CarPlayNavegacionView.swift */; };
 		0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */; };
+		0AC4E0A120260907004E1676 /* CarneDigitalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC4E0A220260907004E1676 /* CarneDigitalView.swift */; };
 		0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D6300AD9FE004E1676 /* PerfilView.swift */; };
 		0A80050E300AD9FE004E1676 /* TarjetaFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */; };
 		0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D9300AD9FE004E1676 /* RutasView.swift */; };
@@ -59,6 +60,7 @@
 		AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E05 /* SeniasOverlay.swift */; };
 		AA6600000000000000000E08 /* senias in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E07 /* senias */; };
 		AA6600000000000000000E10 /* ReportarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E09 /* ReportarSheet.swift */; };
+		AA6600000000000000000E12 /* PublicarComunidadSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E11 /* PublicarComunidadSheet.swift */; };
 		AA6600000000000000000F02 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000F01 /* Idioma.swift */; };
 /* End PBXBuildFile section */
 
@@ -85,6 +87,7 @@
 		0A8004D1300AD9FE004E1676 /* SideDrawer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideDrawer.swift; sourceTree = "<group>"; };
 		0A8004D3300AD9FE004E1676 /* CarPlayNavegacionView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarPlayNavegacionView.swift; sourceTree = "<group>"; };
 		0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarnetScannerView.swift; sourceTree = "<group>"; };
+		0AC4E0A220260907004E1676 /* CarneDigitalView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarneDigitalView.swift; sourceTree = "<group>"; };
 		0A8004D6300AD9FE004E1676 /* PerfilView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerfilView.swift; sourceTree = "<group>"; };
 		0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TarjetaFormSheet.swift; sourceTree = "<group>"; };
 		0A8004D9300AD9FE004E1676 /* RutasView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutasView.swift; sourceTree = "<group>"; };
@@ -116,6 +119,7 @@
 		AA6600000000000000000E05 /* SeniasOverlay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlay.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E07 /* senias */ = {isa = PBXFileReference; lastKnownFileType = folder; path = senias; sourceTree = "<group>"; };
 		AA6600000000000000000E09 /* ReportarSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportarSheet.swift; sourceTree = "<group>"; };
+		AA6600000000000000000E11 /* PublicarComunidadSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PublicarComunidadSheet.swift; sourceTree = "<group>"; };
 		AA6600000000000000000F01 /* Idioma.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -153,6 +157,7 @@
 			children = (
 				0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */,
 				AA6600000000000000000E09 /* ReportarSheet.swift */,
+				AA6600000000000000000E11 /* PublicarComunidadSheet.swift */,
 				0A8004B6300AD9FE004E1676 /* RouteCard.swift */,
 				AA6600000000000000000E05 /* SeniasOverlay.swift */,
 				0A8004B7300AD9FE004E1676 /* TopAppBar.swift */,
@@ -247,6 +252,7 @@
 		0A8004D8300AD9FE004E1676 /* Perfil */ = {
 			isa = PBXGroup;
 			children = (
+				0AC4E0A220260907004E1676 /* CarneDigitalView.swift */,
 				0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */,
 				0A8004D6300AD9FE004E1676 /* PerfilView.swift */,
 				0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */,
@@ -468,6 +474,7 @@
 				AA6600000000000000000E04 /* SeniasService.swift in Sources */,
 				AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */,
 				AA6600000000000000000E10 /* ReportarSheet.swift in Sources */,
+				AA6600000000000000000E12 /* PublicarComunidadSheet.swift in Sources */,
 				AA6600000000000000000B01 /* GTFSModels.swift in Sources */,
 				AA6600000000000000000B02 /* GTFSCSV.swift in Sources */,
 				AA6600000000000000000B03 /* GTFSRepository.swift in Sources */,
@@ -492,6 +499,7 @@
 				0A800500300AD9FE004E1676 /* AppRouter.swift in Sources */,
 				0A8004FB300AD9FE004E1676 /* Spacing.swift in Sources */,
 				0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */,
+				0AC4E0A120260907004E1676 /* CarneDigitalView.swift in Sources */,
 				0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */,
 				0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */,
 				0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */,
