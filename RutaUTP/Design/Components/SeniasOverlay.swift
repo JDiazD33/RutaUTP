@@ -307,29 +307,38 @@ struct SeniableModifier: ViewModifier {
     /// Corrimiento extra del distintivo hacia la derecha (para sitios donde
     /// queda pegado al texto, p. ej. títulos de secciones en Seguridad).
     var distintivoDx: CGFloat = 0
+    /// false = sólo el distintivo visual, sin gesto. Útil cuando el elemento
+    /// es un Button: un TapGesture DENTRO del label le bloquea la acción al
+    /// botón (el miniplayer aparece pero la acción nunca corre); en ese caso
+    /// la acción del botón llama ella misma a `presenter.mostrar(clave:)`.
+    var conGesto: Bool = true
     @AppStorage(SeniasService.llaveModo) private var modoActivo = false
     @ObservedObject private var presenter = SeniasPresenter.shared
 
     func body(content: Content) -> some View {
         if modoActivo {
-            content
-                // Distintivo: manita en la esquina superior derecha que indica
-                // que ese elemento tiene seña. Va como overlay (no como HStack)
-                // para no mover el layout de chips, botones y tarjetas, y con
-                // offset hacia afuera para no tapar el contenido.
-                .overlay(alignment: .topTrailing) {
-                    DistintivoSenia(dx: 6 + distintivoDx)
-                }
-                // simultaneousGesture: funciona también sobre textos que están
-                // DENTRO de un Button (chips, CTAs). El tap muestra la seña y
-                // el botón sigue ejecutando su acción normal.
-                .simultaneousGesture(
-                    TapGesture().onEnded { presenter.mostrar(clave: clave) }
-                )
-                .accessibilityAddTraits(.isButton)
-                .accessibilityHint(L.t("Toca para ver la seña en lengua de señas", "Tap to see the sign language translation"))
+            if conGesto {
+                conDistintivo(content)
+                    // simultaneousGesture: funciona también sobre textos que
+                    // están DENTRO de un Button (chips, CTAs). El tap muestra
+                    // la seña y el botón sigue ejecutando su acción normal.
+                    .simultaneousGesture(
+                        TapGesture().onEnded { presenter.mostrar(clave: clave) }
+                    )
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint(L.t("Toca para ver la seña en lengua de señas", "Tap to see the sign language translation"))
+            } else {
+                conDistintivo(content)
+            }
         } else {
             content
+        }
+    }
+
+    /// El contenido con la manita anclada a su esquina superior derecha.
+    private func conDistintivo(_ content: Content) -> some View {
+        content.overlay(alignment: .topTrailing) {
+            DistintivoSenia(dx: 6 + distintivoDx)
         }
     }
 }
@@ -364,15 +373,17 @@ extension View {
     ///
     /// - `distintivoDx`: empuje extra del distintivo hacia la derecha para
     ///   sitios donde queda pegado al texto.
-    func seniable(_ clave: String, distintivoDx: CGFloat = 0) -> some View {
-        modifier(SeniableModifier(clave: clave, distintivoDx: distintivoDx))
+    /// - `conGesto`: false = sólo el distintivo (la acción del botón
+    ///   contenedor se encarga de llamar `presenter.mostrar(clave:)`).
+    func seniable(_ clave: String, distintivoDx: CGFloat = 0, conGesto: Bool = true) -> some View {
+        modifier(SeniableModifier(clave: clave, distintivoDx: distintivoDx, conGesto: conGesto))
     }
 
     /// Variante para modelos donde la clave puede no existir (nil = no señable).
     @ViewBuilder
-    func seniable(_ clave: String?, distintivoDx: CGFloat = 0) -> some View {
+    func seniable(_ clave: String?, distintivoDx: CGFloat = 0, conGesto: Bool = true) -> some View {
         if let clave {
-            modifier(SeniableModifier(clave: clave, distintivoDx: distintivoDx))
+            modifier(SeniableModifier(clave: clave, distintivoDx: distintivoDx, conGesto: conGesto))
         } else {
             self
         }

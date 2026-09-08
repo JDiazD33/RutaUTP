@@ -192,7 +192,7 @@ struct GuardadoView: View {
             Text(L.signable("guardado.titulo", "Guardado", "Saved"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
-                .seniable("guardado.titulo")
+                .seniable("guardado.titulo", distintivoDx: 10)
             Spacer()
             botonAñadir
         }
@@ -259,7 +259,17 @@ struct GuardadoView: View {
             ForEach(Tab.allCases) { t in
                 Button {
                     AppHaptics.selection()
+                    // 1) El cambio de pestaña PRIMERO y su transacción de
+                    //    animación comprometida...
                     withAnimation(.easeInOut(duration: 0.2)) { selectedTab = t }
+                    // 2) ...y la seña en el siguiente ciclo: mostrar() publica
+                    //    un @Published y despliega la ventana del miniplayer;
+                    //    hacerlo sincrónico aquí dentro rompía el switch (la
+                    //    pestaña no cambiaba, sólo aparecía el miniplayer).
+                    let clave = t == .lugares ? "guardado.lugares" : "guardado.lineas"
+                    DispatchQueue.main.async {
+                        SeniasPresenter.shared.mostrar(clave: clave)
+                    }
                 } label: {
                     VStack(spacing: 6) {
                         Text(t == .lugares
@@ -267,6 +277,10 @@ struct GuardadoView: View {
                              : L.signable("guardado.lineas", "Líneas", "Lines"))
                             .font(.bodyMdMedium)
                             .foregroundStyle(selectedTab == t ? Color.appPrimary : Color.onSurfaceVariant)
+                            // El distintivo va en el TEXTO (al terminar la
+                            // palabra) pero SIN gesto: conGesto false.
+                            .seniable(t == .lugares ? "guardado.lugares" : "guardado.lineas",
+                                      distintivoDx: 10, conGesto: false)
                         Rectangle()
                             .fill(selectedTab == t ? Color.appPrimary : Color.clear)
                             .frame(height: 2)
@@ -275,7 +289,6 @@ struct GuardadoView: View {
                     .padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
-                .seniable(t == .lugares ? "guardado.lugares" : "guardado.lineas")
             }
         }
         .background(Color.appSurface)

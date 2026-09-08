@@ -206,9 +206,16 @@ struct SideDrawer: View {
                 // Cambio de idioma ES/EN (aplica al instante en toda la app)
                 Button {
                     AppHaptics.impact(.medium)
-                    // Modo Señas: deja ver el videito antes de que la app
-                    // entera se re-traduzca alrededor del miniplayer.
-                    SeniasPresenter.shared.ejecutarTrasVerSenia {
+                    if SeniasService.shared.modoActivo {
+                        // Modo señas: el videito primero (4s) y el cambio de
+                        // idioma DESPUÉS. Pausa explícita con el singleton
+                        // capturado directo: sin estados intermedios ni
+                        // condiciones que puedan saltarse el cambio.
+                        SeniasPresenter.shared.mostrar(clave: "perfil.idioma")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                            IdiomaManager.shared.alternar()
+                        }
+                    } else {
                         idioma.alternar()
                     }
                 } label: {
@@ -243,11 +250,15 @@ struct SideDrawer: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.surfaceContainerLow)
                     )
-                    .padding(.horizontal, 8)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L.t("Cambiar idioma", "Change language"))
+                // El gesto de seña va FUERA del label del Button: dentro del
+                // label el TapGesture le bloqueaba la acción y el idioma nunca
+                // cambiaba. El padding externo va DESPUÉS del seniable para que
+                // la manita se ancle al card y no al área con padding.
                 .seniable("perfil.idioma")
+                .padding(.horizontal, 8)
 
                 Divider().padding(.leading, 56).padding(.top, 6)
 

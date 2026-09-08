@@ -242,7 +242,7 @@ struct RutasView: View {
                                 Text(L.signable("rutas.elegir", "Elige tu ruta", "Pick your route"))
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
-                                    .seniable("rutas.elegir")
+                                    .seniable("rutas.elegir", distintivoDx: 10)
                                 Text(viewModel.cargando
                                      ? L.t("Cargando rutas oficiales…", "Loading official routes…")
                                      : (viewModel.filtroCerca != nil
@@ -560,7 +560,6 @@ private struct DetalleRutaView: View {
                                     .font(.labelCapsMd)
                                     .foregroundStyle(.onPrimaryContainer)
                                     .appTracking(AppTracking.wideLabel)
-                                    .seniable("rutas.frecuencia")
                                 Text(ruta.frecuenciaTexto)
                                     .font(.displayNumberMd)
                                     .foregroundStyle(.onPrimaryContainer)
@@ -568,6 +567,9 @@ private struct DetalleRutaView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .background(RoundedRectangle(cornerRadius: 8).fill(Color.primaryContainer))
+                            // La manita va en el CARD rojo, no en la palabra:
+                            // anclada al texto quedaba metida dentro del card.
+                            .seniable("rutas.frecuencia")
                         }
                         .padding(20)
                         .background(
@@ -603,7 +605,7 @@ private struct DetalleRutaView: View {
                             Text(L.signable("rutas.guia", "Guía paso a paso", "Step-by-step guide"))
                                 .font(.headlineXs)
                                 .foregroundStyle(.onSurface)
-                                .seniable("rutas.guia")
+                                .seniable("rutas.guia", distintivoDx: 10)
 
                             VStack(spacing: 0) {
                                 pasoRow("1", L.t("Ve al paradero \(ruta.paradaInicio)", "Go to \(ruta.paradaInicio) stop"),

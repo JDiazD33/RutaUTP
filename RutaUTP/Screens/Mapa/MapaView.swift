@@ -413,7 +413,12 @@ struct MapaView: View {
                         chip(destino)
                     }
                 }
-                .padding(.horizontal, 2)
+                // Respiración para la manita del distintivo: el ScrollView
+                // recorta todo lo que sale del contenido y la parte de arriba
+                // (y la derecha del último chip) se veía a la mitad.
+                .padding(.leading, 2)
+                .padding(.trailing, 10)
+                .padding(.top, 8)
             }
         }
         .padding(14)
