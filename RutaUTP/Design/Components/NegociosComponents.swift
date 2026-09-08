@@ -221,7 +221,7 @@ struct NegocioDetailCard: View {
                 Image(systemName: "clock")
                     .font(.system(size: 11))
                     .foregroundStyle(.onSurfaceVariant)
-                Text(negocio.horario)
+                Text(negocio.horario.texto)
                     .font(.system(size: 11))
                     .foregroundStyle(.onSurfaceVariant)
                     .lineLimit(1)
@@ -243,7 +243,7 @@ struct NegocioDetailCard: View {
     // MARK: Promo
 
     private var promo: some View {
-        Text(negocio.promoDetalle)
+        Text(negocio.promoDetalle.texto)
             .font(.system(size: 12))
             .foregroundStyle(.onSurface)
             .lineSpacing(2)
@@ -264,11 +264,11 @@ struct NegocioDetailCard: View {
                     Image(systemName: "ticket.fill")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Color.appPrimary)
-                    Text(cupon.detalle)
+                    Text(cupon.detalle.texto)
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.onSurface)
                 }
-                Text(cupon.condiciones)
+                Text(cupon.condiciones.texto)
                     .font(.system(size: 10))
                     .foregroundStyle(.onSurfaceVariant)
                     .lineSpacing(1)
@@ -414,15 +414,22 @@ extension Negocio {
             longitud: -79.03799,
             direccion: "Av. Nicolás de Piérola 1150",
             distrito: "Trujillo",
-            promoCorta: "🍗 1/4 pollo + papas 2x1",
-            promoDetalle: "De a dos: pide un 1/4 de pollo a la brasa con papas doradas y el segundo va por nuestra cuenta.",
+            promoCorta: TextoBilingue(es: "🍗 1/4 pollo + papas 2x1",
+                                      en: "🍗 1/4 chicken + fries 2x1"),
+            promoDetalle: TextoBilingue(
+                es: "De a dos: pide un 1/4 de pollo a la brasa con papas doradas y el segundo va por nuestra cuenta.",
+                en: "For two: order a 1/4 rotisserie chicken with golden fries and the second one is on us."
+            ),
             cupon: CuponNegocio(
                 codigo: "RUTA-2X1POLLO",
-                detalle: "2x1 en 1/4 de pollo + papas",
-                condiciones: "Lun a Jue desde las 3 pm. Mostrando el cupón en la app.",
+                detalle: TextoBilingue(es: "2x1 en 1/4 de pollo + papas",
+                                       en: "2x1 on 1/4 chicken + fries"),
+                condiciones: TextoBilingue(es: "Lun a Jue desde las 3 pm. Mostrando el cupón en la app.",
+                                           en: "Mon-Thu from 3 pm. Showing the in-app coupon."),
                 vence: "2026-12-31"
             ),
-            horario: "Lun-Sáb 11:00-22:30 · Dom 12:00-22:00",
+            horario: TextoBilingue(es: "Lun-Sáb 11:00-22:30 · Dom 12:00-22:00",
+                                   en: "Mon-Sat 11:00-22:30 · Sun 12:00-22:00"),
             telefono: "+51 944 302 118",
             patrocinado: true,
             calificacion: 4.6

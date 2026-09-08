@@ -15,6 +15,18 @@ import SwiftUI
 
 // MARK: - Modelo
 
+/// Texto en dos idiomas para el contenido del catálogo (promos, cupones,
+/// horarios). ES es la fuente de verdad; si falta EN se degrada a ES.
+/// Se resuelve en el idioma activo al momento de renderizar, igual que L.t.
+struct TextoBilingue: Codable {
+    let es: String
+    let en: String?
+
+    var texto: String {
+        IdiomaManager.shared.esIngles ? (en ?? es) : es
+    }
+}
+
 /// Un local comercial que aparece como burbuja en el mapa durante el viaje.
 struct Negocio: Codable, Identifiable {
     /// Identificador estable para el futuro backend (ej. "menu-dona-teo").
@@ -27,13 +39,13 @@ struct Negocio: Codable, Identifiable {
     /// Distrito ("Trujillo", "Huanchaco", "La Esperanza"...). Útil para
     /// mostrar "a X km · Huanchaco" en la burbuja y la card.
     let distrito: String
-    /// Texto corto para la burbuja del mapa, con emoji incluido.
-    let promoCorta: String
-    /// Texto completo para la card de detalle.
-    let promoDetalle: String
+    /// Texto corto para badges/burbuja, con emoji incluido (bilingüe).
+    let promoCorta: TextoBilingue
+    /// Texto completo para la card de detalle (bilingüe).
+    let promoDetalle: TextoBilingue
     let cupon: CuponNegocio?
-    /// Horario de atención (texto libre, formato "Lun-Sáb 11:00-22:00").
-    let horario: String
+    /// Horario de atención, texto libre (bilingüe: "Lun-Sáb…" / "Mon-Sat…").
+    let horario: TextoBilingue
     let telefono: String?
     /// Los patrocinados llevan la marca visual "Promocionado".
     let patrocinado: Bool
@@ -49,8 +61,8 @@ struct Negocio: Codable, Identifiable {
 /// canjes > impresiones.
 struct CuponNegocio: Codable {
     let codigo: String
-    let detalle: String
-    let condiciones: String
+    let detalle: TextoBilingue
+    let condiciones: TextoBilingue
     /// Fecha límite ISO "YYYY-MM-DD". Nil = sin vencimiento.
     let vence: String?
 

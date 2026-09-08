@@ -424,7 +424,7 @@ struct SeguridadView: View {
                 Text(L.signable("seguridad.lugares_guardados", "Lugares Guardados", "Saved Places"))
                     .font(.headlineSm)
                     .foregroundStyle(.onSurface)
-                    .seniable("seguridad.lugares_guardados")
+                    .seniable("seguridad.lugares_guardados", distintivoDx: 10)
                 Spacer()
                 Button {
                     AppHaptics.impact(.medium)
@@ -640,7 +640,7 @@ struct SeguridadView: View {
                     .foregroundStyle(.tertiary)
                 Text(L.signable("seguridad.rutas_seguras", "Rutas Seguras Hoy", "Safe Routes Today"))
                     .font(.headlineSm)
-                    .seniable("seguridad.rutas_seguras")
+                    .seniable("seguridad.rutas_seguras", distintivoDx: 10)
             }
 
             Button {
@@ -722,7 +722,7 @@ struct SeguridadView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(L.signable("seguridad.comunidad", "Comunidad", "Community"))
                             .font(.headlineSm)
-                            .seniable("seguridad.comunidad")
+                            .seniable("seguridad.comunidad", distintivoDx: 10)
                         Text(L.t("18 opiniones que cambian cada 4 min", "18 posts · rotate every 4 min"))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)

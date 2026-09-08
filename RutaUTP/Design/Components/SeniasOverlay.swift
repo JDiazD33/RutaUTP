@@ -299,16 +299,27 @@ private final class VentanaSenias: UIWindow {
 
 /// Vuelve un texto tocable cuando el Modo Señas está activado.
 ///
-/// Con el modo apagado no añade NADA: ni gesto ni trait de accesibilidad.
+/// Con el modo apagado no añade NADA: ni gesto ni distintivo ni trait de
+/// accesibilidad.
 struct SeniableModifier: ViewModifier {
 
     let clave: String
+    /// Corrimiento extra del distintivo hacia la derecha (para sitios donde
+    /// queda pegado al texto, p. ej. títulos de secciones en Seguridad).
+    var distintivoDx: CGFloat = 0
     @AppStorage(SeniasService.llaveModo) private var modoActivo = false
     @ObservedObject private var presenter = SeniasPresenter.shared
 
     func body(content: Content) -> some View {
         if modoActivo {
             content
+                // Distintivo: manita en la esquina superior derecha que indica
+                // que ese elemento tiene seña. Va como overlay (no como HStack)
+                // para no mover el layout de chips, botones y tarjetas, y con
+                // offset hacia afuera para no tapar el contenido.
+                .overlay(alignment: .topTrailing) {
+                    DistintivoSenia(dx: 6 + distintivoDx)
+                }
                 // simultaneousGesture: funciona también sobre textos que están
                 // DENTRO de un Button (chips, CTAs). El tap muestra la seña y
                 // el botón sigue ejecutando su acción normal.
@@ -323,17 +334,45 @@ struct SeniableModifier: ViewModifier {
     }
 }
 
+/// Insignia flotante que marca un elemento como señable.
+///
+/// Decorativa: no captura toques (deja pasar al gesto del modificador) ni
+/// entra en el árbol de accesibilidad.
+private struct DistintivoSenia: View {
+
+    /// Desplazamiento horizontal total (6 = posición estándar).
+    var dx: CGFloat = 6
+
+    var body: some View {
+        Image(systemName: "hand.raised.fill")
+            .font(.system(size: 7, weight: .bold))
+            .foregroundStyle(Color.appPrimary)
+            .padding(3)
+            .background(
+                Circle()
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
+            )
+            .offset(x: dx, y: -6)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 extension View {
     /// Marca un texto como señable. Requiere que el texto use `L.signable`.
-    func seniable(_ clave: String) -> some View {
-        modifier(SeniableModifier(clave: clave))
+    ///
+    /// - `distintivoDx`: empuje extra del distintivo hacia la derecha para
+    ///   sitios donde queda pegado al texto.
+    func seniable(_ clave: String, distintivoDx: CGFloat = 0) -> some View {
+        modifier(SeniableModifier(clave: clave, distintivoDx: distintivoDx))
     }
 
     /// Variante para modelos donde la clave puede no existir (nil = no señable).
     @ViewBuilder
-    func seniable(_ clave: String?) -> some View {
+    func seniable(_ clave: String?, distintivoDx: CGFloat = 0) -> some View {
         if let clave {
-            modifier(SeniableModifier(clave: clave))
+            modifier(SeniableModifier(clave: clave, distintivoDx: distintivoDx))
         } else {
             self
         }
