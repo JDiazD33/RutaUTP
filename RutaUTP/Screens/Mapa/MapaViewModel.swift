@@ -6,7 +6,7 @@
 //   - region (zoom al destino)
 //   - textoBusqueda (binding del TextField)
 //   - destinoSeleccionado (chip activo)
-//   - busSimulados (6 puntos rojos animados alrededor del destino)
+//   - busesAnimados (buses simulados sobre shapes reales del feed GTFS)
 //
 //  El timer se inicia al seleccionar destino y se detiene al limpiar
 //  o al desaparecer la vista.
@@ -15,17 +15,6 @@
 import SwiftUI
 import MapKit
 import Combine
-
-// MARK: - Bus simulado
-struct BusSimulado: Identifiable, Equatable {
-    let id: Int
-    var lat: Double
-    var lon: Double
-    let linea: String
-    let colorBus: Color
-    var angulo: Double
-    let velocidad: Double
-}
 
 // MARK: - Bus animado sobre ruta real
 struct BusAnimado: Identifiable, Equatable {
@@ -42,12 +31,45 @@ struct BusAnimado: Identifiable, Equatable {
     var heading: Double       // ángulo de dirección
     let rutaCoordenadas: [CLLocationCoordinate2D]  // waypoints
 
-    var currentSegmentIndex: Int = 0
-    var segmentProgress: Double = 0.0
+    // Simulación tipo flota real: la posición se lleva por DISTANCIA
+    // recorrida sobre el shape, no por fracción de segmento.
+    /// Distancia acumulada (m) de cada waypoint desde el inicio del shape.
+    let acumulados: [Double]
+    /// Metros recorridos a lo largo del shape (0...longitudRutaM).
+    var distanciaM: Double = 0
+    /// Velocidad crucero propia del vehículo (m/s).
+    var velocidadMS: Double = 8
     var isMovingForward: Bool = true
+    /// Tramo [i, i+1] donde cayó la última interpolación (cache).
+    var tramoActual: Int = 0
+
+    var longitudRutaM: Double { acumulados.last ?? 0 }
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
+    /// Coloca lat/lon/heading en el punto del shape que corresponde a
+    /// `distanciaM` metros del inicio. Los buses avanzan pocos metros por
+    /// tick, así que el índice de tramo se ajusta incrementalmente en vez
+    /// de buscar desde cero.
+    mutating func actualizarPosicion() {
+        guard acumulados.count == rutaCoordenadas.count,
+              rutaCoordenadas.count >= 2 else { return }
+
+        var i = min(max(tramoActual, 0), rutaCoordenadas.count - 2)
+        while i > 0 && distanciaM < acumulados[i] { i -= 1 }
+        while i < rutaCoordenadas.count - 2 && distanciaM > acumulados[i + 1] { i += 1 }
+
+        let a = rutaCoordenadas[i]
+        let b = rutaCoordenadas[i + 1]
+        let largo = acumulados[i + 1] - acumulados[i]
+        let f = largo > 0.5 ? min(1, max(0, (distanciaM - acumulados[i]) / largo)) : 0
+
+        lat = a.latitude + (b.latitude - a.latitude) * f
+        lon = a.longitude + (b.longitude - a.longitude) * f
+        heading = atan2(b.longitude - a.longitude, b.latitude - a.latitude) * 180 / .pi
+        tramoActual = i
     }
 
     static func == (lhs: BusAnimado, rhs: BusAnimado) -> Bool {
@@ -78,14 +100,10 @@ struct DestinoChip: Identifiable, Equatable {
     }
 }
 
-// MARK: - Anotación unificada para el mapa
+// MARK: - Anotación unificada para el mapa (usada por RutasView)
 enum TipoAnotacion: Equatable {
     case utp
     case usuario
-    case usuarioReal
-    case bus(String)
-    case conductor(String)
-    case busqueda(String)
 }
 
 struct MapaAnotacion: Identifiable, Equatable {
@@ -113,7 +131,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     // GPS Real
     @Published var userRealCoordinate: CLLocationCoordinate2D? = nil
-    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
 
     // Búsqueda MapKit
     @Published var sugerenciasBusqueda: [MKLocalSearchCompletion] = []
@@ -124,7 +141,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var routePolyline: MKPolyline? = nil
     @Published var etaMinutos: Int? = nil
     @Published var distanciaKm: Double? = nil
-    @Published var calculandoRuta: Bool = false
 
     // Buses Animados en Tiempo Real
     @Published var busesAnimados: [BusAnimado] = []
@@ -132,6 +148,9 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     /// True mientras se consulta el feed por las líneas del punto actual.
     @Published private(set) var cargandoLineas: Bool = false
     private var busSimulationTimer: Timer?
+    /// Último tick del timer: para mover los buses por tiempo transcurrido
+    /// real (metros = velocidad × dt) y no por pasos fijos de segmento.
+    private var ultimoTickBuses: Date?
     /// Punto de interés actual del panel (destino elegido o campus UTP).
     /// Evita relanzar la consulta GTFS si el ancla no cambió y permite
     /// descartar resultados obsoletos si el usuario cambió de destino.
@@ -214,7 +233,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         locationTask?.cancel()
         locationTask = Task { @MainActor in
             let status = await locationService.requestPermission()
-            self.authorizationStatus = status
             if status.isAuthorized {
                 locationService.startUpdating()
                 for await location in locationService.currentLocation() {
@@ -243,12 +261,16 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     //
     // Los recorridos (shapes) son REALES del feed GTFS embebido; las
     // posiciones son SIMULADAS porque el feed estático no incluye GPS.
+    // La simulación imita una flota real: vehículos repartidos por sus
+    // corredores, con dirección y velocidad propias (25–43 km/h), que
+    // avanzan metros reales sobre el shape según el tiempo transcurrido.
     func iniciarSimulacionBuses() {
         // Sin destino: líneas que pasan por el campus (comportamiento
         // original del panel "Transportes cercanos").
         recargarLineas(cercaDe: nil)
 
         guard busSimulationTimer == nil else { return }
+        ultimoTickBuses = nil
         busSimulationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             DispatchQueue.main.async {
@@ -295,6 +317,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         return feed.enumerated().map { index, ruta in
             var waypoints = decimarCoordenadas(ruta.shape, maximoPuntos: 240)
             if waypoints.count < 2 { waypoints = RutaCoordenadas.linea10 }
+            let acumulados = distanciasAcumuladas(waypoints)
 
             var bus = BusAnimado(
                 id: index + 1,
@@ -308,18 +331,47 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 lat: waypoints[0].latitude,
                 lon: waypoints[0].longitude,
                 heading: 0,
-                rutaCoordenadas: waypoints
+                rutaCoordenadas: waypoints,
+                acumulados: acumulados
             )
-            // Nace en el tramo más cercano al punto consultado: se le ve
-            // pasar por la zona del destino, no amontonado al inicio del
-            // recorrido.
-            let idx = min(waypointMasCercano(waypoints, a: ancla),
-                          max(0, waypoints.count - 2))
-            bus.currentSegmentIndex = idx
-            bus.lat = waypoints[idx].latitude
-            bus.lon = waypoints[idx].longitude
+
+            // Nacimiento REPARTIDO por el corredor: se toma el tramo del
+            // shape más cercano al punto consultado y cada vehículo arranca
+            // de un punto distinto a su alrededor (±1.8 km), con dirección y
+            // velocidad propias. Si varias líneas comparten avenida, quedan
+            // escalonadas a lo largo de ella y no amontonadas en un punto.
+            let idxAncla = waypointMasCercano(waypoints, a: ancla)
+            let distanciaAnclaM = acumulados.isEmpty ? 0 : acumulados[idxAncla]
+            // Fracciones de Fibonacci (0.618) escalonan los arranques de
+            // forma determinista (~38% del rango entre vecinos); el jitter
+            // aleatorio evita que dos recargas se vean idénticas.
+            let fraccion = fmod(Double(index) * 0.6180339887, 1.0)
+            let offsetM = fraccion * 3600 - 1800 + Double.random(in: -120...120)
+            // Se envuelve módulo la longitud del recorrido (un vehículo en
+            // otro ciclo de la línea) en vez de amontonar en los extremos.
+            var d = distanciaAnclaM + offsetM
+            let total = bus.longitudRutaM
+            if total > 0 {
+                d = d.truncatingRemainder(dividingBy: total)
+                if d < 0 { d += total }
+            }
+            bus.distanciaM = d
+            bus.velocidadMS = Double.random(in: 7...12)   // 25–43 km/h
+            bus.isMovingForward = Bool.random()
+            bus.actualizarPosicion()
             return bus
         }
+    }
+
+    /// Distancia acumulada (metros) de cada waypoint respecto al inicio.
+    private static func distanciasAcumuladas(_ pts: [CLLocationCoordinate2D]) -> [Double] {
+        guard !pts.isEmpty else { return [] }
+        var acc: [Double] = [0]
+        acc.reserveCapacity(pts.count)
+        for j in 1..<pts.count {
+            acc.append(acc[j - 1] + PolylineMatching.distanceMeters(pts[j - 1], pts[j]))
+        }
+        return acc
     }
 
     /// Índice del waypoint más cercano a un punto (distancia planar:
@@ -356,51 +408,36 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     func detenerSimulacionBuses() {
         busSimulationTimer?.invalidate()
         busSimulationTimer = nil
+        ultimoTickBuses = nil
     }
 
     private func actualizarPosicionBuses() {
+        // dt real entre ticks: la velocidad no depende de la cadencia del
+        // timer ni de eventuales tirones del hilo principal.
+        let ahora = Date()
+        let dt: Double = ultimoTickBuses.map { min(ahora.timeIntervalSince($0), 1.0) } ?? 0
+        ultimoTickBuses = ahora
+
         for i in busesAnimados.indices {
             var bus = busesAnimados[i]
-            let waypoints = bus.rutaCoordenadas
-            guard waypoints.count >= 2 else { continue }
+            let totalM = bus.longitudRutaM
+            guard totalM > 10 else { continue }
 
-            let step: Double = 0.012
+            // Avance en METROS reales: velocidad crucero propia × tiempo.
+            let avance = bus.velocidadMS * dt
+            var d = bus.distanciaM + (bus.isMovingForward ? avance : -avance)
 
-            bus.segmentProgress += step
-            if bus.segmentProgress >= 1.0 {
-                bus.segmentProgress = 0.0
-                if bus.isMovingForward {
-                    if bus.currentSegmentIndex + 1 < waypoints.count - 1 {
-                        bus.currentSegmentIndex += 1
-                    } else {
-                        bus.isMovingForward = false
-                    }
-                } else {
-                    if bus.currentSegmentIndex > 0 {
-                        bus.currentSegmentIndex -= 1
-                    } else {
-                        bus.isMovingForward = true
-                    }
-                }
+            // Extremo del recorrido: el vehículo regresa por el mismo
+            // corredor (ida y vuelta), sin saltos en el mapa.
+            if d >= totalM {
+                d = totalM
+                bus.isMovingForward = false
+            } else if d <= 0 {
+                d = 0
+                bus.isMovingForward = true
             }
-
-            let idxA = bus.currentSegmentIndex
-            let idxB = idxA + 1
-            guard idxB < waypoints.count else { continue }
-
-            let pA = waypoints[idxA]
-            let pB = waypoints[idxB]
-
-            let fromCoord = bus.isMovingForward ? pA : pB
-            let toCoord = bus.isMovingForward ? pB : pA
-
-            bus.lat = fromCoord.latitude + (toCoord.latitude - fromCoord.latitude) * bus.segmentProgress
-            bus.lon = fromCoord.longitude + (toCoord.longitude - fromCoord.longitude) * bus.segmentProgress
-
-            let dLat = toCoord.latitude - fromCoord.latitude
-            let dLon = toCoord.longitude - fromCoord.longitude
-            bus.heading = atan2(dLon, dLat) * 180 / .pi
-
+            bus.distanciaM = d
+            bus.actualizarPosicion()
             busesAnimados[i] = bus
         }
     }
@@ -552,7 +589,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // MARK: - Ruteo Real (Polilínea MKDirections)
     func calcularRutaHacia(_ destinoCoord: CLLocationCoordinate2D) {
         let origen = userRealCoordinate ?? CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)
-        calculandoRuta = true
 
         #if DEBUG
         print("[Ruta] calculando desde (\(origen.latitude), \(origen.longitude)) hacia (\(destinoCoord.latitude), \(destinoCoord.longitude))")
@@ -597,7 +633,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 self.distanciaKm = Double(round(10 * (metros / 1000.0)) / 10)
                 self.etaMinutos = Int(ceil(metros / 83.0))   // ~5 km/h caminando
             }
-            self.calculandoRuta = false
         }
     }
 
@@ -619,33 +654,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
             )
         }
-    }
-
-    // MARK: - Anotaciones para el mapa
-    func anotaciones() -> [MapaAnotacion] {
-        var items: [MapaAnotacion] = []
-
-        // Marcador del campus UTP
-        items.append(MapaAnotacion(id: -1, lat: -8.098247879173792, lon: -79.03818104755645, tipo: .utp))
-
-        // Marcador de usuario GPS Real o Peatón Mock
-        if let userCoord = userRealCoordinate {
-            items.append(MapaAnotacion(id: -2, lat: userCoord.latitude, lon: userCoord.longitude, tipo: .usuarioReal))
-        } else {
-            items.append(MapaAnotacion(id: -2, lat: -8.1180, lon: -79.0350, tipo: .usuario))
-        }
-
-        // Marcador del destino buscado (ej. UPAO, Casa, Mall)
-        if let res = busquedaResultado, res.titulo != "UTP" {
-            items.append(MapaAnotacion(
-                id: -3,
-                lat: res.coordenada.latitude,
-                lon: res.coordenada.longitude,
-                tipo: .busqueda(res.titulo)
-            ))
-        }
-
-        return items
     }
 }
 

@@ -7,29 +7,6 @@
 
 import SwiftUI
 
-// MARK: - Bus marker (punto rojo pulsante)
-struct BusMarker: View {
-    let linea: String
-    @State private var pulsando = false
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.appPrimary.opacity(0.25))
-                .frame(width: pulsando ? 20 : 12, height: pulsando ? 20 : 12)
-                .animation(
-                    .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                    value: pulsando
-                )
-            Circle()
-                .fill(Color.appPrimary)
-                .frame(width: 10, height: 10)
-                .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
-        }
-        .onAppear { pulsando = true }
-    }
-}
-
 // MARK: - User marker (pulso azul con icono de caminante)
 struct PulsingUserMarker: View {
     @State private var pulsando = false

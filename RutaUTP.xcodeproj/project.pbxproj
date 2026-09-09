@@ -34,6 +34,7 @@
 		0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D9300AD9FE004E1676 /* RutasView.swift */; };
 		0A800510300AD9FE004E1676 /* SeguridadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004DB300AD9FE004E1676 /* SeguridadView.swift */; };
 		0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004DD300AD9FE004E1676 /* RouteTrackingDemoView.swift */; };
+		0A8005AA300AD9FE004E1676 /* TrackingDemoComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */; };
 		0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004DE300AD9FE004E1676 /* RouteTrackingViewModel.swift */; };
 		0A800513300AD9FE004E1676 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E1300AD9FE004E1676 /* LocationService.swift */; };
 		0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E2300AD9FE004E1676 /* LocationServiceProtocol.swift */; };
@@ -97,6 +98,7 @@
 		0A8004D9300AD9FE004E1676 /* RutasView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutasView.swift; sourceTree = "<group>"; };
 		0A8004DB300AD9FE004E1676 /* SeguridadView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadView.swift; sourceTree = "<group>"; };
 		0A8004DD300AD9FE004E1676 /* RouteTrackingDemoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RouteTrackingDemoView.swift; sourceTree = "<group>"; };
+		0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TrackingDemoComponents.swift; sourceTree = "<group>"; };
 		0A8004DE300AD9FE004E1676 /* RouteTrackingViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RouteTrackingViewModel.swift; sourceTree = "<group>"; };
 		0A8004E1300AD9FE004E1676 /* LocationService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		0A8004E2300AD9FE004E1676 /* LocationServiceProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocationServiceProtocol.swift; sourceTree = "<group>"; };
@@ -292,6 +294,7 @@
 			children = (
 				0A8004DD300AD9FE004E1676 /* RouteTrackingDemoView.swift */,
 				0A8004DE300AD9FE004E1676 /* RouteTrackingViewModel.swift */,
+				0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */,
 			);
 			path = Tracking;
 			sourceTree = "<group>";
@@ -525,6 +528,7 @@
 				0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */,
 				0AC4E0A120260907004E1676 /* CarneDigitalView.swift in Sources */,
 				0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */,
+				0A8005AA300AD9FE004E1676 /* TrackingDemoComponents.swift in Sources */,
 				0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */,
 				0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */,
 				0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */,

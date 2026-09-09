@@ -170,7 +170,7 @@ struct BienvenidaView: View {
     private var featureGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
             FeatureCard(
-                icon: "heart.shield.fill",
+                icon: "shield.fill",
                 iconColor: .appPrimary,
                 label: L.t("SEGURIDAD", "SAFETY"),
                 title: L.t("Rutas nocturnas monitoreadas.", "Monitored night routes.")

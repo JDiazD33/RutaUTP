@@ -3,9 +3,9 @@
 //  RutaUTP
 //
 //  Posición actual de un vehículo (micro/combi/bus) que se está trackeando.
-//  Reemplaza conceptualmente a `BusSimulado` (que vive solo en el ViewModel
-//  del mapa con datos sintéticos). Aquí están los datos crudos, sin Color,
-//  listos para venir de un backend / WebSocket.
+//  Sustituye al antiguo `BusSimulado` del ViewModel del mapa (datos
+//  sintéticos). Aquí están los datos crudos, sin Color, listos para venir
+//  de un backend / WebSocket.
 //
 
 import Foundation

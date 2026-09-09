@@ -41,12 +41,15 @@ final class RouteTrackingViewModel: ObservableObject {
         static func == (lhs: DestinoDemo, rhs: DestinoDemo) -> Bool { lhs.id == rhs.id }
     }
 
-    static let destinos: [DestinoDemo] = [
-        DestinoDemo(id: 1, label: "UTP", icon: "graduationcap.fill",
+    /// Propiedad de instancia (no `static`): se evalúa al crear el VM, que
+    /// RootView reconstruye al cambiar el idioma (.id(codigo)), así el label
+    /// sale siempre en el idioma activo. Mismas claves señables del Mapa.
+    let destinos: [DestinoDemo] = [
+        DestinoDemo(id: 1, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill",
                     coordinate: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645)),
-        DestinoDemo(id: 2, label: "Centro", icon: "building.2.fill",
+        DestinoDemo(id: 2, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill",
                     coordinate: CLLocationCoordinate2D(latitude: -8.1090, longitude: -79.0270)),
-        DestinoDemo(id: 3, label: "Huanchaco", icon: "water.waves",
+        DestinoDemo(id: 3, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves",
                     coordinate: CLLocationCoordinate2D(latitude: -8.0825, longitude: -79.1197))
     ]
 
@@ -91,6 +94,29 @@ final class RouteTrackingViewModel: ObservableObject {
     @Published private(set) var sesion: TripSession?
 
     @Published private(set) var routePolyline: MKPolyline?
+    /// Ruta dividida por el avance: tramo recorrido (tenue) y restante (vivo).
+    @Published private(set) var rutaRecorrida: MKPolyline? = nil
+    @Published private(set) var rutaRestante: MKPolyline? = nil
+    /// True cuando MKDirections no respondió y la ruta es un trazo directo.
+    @Published private(set) var rutaAproximada: Bool = false
+    /// True mientras corre el pipeline de ruteo (spinner del botón Iniciar).
+    @Published private(set) var calculandoRuta: Bool = false
+    /// Rumbo actual en grados (-1 desconocido): orienta la cámara y el marcador.
+    @Published private(set) var rumbo: Double = -1
+    /// Multiplicador del modo demo (1× / 2× / 4×).
+    @Published var velocidadDemo: Double = 1
+    /// Velocidad estimada por vehículo (m/s), calculada entre snapshots del
+    /// provider para el popup en vivo.
+    @Published private(set) var velocidadesVehiculos: [String: Double] = [:]
+
+    /// Métricas del viaje terminado (las muestra la card de llegada).
+    struct ResumenViaje: Equatable {
+        let duracionS: TimeInterval
+        let distanciaM: Double
+        let puntos: Int
+        let velocidadKmh: Double
+    }
+    @Published private(set) var resumen: ResumenViaje?
 
     // MARK: - Dependencias
 
@@ -108,6 +134,8 @@ final class RouteTrackingViewModel: ObservableObject {
     private var vehiculoTask: Task<Void, Never>?
     private var demoTimer: Timer?
     private var demoProgreso: Double = 0
+    private var ultimoFraccionPolyline: Double = 0
+    private var snapshotVehiculosAnterior: [String: (coord: CLLocationCoordinate2D, t: TimeInterval)] = [:]
 
     private var authCancellable: AnyCancellable?
 
@@ -145,7 +173,8 @@ final class RouteTrackingViewModel: ObservableObject {
             locationService.startUpdating()
         } else {
             estado = .sinPermiso
-            errorMessage = "Permiso de ubicación denegado. Actívalo en Ajustes para usar el tracking."
+            errorMessage = L.t("Permiso de ubicación denegado. Actívalo en Ajustes para usar el tracking.",
+                               "Location permission denied. Enable it in Settings to use tracking.")
         }
         iniciarVehiculos()
     }
@@ -167,6 +196,7 @@ final class RouteTrackingViewModel: ObservableObject {
     private func procesar(coordenada: CLLocationCoordinate2D, rumbo: Double) {
         posicion = coordenada
         posicionTick += 1
+        self.rumbo = rumbo
 
         // Sin viaje en curso: GPS listo, a la espera de destino.
         guard tripInProgress, !polyCoords.isEmpty else {
@@ -184,6 +214,7 @@ final class RouteTrackingViewModel: ObservableObject {
         }
 
         distanciaRestanteM = max(0, distanciaTotalM * (1 - progreso))
+        refrescarPolylinesProgreso()
 
         // Recalculo por desvío sostenido (misma política del módulo).
         if match.isOnRoute {
@@ -206,9 +237,13 @@ final class RouteTrackingViewModel: ObservableObject {
             estado = .enRuta
         }
 
-        // Llegó: cerrar la sesión de viaje (una sola vez).
-        if estado == .finalizado, sesion?.estado != .completed {
-            finalizarSesion(estado: .completed)
+        // Llegó: cerrar la sesión (una sola vez) y frenar la simulación demo
+        // para no seguir tick-eando sobre el destino.
+        if estado == .finalizado {
+            if sesion?.estado != .completed {
+                finalizarSesion(estado: .completed)
+            }
+            if modoDemo { modoDemo = false }
         }
 
         registrarPunto(coordenada, rumbo: rumbo)
@@ -217,12 +252,15 @@ final class RouteTrackingViewModel: ObservableObject {
     // MARK: - Inicio de viaje
 
     func iniciar(destino: DestinoDemo) async {
+        guard !calculandoRuta else { return }
         guard authStatus.isAuthorized else {
-            errorMessage = "Sin permiso de ubicación. Concédelo en Ajustes."
+            errorMessage = L.t("Sin permiso de ubicación. Concédelo en Ajustes.",
+                               "No location permission. Grant it in Settings.")
             return
         }
         guard let origen = posicion else {
-            errorMessage = "Aún no tenemos tu ubicación. Espera unos segundos."
+            errorMessage = L.t("Aún no tenemos tu ubicación. Espera unos segundos.",
+                               "We don't have your location yet. Wait a few seconds.")
             return
         }
 
@@ -231,6 +269,7 @@ final class RouteTrackingViewModel: ObservableObject {
         tripInProgress = true
         progreso = 0
         consecutiveOffRoute = 0
+        resumen = nil
 
         sesion = TripSession(
             linea: destino.label,
@@ -241,6 +280,15 @@ final class RouteTrackingViewModel: ObservableObject {
             startedAt: Date().timeIntervalSince1970
         )
 
+        // Demo: reubica los vehículos simulados a mitad del recorrido para
+        // cruzarse con ellos durante el viaje.
+        if let simulado = vehicleProvider as? SimulatedTrackingProvider {
+            simulado.setCenter(lat: (origen.latitude + destino.coordinate.latitude) / 2,
+                               lon: (origen.longitude + destino.coordinate.longitude) / 2)
+        }
+
+        calculandoRuta = true
+        defer { calculandoRuta = false }
         await calcularRuta(desde: origen, hacia: destino.coordinate)
 
         if routePolyline != nil {
@@ -290,6 +338,7 @@ final class RouteTrackingViewModel: ObservableObject {
         }
 
         if let ruta {
+            rutaAproximada = false
             routePolyline = ruta.polyline
             etaTotalSeg = ruta.expectedTravelTime
             instalarShape(PolylineMatching.coordinates(from: ruta.polyline))
@@ -299,6 +348,7 @@ final class RouteTrackingViewModel: ObservableObject {
             #if DEBUG
             print("[TrackingDemo] sin respuesta de MKDirections → trazo directo")
             #endif
+            rutaAproximada = true
             routePolyline = MKPolyline(coordinates: [origen, destino], count: 2)
             let metros = PolylineMatching.distanceMeters(origen, destino)
             etaTotalSeg = metros / 83.0 * 60   // ~5 km/h, mismo criterio del Mapa
@@ -319,6 +369,41 @@ final class RouteTrackingViewModel: ObservableObject {
             )
         }
         demoProgreso = progreso
+        ultimoFraccionPolyline = 0
+        rutaRecorrida = nil
+        rutaRestante = routePolyline
+    }
+
+    /// Divide la polyline en tramo recorrido / restante según `progreso`.
+    /// Se refresca cada ~0.5% de avance (o al 100%) para no reconstruir
+    /// MKPolylines en cada tick del GPS/demo.
+    private func refrescarPolylinesProgreso() {
+        guard polyCoords.count >= 2,
+              let total = distanciasAcumuladas.last, total > 0 else { return }
+        guard progreso >= 0.999 || abs(progreso - ultimoFraccionPolyline) >= 0.005 else { return }
+        ultimoFraccionPolyline = progreso
+
+        let objetivo = total * min(max(progreso, 0), 1)
+        var bajo = 0, alto = distanciasAcumuladas.count - 1
+        while bajo < alto - 1 {
+            let medio = (bajo + alto) / 2
+            if distanciasAcumuladas[medio] <= objetivo { bajo = medio } else { alto = medio }
+        }
+        let longSeg = distanciasAcumuladas[alto] - distanciasAcumuladas[bajo]
+        let t = longSeg > 0 ? (objetivo - distanciasAcumuladas[bajo]) / longSeg : 0
+        let a = polyCoords[bajo], b = polyCoords[alto]
+        let punto = CLLocationCoordinate2D(latitude: a.latitude + (b.latitude - a.latitude) * t,
+                                           longitude: a.longitude + (b.longitude - a.longitude) * t)
+
+        var recorridas = Array(polyCoords[0...bajo])
+        recorridas.append(punto)
+        rutaRecorrida = recorridas.count >= 2
+            ? MKPolyline(coordinates: recorridas, count: recorridas.count) : nil
+
+        var restantes = [punto]
+        restantes.append(contentsOf: polyCoords[alto...])
+        rutaRestante = restantes.count >= 2
+            ? MKPolyline(coordinates: restantes, count: restantes.count) : nil
     }
 
     // MARK: - Salidas formateadas (mismo estilo de NavegacionRutaView)
@@ -346,7 +431,7 @@ final class RouteTrackingViewModel: ObservableObject {
         demoTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.demoProgreso = min(1.0, self.demoProgreso + 1.0 / 900.0)   // ~72 s todo el viaje
+                self.demoProgreso = min(1.0, self.demoProgreso + (1.0 / 900.0) * self.velocidadDemo)   // ~72 s a 1×
                 let coord = self.coordenadaEnFraccion(self.demoProgreso)
                 let siguiente = self.coordenadaEnFraccion(min(1.0, self.demoProgreso + 0.002))
                 let rumbo = atan2(siguiente.longitude - coord.longitude,
@@ -389,8 +474,28 @@ final class RouteTrackingViewModel: ObservableObject {
         vehiculoTask?.cancel()
         vehiculoTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            var ultimaActualizacion = 0.0
             for await positions in self.vehicleProvider.positions() {
                 guard !Task.isCancelled else { break }
+                // El provider ticka a 20 Hz: la UI se refresca a 4 Hz, de sobra
+                // para que los buses se muevan fluidos sin re-renderizar el
+                // mapa a cada instante.
+                let ahora = Date().timeIntervalSince1970
+                guard ahora - ultimaActualizacion >= 0.25 else { continue }
+                ultimaActualizacion = ahora
+
+                var velocidades = self.velocidadesVehiculos
+                for vehiculo in positions {
+                    if let previa = self.snapshotVehiculosAnterior[vehiculo.id] {
+                        let dt = vehiculo.timestamp - previa.t
+                        if dt > 0.2 {
+                            velocidades[vehiculo.id] = max(0,
+                                PolylineMatching.distanceMeters(previa.coord, vehiculo.coordinate) / dt)
+                        }
+                    }
+                    self.snapshotVehiculosAnterior[vehiculo.id] = (vehiculo.coordinate, vehiculo.timestamp)
+                }
+                self.velocidadesVehiculos = velocidades
                 self.vehiculos = positions
             }
         }
@@ -411,6 +516,17 @@ final class RouteTrackingViewModel: ObservableObject {
     }
 
     private func finalizarSesion(estado nuevo: TripState) {
+        // Resumen con las métricas del viaje para la card de llegada.
+        let inicio = sesion?.startedAt ?? Date().timeIntervalSince1970
+        let duracion = max(0, Date().timeIntervalSince1970 - inicio)
+        let distancia = distanciaTotalM * progreso
+        let puntos = sesion?.puntosRecorridos.count ?? 0
+        resumen = ResumenViaje(
+            duracionS: duracion,
+            distanciaM: distancia,
+            puntos: puntos,
+            velocidadKmh: duracion > 0 ? (distancia / duracion) * 3.6 : 0
+        )
         sesion?.estado = nuevo
         sesion?.endedAt = Date().timeIntervalSince1970
     }
@@ -432,6 +548,11 @@ final class RouteTrackingViewModel: ObservableObject {
         distanciaRestanteM = 0
         consecutiveOffRoute = 0
         recalculando = false
+        resumen = nil
+        rutaRecorrida = nil
+        rutaRestante = nil
+        rutaAproximada = false
+        ultimoFraccionPolyline = 0
         estado = posicion != nil ? .listo : .esperandoGPS
     }
 

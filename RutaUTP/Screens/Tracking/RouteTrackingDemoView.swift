@@ -7,24 +7,27 @@
 //  Mapa → AppRouter.navigate(to: .trackingDemo)).
 //
 //  Banco de pruebas del stack de tracking ACTUAL:
-//   1. Pide permiso de ubicación y muestra tu posición real en el mapa.
+//   1. Pide permiso de ubicación y muestra tu posición real en el mapa
+//      (marcador con cono de rumbo cuando hay course del GPS).
 //   2. Destinos = los mismos chips fijos del Mapa (UTP / Centro / Huanchaco).
 //   3. Ruteo con el MISMO pipeline del Mapa: MKDirections transit →
-//      automobile → trazo directo de respaldo.
-//   4. Navegación estilo NavegacionRutaView (tema oscuro): estado,
-//      barra de progreso, ETA/distancia restante, detección de desvío con
-//      recálculo y alerta de llegada.
-//   5. Modo DEMO: simula el avance a lo largo de la ruta calculada para
-//      probar todo en el simulador sin caminar.
-//   6. Vehículos en el mapa vía VehicleTrackingProviding con badge de
-//      fuente (DEMO simulado / EN VIVO backend futuro).
-//   7. Registra el viaje en un TripSession (puntos GPS) listo para backend.
-//   8. Negocios en ruta (fase 1): burbujas de locales promocionados cerca
-//      de la posición que van apareciendo durante el viaje; tap → card
-//      con promo y cupón (JSON local vía NegociosService).
+//      automobile → trazo directo de respaldo (avisa "ruta aproximada").
+//   4. Navegación estilo apps de navegación: al iniciar el viaje se encuadra
+//      toda la ruta; la cámara persigue la posición rotando con el rumbo
+//      (3D en ruta, norte arriba en reposo) sin pelear con los gestos.
+//   5. Ruta dibujada con casing blanco + tramo recorrido (tenue) y
+//      restante (vivo), barra de progreso, ETA + hora de llegada estimada,
+//      banner de recálculo en desvíos y alerta de llegada con resumen
+//      (duración, distancia, velocidad media, puntos GPS).
+//   6. Modo DEMO interactivo: simula el avance por la ruta a 1× / 2× / 4×.
+//   7. Vehículos en el mapa vía VehicleTrackingProviding: tap en un bus →
+//      popup en vivo (línea, rumbo, velocidad, distancia, frescura) con
+//      badge de fuente (DEMO simulado / EN VIVO backend futuro).
+//   8. Registra el viaje en un TripSession (puntos GPS) listo para backend.
+//   9. Negocios en ruta (fase 1): burbujas de locales promocionados cerca
+//      de la posición; tap → card con promo y cupón (JSON local).
 //
-//  Usa `Map(position:)` con `MapCameraPosition` (iOS 17+), igual que el
-//  resto del módulo.
+//  Usa `Map(position:)` con `MapCameraPosition` (iOS 17+).
 //
 
 import SwiftUI
@@ -40,7 +43,10 @@ struct RouteTrackingDemoView: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var seguir: Bool = true
     @State private var ultimoCentroCamara: CLLocationCoordinate2D?
-    @State private var destinoElegido: RouteTrackingViewModel.DestinoDemo
+    @State private var rumboCamara: Double?
+    @State private var ultimaActualizacionCamara: Date = .distantPast
+    /// Chip tocado; nil = el primero del selector (UTP).
+    @State private var destinoElegido: RouteTrackingViewModel.DestinoDemo?
 
     /// Tema elegido en Ajustes. La pantalla de tracking está estilizada en
     /// oscuro (navegación), pero la card de negocio es contenido flotante y
@@ -54,9 +60,26 @@ struct RouteTrackingDemoView: View {
     @State private var negocioSeleccionado: Negocio?
     @State private var ultimoRefreshNegocios: CLLocationCoordinate2D?
 
+    // ── Interacción con vehículos ──
+    /// ID del bus tocado en el mapa (la card se alimenta del stream en vivo).
+    @State private var vehiculoSeleccionadoID: String?
+
+    /// Confirmación antes de cortar un viaje en curso.
+    @State private var confirmarDetener: Bool = false
+
     init(locationService: LocationServiceProtocol = LocationService()) {
         _vm = StateObject(wrappedValue: RouteTrackingViewModel(locationService: locationService))
-        _destinoElegido = State(initialValue: RouteTrackingViewModel.destinos[0])
+    }
+
+    /// Destino activo: el chip tocado o el primero por defecto.
+    private var destinoActual: RouteTrackingViewModel.DestinoDemo {
+        destinoElegido ?? vm.destinos[0]
+    }
+
+    /// Datos del vehículo tocado, siempre frescos (el stream actualiza 4 Hz).
+    private var vehiculoSeleccionado: VehiclePosition? {
+        guard let id = vehiculoSeleccionadoID else { return nil }
+        return vm.vehiculos.first { $0.id == id }
     }
 
     var body: some View {
@@ -69,9 +92,17 @@ struct RouteTrackingDemoView: View {
                 topBar
                 Spacer()
 
-                // Card del negocio tocado: directamente sobre el panel
-                // inferior, sin taparlo nunca. Sigue el tema elegido en
-                // Ajustes (la pantalla fuerza oscuro; la card no).
+                // Controles flotantes de cámara (seguir / encuadrar ruta).
+                HStack {
+                    Spacer()
+                    controlesMapa
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+
+                // Card del negocio o del vehículo tocado: directamente sobre
+                // el panel inferior, sin taparlo nunca. La de negocio sigue el
+                // tema elegido en Ajustes (la pantalla fuerza oscuro; esa no).
                 if let negocio = negocioSeleccionado {
                     NegocioDetailCard(
                         negocio: negocio,
@@ -86,13 +117,39 @@ struct RouteTrackingDemoView: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if let vehiculo = vehiculoSeleccionado {
+                    VehiclePopupCard(
+                        vehiculo: vehiculo,
+                        velocidadMs: vm.velocidadesVehiculos[vehiculo.id],
+                        distanciaM: vm.posicion.map {
+                            PolylineMatching.distanceMeters($0, vehiculo.coordinate)
+                        },
+                        enVivo: vm.fuenteVehiculos == .real,
+                        onClose: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                vehiculoSeleccionadoID = nil
+                            }
+                        }
+                    )
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
                 panelInferior
             }
 
-            if vm.estado == .finalizado {
-                alertaLlegada
+            // Resumen de llegada con dim que enfoca la card.
+            if vm.estado == .finalizado, let resumen = vm.resumen {
+                ZStack {
+                    Color.black.opacity(0.45).ignoresSafeArea()
+                    ResumenLlegadaCard(
+                        resumen: resumen,
+                        destino: vm.destinoSeleccionado?.label ?? L.t("tu destino", "your destination"),
+                        onCerrar: { vm.cancelTrip() }
+                    )
+                    .transition(.scale(scale: 0.92).combined(with: .opacity))
+                }
             }
         }
         .preferredColorScheme(.dark)
@@ -104,24 +161,46 @@ struct RouteTrackingDemoView: View {
             vm.stop()
         }
         .onChange(of: vm.posicionTick) { _, _ in
-            guard seguir, let nueva = vm.posicion else { return }
-            // Recentrar solo si se alejó del último centro (evita pelear
-            // con el gesto del usuario cada tick del modo demo).
-            if let ultimo = ultimoCentroCamara,
-               PolylineMatching.distanceMeters(ultimo, nueva) < 5 { return }
-            moverCamara(a: nueva)
-        }
-        .onChange(of: vm.posicionTick) { _, _ in
             refrescarNegocios()
+            seguirPosicion()
+        }
+        // Al arrancar el viaje: encuadre de toda la ruta (el usuario decide
+        // cuándo pasar a seguimiento con el botón flotante).
+        .onChange(of: vm.tripInProgress) { _, activo in
+            if activo { encuadrarRuta() }
+        }
+        // Activar el demo implica querer VER el avance: seguimiento automático.
+        .onChange(of: vm.modoDemo) { _, activo in
+            if activo {
+                seguir = true
+                if let pos = vm.posicion { moverCamara(a: pos) }
+            }
+        }
+        // Feedback háptico en los cambios de estado clave.
+        .onChange(of: vm.estado) { _, nuevo in
+            switch nuevo {
+            case .fueraDeRuta:  AppHaptics.warning()
+            case .cercaDestino: AppHaptics.impact(.medium)
+            case .finalizado:   AppHaptics.success()
+            default: break
+            }
+        }
+        .confirmationDialog(L.t("¿Finalizar el viaje?", "End the trip?"),
+                            isPresented: $confirmarDetener,
+                            titleVisibility: .visible) {
+            Button(L.t("Sí, finalizar", "Yes, end it"), role: .destructive) {
+                vm.cancelTrip()
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
         }
     }
 
-    // MARK: - Mapa (iOS 17+, mismo estilo del módulo)
+    // MARK: - Mapa (iOS 17+)
 
     private var mapa: some View {
         Map(position: $cameraPosition) {
             // Destinos del demo = chips fijos del Mapa.
-            ForEach(RouteTrackingViewModel.destinos) { destino in
+            ForEach(vm.destinos) { destino in
                 Annotation(destino.label, coordinate: destino.coordinate) {
                     if destino.label == "UTP" {
                         MarcadorUTP()
@@ -131,28 +210,50 @@ struct RouteTrackingDemoView: View {
                 }
             }
 
-            // Posición actual (GPS real o simulada por el modo demo).
+            // Posición actual (GPS real o simulada por el modo demo) con
+            // cono de rumbo estilo navegación.
             if let pos = vm.posicion {
-                Annotation("Mi posición", coordinate: pos) {
-                    PulsingUserMarker()
+                Annotation(L.t("Mi posición", "My position"), coordinate: pos) {
+                    UserNavMarker(heading: vm.rumbo)
                 }
             }
 
-            // Ruta calculada (pipeline real del Mapa).
-            if let polyline = vm.routePolyline {
-                MapPolyline(polyline)
+            // Ruta dividida por el avance: casing blanco + tramo restante
+            // vivo y tramo recorrido tenue (estilo apps de navegación).
+            if let restante = vm.rutaRestante {
+                MapPolyline(restante)
+                    .stroke(.white.opacity(0.9),
+                            style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
+                MapPolyline(restante)
                     .stroke(Color.primaryContainer,
-                            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                            style: StrokeStyle(lineWidth: 5.5, lineCap: .round, lineJoin: .round))
+            }
+            if let recorrida = vm.rutaRecorrida {
+                MapPolyline(recorrida)
+                    .stroke(Color.primaryContainer.opacity(0.35),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
             }
 
-            // Vehículos en tiempo real vía provider (badge DEMO/EN VIVO arriba).
+            // Vehículos en tiempo real vía provider: tap → popup en vivo.
             ForEach(vm.vehiculos.prefix(8)) { vehiculo in
-                Annotation("Línea \(vehiculo.linea)", coordinate: vehiculo.coordinate) {
+                Annotation(L.t("Línea", "Line") + " \(vehiculo.linea)", coordinate: vehiculo.coordinate) {
                     AnimatedBusMarker(
                         linea: vehiculo.linea,
                         color: colorDeLinea(vehiculo.linea),
                         heading: vehiculo.heading
                     )
+                    .scaleEffect(vehiculoSeleccionadoID == vehiculo.id ? 1.15 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7),
+                               value: vehiculoSeleccionadoID)
+                    .onTapGesture {
+                        AppHaptics.impact(.light)
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            // Toggle: segundo tap sobre el mismo bus cierra.
+                            vehiculoSeleccionadoID = (vehiculoSeleccionadoID == vehiculo.id)
+                                ? nil : vehiculo.id
+                            negocioSeleccionado = nil
+                        }
+                    }
                 }
             }
 
@@ -168,6 +269,7 @@ struct RouteTrackingDemoView: View {
                         AppHaptics.impact(.light)
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             negocioSeleccionado = negocio
+                            vehiculoSeleccionadoID = nil
                         }
                     }
                 }
@@ -177,19 +279,91 @@ struct RouteTrackingDemoView: View {
         .mapControls {
             MapCompass()
             MapScaleView()
+            MapPitchToggle()
         }
         .ignoresSafeArea()
         // SIN .onTapGesture aquí: un gesto de tap sobre el Map entero compite
         // con los taps de las Annotations y las burbujas dejaban de responder.
-        // La card se cierra con su botón X o tocando otra burbuja.
+        // Las cards se cierran con su botón X o tocando otra burbuja.
     }
 
+    // MARK: - Cámara: seguimiento suave con rumbo
+
+    /// Persigue la posición sin pelear con el usuario: solo recentra si se
+    /// alejó ≥ 18 m del centro o giró ≥ 30°, con un mínimo de 0.35 s entre
+    /// movimientos para no apilar animaciones en el modo demo.
+    private func seguirPosicion() {
+        guard seguir, let nueva = vm.posicion else { return }
+
+        let movido = ultimoCentroCamara.map { PolylineMatching.distanceMeters($0, nueva) }
+            ?? .greatestFiniteMagnitude
+        let giro: Double = {
+            guard let rumboCamara, vm.rumbo >= 0 else { return 0 }
+            let delta = abs(rumboCamara - vm.rumbo).truncatingRemainder(dividingBy: 360)
+            return min(delta, 360 - delta)
+        }()
+        guard movido >= 18 || giro >= 30 else { return }
+        guard Date().timeIntervalSince(ultimaActualizacionCamara) >= 0.35 else { return }
+
+        moverCamara(a: nueva)
+    }
+
+    /// Recentra la cámara. En viaje: vista 3D (pitch 55) rotando con el
+    /// rumbo; en reposo: norte arriba, plano y más abierto.
     private func moverCamara(a coord: CLLocationCoordinate2D) {
         ultimoCentroCamara = coord
-        withAnimation(.easeInOut(duration: 0.4)) {
+        let enViaje = vm.tripInProgress
+        let heading = (enViaje && vm.rumbo >= 0) ? vm.rumbo : 0
+        rumboCamara = heading
+        ultimaActualizacionCamara = Date()
+        withAnimation(.easeInOut(duration: 0.6)) {
             cameraPosition = .camera(
-                MapCamera(centerCoordinate: coord, distance: 700, heading: 0, pitch: 45)
+                MapCamera(centerCoordinate: coord,
+                          distance: enViaje ? 550 : 1100,
+                          heading: heading,
+                          pitch: enViaje ? 55 : 0)
             )
+        }
+    }
+
+    /// Encuadra toda la ruta calculada (vista general antes de arrancar el
+    /// seguimiento). Desactiva `seguir` para no saltar de inmediato a la
+    /// cámara de persecución: el botón late invitando al tap.
+    private func encuadrarRuta() {
+        guard let polyline = vm.routePolyline else { return }
+        seguir = false
+        var rect = polyline.boundingMapRect
+        let margen = max(rect.width, rect.height) * 0.22
+        rect = MKMapRect(x: rect.minX - margen, y: rect.minY - margen,
+                         width: rect.width + margen * 2, height: rect.height + margen * 2)
+        withAnimation(.easeInOut(duration: 0.7)) {
+            cameraPosition = .region(MKCoordinateRegion(rect))
+        }
+    }
+
+    // MARK: - Controles flotantes del mapa
+
+    private var controlesMapa: some View {
+        VStack(spacing: 10) {
+            if vm.tripInProgress, vm.routePolyline != nil {
+                BotonFlotanteMapa(
+                    icono: "arrow.up.left.and.down.right.magnifyingglass",
+                    etiqueta: L.t("Ver toda la ruta", "See the full route")
+                ) {
+                    encuadrarRuta()
+                }
+            }
+
+            BotonFlotanteMapa(
+                icono: seguir ? "location.fill" : "location",
+                etiqueta: seguir ? L.t("Siguiendo tu ubicación", "Following your location")
+                                 : L.t("Centrar en mi ubicación", "Center on my location"),
+                destacado: seguir,
+                pulsante: vm.tripInProgress && !seguir
+            ) {
+                seguir = true
+                if let pos = vm.posicion { moverCamara(a: pos) }
+            }
         }
     }
 
@@ -207,14 +381,14 @@ struct RouteTrackingDemoView: View {
                     .foregroundStyle(.white.opacity(0.85))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Cerrar demo")
+            .accessibilityLabel(L.t("Cerrar demo", "Close demo"))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("TRACKING DEMO")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white.opacity(0.6))
                     .appTracking(AppTracking.wideLabel)
-                Text("Módulo de tracking real")
+                Text(L.t("Módulo de tracking real", "Real tracking module"))
                     .font(.system(size: 15, weight: .heavy))
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -237,7 +411,7 @@ struct RouteTrackingDemoView: View {
     /// Fuente de los vehículos del mapa (VehicleTrackingProviding.source).
     private var badgeFuente: some View {
         let enVivo = vm.fuenteVehiculos == .real
-        return Text(enVivo ? "EN VIVO" : "DEMO")
+        return Text(enVivo ? L.t("EN VIVO", "LIVE") : "DEMO")
             .font(.system(size: 9, weight: .bold))
             .foregroundStyle(enVivo ? .black : .white)
             .appTracking(AppTracking.wideLabel)
@@ -252,7 +426,7 @@ struct RouteTrackingDemoView: View {
             switch status {
             case .authorizedAlways, .authorizedWhenInUse: return ("GPS ON", Color(hex: "#8affc1"))
             case .denied, .restricted:                    return ("GPS OFF", .appError)
-            case .notDetermined:                          return ("SIN GPS", .gray)
+            case .notDetermined:                          return (L.t("SIN GPS", "NO GPS"), .gray)
             @unknown default:                             return ("GPS", .gray)
             }
         }()
@@ -265,10 +439,10 @@ struct RouteTrackingDemoView: View {
             .background(Capsule().fill(color))
     }
 
-    // MARK: - Panel inferior (mismo estilo de NavegacionRutaView)
+    // MARK: - Panel inferior
 
     private var panelInferior: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             // Instrucción principal según estado
             HStack(spacing: 12) {
                 Image(systemName: iconoEstado)
@@ -293,20 +467,61 @@ struct RouteTrackingDemoView: View {
             if let err = vm.errorMessage {
                 Text(err)
                     .font(.system(size: 11))
-                    .foregroundStyle(Color(hex: "#ffd7d3"))
+                    .foregroundStyle(.onErrorContainer)
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: "#5c2224")))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.errorContainer))
+            }
+
+            // Banner de recálculo (desvío sostenido detectado).
+            if vm.recalculando {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .tint(.orange)
+                        .controlSize(.small)
+                    Text(L.t("Recalculando ruta…", "Recalculating route…"))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.orange)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.14)))
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             if vm.tripInProgress {
+                // Aviso cuando la ruta es el trazo directo de respaldo.
+                if vm.rutaAproximada {
+                    Label(L.t("Ruta aproximada · sin datos de MapKit",
+                              "Approximate route · no MapKit data"),
+                          systemImage: "wifi.exclamationmark")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.yellow.opacity(0.9))
+                }
+
                 barraProgreso
                 statsRow
+                controlesViaje
             } else {
                 selectorDestino
             }
 
-            controles
+            if vm.estado == .sinPermiso {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label(L.t("Abrir Ajustes", "Open Settings"), systemImage: "gearshape.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Capsule().fill(Color(hex: "#8affc1")))
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(16)
         .background(
@@ -335,32 +550,52 @@ struct RouteTrackingDemoView: View {
                 }
             }
             .frame(height: 6)
+            .animation(.linear(duration: 0.3), value: vm.progreso)
 
             HStack {
-                Text("Avance del recorrido")
+                Text(L.t("Avance del recorrido", "Trip progress"))
                     .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.5))
                 Spacer()
                 Text("\(Int(vm.progreso * 100))%")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.primaryContainer)
+                    .monospacedDigit()
             }
         }
     }
 
     private var statsRow: some View {
         HStack(spacing: 0) {
-            stat(icono: "clock.fill", valor: "\(vm.minutosRestantes) min", etiqueta: "Restante")
+            stat(icono: "clock.badge.checkmark",
+                 valor: horaLlegadaTexto,
+                 etiqueta: L.t("Llegada", "Arrival"))
+                .frame(maxWidth: .infinity)
+            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
+            stat(icono: "clock.fill",
+                 valor: "\(vm.minutosRestantes) min",
+                 etiqueta: L.t("Restante", "Remaining"))
                 .frame(maxWidth: .infinity)
             Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
             stat(icono: "point.topleft.down.curvedto.point.bottomright.up",
-                 valor: vm.distanciaRestanteTexto, etiqueta: "Por recorrer")
+                 valor: vm.distanciaRestanteTexto,
+                 etiqueta: L.t("Por recorrer", "To go"))
                 .frame(maxWidth: .infinity)
             Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
             stat(icono: "record.circle",
-                 valor: "\(vm.sesion?.puntosRecorridos.count ?? 0)", etiqueta: "Puntos GPS")
+                 valor: "\(vm.sesion?.puntosRecorridos.count ?? 0)",
+                 etiqueta: L.t("Puntos GPS", "GPS points"))
                 .frame(maxWidth: .infinity)
         }
+    }
+
+    /// Hora de llegada estimada al ritmo de la ruta calculada.
+    private var horaLlegadaTexto: String {
+        guard let eta = vm.etaTotalSeg else { return "—" }
+        let fecha = Date().addingTimeInterval(eta * (1 - vm.progreso))
+        let formato = DateFormatter()
+        formato.dateFormat = "HH:mm"
+        return formato.string(from: fecha)
     }
 
     private func stat(icono: String, valor: String, etiqueta: String) -> some View {
@@ -371,6 +606,8 @@ struct RouteTrackingDemoView: View {
             Text(valor)
                 .font(.system(size: 15, weight: .heavy))
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(etiqueta.uppercased())
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.5))
@@ -382,22 +619,26 @@ struct RouteTrackingDemoView: View {
 
     private var selectorDestino: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("DESTINO")
+            Text(L.t("DESTINO", "DESTINATION"))
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.white.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
 
             HStack(spacing: 8) {
-                ForEach(RouteTrackingViewModel.destinos) { destino in
-                    let seleccionado = destino.id == destinoElegido.id
+                ForEach(vm.destinos) { destino in
+                    let seleccionado = destino.id == destinoActual.id
                     Button {
-                        destinoElegido = destino
+                        AppHaptics.selection()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            destinoElegido = destino
+                        }
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: destino.icon)
                                 .font(.system(size: 12, weight: .bold))
                             Text(destino.label)
                                 .font(.system(size: 12, weight: .bold))
+                                .lineLimit(1)
                         }
                         .foregroundStyle(seleccionado ? .black : .white)
                         .frame(maxWidth: .infinity)
@@ -410,12 +651,23 @@ struct RouteTrackingDemoView: View {
             }
 
             Button {
-                Task { await vm.iniciar(destino: destinoElegido) }
+                Task { await vm.iniciar(destino: destinoActual) }
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "play.fill")
-                    Text("Iniciar viaje a \(destinoElegido.label)")
-                        .font(.system(size: 15, weight: .heavy))
+                    if vm.calculandoRuta {
+                        ProgressView()
+                            .tint(.white)
+                            .controlSize(.small)
+                        Text(L.t("Calculando ruta…", "Calculating route…"))
+                            .font(.system(size: 15, weight: .heavy))
+                    } else {
+                        Image(systemName: "play.fill")
+                        Text(L.t("Iniciar viaje a \(destinoActual.label)",
+                                 "Start trip to \(destinoActual.label)"))
+                            .font(.system(size: 15, weight: .heavy))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 52)
@@ -423,78 +675,72 @@ struct RouteTrackingDemoView: View {
                     .fill(vm.posicion == nil ? Color.white.opacity(0.25) : Color.primaryContainer))
             }
             .buttonStyle(.plain)
-            .disabled(vm.posicion == nil)
-            .accessibilityHint("Calcula la ruta real y activa el tracking")
+            .disabled(vm.posicion == nil || vm.calculandoRuta)
+            .accessibilityHint(L.t("Calcula la ruta real y activa el tracking",
+                                   "Calculates the real route and starts tracking"))
         }
     }
 
-    // MARK: - Controles (demo / detener / seguir / ajustes)
+    // MARK: - Controles del viaje (demo / velocidad / detener)
 
-    private var controles: some View {
+    private var controlesViaje: some View {
         VStack(spacing: 10) {
-            if vm.tripInProgress {
-                HStack(spacing: 10) {
-                    // Modo demo: simula el avance por la ruta (prueba en simulador).
-                    Button {
-                        vm.modoDemo.toggle()
-                    } label: {
-                        Label(vm.modoDemo ? "Demo ON" : "Demo",
-                              systemImage: vm.modoDemo ? "stop.fill" : "play.circle.fill")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(vm.modoDemo ? .black : .white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(Capsule().fill(vm.modoDemo ? Color(hex: "#8affc1")
-                                                                   : Color.white.opacity(0.12)))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Simular avance por la ruta")
-
-                    Button {
-                        vm.cancelTrip()
-                    } label: {
-                        Label("Detener", systemImage: "stop.fill")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Capsule().fill(Color.red.opacity(0.85)))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            if vm.estado == .sinPermiso {
+            HStack(spacing: 10) {
+                // Modo demo: simula el avance por la ruta (prueba en simulador).
                 Button {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
+                    AppHaptics.impact(.light)
+                    vm.modoDemo.toggle()
                 } label: {
-                    Label("Abrir Ajustes", systemImage: "gearshape.fill")
+                    Label(vm.modoDemo ? L.t("Pausar demo", "Pause demo")
+                                      : L.t("Simular avance", "Simulate progress"),
+                          systemImage: vm.modoDemo ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(vm.modoDemo ? .black : .white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Capsule().fill(vm.modoDemo ? Color(hex: "#8affc1")
+                                                               : Color.white.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Simular avance por la ruta", "Simulate progress along the route"))
+
+                Button {
+                    confirmarDetener = true
+                } label: {
+                    Label(L.t("Detener", "Stop"), systemImage: "stop.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(Color(hex: "#8affc1")))
+                        .background(Capsule().fill(Color.appError.opacity(0.85)))
                 }
                 .buttonStyle(.plain)
             }
 
-            Button {
-                seguir.toggle()
-                if seguir, let pos = vm.posicion {
-                    moverCamara(a: pos)
+            // Velocidad de la simulación (visible solo con el demo corriendo).
+            if vm.modoDemo {
+                HStack(spacing: 0) {
+                    ForEach([1.0, 2.0, 4.0], id: \.self) { factor in
+                        let activo = vm.velocidadDemo == factor
+                        Button {
+                            AppHaptics.selection()
+                            vm.velocidadDemo = factor
+                        } label: {
+                            Text("\(Int(factor))×")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(activo ? .black : .white.opacity(0.8))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 7)
+                                .background(Capsule().fill(activo ? Color(hex: "#8affc1") : .clear))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-            } label: {
-                Label(seguir ? "Siguiendo tu ubicación" : "Centrar en mi ubicación",
-                      systemImage: seguir ? "location.fill" : "location.slash.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Capsule().fill(Color.white.opacity(0.12)))
+                .padding(3)
+                .background(Capsule().fill(Color.white.opacity(0.10)))
+                .accessibilityLabel(L.t("Velocidad de la simulación", "Simulation speed"))
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            .buttonStyle(.plain)
         }
     }
 
@@ -527,75 +773,45 @@ struct RouteTrackingDemoView: View {
     private var instruccion: String {
         switch vm.estado {
         case .esperandoGPS:
-            return "Buscando señal GPS…"
+            return L.t("Buscando señal GPS…", "Looking for GPS signal…")
         case .sinPermiso:
-            return "Activa la ubicación para navegar"
+            return L.t("Activa la ubicación para navegar", "Enable location to navigate")
         case .listo:
-            return "GPS listo · elige un destino"
+            return L.t("GPS listo · elige un destino", "GPS ready · pick a destination")
         case .enRuta:
-            return "Tracking activo"
+            return L.t("Tracking activo", "Tracking active")
         case .fueraDeRuta(let metros):
-            return "Te alejaste de la ruta (\(Int(metros)) m)"
+            return L.t("Te alejaste de la ruta (\(Int(metros)) m)",
+                       "You went off route (\(Int(metros)) m)")
         case .cercaDestino:
-            return "Prepárate para llegar"
+            return L.t("Prepárate para llegar", "Get ready to arrive")
         case .finalizado:
-            return "¡Llegaste a tu destino!"
+            return L.t("¡Llegaste a tu destino!", "You arrived at your destination!")
         }
     }
 
     private var subtitulo: String {
         switch vm.estado {
-        case .esperandoGPS:  return "Esperando el primer fix del GPS"
-        case .sinPermiso:    return "Ajustes → Privacidad → Ubicación"
-        case .listo:         return "Inicia el viaje para probar el tracking"
-        case .enRuta:        return "Hacia \(vm.destinoSeleccionado?.label ?? "…")"
-        case .fueraDeRuta:   return "Recalculando automáticamente"
-        case .cercaDestino:  return "Llegando a \(vm.destinoSeleccionado?.label ?? "…")"
-        case .finalizado:    return vm.destinoSeleccionado?.label ?? "Destino"
+        case .esperandoGPS:
+            return L.t("Esperando el primer fix del GPS", "Waiting for the first GPS fix")
+        case .sinPermiso:
+            return L.t("Ajustes → Privacidad → Ubicación", "Settings → Privacy → Location")
+        case .listo:
+            return L.t("Inicia el viaje para probar el tracking", "Start the trip to test tracking")
+        case .enRuta:
+            return L.t("Hacia \(vm.destinoSeleccionado?.label ?? "…")",
+                       "To \(vm.destinoSeleccionado?.label ?? "…")")
+        case .fueraDeRuta:
+            return L.t("Recalculando automáticamente", "Recalculating automatically")
+        case .cercaDestino:
+            return L.t("Llegando a \(vm.destinoSeleccionado?.label ?? "…")",
+                       "Arriving at \(vm.destinoSeleccionado?.label ?? "…")")
+        case .finalizado:
+            return vm.destinoSeleccionado?.label ?? L.t("Destino", "Destination")
         }
     }
 
-    // MARK: - Alerta de llegada (igual a NavegacionRutaView)
-
-    private var alertaLlegada: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 52))
-                .foregroundStyle(Color(hex: "#8affc1"))
-            Text("Fin del recorrido")
-                .font(.system(size: 20, weight: .heavy))
-                .foregroundStyle(.white)
-            Text("Llegaste a \(vm.destinoSeleccionado?.label ?? "tu destino")")
-                .font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.7))
-                .multilineTextAlignment(.center)
-
-            Button {
-                vm.cancelTrip()
-            } label: {
-                Text("Terminar")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(Capsule().fill(Color(hex: "#8affc1")))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(24)
-        .frame(maxWidth: 320)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(hex: "#141414"))
-                .shadow(color: .black.opacity(0.5), radius: 24)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Helpers
+    // MARK: Helpers
 
     // MARK: Negocios en ruta
 

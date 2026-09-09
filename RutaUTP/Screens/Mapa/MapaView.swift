@@ -6,7 +6,7 @@
 //  - Mapa (MapKit) de fondo con marcadores UTP, usuario y buses animados.
 //  - Header con botón de menú y título "Mapa".
 //  - Panel de búsqueda con TextField funcional y chips de destino.
-//  - Al seleccionar destino: mapa hace zoom + aparecen 6 puntos rojos animados.
+//  - Al seleccionar destino: mapa hace zoom + traza la ruta con buses animados.
 //  - Bottom panel con botón REPORTAR y cards de buses.
 //
 
@@ -18,7 +18,6 @@ struct MapaView: View {
     @StateObject private var vm = MapaViewModel()
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
-    @State private var showReportSuccess = false
     /// Selector de destino tocando el mapa (botón del buscador).
     @State private var showElegirEnMapa = false
     /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
@@ -259,11 +258,6 @@ struct MapaView: View {
                 onCerrar: { showElegirEnMapa = false }
             )
         }
-        .alert("Reporte enviado", isPresented: $showReportSuccess) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Tu reporte fue enviado a la comunidad. Gracias por colaborar.")
-        }
     }
 
     // MARK: - Header
@@ -324,7 +318,8 @@ struct MapaView: View {
     }
 
     // MARK: - Search panel
-    private var searchPanel: some View {        VStack(spacing: 10) {
+    private var searchPanel: some View {
+        VStack(spacing: 10) {
             // TextField
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")

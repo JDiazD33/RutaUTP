@@ -218,7 +218,7 @@ struct RutaMapKitView: View {
 
             // Badge "RUTA SEGURA"
             HStack(spacing: 5) {
-                Image(systemName: "heart.shield.fill")
+                Image(systemName: "shield.fill")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
                 Text("RUTA SEGURA")
