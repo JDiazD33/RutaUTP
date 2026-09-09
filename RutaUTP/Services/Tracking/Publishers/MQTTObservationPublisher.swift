@@ -5,7 +5,7 @@
 //  Implementación MQTT del publicador de observaciones.
 //
 //  Responsabilidades:
-//  - Mantener una conexión MQTT autenticada.
+//  - Mantener una conexión MQTT autenticada (opcionalmente cifrada TLS).
 //  - Recibir ubicaciones ya autorizadas por el detector.
 //  - Limitar la frecuencia de publicación.
 //  - Serializar las observaciones como JSON.
@@ -32,6 +32,13 @@ final class MQTTObservationPublisher:
     private(set) var state:
         ObservationPublisherState = .inactive
 
+    /// Observador de transiciones de estado.
+    ///
+    /// Se invoca exactamente una vez por cambio de estado, en el actor
+    /// principal, para que la interfaz reaccione al instante sin sondear.
+    var onStateChange:
+        (@MainActor (ObservationPublisherState) -> Void)?
+
     /// Cliente MQTT proporcionado por CocoaMQTT.
     private let mqtt: CocoaMQTT
 
@@ -51,14 +58,24 @@ final class MQTTObservationPublisher:
     /// Indica si existe una sesión activa de contribución.
     private var isActive = false
 
-    /// Último instante en que se publicó una observación.
-    private var lastPublishedAt: TimeInterval?
+    /// Decide el ritmo de publicación (testeable sin red ni reloj real).
+    private var throttle = ObservationPublishThrottle(
+        minimumInterval: 5
+    )
 
     /// Conserva temporalmente la muestra más reciente.
     ///
     /// Esto permite recibir una ubicación mientras MQTT todavía
     /// está conectándose y enviarla cuando la conexión sea aceptada.
     private var pendingObservation: PendingObservation?
+
+    /// Reenvía la muestra pendiente aunque no lleguen lecturas nuevas.
+    ///
+    /// Mientras la sesión esté conectada, el GPS puede callarse unos
+    /// segundos (túnel, techo del vehículo). Este temporizador publica
+    /// la última muestra válida para que la baliza no desaparezca del
+    /// mapa de los demás usuarios en esos huecos.
+    private var flushTimer: Timer?
 
     /// Crea el publicador con una configuración externa.
     ///
@@ -79,6 +96,7 @@ final class MQTTObservationPublisher:
         mqtt.keepAlive = 30
         mqtt.cleanSession = true
         mqtt.autoReconnect = true
+        mqtt.enableSSL = configuration.useTLS
 
         configureCallbacks()
     }
@@ -99,7 +117,7 @@ final class MQTTObservationPublisher:
             return
         }
 
-        state = .connecting
+        setState(.connecting)
 
         #if DEBUG
         print(
@@ -125,6 +143,7 @@ final class MQTTObservationPublisher:
         }
 
         guard
+            location.horizontalAccuracy.isFinite,
             location.horizontalAccuracy >= 0,
             location.horizontalAccuracy <= 50
         else {
@@ -133,6 +152,27 @@ final class MQTTObservationPublisher:
                 "[MQTTObservationPublisher] " +
                 "Muestra descartada por precisión: " +
                 "\(location.horizontalAccuracy) m"
+            )
+            #endif
+
+            return
+        }
+
+        // Coordenadas imposibles no deben salir nunca del teléfono,
+        // ni siquiera proviniendo del hardware GPS.
+        let latitude = location.coordinate.latitude
+        let longitude = location.coordinate.longitude
+
+        guard
+            latitude.isFinite,
+            abs(latitude) <= 90,
+            longitude.isFinite,
+            abs(longitude) <= 180
+        else {
+            #if DEBUG
+            print(
+                "[MQTTObservationPublisher] " +
+                "Muestra descartada por coordenada inválida"
             )
             #endif
 
@@ -153,11 +193,13 @@ final class MQTTObservationPublisher:
         isActive = false
         sessionID = nil
         linea = nil
-        lastPublishedAt = nil
         pendingObservation = nil
 
+        stopFlushTimer()
+        throttle.reset()
+
         mqtt.disconnect()
-        state = .inactive
+        setState(.inactive)
 
         #if DEBUG
         print(
@@ -179,8 +221,10 @@ final class MQTTObservationPublisher:
                 }
 
                 guard acknowledgment == .accept else {
-                    self.state = .failed(
-                        "Conexión rechazada: \(acknowledgment)"
+                    self.setState(
+                        .failed(
+                            "Conexión rechazada: \(acknowledgment)"
+                        )
                     )
 
                     #if DEBUG
@@ -193,7 +237,8 @@ final class MQTTObservationPublisher:
                     return
                 }
 
-                self.state = .connected
+                self.setState(.connected)
+                self.startFlushTimer()
 
                 #if DEBUG
                 print(
@@ -230,6 +275,8 @@ final class MQTTObservationPublisher:
                     return
                 }
 
+                self.stopFlushTimer()
+
                 // Una desconexión solicitada por stop() no debe
                 // presentarse como un fallo.
                 guard self.isActive else {
@@ -237,8 +284,8 @@ final class MQTTObservationPublisher:
                 }
 
                 if let error {
-                    self.state = .failed(
-                        error.localizedDescription
+                    self.setState(
+                        .failed(error.localizedDescription)
                     )
 
                     #if DEBUG
@@ -249,7 +296,9 @@ final class MQTTObservationPublisher:
                     )
                     #endif
                 } else {
-                    self.state = .connecting
+                    // autoReconnect está activo: la sesión se
+                    // está rearmando, no es un fallo definitivo.
+                    self.setState(.connecting)
                 }
             }
         }
@@ -276,12 +325,11 @@ final class MQTTObservationPublisher:
 
         let now = Date().timeIntervalSince1970
 
-        if !force, let lastPublishedAt {
-            let elapsed = now - lastPublishedAt
-
-            guard elapsed >= minimumPublishInterval else {
-                return
-            }
+        guard throttle.canPublish(
+            now: now,
+            force: force
+        ) else {
+            return
         }
 
         let location = observation.location
@@ -293,8 +341,8 @@ final class MQTTObservationPublisher:
             linea: linea,
             lat: location.coordinate.latitude,
             lon: location.coordinate.longitude,
-            speed: max(-1, location.speed),
-            heading: max(-1, location.course),
+            speed: sanitizedSpeed(location.speed),
+            heading: sanitizedHeading(location.course),
             accuracy: location.horizontalAccuracy,
             motionActivity:
                 observation.activity.rawValue,
@@ -309,8 +357,10 @@ final class MQTTObservationPublisher:
                 data: data,
                 encoding: .utf8
             ) else {
-                state = .failed(
-                    "No se pudo convertir el JSON a texto"
+                setState(
+                    .failed(
+                        "No se pudo convertir el JSON a texto"
+                    )
                 )
                 return
             }
@@ -326,7 +376,7 @@ final class MQTTObservationPublisher:
                 retained: false
             )
 
-            lastPublishedAt = now
+            throttle.didPublish(at: now)
             pendingObservation = nil
 
             #if DEBUG
@@ -336,8 +386,8 @@ final class MQTTObservationPublisher:
             )
             #endif
         } catch {
-            state = .failed(
-                error.localizedDescription
+            setState(
+                .failed(error.localizedDescription)
             )
 
             #if DEBUG
@@ -348,6 +398,73 @@ final class MQTTObservationPublisher:
             )
             #endif
         }
+    }
+
+    // MARK: - Sanitización numérica
+
+    /// Velocidad válida para el contrato JSON.
+    ///
+    /// `-1` significa desconocida; valores absurdos (NaN, satélite
+    /// defectuoso) no deben viajar por el canal público.
+    private func sanitizedSpeed(
+        _ value: Double
+    ) -> Double {
+        guard value.isFinite else {
+            return -1
+        }
+
+        return min(max(value, -1), 100)
+    }
+
+    /// Rumbo válido para el contrato JSON.
+    ///
+    /// `-1` significa desconocido; se normaliza al rango [0, 360).
+    private func sanitizedHeading(
+        _ value: Double
+    ) -> Double {
+        guard value.isFinite, value >= 0 else {
+            return -1
+        }
+
+        return value.truncatingRemainder(dividingBy: 360)
+    }
+
+    // MARK: - Estado y temporizador
+
+    /// Actualiza el estado y notifica al observador.
+    private func setState(
+        _ newState: ObservationPublisherState
+    ) {
+        guard state != newState else {
+            return
+        }
+
+        state = newState
+
+        onStateChange?(newState)
+    }
+
+    /// Activa el reenvío periódico de la última muestra.
+    private func startFlushTimer() {
+        guard flushTimer == nil else {
+            return
+        }
+
+        flushTimer = Timer.scheduledTimer(
+            withTimeInterval: minimumPublishInterval,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.publishPendingIfPossible(
+                    force: false
+                )
+            }
+        }
+    }
+
+    private func stopFlushTimer() {
+        flushTimer?.invalidate()
+        flushTimer = nil
     }
 }
 
@@ -402,4 +519,41 @@ struct PassengerObservationPayload: Codable, Equatable {
 
     /// Fecha de la lectura en formato UNIX, expresada en segundos.
     let timestamp: TimeInterval
+}
+
+/// Ritmo mínimo de publicación, aislado para poder probarlo con un
+/// reloj controlado sin abrir conexiones ni esperar tiempo real.
+struct ObservationPublishThrottle: Equatable {
+
+    /// Segundos que deben pasar entre dos publicaciones.
+    let minimumInterval: TimeInterval
+
+    private(set) var lastPublishedAt: TimeInterval?
+
+    init(minimumInterval: TimeInterval = 5) {
+        self.minimumInterval = minimumInterval
+    }
+
+    /// Indica si es válido publicar en `now`.
+    ///
+    /// - Parameter force: Ignora el intervalo. Se usa al concretar la
+    ///   conexión para no perder la primera ubicación ya recibida.
+    func canPublish(
+        now: TimeInterval,
+        force: Bool
+    ) -> Bool {
+        guard !force, let lastPublishedAt else {
+            return true
+        }
+
+        return now - lastPublishedAt >= minimumInterval
+    }
+
+    mutating func didPublish(at now: TimeInterval) {
+        lastPublishedAt = now
+    }
+
+    mutating func reset() {
+        lastPublishedAt = nil
+    }
 }

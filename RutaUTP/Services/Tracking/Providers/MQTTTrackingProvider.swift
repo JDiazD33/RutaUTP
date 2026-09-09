@@ -17,6 +17,23 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
 
     private(set) var currentPositions: [VehiclePosition] = []
 
+    /// Reconstruye el snapshot descartando vehículos cuya última
+    /// señal supera el límite de obsolescencia: una baliza apagada
+    /// no debe quedarse dibujada en el mapa indefinidamente.
+    private func refreshCurrentPositions() {
+        let now = Date().timeIntervalSince1970
+
+        currentPositions = positionsByID
+            .values
+            .filter {
+                now - $0.timestamp <=
+                    VehiclePositionSanitizer.stalenessLimit
+            }
+            .sorted {
+                $0.id < $1.id
+            }
+    }
+
     init(configuration: MQTTConfiguration) {
         let clientID = "rutautp-ios-\(UUID().uuidString)"
 
@@ -31,6 +48,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         mqtt.keepAlive = 30
         mqtt.cleanSession = true
         mqtt.autoReconnect = true
+        mqtt.enableSSL = configuration.useTLS
 
         configureCallbacks()
     }
@@ -181,13 +199,25 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                     return
                 }
 
+                // El broker es un canal compartido: nada garantiza que
+                // el mensaje entrante sea razonable, así que se filtra
+                // antes de tocar el estado que alimenta el mapa.
+                guard let position = VehiclePositionSanitizer.sanitize(
+                    position
+                ) else {
+                    #if DEBUG
+                    print(
+                        "[MQTT] Posición inválida u obsoleta en \(topic): " +
+                        "\(position.id)"
+                    )
+                    #endif
+
+                    return
+                }
+
                 self.positionsByID[position.id] = position
 
-                self.currentPositions = self.positionsByID
-                    .values
-                    .sorted {
-                        $0.id < $1.id
-                    }
+                self.refreshCurrentPositions()
 
                 self.continuation?.yield(
                     self.currentPositions

@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import Combine
+import UIKit
 
 @MainActor
 final class PassiveTrackingCoordinator: ObservableObject {
@@ -58,7 +59,17 @@ final class PassiveTrackingCoordinator: ObservableObject {
 
     private var motionTask:
         Task<Void, Never>?
-    
+
+    /// Observadores del ciclo de vida de la app.
+    ///
+    /// iOS suspende el proceso poco después de pasar a segundo plano:
+    /// el socket MQTT y el GPS mueren sin despedida. Detectar la
+    /// transición permite cerrar la publicación de forma limpia y
+    /// reanudarla cuando el usuario vuelve a la app.
+    private var backgroundObserver: NSObjectProtocol?
+
+    private var foregroundObserver: NSObjectProtocol?
+
     /// Identificador anónimo y temporal de la sesión de viaje.
     ///
     /// Se crea al confirmar el abordaje y se elimina al confirmar el descenso.
@@ -134,6 +145,13 @@ private let isForcedOnboardForMQTTTest =
         isEnabled = UserDefaults.standard.bool(
             forKey: consentStorageKey
         )
+
+        // El estado del canal se propaga en el momento en que cambia,
+        // no cuando la siguiente muestra lo consulta.
+        observationPublisher?.onStateChange =
+            { [weak self] newState in
+                self?.observationPublisherState = newState
+            }
     }
     
     
@@ -209,6 +227,7 @@ private let isForcedOnboardForMQTTTest =
         isRunning = true
         statusMessage = "Analizando movilidad"
 
+        observeAppLifecycle()
         startMotionObservation()
         startLocationObservation()
 
@@ -423,7 +442,9 @@ if isForcedOnboardForMQTTTest {
 
         motionService.stop()
         detectionEngine.reset()
-        
+
+        removeAppLifecycleObservers()
+
         // Revocar el consentimiento o detener el coordinador también debe
         // finalizar cualquier sesión MQTT que todavía permanezca activa.
         stopObservationSession()
@@ -515,6 +536,113 @@ private func processForcedOnboardForMQTTTest(
         confirmedRouteID = nil
 
         refreshObservationPublisherState()
+    }
+
+    // MARK: - Ciclo de vida de la app
+
+    /// Registra los observadores de segundo plano/foreground.
+    private func observeAppLifecycle() {
+        guard backgroundObserver == nil else {
+            return
+        }
+
+        backgroundObserver = NotificationCenter
+            .default
+            .addObserver(
+                forName:
+                    UIApplication.didEnterBackgroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.pauseObservationSessionForBackground()
+                }
+            }
+
+        foregroundObserver = NotificationCenter
+            .default
+            .addObserver(
+                forName:
+                    UIApplication.willEnterForegroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.resumeObservationSessionIfNeeded()
+                }
+            }
+    }
+
+    private func removeAppLifecycleObservers() {
+        if let backgroundObserver {
+            NotificationCenter
+                .default
+                .removeObserver(backgroundObserver)
+
+            self.backgroundObserver = nil
+        }
+
+        if let foregroundObserver {
+            NotificationCenter
+                .default
+                .removeObserver(foregroundObserver)
+
+            self.foregroundObserver = nil
+        }
+    }
+
+    /// Corta la publicación al pasar a segundo plano.
+    ///
+    /// iOS suspende el proceso pocos segundos después: el socket MQTT
+    /// moriría sin desconexión limpia y el GPS se detendría. Se cierra
+    /// la conexión conservando el `sessionID` y la ruta confirmada,
+    /// porque el viaje sigue vigente y debe poder reanudarse.
+    ///
+    /// La existencia de la sesión es la condición suficiente: si no hay
+    /// viaje en curso no hay nada que pausar, con o sin coordinador vivo.
+    ///
+    /// Visibilidad interna para que XCTest verifique la pausa/reanudación
+    /// sin simular el ciclo de vida real de la app.
+    func pauseObservationSessionForBackground() {
+        guard observationSessionID != nil else {
+            return
+        }
+
+        observationPublisher?.stop()
+
+        refreshObservationPublisherState()
+
+        statusMessage =
+            "Publicación pausada: app en segundo plano"
+    }
+
+    /// Reanuda la publicación si el viaje detectado sigue vigente.
+    ///
+    /// Se reutiliza el mismo `sessionID`: la reanudación pertenece al
+    /// mismo viaje anónimo. La siguiente muestra GPS que apruebe el
+    /// detector vuelve a transmitirse sin esperar un nuevo abordaje.
+    ///
+    /// Tras `stop()` todo queda limpio (`idle`, sin sesión), así que
+    /// las condiciones de viaje bastan para decidir si corresponde
+    /// reanudar.
+    func resumeObservationSessionIfNeeded() {
+        guard
+            detectionState == .onboard,
+            let sessionID = observationSessionID,
+            let linea = confirmedLine
+        else {
+            return
+        }
+
+        observationPublisher?.start(
+            sessionID: sessionID,
+            linea: linea
+        )
+
+        refreshObservationPublisherState()
+
+        statusMessage =
+            "Viaje detectado en \(linea)"
     }
 
     /// Actualiza la propiedad observable con el estado real del publicador.

@@ -1,0 +1,27 @@
+# Control de acceso por usuario para Mosquitto.
+#
+# Copiar a mqtt/config/acl (archivo ignorado por git, igual que passwords)
+# y habilitar en mosquitto.conf con:
+#   acl_file /mosquitto/config/acl
+#
+# Regla general: quien no aparece aquí, no puede hacer NADA
+# (Mosquitto deniega por defecto a los usuarios autenticados no listados).
+
+# La app (pasajero/baliza) usa el usuario "observer".
+#   - Escribe SOLO sus observaciones anónimas.
+#   - Lee las posiciones vehiculares que produce el backend.
+#   - NO puede publicar posiciones vehiculares (eso impide que un
+#     cliente suplante vehículos ante los demás).
+user observer
+topic write rutautp/observaciones/#
+topic read rutautp/observaciones/#
+topic read rutautp/vehiculos/#
+
+# El puente/backend valida, agrupa y republica a vehiculos/.
+user backend
+topic readwrite rutautp/#
+
+# Cuenta humana para depurar con mosquitto_sub durante desarrollo.
+# Leer TODO incluye observaciones ajenas: no usar en producción.
+#user debug
+#topic read rutautp/#

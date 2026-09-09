@@ -325,6 +325,30 @@ struct MapaView: View {
 
     // MARK: - Contribución pasiva
 
+    /// Texto del estado del canal MQTT para el panel de contribución.
+    ///
+    /// `nil` significa que no hay nada útil que mostrar: sin sesión
+    /// activa o sin configuración de servidor el panel queda limpio.
+    private var contributionConnectionStatus: String? {
+        guard trackingCoordinator.isEnabled else {
+            return nil
+        }
+
+        switch trackingCoordinator.observationPublisherState {
+        case .inactive:
+            return nil
+
+        case .connecting:
+            return "Conectando al servidor…"
+
+        case .connected:
+            return "Transmitiendo en vivo"
+
+        case .failed(let message):
+            return "Sin conexión: \(message)"
+        }
+    }
+
     private var contributionPanel: some View {
         HStack(spacing: 12) {
             Image(
@@ -360,6 +384,16 @@ struct MapaView: View {
                     Text("Línea detectada: \(line)")
                         .font(.labelCapsSm)
                         .foregroundStyle(.appPrimary)
+                }
+
+                if let connectionStatus =
+                    contributionConnectionStatus {
+                    Text(connectionStatus)
+                        .font(.labelCapsSm)
+                        .foregroundStyle(
+                            trackingCoordinator.observationPublisherState
+                                .isFailure ? Color.appError : .appPrimary
+                        )
                 }
             }
 

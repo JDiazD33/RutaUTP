@@ -31,6 +31,18 @@ enum ObservationPublisherState: Equatable {
     case failed(String)
 }
 
+extension ObservationPublisherState {
+
+    /// Indica si el canal terminó en error, para colorear la UI.
+    var isFailure: Bool {
+        if case .failed = self {
+            return true
+        }
+
+        return false
+    }
+}
+
 /// Contrato de un componente capaz de publicar observaciones.
 ///
 /// Está aislado en el actor principal porque será controlado por
@@ -40,6 +52,15 @@ protocol ObservationPublishing: AnyObject {
 
     /// Estado actual de la conexión.
     var state: ObservationPublisherState { get }
+
+    /// Notificación inmediata de cambios de estado.
+    ///
+    /// CocoaMQTT informa la conexión mediante callbacks asíncronos, así que
+    /// consultar `state` solo después de cada muestra dejaría la interfaz
+    /// desactualizada. El consumidor asigna esta clausula una vez y recibe
+    /// cada transición en el momento en que ocurre.
+    var onStateChange:
+        (@MainActor (ObservationPublisherState) -> Void)? { get set }
 
     /// Inicia una sesión anónima de contribución.
     ///

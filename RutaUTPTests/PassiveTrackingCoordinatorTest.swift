@@ -130,6 +130,65 @@ final class PassiveTrackingCoordinatorTests:
         )
     }
 
+    /// Al pasar a segundo plano con un viaje a bordo, la publicación se
+    /// corta de forma limpia conservando la sesión; al volver a primer
+    /// plano se reanuda el mismo viaje anónimo sin esperar un nuevo
+    /// abordaje y la siguiente muestra vuelve a transmitirse.
+    func testSegundoPlanoPausaYForegroundReanudaMismaSesion() throws {
+        let publisher = MockObservationPublisher()
+        let coordinator = makeCoordinator(
+            publisher: publisher
+        )
+
+        processBoardingSamples(
+            with: coordinator
+        )
+
+        let originalStart = try XCTUnwrap(
+            publisher.startCalls.first
+        )
+
+        let publishCountBefore = publisher.publishCalls.count
+
+        coordinator.pauseObservationSessionForBackground()
+
+        XCTAssertEqual(publisher.stopCallCount, 1)
+        XCTAssertEqual(
+            coordinator.observationPublisherState,
+            .inactive
+        )
+        XCTAssertEqual(
+            coordinator.statusMessage,
+            "Publicación pausada: app en segundo plano"
+        )
+
+        coordinator.resumeObservationSessionIfNeeded()
+
+        XCTAssertEqual(publisher.startCalls.count, 2)
+
+        // La reanudación pertenece al mismo viaje: mismo sessionID.
+        XCTAssertEqual(
+            publisher.startCalls.last?.sessionID,
+            originalStart.sessionID
+        )
+
+        XCTAssertEqual(
+            coordinator.observationPublisherState,
+            .connected
+        )
+
+        // La siguiente muestra se transmite sin nuevo abordaje.
+        coordinator.process(
+            vehicleLocation(),
+            activity: .automotive
+        )
+
+        XCTAssertEqual(
+            publisher.publishCalls.count,
+            publishCountBefore + 1
+        )
+    }
+
     /// Construye un coordinador con dependencias controladas.
     private func makeCoordinator(
         publisher: MockObservationPublisher
@@ -229,6 +288,9 @@ private final class MockObservationPublisher:
 
     private(set) var state:
         ObservationPublisherState = .inactive
+
+    var onStateChange:
+        (@MainActor (ObservationPublisherState) -> Void)?
 
     private(set) var startCalls:
         [(sessionID: String, linea: String)] = []
