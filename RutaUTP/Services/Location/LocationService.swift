@@ -91,7 +91,22 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
             }
 
             continuation.onTermination = { [weak self] _ in
-                self?.continuations.removeValue(forKey: id)
+                // AsyncStream puede ejecutar esta clausura desde un contexto distinto.
+                // CLLocationManager y el registro de consumidores se administran en la
+                // cola principal para evitar modificaciones concurrentes.
+                DispatchQueue.main.async {
+                    guard let self else {
+                        return
+                    }
+
+                    self.continuations.removeValue(
+                        forKey: id
+                    )
+
+                    // El GPS solo se apaga cuando terminó el último consumidor.
+                    // Si el coordinador pasivo todavía escucha ubicaciones, continúa.
+                    self.stopManagerIfUnused()
+                }
             }
         }
     }
@@ -112,13 +127,70 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         isUpdating = true
     }
 
+    /// Solicita apagar el GPS cuando ya no existen consumidores activos.
+    ///
+    /// Cancelar la tarea que recorre un `AsyncStream` elimina automáticamente
+    /// su continuación. Este método no finaliza streams ajenos porque el
+    /// `LocationService` es compartido por toda la aplicación.
     func stopUpdating() {
+        stopManagerIfUnused()
+    }
+    
+    /// Detiene CLLocationManager únicamente cuando ningún componente mantiene
+    /// un stream activo de ubicación.
+    ///
+    /// Esto evita que una pantalla apague el GPS utilizado simultáneamente por
+    /// `PassiveTrackingCoordinator` u otra pantalla.
+    private func stopManagerIfUnused() {
+        guard continuations.isEmpty else {
+            #if DEBUG
+            print(
+                "[LocationService] El GPS continúa activo: " +
+                "\(continuations.count) consumidor(es)"
+            )
+            #endif
+
+            return
+        }
+
+        guard isUpdating else {
+            return
+        }
+
         manager.stopUpdatingLocation()
         isUpdating = false
-        for continuation in continuations.values {
+
+        #if DEBUG
+        print(
+            "[LocationService] GPS detenido: " +
+            "no quedan consumidores"
+        )
+        #endif
+    }
+
+    /// Detiene obligatoriamente el GPS y finaliza todos los streams.
+    ///
+    /// Solo debe utilizarse cuando iOS deniega o restringe el permiso. En ese
+    /// escenario ningún consumidor tiene autorización para seguir recibiendo
+    /// ubicaciones.
+    private func forceStopUpdating() {
+        manager.stopUpdatingLocation()
+        isUpdating = false
+
+        let activeContinuations =
+            Array(continuations.values)
+
+        continuations.removeAll()
+
+        for continuation in activeContinuations {
             continuation.finish()
         }
-        continuations.removeAll()
+
+        #if DEBUG
+        print(
+            "[LocationService] GPS detenido por falta de permiso"
+        )
+        #endif
     }
 
     // MARK: - CLLocationManagerDelegate
@@ -129,7 +201,8 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         case .authorizedWhenInUse, .authorizedAlways:
             if !isUpdating { startUpdating() }
         case .denied, .restricted:
-            stopUpdating()
+            // La ausencia de autorización prevalece sobre cualquier consumidor.
+            forceStopUpdating()
         case .notDetermined:
             break
         @unknown default:

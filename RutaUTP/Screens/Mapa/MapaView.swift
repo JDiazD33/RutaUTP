@@ -281,9 +281,10 @@ struct MapaView: View {
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text(
-                "RutaUTP analizará tu ubicación y actividad física " +
-                "para detectar si viajas en una ruta de transporte. " +
-                "En esta etapa de prueba los datos todavía no se enviarán."
+                "RutaUTP analizará tu ubicación y actividad física para " +
+                "detectar si viajas en una ruta de transporte. Solo después " +
+                "de confirmar un viaje enviará observaciones anónimas y " +
+                "temporales al servidor MQTT local de prueba."
             )
         }
     }

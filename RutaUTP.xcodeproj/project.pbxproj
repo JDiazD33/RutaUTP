@@ -47,6 +47,8 @@
 		0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F2300AD9FE004E1676 /* Assets.xcassets */; };
 		0A80051F300AD9FE004E1676 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F4300AD9FE004E1676 /* README.md */; };
 		0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */; };
+		2F53143E304F16D500AC2B66 /* ObservationPublishing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */; };
+		2F531442304F170200AC2B66 /* MQTTObservationPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */; };
 		2F5EE8013047D6E700B24250 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5EE8003047D6E700B24250 /* Idioma.swift */; };
 		2F5EE8033047D78A00B24250 /* ParaderosIluminadosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */; };
 		2F87EE07304DE59800E2F5F2 /* CocoaMQTT in Frameworks */ = {isa = PBXBuildFile; productRef = 2F87EE06304DE59800E2F5F2 /* CocoaMQTT */; };
@@ -120,6 +122,8 @@
 		0A8004F4300AD9FE004E1676 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
 		2F5242BF3049046300D850E9 /* RutaUTPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RutaUTPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservationPublishing.swift; sourceTree = "<group>"; };
+		2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTObservationPublisher.swift; sourceTree = "<group>"; };
 		2F5EE8003047D6E700B24250 /* Idioma.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 		2F5EE8023047D78A00B24250 /* ParaderosIluminadosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParaderosIluminadosView.swift; sourceTree = "<group>"; };
 		2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfiguration.swift; sourceTree = "<group>"; };
@@ -368,6 +372,7 @@
 		0A8004EE300AD9FE004E1676 /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				2F53143C304F16B600AC2B66 /* Publishers */,
 				2F87EE24304E0F0A00E2F5F2 /* Coordination */,
 				2F87EE1A304E093D00E2F5F2 /* Motion */,
 				2F87EE10304E032300E2F5F2 /* Detection */,
@@ -413,6 +418,15 @@
 				0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */,
 			);
 			path = RutaUTP;
+			sourceTree = "<group>";
+		};
+		2F53143C304F16B600AC2B66 /* Publishers */ = {
+			isa = PBXGroup;
+			children = (
+				2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */,
+				2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */,
+			);
+			path = Publishers;
 			sourceTree = "<group>";
 		};
 		2F87EE10304E032300E2F5F2 /* Detection */ = {
@@ -592,9 +606,11 @@
 				0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */,
 				2F5EE8013047D6E700B24250 /* Idioma.swift in Sources */,
 				0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */,
+				2F531442304F170200AC2B66 /* MQTTObservationPublisher.swift in Sources */,
 				0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */,
 				2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */,
 				0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */,
+				2F53143E304F16D500AC2B66 /* ObservationPublishing.swift in Sources */,
 				0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */,
 				2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */,
 				2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */,

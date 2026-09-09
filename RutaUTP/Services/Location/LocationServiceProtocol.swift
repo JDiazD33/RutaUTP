@@ -34,7 +34,11 @@ protocol LocationServiceProtocol: AnyObject {
     /// Comienza a recibir updates. Idempotente.
     func startUpdating()
 
-    /// Detiene los updates y cierra el stream activo.
+    /// Solicita detener las actualizaciones de ubicación.
+    ///
+    /// La implementación compartida solo debe apagar `CLLocationManager` cuando
+    /// ya no queden consumidores activos. Una pantalla no puede cerrar los
+    /// streams pertenecientes a otras pantallas o al rastreo pasivo global.
     func stopUpdating()
 }
 
