@@ -76,6 +76,11 @@ struct RouteTrackingDemoView: View {
         destinoElegido ?? vm.destinos[0]
     }
 
+    /// Color de la ruta activa: el oficial de la línea GTFS o el del tema.
+    private var colorRuta: Color {
+        vm.rutaGTFS?.color ?? Color.primaryContainer
+    }
+
     /// Datos del vehículo tocado, siempre frescos (el stream actualiza 4 Hz).
     private var vehiculoSeleccionado: VehiclePosition? {
         guard let id = vehiculoSeleccionadoID else { return nil }
@@ -220,17 +225,18 @@ struct RouteTrackingDemoView: View {
 
             // Ruta dividida por el avance: casing blanco + tramo restante
             // vivo y tramo recorrido tenue (estilo apps de navegación).
+            // Con línea GTFS real, la ruta toma el color oficial de la línea.
             if let restante = vm.rutaRestante {
                 MapPolyline(restante)
                     .stroke(.white.opacity(0.9),
                             style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
                 MapPolyline(restante)
-                    .stroke(Color.primaryContainer,
+                    .stroke(colorRuta,
                             style: StrokeStyle(lineWidth: 5.5, lineCap: .round, lineJoin: .round))
             }
             if let recorrida = vm.rutaRecorrida {
                 MapPolyline(recorrida)
-                    .stroke(Color.primaryContainer.opacity(0.35),
+                    .stroke(colorRuta.opacity(0.35),
                             style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
             }
 
@@ -491,8 +497,22 @@ struct RouteTrackingDemoView: View {
             }
 
             if vm.tripInProgress {
-                // Aviso cuando la ruta es el trazo directo de respaldo.
-                if vm.rutaAproximada {
+                // Identidad de la ruta: línea real del GTFS o avisos de respaldo.
+                if let rutaReal = vm.rutaGTFS {
+                    HStack(spacing: 6) {
+                        Circle().fill(rutaReal.color).frame(width: 7, height: 7)
+                        Text(L.t("Ruta real · Línea \(rutaReal.linea) · \(rutaReal.empresa)",
+                                 "Real route · Line \(rutaReal.linea) · \(rutaReal.empresa)"))
+                            .lineLimit(1)
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color(hex: "#8affc1"))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: "#8affc1").opacity(0.10)))
+                } else if vm.rutaAproximada {
+                    // Aviso cuando la ruta es el trazo directo de respaldo.
                     Label(L.t("Ruta aproximada · sin datos de MapKit",
                               "Approximate route · no MapKit data"),
                           systemImage: "wifi.exclamationmark")
@@ -545,7 +565,7 @@ struct RouteTrackingDemoView: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.white.opacity(0.15))
                     Capsule()
-                        .fill(Color.primaryContainer)
+                        .fill(colorRuta)
                         .frame(width: max(8, geo.size.width * vm.progreso))
                 }
             }
@@ -559,7 +579,7 @@ struct RouteTrackingDemoView: View {
                 Spacer()
                 Text("\(Int(vm.progreso * 100))%")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color.primaryContainer)
+                    .foregroundStyle(colorRuta)
                     .monospacedDigit()
             }
         }
@@ -718,27 +738,35 @@ struct RouteTrackingDemoView: View {
             }
 
             // Velocidad de la simulación (visible solo con el demo corriendo).
+            // 1× = ritmo real de la ruta activa; 3× y 10× para no esperar.
             if vm.modoDemo {
-                HStack(spacing: 0) {
-                    ForEach([1.0, 2.0, 4.0], id: \.self) { factor in
-                        let activo = vm.velocidadDemo == factor
-                        Button {
-                            AppHaptics.selection()
-                            vm.velocidadDemo = factor
-                        } label: {
-                            Text("\(Int(factor))×")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(activo ? .black : .white.opacity(0.8))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 7)
-                                .background(Capsule().fill(activo ? Color(hex: "#8affc1") : .clear))
+                VStack(spacing: 5) {
+                    HStack(spacing: 0) {
+                        ForEach([1.0, 3.0, 10.0], id: \.self) { factor in
+                            let activo = vm.velocidadDemo == factor
+                            Button {
+                                AppHaptics.selection()
+                                vm.velocidadDemo = factor
+                            } label: {
+                                Text("\(Int(factor))×")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(activo ? .black : .white.opacity(0.8))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 7)
+                                    .background(Capsule().fill(activo ? Color(hex: "#8affc1") : .clear))
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(3)
+                    .background(Capsule().fill(Color.white.opacity(0.10)))
+                    .accessibilityLabel(L.t("Velocidad de la simulación", "Simulation speed"))
+
+                    Text(L.t("1× = ritmo real (~\(vm.velocidadSimKmh) km/h)",
+                             "1× = real pace (~\(vm.velocidadSimKmh) km/h)"))
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.45))
                 }
-                .padding(3)
-                .background(Capsule().fill(Color.white.opacity(0.10)))
-                .accessibilityLabel(L.t("Velocidad de la simulación", "Simulation speed"))
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }

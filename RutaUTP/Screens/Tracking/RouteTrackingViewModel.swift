@@ -4,8 +4,12 @@
 //
 //  ViewModel del Tracking Demo: banco de pruebas del módulo de tracking.
 //  Integra TODO el stack actual:
-//   - Ruteo real con el MISMO pipeline del Mapa (RouteCalculationService:
-//     transit → automobile → trazo directo de respaldo).
+//   - Ruteo con RUTAS REALES primero: línea del feed GTFS de Trujillo cuyo
+//     recorrido pase por origen y destino (shape del tramo + ritmo real de
+//     la línea según stop_times). Respaldo: RouteCalculationService
+//     (transit → automobile → trazo directo) con aviso de "aproximada".
+//   - El modo demo simula el avance A RITMO REAL de la ruta activa
+//     (m/s derivados del ETA), con multiplicador 1× / 3× / 10×.
 //   - Snap-to-road y progreso con PolylineMatching (mismos umbrales de
 //     NavegacionRutaView: 60 m, anti-jitter de progreso, llegada < 120 m).
 //   - Máquina de estados de navegación igual a NavegacionRutaView
@@ -99,6 +103,9 @@ final class RouteTrackingViewModel: ObservableObject {
     @Published private(set) var rutaRestante: MKPolyline? = nil
     /// True cuando MKDirections no respondió y la ruta es un trazo directo.
     @Published private(set) var rutaAproximada: Bool = false
+    /// Línea REAL del feed GTFS usada para el viaje (nil = MapKit/respaldo).
+    /// El shape del tramo y el ritmo de simulación salen de esta línea.
+    @Published private(set) var rutaGTFS: RutaGTFS?
     /// True mientras corre el pipeline de ruteo (spinner del botón Iniciar).
     @Published private(set) var calculandoRuta: Bool = false
     /// Rumbo actual en grados (-1 desconocido): orienta la cámara y el marcador.
@@ -135,6 +142,8 @@ final class RouteTrackingViewModel: ObservableObject {
     private var demoTimer: Timer?
     private var demoProgreso: Double = 0
     private var ultimoFraccionPolyline: Double = 0
+    /// Ritmo real de simulación en m/s (de la línea GTFS o del ETA de MapKit).
+    private var velocidadSimMs: Double = 6.0
     private var snapshotVehiculosAnterior: [String: (coord: CLLocationCoordinate2D, t: TimeInterval)] = [:]
 
     private var authCancellable: AnyCancellable?
@@ -314,9 +323,23 @@ final class RouteTrackingViewModel: ObservableObject {
         if sesion?.estado == .recalculating { sesion?.estado = .inProgress }
     }
 
-    /// Pipeline de ruteo REAL del Mapa: transit → automobile → trazo directo.
+    /// Pipeline de ruteo: 1) línea REAL del feed GTFS (micros de Trujillo)
+    /// que pase por origen y destino → 2) transit → 3) automobile →
+    /// 4) trazo directo de respaldo.
     private func calcularRuta(desde origen: CLLocationCoordinate2D,
                               hacia destino: CLLocationCoordinate2D) async {
+        // 1) Ruta real: el shape del micro entre tu posición y el destino,
+        //    con el ritmo real de la línea (stop_times del GTFS).
+        if let real = await rutaGTFSDesde(origen, hacia: destino) {
+            rutaGTFS = real.ruta
+            rutaAproximada = false
+            routePolyline = MKPolyline(coordinates: real.coords, count: real.coords.count)
+            etaTotalSeg = real.segundos
+            instalarShape(real.coords)
+            return
+        }
+        rutaGTFS = nil
+
         var ruta: CalculatedRoute? = nil
         do {
             ruta = try await routeService.calculateRoute(from: origen, to: destino,
@@ -356,7 +379,98 @@ final class RouteTrackingViewModel: ObservableObject {
         }
     }
 
-    /// Prepara shape decimado + distancias acumuladas (una vez por ruta).
+    /// Busca una línea real del GTFS cuyo recorrido pase cerca del origen Y
+    /// del destino, y arma el tramo del shape entre ambos puntos (con una
+    /// piernita a pie al inicio y al final). Prefiere líneas cuyo sentido
+    /// (orden del shape) vaya del origen hacia el destino.
+    private func rutaGTFSDesde(_ origen: CLLocationCoordinate2D,
+                               hacia destino: CLLocationCoordinate2D)
+        async -> (ruta: RutaGTFS, coords: [CLLocationCoordinate2D], segundos: TimeInterval)? {
+        let porDestino = await GTFSRepository.shared.rutasQuePasanPor(destino, radioMetros: 450)
+        guard !porDestino.isEmpty else { return nil }
+
+        // Candidatas: las que además pasan cerca del origen.
+        let porOrigen = await GTFSRepository.shared.rutasQuePasanPor(origen, radioMetros: 350)
+        let idsOrigen = Set(porOrigen.map(\.id))
+        let candidatas = porDestino.filter { idsOrigen.contains($0.id) }
+        guard !candidatas.isEmpty else { return nil }
+
+        // Mejor candidata: primera cuyo shape va del origen al destino en
+        // orden; si ninguna, la primera (tramo invertido ≈ sentido de retorno).
+        var elegida: (ruta: RutaGTFS, coords: [CLLocationCoordinate2D], segundos: TimeInterval, sentidoCorrecto: Bool)? = nil
+        for ruta in candidatas {
+            guard let tramo = tramoShape(ruta.shape,
+                                         desde: origen,
+                                         hacia: destino,
+                                         duracionLineaSeg: TimeInterval(ruta.duracionMin * 60)) else { continue }
+            if tramo.sentidoCorrecto {
+                elegida = (ruta, tramo.coords, tramo.segundos, true)
+                break
+            }
+            if elegida == nil {
+                elegida = (ruta, tramo.coords, tramo.segundos, false)
+            }
+        }
+        guard let resultado = elegida else { return nil }
+        #if DEBUG
+        print("[TrackingDemo] ruta GTFS: \(resultado.ruta.linea) (sentido \(resultado.sentidoCorrecto ? "de ida" : "de retorno"))")
+        #endif
+        return (resultado.ruta, resultado.coords, resultado.segundos)
+    }
+
+    /// Trama el slice del shape entre los puntos más cercanos a origen y
+    /// destino, más la caminata de conexión en ambos extremos.
+    private func tramoShape(_ shape: [CLLocationCoordinate2D],
+                            desde origen: CLLocationCoordinate2D,
+                            hacia destino: CLLocationCoordinate2D,
+                            duracionLineaSeg: TimeInterval)
+        -> (coords: [CLLocationCoordinate2D], segundos: TimeInterval, sentidoCorrecto: Bool)? {
+        guard shape.count >= 2,
+              let iOrigen = indiceMasCercano(shape, a: origen),
+              let iDestino = indiceMasCercano(shape, a: destino) else { return nil }
+
+        let sentidoCorrecto = iOrigen < iDestino
+        let tramo: [CLLocationCoordinate2D] = sentidoCorrecto
+            ? Array(shape[iOrigen...iDestino])
+            : Array(shape[iDestino...iOrigen]).reversed()
+        guard tramo.count >= 2, let primerParadero = tramo.first, let ultimoParadero = tramo.last else {
+            return nil
+        }
+
+        var coords = [origen]
+        coords.append(contentsOf: tramo)
+        coords.append(destino)
+
+        // Ritmo real: el tramo dura lo que dice el stop_times de la línea,
+        // proporcional a la fracción del shape recorrido.
+        let metrosTramo = PolylineMatching.totalLengthMeters(tramo)
+        let metrosTotales = max(PolylineMatching.totalLengthMeters(shape), 1)
+        let segundosBus = duracionLineaSeg > 0
+            ? duracionLineaSeg * (metrosTramo / metrosTotales)
+            : metrosTramo / 6.0
+        // Caminatas de conexión (origen → paradero y paradero → destino) a paso humano.
+        let metrosCaminata = PolylineMatching.distanceMeters(origen, primerParadero)
+                          + PolylineMatching.distanceMeters(ultimoParadero, destino)
+        let segundos = segundosBus + metrosCaminata / 1.4
+
+        return (coords, segundos, sentidoCorrecto)
+    }
+
+    /// Índice del punto del array más cercano a `objetivo`.
+    private func indiceMasCercano(_ puntos: [CLLocationCoordinate2D],
+                                  a objetivo: CLLocationCoordinate2D) -> Int? {
+        guard !puntos.isEmpty else { return nil }
+        var mejor = 0
+        var mejorDistancia = Double.greatestFiniteMagnitude
+        for (i, punto) in puntos.enumerated() {
+            let d = PolylineMatching.distanceMeters(punto, objetivo)
+            if d < mejorDistancia {
+                mejorDistancia = d
+                mejor = i
+            }
+        }
+        return mejor
+    }
     private func instalarShape(_ coords: [CLLocationCoordinate2D]) {
         let decimada = PolylineMatching.decimate(coords, maxPoints: 240)
         polyCoords = decimada.count >= 2 ? decimada : coords
@@ -372,6 +486,13 @@ final class RouteTrackingViewModel: ObservableObject {
         ultimoFraccionPolyline = 0
         rutaRecorrida = nil
         rutaRestante = routePolyline
+        // Ritmo real de simulación: distancia total / ETA de la ruta
+        // (línea GTFS o MapKit). Es "a como vamos": micro urbano ≈ 20-25 km/h.
+        if let eta = etaTotalSeg, eta > 10 {
+            velocidadSimMs = max(1.2, distanciaTotalM / eta)
+        } else {
+            velocidadSimMs = 6.0
+        }
     }
 
     /// Divide la polyline en tramo recorrido / restante según `progreso`.
@@ -419,6 +540,11 @@ final class RouteTrackingViewModel: ObservableObject {
             : "\(Int(distanciaRestanteM)) m"
     }
 
+    /// Ritmo real de la ruta activa, para el caption del selector 1×/3×/10×.
+    var velocidadSimKmh: Int {
+        Int((velocidadSimMs * 3.6).rounded())
+    }
+
     // MARK: - Modo demo (simulación de avance sobre la ruta calculada)
 
     private func iniciarDemoSimulado() {
@@ -431,7 +557,11 @@ final class RouteTrackingViewModel: ObservableObject {
         demoTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.demoProgreso = min(1.0, self.demoProgreso + (1.0 / 900.0) * self.velocidadDemo)   // ~72 s a 1×
+                // Avance por METROS reales: velocidad real de la ruta (m/s)
+                // × multiplicador elegido. 1× = ritmo real de la línea.
+                guard let total = self.distanciasAcumuladas.last, total > 1 else { return }
+                let deltaMetros = self.velocidadSimMs * self.velocidadDemo * 0.08
+                self.demoProgreso = min(1.0, self.demoProgreso + deltaMetros / total)
                 let coord = self.coordenadaEnFraccion(self.demoProgreso)
                 let siguiente = self.coordenadaEnFraccion(min(1.0, self.demoProgreso + 0.002))
                 let rumbo = atan2(siguiente.longitude - coord.longitude,
@@ -552,6 +682,8 @@ final class RouteTrackingViewModel: ObservableObject {
         rutaRecorrida = nil
         rutaRestante = nil
         rutaAproximada = false
+        rutaGTFS = nil
+        velocidadSimMs = 6.0
         ultimoFraccionPolyline = 0
         estado = posicion != nil ? .listo : .esperandoGPS
     }
