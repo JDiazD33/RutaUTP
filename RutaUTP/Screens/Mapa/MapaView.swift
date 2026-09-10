@@ -74,26 +74,26 @@ struct MapaView: View {
                 // muestran TODAS las líneas que pasan por el punto.
                 ForEach(vm.busesAnimados.prefix(8)) { bus in
                     Annotation(L.t("Línea", "Line") + " \(bus.linea)", coordinate: bus.coordinate) {
-                        AnimatedBusMarker(
-                            linea: bus.linea,
-                            color: bus.color,
-                            heading: bus.heading
-                        )
-                        .onTapGesture {
+                        Button {
+                            campoEnfocado = false
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 vm.busSeleccionado = bus
                             }
+                        } label: {
+                            AnimatedBusMarker(
+                                linea: bus.linea,
+                                color: bus.color,
+                                heading: bus.heading,
+                                seleccionado: vm.busSeleccionado?.id == bus.id
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
             .ignoresSafeArea()
-            .onTapGesture {
-                campoEnfocado = false
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    vm.busSeleccionado = nil
-                }
-            }
+            // Las anotaciones gestionan sus toques; la ficha se cierra con su X.
+            // Un gesto en el Map padre competía con la selección del micro.
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
@@ -224,6 +224,9 @@ struct MapaView: View {
         .onDisappear { vm.detenerSimulacionBuses() }
         .onChange(of: router.destinoPendiente) { _ in
             consumirDestinoPendiente()
+        }
+        .onChange(of: vm.destinoFocusTick) { _, _ in
+            withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }
         }
         .onChange(of: vm.region.center.latitude) { _ in
             withAnimation {
@@ -434,20 +437,29 @@ struct MapaView: View {
             campoEnfocado = false
             vm.seleccionar(destino: destino)
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: destino.icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 30, height: 30)
+                    .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
                 Text(destino.label)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                if activo {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 14))
+                }
             }
             .foregroundStyle(activo ? Color.onSecondaryContainer : Color.onSurface)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .background(
-                Capsule().fill(activo ? Color.secondaryContainer : Color.surfaceContainerHighest)
-            )
+            .padding(.horizontal, 12)
+            .frame(minHeight: 48)
+            .background(activo ? Color.secondaryContainer : Color.surfaceContainerLowest,
+                        in: RoundedRectangle(cornerRadius: 15))
+            .overlay(RoundedRectangle(cornerRadius: 15)
+                .stroke(activo ? Color.secondary : Color.outlineVariant.opacity(0.3), lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .accessibilityValue(activo ? L.t("Seleccionado", "Selected") : "")
+        .accessibilityHint(L.t("Mostrar este destino en el mapa", "Show this destination on the map"))
         .seniable(destino.claveSenia)
     }
 

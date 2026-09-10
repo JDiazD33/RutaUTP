@@ -128,6 +128,27 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     @Published var textoBusqueda: String = ""
     @Published var destinoSeleccionado: DestinoChip? = nil
+    @Published private(set) var destinoFocusTick = 0
+    private var selectionRevision = UUID()
+    private var routeRevision = UUID()
+    private var routeTask: Task<Void, Never>?
+    private var activeSearch: MKLocalSearch?
+
+    private func invalidarSeleccionAnterior() {
+        selectionRevision = UUID()
+        routeRevision = UUID()
+        activeSearch?.cancel()
+        activeSearch = nil
+        routeTask?.cancel()
+        routeTask = nil
+        buscando = false
+        routePolyline = nil
+        etaMinutos = nil
+        distanciaKm = nil
+        busSeleccionado = nil
+        completer.queryFragment = ""
+        sugerenciasBusqueda = []
+    }
 
     // GPS Real
     @Published var userRealCoordinate: CLLocationCoordinate2D? = nil
@@ -239,7 +260,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                     let isInitialFix = (self.userRealCoordinate == nil)
                     self.userRealCoordinate = location.coordinate
                     if isInitialFix {
-                        self.recenterOnUser()
+                        if self.busquedaResultado == nil { self.recenterOnUser() }
 
                         // Si ya había un destino trazado desde el origen mock
                         // (el usuario llegó antes que el primer fix del GPS),
@@ -500,8 +521,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     // MARK: - Selección y Búsqueda de Destino
     func seleccionar(destino: DestinoChip) {
-        if destinoSeleccionado?.id == destino.id { return }
-
+        invalidarSeleccionAnterior()
         sugerenciasBusqueda = []
         destinoSeleccionado = destino
         let destCoord = CLLocationCoordinate2D(latitude: destino.lat, longitude: destino.lon)
@@ -514,21 +534,27 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
             )
         }
+        destinoFocusTick += 1
         calcularRutaHacia(destCoord)
         recargarLineas(cercaDe: destCoord)
     }
 
     func seleccionarSugerencia(_ completion: MKLocalSearchCompletion) {
+        invalidarSeleccionAnterior()
+        let revision = selectionRevision
         sugerenciasBusqueda = []
         textoBusqueda = completion.title
         buscando = true
 
         let searchRequest = MKLocalSearch.Request(completion: completion)
         let search = MKLocalSearch(request: searchRequest)
+        activeSearch = search
 
         search.start { [weak self] response, error in
             guard let self = self else { return }
             DispatchQueue.main.async {
+                guard self.selectionRevision == revision else { return }
+                self.activeSearch = nil
                 self.buscando = false
                 if let mapItem = response?.mapItems.first {
                     self.seleccionarLugar(
@@ -546,21 +572,26 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         sugerenciasBusqueda = []
 
         if let match = destinos.first(where: {
-            $0.label.lowercased().contains(t.lowercased())
+            $0.label.compare(t, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
         }) {
             seleccionar(destino: match)
             return
         }
 
+        invalidarSeleccionAnterior()
+        let revision = selectionRevision
         buscando = true
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = t
         request.region = region
 
         let search = MKLocalSearch(request: request)
+        activeSearch = search
         search.start { [weak self] response, error in
             guard let self = self else { return }
             DispatchQueue.main.async {
+                guard self.selectionRevision == revision else { return }
+                self.activeSearch = nil
                 self.buscando = false
                 if let mapItem = response?.mapItems.first {
                     self.seleccionarLugar(
@@ -573,6 +604,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     }
 
     func seleccionarLugar(titulo: String, coordenada: CLLocationCoordinate2D) {
+        invalidarSeleccionAnterior()
+        textoBusqueda = titulo
         destinoSeleccionado = nil
         busquedaResultado = (titulo: titulo, coordenada: coordenada)
 
@@ -582,19 +615,23 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
             )
         }
+        destinoFocusTick += 1
         calcularRutaHacia(coordenada)
         recargarLineas(cercaDe: coordenada)
     }
 
     // MARK: - Ruteo Real (Polilínea MKDirections)
     func calcularRutaHacia(_ destinoCoord: CLLocationCoordinate2D) {
+        routeTask?.cancel()
+        let revision = UUID()
+        routeRevision = revision
         let origen = userRealCoordinate ?? CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)
 
         #if DEBUG
         print("[Ruta] calculando desde (\(origen.latitude), \(origen.longitude)) hacia (\(destinoCoord.latitude), \(destinoCoord.longitude))")
         #endif
 
-        Task { @MainActor in
+        routeTask = Task { @MainActor in
             var route: CalculatedRoute? = nil
             do {
                 route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .transit)
@@ -603,6 +640,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 print("[Ruta] transit falló: \(error.localizedDescription)")
                 #endif
             }
+            guard !Task.isCancelled, self.routeRevision == revision else { return }
             if route == nil {
                 do {
                     route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .automobile)
@@ -613,6 +651,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 }
             }
 
+            guard !Task.isCancelled, self.routeRevision == revision else { return }
             if let route {
                 #if DEBUG
                 print("[Ruta] OK por calles: \(Int(route.distance)) m, \(Int(route.expectedTravelTime/60)) min")
@@ -637,6 +676,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     }
 
     func limpiar() {
+        invalidarSeleccionAnterior()
         textoBusqueda = ""
         destinoSeleccionado = nil
         busquedaResultado = nil

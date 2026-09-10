@@ -12,10 +12,7 @@ struct RouteTrackingDemoView: View {
     @StateObject private var vm: RouteTrackingViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // Un encuadre explícito evita que añadir anotaciones vuelva a mover la cámara.
-    @State private var cameraPosition: MapCameraPosition = .region(MKCoordinateRegion(
-        center: GTFSRepository.coordenadaUTP,
-        span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)))
+    @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var seguir: Bool = true
     @State private var ultimoCentroCamara: CLLocationCoordinate2D?
     @State private var rumboCamara: Double?
@@ -279,15 +276,8 @@ struct RouteTrackingDemoView: View {
         }
         .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
         .onMapCameraChange(frequency: .onEnd) { context in
-            let center = context.region.center
-            let radius = max(500, min(16000, context.region.span.latitudeDelta * 111_320 * 0.6))
-            let moved = businessMapCenter.map {
-                NegociosService.distanciaMetros($0, center) >= 120
-            } ?? true
-            let zoomChanged = abs(radius - businessMapRadius) >= max(50, businessMapRadius * 0.1)
-            guard moved || zoomChanged else { return }
-            businessMapCenter = center
-            businessMapRadius = radius
+            businessMapCenter = context.region.center
+            businessMapRadius = max(500, min(16000, context.region.span.latitudeDelta * 111_320 * 0.6))
             refrescarNegocios(force: true)
         }
         .mapControls {
@@ -910,10 +900,7 @@ struct RouteTrackingDemoView: View {
         if !force, let ultimo = ultimoRefreshNegocios,
            NegociosService.distanciaMetros(ultimo, pos) < 120 { return }
         ultimoRefreshNegocios = pos
-        let nuevos = NegociosService.shared.distribuidos(cercaDe: pos, radioMetros: businessMapRadius, limite: 14)
-        if nuevos.map(\.id) != negociosCerca.map(\.id) {
-            negociosCerca = nuevos
-        }
+        negociosCerca = NegociosService.shared.distribuidos(cercaDe: pos, radioMetros: businessMapRadius, limite: 14)
         // El negocio abierto se mantiene aunque salga del top cercano: el
         // usuario ya mostró interés; se cierra solo con el botón.
     }

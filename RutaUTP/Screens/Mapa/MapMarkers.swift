@@ -80,49 +80,72 @@ struct MarcadorDestinoBuscado: View {
     }
 }
 
-// MARK: - Marcador de Bus Animado en Tiempo Real
+// MARK: - Bus: línea legible, rumbo separado y selección
 struct AnimatedBusMarker: View {
     let linea: String
     let color: Color
     let heading: Double
-    @State private var pulsando = false
+    var seleccionado: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 2) {
-            // Badge con el número de línea
-            Text("L-\(linea)")
-                .font(.system(size: 10, weight: .heavy))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(color))
-                .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
+        VStack(spacing: 4) {
+            Text(linea)
+                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.onSurface)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.surfaceContainerLowest, in: Capsule())
+                .overlay(Capsule().stroke(color.opacity(0.55), lineWidth: 1))
 
-            // Pin interactivo del bus con pulso
             ZStack {
-                Circle()
-                    .fill(color.opacity(0.30))
-                    .frame(width: pulsando ? 44 : 32, height: pulsando ? 44 : 32)
-                    .animation(
-                        .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
-                        value: pulsando
-                    )
-
-                Circle()
-                    .fill(color)
-                    .frame(width: 32, height: 32)
-                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                    .shadow(color: .black.opacity(0.35), radius: 4, x: 0, y: 2)
-
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .fill(color.opacity(seleccionado ? 0.22 : 0.09))
+                    .frame(width: 52, height: 52)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.surfaceContainerLowest)
+                    .frame(width: 42, height: 42)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(color, lineWidth: seleccionado ? 3 : 1.5)
+                    }
+                // El vehículo permanece derecho aunque cambie de rumbo.
                 Image(systemName: "bus.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .rotationEffect(Angle(degrees: heading))
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(Color.onSurface)
+                if heading.isFinite && heading >= 0 {
+                    Image(systemName: "arrowtriangle.up.fill")
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundStyle(Color.onSurface)
+                        .padding(3)
+                        .background(Color.surfaceContainerLowest, in: Circle())
+                        .offset(y: -25)
+                        .rotationEffect(.degrees(heading))
+                }
+                if seleccionado {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 8, weight: .heavy))
+                        .foregroundStyle(Color.onSurface)
+                        .frame(width: 17, height: 17)
+                        .background(Color.surfaceContainerLowest, in: Circle())
+                        .overlay(Circle().stroke(color, lineWidth: 1.5))
+                        .offset(x: 20, y: 20)
+                }
             }
         }
-        .onAppear { pulsando = true }
+        .frame(minWidth: 60, maxWidth: 88)
+        .padding(3)
+        .shadow(color: .black.opacity(0.16), radius: 4, x: 0, y: 2)
+        .contentShape(Rectangle())
+        .scaleEffect(seleccionado ? 1.08 : 1)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: seleccionado)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Micro, línea ", "Bus, line ") + linea)
+        .accessibilityValue(seleccionado ? L.t("Seleccionado", "Selected") : "")
+        .accessibilityHint(L.t("Toca para ver la información del micro", "Tap to view bus information"))
+        .accessibilityAddTraits(.isButton)
     }
 }
-
-
-

@@ -602,195 +602,185 @@ struct LugarDetailSheet: View {
     var onEliminar: () -> Void
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var router: AppRouter
-
-    /// Centro del mapa: coordenadas del lugar si las tiene; si no, fallback
-    /// al campus UTP mientras el geocoder resuelve.
-    @State private var lugarCoord: CLLocationCoordinate2D = CLLocationCoordinate2D(
-        latitude: -8.098247879173792, longitude: -79.03818104755645
-    )
-    @State private var camera: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
-            span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
-        )
-    )
-    @State private var buscandoCoord: Bool = false
+    @State private var lugarCoord: CLLocationCoordinate2D?
+    @State private var buscandoCoord = true
+    @State private var intento = 0
+    @State private var geocoder = CLGeocoder()
+    @State private var navegando = false
+    @State private var confirmarEliminar = false
+    @State private var camera: MapCameraPosition = .region(MKCoordinateRegion(
+        center: GTFSRepository.coordenadaUTP,
+        span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)))
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Mapa preview centrado en el lugar
-            ZStack(alignment: .bottomTrailing) {
-                Map(position: $camera) {
-                    Annotation(lugar.nombre, coordinate: lugarCoord) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.appPrimary)
-                                .frame(width: 36, height: 36)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                            Image(systemName: lugar.categoria.icono)
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                }
-                .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
-
-                if buscandoCoord {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                        Text(L.t("Buscando ubicación…", "Finding location…"))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.onSurface)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(.ultraThinMaterial))
-                    .padding(10)
-                }
-            }
-            .frame(height: 180)
-            .clipped()
-
-            VStack(alignment: .leading, spacing: 16) {
-                // Header
-                HStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(lugar.esFijo ? Color.appPrimary : Color.primaryContainer.opacity(0.15))
-                            .frame(width: 56, height: 56)
-                        Image(systemName: lugar.categoria.icono)
-                            .font(.system(size: 28))
-                            .foregroundStyle(lugar.esFijo ? .white : .appPrimary)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(lugar.nombre)
-                                .font(.headlineMd)
-                            if lugar.esFrecuente {
-                                Text("FRECUENTE")
-                                    .font(.labelCapsSm)
-                                    .foregroundStyle(.onTertiary)
-                                    .appTracking(AppTracking.wideLabel)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.tertiary))
-                            }
-                        }
-                        Text(lugar.direccion)
-                            .font(.bodySm)
-                            .foregroundStyle(.onSurfaceVariant)
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    Label(L.t("LUGAR GUARDADO", "SAVED PLACE"), systemImage: "bookmark.fill")
+                        .font(.caption.weight(.bold)).foregroundStyle(Color.onSurfaceVariant)
                     Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark").font(.subheadline.bold())
+                            .frame(width: 44, height: 44)
+                            .background(Color.surfaceContainerLow, in: Circle())
+                    }
+                    .accessibilityLabel(L.t("Cerrar", "Close"))
                 }
 
-                Divider()
-
-                // Botones de acción (funcionales con las coordenadas del lugar)
-                VStack(spacing: 10) {
-                    Button {
-                        // Mapa: traza la ruta desde mi posición hasta este lugar
-                        if let coord = lugar.coordinate {
-                            router.destinoPendiente = DestinoPendiente(
-                                titulo: lugar.nombre, lat: coord.latitude, lon: coord.longitude
-                            )
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: lugar.categoria.icono)
+                        .font(.system(size: 25, weight: .semibold))
+                        .foregroundStyle(Color.appPrimary)
+                        .frame(width: 58, height: 58)
+                        .background(Color.appPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 18))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(lugar.nombre).font(.title2.bold())
+                        Text(lugar.direccion).font(.subheadline)
+                            .foregroundStyle(Color.onSurfaceVariant)
+                        if lugar.esFrecuente {
+                            Label(L.t("Frecuente", "Frequent"), systemImage: "star.fill")
+                                .font(.caption.weight(.semibold)).foregroundStyle(Color.appPrimary)
                         }
-                        router.navigate(to: .mapaPrincipal)
-                        dismiss()
-                    } label: {
-                        HStack {
-                            Image(systemName: "map.fill")
-                            Text(L.t("Ver ruta desde mi posición", "See route from my location"))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                        .foregroundStyle(.white)
-                        .font(.bodyMdMedium)
                     }
-                    .buttonStyle(.plain)
+                }
 
-                    Button {
-                        // Rutas: muestra las líneas que pasan cerca del lugar
-                        if let coord = lugar.coordinate {
-                            router.lugarCercanoPendiente = DestinoPendiente(
-                                titulo: lugar.nombre, lat: coord.latitude, lon: coord.longitude
-                            )
-                        }
-                        router.navigate(to: .rutas)
-                        dismiss()
-                    } label: {
-                        HStack {
-                            Image(systemName: "bus.fill")
-                            Text(lugar.coordinate == nil
-                                 ? L.t("Ver rutas disponibles", "See available routes")
-                                 : L.t("Buscar transporte cercano", "Find nearby transport"))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryContainer))
-                        .foregroundStyle(.onPrimaryContainer)
-                        .font(.bodyMdMedium)
-                    }
-                    .buttonStyle(.plain)
-
-                    if lugar.esFijo {
-                        HStack(spacing: 8) {
-                            Image(systemName: "pin.fill")
-                            Text(L.t("Lugar fijo de la app · no se puede eliminar", "Fixed app place · cannot be removed"))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                        .foregroundStyle(.onSurfaceVariant)
-                        .font(.bodyMdMedium)
-                    } else {
-                        Button {
-                            onEliminar()
-                            dismiss()
-                        } label: {
-                            HStack {
-                                Image(systemName: "trash.fill")
-                                Text(L.t("Eliminar de guardados", "Remove from saved"))
+                Group {
+                    if let coord = lugarCoord {
+                        Map(position: $camera, interactionModes: []) {
+                            Annotation(lugar.nombre, coordinate: coord) {
+                                Image(systemName: lugar.categoria.icono)
+                                    .font(.title3.bold()).foregroundStyle(.white)
+                                    .padding(12).background(Color.appPrimary, in: Circle())
+                                    .overlay(Circle().stroke(.white, lineWidth: 3))
+                                    .shadow(color: .black.opacity(0.2), radius: 5, y: 3)
                             }
-                            .frame(maxWidth: .infinity, minHeight: 48)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
-                            .foregroundStyle(.onErrorContainer)
-                            .font(.bodyMdMedium)
                         }
-                        .buttonStyle(.plain)
+                        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+                        .accessibilityLabel(L.t("Ubicación de ", "Location of ") + lugar.nombre)
+                    } else {
+                        VStack(spacing: 12) {
+                            if buscandoCoord {
+                                ProgressView()
+                                Text(L.t("Localizando el lugar…", "Locating this place…"))
+                            } else {
+                                Image(systemName: "mappin.slash.circle").font(.largeTitle)
+                                Text(L.t("No pudimos localizar esta dirección.", "We could not locate this address."))
+                                Button(L.t("Reintentar", "Try again")) { intento += 1 }
+                                    .fontWeight(.bold).foregroundStyle(Color.appPrimary)
+                            }
+                        }
+                        .font(.subheadline).multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.surfaceContainerLow)
                     }
                 }
-                Spacer(minLength: 0)
+                .frame(height: 170)
+                .clipShape(RoundedRectangle(cornerRadius: 22))
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L.t("Planea tu visita", "Plan your visit")).font(.headline)
+                    accion(titulo: L.t("Transporte cerca de este lugar", "Transport near this place"),
+                           detalle: L.t("Líneas con paradero a menos de 300 m del lugar.", "Routes with a stop within 300 m of this place."),
+                           icono: "bus.fill", principal: true) {
+                        abrirDestino(transporte: true)
+                    }
+                    accion(titulo: L.t("Cómo llegar", "How to get there"),
+                           detalle: L.t("Traza el camino desde tu ubicación en el mapa.", "Plot the journey from your location on the map."),
+                           icono: "arrow.triangle.turn.up.right.diamond.fill", principal: false) {
+                        abrirDestino(transporte: false)
+                    }
+                }
+                .disabled(lugarCoord == nil || navegando)
+                .opacity(lugarCoord == nil ? 0.5 : 1)
+
+                if lugar.esFijo {
+                    Label(L.t("Lugar fijo de RutaUTP", "RutaUTP fixed place"), systemImage: "pin.fill")
+                        .font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                } else {
+                    Button(role: .destructive) { confirmarEliminar = true } label: {
+                        Label(L.t("Quitar de mis lugares", "Remove from my places"), systemImage: "trash")
+                            .font(.subheadline).frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                }
             }
             .padding(20)
         }
-        .onAppear { resolverCoordenadas() }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.onSurface)
+        .background(Color.appBackground)
+        .presentationDragIndicator(.visible)
+        .seguirTemaForzado()
+        .task(id: intento) { await resolverCoordenadas() }
+        .onDisappear { geocoder.cancelGeocode() }
+        .confirmationDialog(L.t("¿Quitar este lugar de guardados?", "Remove this saved place?"),
+                            isPresented: $confirmarEliminar, titleVisibility: .visible) {
+            Button(L.t("Quitar lugar", "Remove place"), role: .destructive) {
+                onEliminar()
+                dismiss()
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
+        }
     }
 
-    /// Si el lugar trae coordenadas las usa directo; si no, geocodifica
-    /// su dirección para centrar el mapa correctamente.
-    private func resolverCoordenadas() {
-        if let coord = lugar.coordinate {
+    private func accion(titulo: String, detalle: String, icono: String,
+                        principal: Bool, ejecutar: @escaping () -> Void) -> some View {
+        Button(action: ejecutar) {
+            HStack(spacing: 12) {
+                Image(systemName: icono).font(.title3)
+                    .frame(width: 42, height: 42)
+                    .background(principal ? Color.white.opacity(0.16) : Color.appPrimary.opacity(0.1),
+                                in: RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(titulo).font(.subheadline.bold())
+                    Text(detalle).font(.caption).opacity(0.85)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right").font(.caption.bold())
+            }
+            .padding(16)
+            .foregroundStyle(principal ? Color.white : Color.onSurface)
+            .background(principal ? Color.appPrimary : Color.surfaceContainerLowest,
+                        in: RoundedRectangle(cornerRadius: 18))
+            .contentShape(RoundedRectangle(cornerRadius: 18))
+        }
+    }
+
+    private func abrirDestino(transporte: Bool) {
+        guard let coord = lugarCoord, !navegando else { return }
+        navegando = true
+        let destino = DestinoPendiente(titulo: lugar.nombre, lat: coord.latitude, lon: coord.longitude)
+        if transporte {
+            router.lugarCercanoPendiente = destino
+        } else {
+            router.destinoPendiente = destino
+        }
+        dismiss()
+        router.navigate(to: transporte ? .rutas : .mapaPrincipal)
+    }
+
+    @MainActor
+    private func resolverCoordenadas() async {
+        buscandoCoord = true
+        defer { buscandoCoord = false }
+        if let coord = lugar.coordinate, CLLocationCoordinate2DIsValid(coord) {
             centrar(coord)
             return
         }
-        buscandoCoord = true
-        let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString("\(lugar.direccion), Trujillo, Perú") { placemarks, _ in
-            DispatchQueue.main.async {
-                buscandoCoord = false
-                if let coord = placemarks?.first?.location?.coordinate {
-                    centrar(coord)
-                }
-            }
+        do {
+            let resultados = try await geocoder.geocodeAddressString("\(lugar.direccion), Trujillo, Perú")
+            guard !Task.isCancelled,
+                  let coord = resultados.first?.location?.coordinate,
+                  CLLocationCoordinate2DIsValid(coord) else { return }
+            centrar(coord)
+        } catch {
+            // Sin ubicación válida, las acciones permanecen deshabilitadas.
         }
     }
 
     private func centrar(_ coord: CLLocationCoordinate2D) {
         lugarCoord = coord
-        withAnimation(.spring(response: 0.4)) {
-            camera = .region(MKCoordinateRegion(
-                center: coord,
-                span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
-            ))
-        }
+        camera = .region(MKCoordinateRegion(center: coord,
+            span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)))
     }
 }
 

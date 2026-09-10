@@ -26,6 +26,7 @@ struct RutaOpcion: Identifiable, Equatable {
     let paraderos: [ParaderoGTFS]         // paraderos en orden (stops + stop_times)
     let paradaInicio: String
     let paradaFin: String
+    var variante: String = ""
 
     var frecuenciaTexto: String {
         frecuenciaMin > 0 ? L.t("cada \(frecuenciaMin) min", "every \(frecuenciaMin) min") : "—"
@@ -66,6 +67,7 @@ final class RutasViewModel: ObservableObject {
             $0.linea.localizedCaseInsensitiveContains(t)
             || $0.empresa.localizedCaseInsensitiveContains(t)
             || $0.recorrido.localizedCaseInsensitiveContains(t)
+            || $0.variante.localizedCaseInsensitiveContains(t)
         }
     }
 
@@ -81,6 +83,7 @@ final class RutasViewModel: ObservableObject {
         let feed = await GTFSRepository.shared.rutas()
         rutas = Self.convertir(feed)
         cargando = false
+        if let destino = filtroCerca { activarFiltroCerca(destino: destino) }
     }
 
     /// Convierte el feed GTFS en el modelo de lista. Reutilizado por
@@ -101,21 +104,30 @@ final class RutasViewModel: ObservableObject {
                 shape: ruta.shape,
                 paraderos: ruta.paraderos,
                 paradaInicio: ruta.paraderos.first?.nombre ?? L.t("Paradero inicial", "First stop"),
-                paradaFin: ruta.paraderos.last?.nombre ?? L.t("Paradero final", "Last stop")
+                paradaFin: ruta.paraderos.last?.nombre ?? L.t("Paradero final", "Last stop"),
+                variante: ruta.variante
             )
         }
     }
 
-    /// Activa el filtro "cerca de": mide la distancia de cada shape al lugar.
+    /// Busca paraderos donde se puede abordar, reutilizando la distancia de
+    /// cada parada compartida. Ordena por la más cercana de cada línea.
     func activarFiltroCerca(destino: DestinoPendiente) {
         filtroCerca = destino
         var distancias: [String: Double] = [:]
-        for ruta in rutas where ruta.shape.count >= 2 {
-            var minima = Double.greatestFiniteMagnitude
-            for punto in ruta.shape {
-                let d = PolylineMatching.distanceMeters(punto, destino.coordinate)
-                if d < minima { minima = d }
-                if d < Self.radioCercaMetros { break }   // ya califica; no seguir
+        var distanciasPorParadero: [String: Double] = [:]
+        let coordinate = destino.coordinate
+        for ruta in rutas {
+            var minima = Double.infinity
+            for paradero in ruta.paraderos {
+                let distancia: Double
+                if let cached = distanciasPorParadero[paradero.id] {
+                    distancia = cached
+                } else {
+                    distancia = PolylineMatching.distanceMeters(paradero.coordinate, coordinate)
+                    distanciasPorParadero[paradero.id] = distancia
+                }
+                minima = min(minima, distancia)
             }
             distancias[ruta.id] = minima
         }
@@ -266,7 +278,7 @@ struct RutasView: View {
                             .padding(.vertical, 32)
                         } else if viewModel.rutasFiltradas.isEmpty {
                             Text(viewModel.filtroCerca != nil
-                                 ? L.t("Ninguna línea pasa a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar", "No line passes within \(Int(RutasViewModel.radioCercaMetros)) m of this place")
+                                 ? L.t("Ninguna línea tiene paradero a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar", "No route has a stop within \(Int(RutasViewModel.radioCercaMetros)) m of this place")
                                  : "No hay rutas que coincidan con “\(viewModel.textoBusqueda)”")
                                 .font(.bodySm)
                                 .foregroundStyle(.onSurfaceVariant)
@@ -305,7 +317,7 @@ struct RutasView: View {
                             .font(.bodySm)
                             .fontWeight(.semibold)
                             .foregroundStyle(.onPrimaryContainer)
-                        Text(String(format: L.t("%1$d of %2$d routes pass within %3$d m", "%1$d of %2$d routes pass within %3$d m"), viewModel.rutasFiltradas.count, viewModel.rutas.count, Int(RutasViewModel.radioCercaMetros)))
+                        Text(String(format: L.t("%1$d de %2$d líneas con paradero a menos de %3$d m", "%1$d of %2$d routes have a stop within %3$d m"), viewModel.rutasFiltradas.count, viewModel.rutas.count, Int(RutasViewModel.radioCercaMetros)))
                             .font(.system(size: 10))
                             .foregroundStyle(.onPrimaryContainer.opacity(0.8))
                     }
@@ -413,6 +425,13 @@ private struct RutaOpcionCard: View {
                     .font(.bodyMdMedium)
                     .foregroundStyle(.onSurface)
                     .lineLimit(1)
+                if !ruta.variante.isEmpty {
+                    Text(L.t("Variante ", "Variant ") + ruta.variante)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.surfaceContainerLow, in: Capsule())
+                }
                 Text(ruta.recorrido)
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
@@ -543,7 +562,7 @@ private struct DetalleRutaView: View {
                                 .fill(ruta.colorLinea)
                                 .frame(width: 6, height: 48)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("\(ruta.empresa)")
+                                Text(ruta.empresa + (ruta.variante.isEmpty ? "" : " · " + ruta.variante))
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
                                 Text(ruta.recorrido)

@@ -166,3 +166,19 @@ extension ShapeStyle where Self == Color {
     static var errorContainer:     Color { .errorContainer }
     static var onErrorContainer:   Color { .onErrorContainer }
 }
+
+
+extension Color {
+    /// Ajuste de presentación para colores GTFS que se pierden sobre el mapa.
+    /// El valor original sigue disponible en RutaGTFS.colorHex.
+    static func colorRuta(hex: String) -> Color {
+        switch hex.trimmingCharacters(in: CharacterSet(charactersIn: "# ")).uppercased() {
+        case "FFFF00", "FFFF66", "FFFF33":
+            return Color(light: "#796000", dark: "#F4D35E")
+        case "FFFFFF":
+            return Color(light: "#59636F", dark: "#E4E8EA")
+        default:
+            return Color(hex: hex)
+        }
+    }
+}

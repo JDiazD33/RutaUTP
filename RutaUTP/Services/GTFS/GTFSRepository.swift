@@ -205,7 +205,7 @@ extension GTFSRepository {
                 recorrido: recorrido,
                 empresa: nombresAgencia[routeAgency[i]] ?? "Transporte Trujillo",
                 colorHex: colorHex,
-                color: Color(hex: colorHex),
+                color: Color.colorRuta(hex: colorHex),
                 shape: shapePuntos,
                 paraderos: paraderos,
                 duracionMin: duracionMin,
