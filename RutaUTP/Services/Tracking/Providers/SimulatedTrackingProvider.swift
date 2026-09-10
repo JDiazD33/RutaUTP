@@ -9,6 +9,9 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
     private var stream: AsyncStream<[VehiclePosition]>?
     private var timer: Timer?
     private var loading: Task<Void, Never>?
+    private var rebuildTask: Task<Void, Never>?
+    private var rebuildWorker: Task<[Motion], Never>?
+    private var rebuildGeneration = UUID()
     private var generation = UUID()
     private var previousTick: Date?
     private var center = GTFSRepository.coordenadaUTP
@@ -45,6 +48,11 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         generation = UUID()
         loading?.cancel()
         loading = nil
+        rebuildGeneration = UUID()
+        rebuildTask?.cancel()
+        rebuildTask = nil
+        rebuildWorker?.cancel()
+        rebuildWorker = nil
         timer?.invalidate()
         timer = nil
         previousTick = nil
@@ -75,15 +83,45 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
     }
 
     private func rebuild() {
-        let ranked = routes.map { route in
-            (route, PolylineMatching.match(point: center, on: route.shape))
-        }.sorted {
+        rebuildTask?.cancel()
+        rebuildWorker?.cancel()
+        let token = UUID()
+        rebuildGeneration = token
+        let routes = routes
+        let center = center
+        let preferredRouteID = preferredRouteID
+        guard !routes.isEmpty else { return }
+        // El matching de todo el feed no debe bloquear MapKit ni los toques.
+        let worker = Task.detached(priority: .userInitiated) {
+            Self.makeFleet(routes: routes, center: center, preferredRouteID: preferredRouteID)
+        }
+        rebuildWorker = worker
+        rebuildTask = Task { @MainActor [weak self] in
+            let result = await worker.value
+            guard let self, !Task.isCancelled, self.rebuildGeneration == token else { return }
+            self.fleet = result
+            self.previousTick = Date()
+            self.publish()
+            self.rebuildTask = nil
+            self.rebuildWorker = nil
+        }
+    }
+
+    private static func makeFleet(routes: [RutaGTFS], center: CLLocationCoordinate2D,
+                                  preferredRouteID: String?) -> [Motion] {
+        var matches: [(RutaGTFS, PolylineMatching.MatchResult?)] = []
+        for route in routes {
+            guard !Task.isCancelled else { return [] }
+            matches.append((route, PolylineMatching.match(point: center, on: route.shape)))
+        }
+        let ranked = matches.sorted {
             if ($0.0.id == preferredRouteID) != ($1.0.id == preferredRouteID) {
                 return $0.0.id == preferredRouteID
             }
             return ($0.1?.distanceToRoute ?? .infinity) < ($1.1?.distanceToRoute ?? .infinity)
         }
-        fleet = ranked.prefix(12).enumerated().compactMap { index, entry in
+        return ranked.prefix(12).enumerated().compactMap { index, entry in
+            guard !Task.isCancelled else { return nil }
             let route = entry.0
             var cumulative = [0.0]
             for i in 1..<route.shape.count {
@@ -96,8 +134,6 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
                           speed: min(12, max(4, total / Double(max(1, route.duracionMin) * 60))),
                           distance: max(0, anchor - offset))
         }
-        previousTick = Date()
-        publish()
     }
 
     private func tick() {
