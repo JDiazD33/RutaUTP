@@ -433,29 +433,40 @@ struct MapaView: View {
 
     private func chip(_ destino: DestinoChip) -> some View {
         let activo = vm.destinoSeleccionado?.id == destino.id
+        let acento: Color = {
+            switch destino.id {
+            case 1: return Color(light: "#A80033", dark: "#FF91AD")
+            case 2: return Color(light: "#796000", dark: "#F4D35E")
+            case 3: return Color(light: "#006779", dark: "#65CCD8")
+            default: return Color(light: "#3C5D9C", dark: "#99B8FE")
+            }
+        }()
         return Button {
             campoEnfocado = false
             vm.seleccionar(destino: destino)
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: destino.icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 30, height: 30)
-                    .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(acento)
+                    .frame(width: 20)
                 Text(destino.label)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
                 if activo {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 14))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(acento)
                 }
             }
-            .foregroundStyle(activo ? Color.onSecondaryContainer : Color.onSurface)
-            .padding(.horizontal, 12)
-            .frame(minHeight: 48)
-            .background(activo ? Color.secondaryContainer : Color.surfaceContainerLowest,
-                        in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15)
-                .stroke(activo ? Color.secondary : Color.outlineVariant.opacity(0.3), lineWidth: 1))
+            .foregroundStyle(Color.onSurface)
+            .padding(.horizontal, 10)
+            .frame(height: 34)
+            .background(acento.opacity(activo ? 0.22 : 0.10), in: Capsule())
+            .overlay(Capsule().stroke(acento.opacity(activo ? 0.8 : 0.25), lineWidth: 1))
+            // Compacto a la vista, con un área cómoda para tocar.
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityValue(activo ? L.t("Seleccionado", "Selected") : "")

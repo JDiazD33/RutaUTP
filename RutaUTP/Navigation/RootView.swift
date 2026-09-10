@@ -45,6 +45,7 @@ struct RootView: View {
             case "guardado": AppRouter.pantallaInicial = .guardado
             case "seguridad":AppRouter.pantallaInicial = .seguridad
             case "perfil":   AppRouter.pantallaInicial = .perfil
+            case "tracking": AppRouter.pantallaInicial = .trackingDemo
             default:         break
             }
         }
