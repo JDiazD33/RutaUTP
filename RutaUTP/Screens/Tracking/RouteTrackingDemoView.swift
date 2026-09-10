@@ -1,34 +1,6 @@
-//
-//  RouteTrackingDemoView.swift
-//  RutaUTP
-//
-//  Vista de PRUEBA aislada del módulo de tracking real.
-//  NO está conectada al flujo principal (se abre desde el SideDrawer del
-//  Mapa → AppRouter.navigate(to: .trackingDemo)).
-//
-//  Banco de pruebas del stack de tracking ACTUAL:
-//   1. Pide permiso de ubicación y muestra tu posición real en el mapa
-//      (marcador con cono de rumbo cuando hay course del GPS).
-//   2. Destinos = los mismos chips fijos del Mapa (UTP / Centro / Huanchaco).
-//   3. Ruteo con el MISMO pipeline del Mapa: MKDirections transit →
-//      automobile → trazo directo de respaldo (avisa "ruta aproximada").
-//   4. Navegación estilo apps de navegación: al iniciar el viaje se encuadra
-//      toda la ruta; la cámara persigue la posición rotando con el rumbo
-//      (3D en ruta, norte arriba en reposo) sin pelear con los gestos.
-//   5. Ruta dibujada con casing blanco + tramo recorrido (tenue) y
-//      restante (vivo), barra de progreso, ETA + hora de llegada estimada,
-//      banner de recálculo en desvíos y alerta de llegada con resumen
-//      (duración, distancia, velocidad media, puntos GPS).
-//   6. Modo DEMO interactivo: simula el avance por la ruta a 1× / 2× / 4×.
-//   7. Vehículos en el mapa vía VehicleTrackingProviding: tap en un bus →
-//      popup en vivo (línea, rumbo, velocidad, distancia, frescura) con
-//      badge de fuente (DEMO simulado / EN VIVO backend futuro).
-//   8. Registra el viaje en un TripSession (puntos GPS) listo para backend.
-//   9. Negocios en ruta (fase 1): burbujas de locales promocionados cerca
-//      de la posición; tap → card con promo y cupón (JSON local).
-//
-//  Usa `Map(position:)` con `MapCameraPosition` (iOS 17+).
-//
+// Tracking Demo: tema persistido, transporte GTFS y tramos a pie diferenciados.
+// El usuario puede buscar un destino y escoger un radio de 200 o 500 metros.
+// Los comercios son datos demo, distribuidos según el área visible del mapa.
 
 import SwiftUI
 import MapKit
@@ -66,6 +38,10 @@ struct RouteTrackingDemoView: View {
 
     /// Confirmación antes de cortar un viaje en curso.
     @State private var confirmarDetener: Bool = false
+    @State private var destinoTexto = ""
+    @FocusState private var destinationFocused: Bool
+    @State private var businessMapCenter: CLLocationCoordinate2D?
+    @State private var businessMapRadius: Double = 1800
 
     init(locationService: LocationServiceProtocol = LocationService()) {
         _vm = StateObject(wrappedValue: RouteTrackingViewModel(locationService: locationService))
@@ -89,7 +65,7 @@ struct RouteTrackingDemoView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#0a0a0a").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
 
             mapa
 
@@ -141,7 +117,11 @@ struct RouteTrackingDemoView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
-                panelInferior
+                ScrollView(showsIndicators: false) {
+                    panelInferior
+                }
+                .frame(maxHeight: vm.tripInProgress ? 410 : 360)
+                .scrollBounceBehavior(.basedOnSize)
             }
 
             // Resumen de llegada con dim que enfoca la card.
@@ -157,7 +137,7 @@ struct RouteTrackingDemoView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await vm.requestPermissionAndStart()
@@ -171,6 +151,9 @@ struct RouteTrackingDemoView: View {
         }
         // Al arrancar el viaje: encuadre de toda la ruta (el usuario decide
         // cuándo pasar a seguimiento con el botón flotante).
+        .onChange(of: vm.calculandoRuta) { _, calculating in
+            if !calculating && vm.itinerary != nil { encuadrarRuta() }
+        }
         .onChange(of: vm.tripInProgress) { _, activo in
             if activo { encuadrarRuta() }
         }
@@ -223,25 +206,36 @@ struct RouteTrackingDemoView: View {
                 }
             }
 
-            // Ruta dividida por el avance: casing blanco + tramo restante
-            // vivo y tramo recorrido tenue (estilo apps de navegación).
-            // Con línea GTFS real, la ruta toma el color oficial de la línea.
-            if let restante = vm.rutaRestante {
-                MapPolyline(restante)
-                    .stroke(.white.opacity(0.9),
-                            style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
-                MapPolyline(restante)
-                    .stroke(colorRuta,
-                            style: StrokeStyle(lineWidth: 5.5, lineCap: .round, lineJoin: .round))
+            if let plan = vm.itinerary {
+                MapPolyline(coordinates: plan.walkToBoard)
+                    .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
+                MapPolyline(coordinates: plan.bus)
+                    .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
+                MapPolyline(coordinates: plan.bus)
+                    .stroke(colorRuta, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                MapPolyline(coordinates: plan.walkToDestination)
+                    .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
+                Annotation(L.t("Sube aquí", "Board here"), coordinate: plan.board.coordinate, anchor: .bottom) {
+                    TransitStopMarker(number: "1", title: L.t("SUBE", "BOARD"), color: .secondary)
+                }
+                Annotation(L.t("Baja aquí", "Get off here"), coordinate: plan.alight.coordinate, anchor: .bottom) {
+                    TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .appPrimary)
+                }
+            } else if let stop = vm.nearestStop {
+                Annotation(stop.nombre, coordinate: stop.coordinate, anchor: .bottom) {
+                    TransitStopMarker(number: "", title: L.t("PARADERO", "STOP"), color: .secondary)
+                }
             }
-            if let recorrida = vm.rutaRecorrida {
-                MapPolyline(recorrida)
-                    .stroke(colorRuta.opacity(0.35),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            if destinoActual.id == 999 {
+                Annotation(destinoActual.label, coordinate: destinoActual.coordinate) {
+                    Image(systemName: "flag.checkered.circle.fill")
+                        .font(.system(size: 30)).foregroundStyle(Color.appPrimary)
+                        .background(Circle().fill(Color.appSurface))
+                }
             }
 
             // Vehículos en tiempo real vía provider: tap → popup en vivo.
-            ForEach(vm.vehiculos.prefix(8)) { vehiculo in
+            ForEach(vm.vehiculos) { vehiculo in
                 Annotation(L.t("Línea", "Line") + " \(vehiculo.linea)", coordinate: vehiculo.coordinate) {
                     AnimatedBusMarker(
                         linea: vehiculo.linea,
@@ -263,10 +257,9 @@ struct RouteTrackingDemoView: View {
                 }
             }
 
-            // Negocios en ruta: burbujas de locales promocionados cerca de
-            // la posición. Tap → card con promo y cupón.
+            // Catálogo demo espaciado según el área visible, también al explorar la ciudad.
             ForEach(negociosCerca) { negocio in
-                Annotation(negocio.nombre, coordinate: negocio.coordinate) {
+                Annotation(negocio.nombre, coordinate: negocio.coordinate, anchor: .bottom) {
                     NegocioBubbleMarker(
                         negocio: negocio,
                         seleccionado: negocioSeleccionado?.id == negocio.id
@@ -282,6 +275,11 @@ struct RouteTrackingDemoView: View {
             }
         }
         .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
+        .onMapCameraChange(frequency: .onEnd) { context in
+            businessMapCenter = context.region.center
+            businessMapRadius = max(500, min(16000, context.region.span.latitudeDelta * 111_320 * 0.6))
+            refrescarNegocios(force: true)
+        }
         .mapControls {
             MapCompass()
             MapScaleView()
@@ -384,7 +382,7 @@ struct RouteTrackingDemoView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 28))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(Color.onSurface.opacity(0.85))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Cerrar demo", "Close demo"))
@@ -392,23 +390,33 @@ struct RouteTrackingDemoView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("TRACKING DEMO")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(Color.onSurface.opacity(0.6))
                     .appTracking(AppTracking.wideLabel)
-                Text(L.t("Módulo de tracking real", "Real tracking module"))
+                Text(L.t("Tu viaje, paso a paso", "Your journey, step by step"))
                     .font(.system(size: 15, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.onSurface)
                     .lineLimit(1)
             }
 
             Spacer()
 
+            Button {
+                isDarkMode.toggle()
+            } label: {
+                Image(systemName: isDarkMode ? "sun.max.fill" : "moon.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.onSurface)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Color.surfaceContainerLowest))
+            }
+            .accessibilityLabel(L.t("Cambiar tema claro u oscuro", "Toggle light or dark theme"))
             badgeFuente
             badgePermiso
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(
-            LinearGradient(colors: [Color(hex: "#0a0a0a").opacity(0.92), .clear],
+            LinearGradient(colors: [Color.appBackground.opacity(0.92), .clear],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea(edges: .top)
         )
@@ -419,18 +427,18 @@ struct RouteTrackingDemoView: View {
         let enVivo = vm.fuenteVehiculos == .real
         return Text(enVivo ? L.t("EN VIVO", "LIVE") : "DEMO")
             .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(enVivo ? .black : .white)
+            .foregroundStyle(enVivo ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
             .appTracking(AppTracking.wideLabel)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(Capsule().fill(enVivo ? Color(hex: "#8affc1") : Color.white.opacity(0.14)))
+            .background(Capsule().fill(enVivo ? Color(light: "#087C55", dark: "#8affc1") : Color.onSurface.opacity(0.14)))
     }
 
     private var badgePermiso: some View {
         let status = vm.authStatus
         let (text, color): (String, Color) = {
             switch status {
-            case .authorizedAlways, .authorizedWhenInUse: return ("GPS ON", Color(hex: "#8affc1"))
+            case .authorizedAlways, .authorizedWhenInUse: return ("GPS ON", Color(light: "#087C55", dark: "#8affc1"))
             case .denied, .restricted:                    return ("GPS OFF", .appError)
             case .notDetermined:                          return (L.t("SIN GPS", "NO GPS"), .gray)
             @unknown default:                             return ("GPS", .gray)
@@ -438,7 +446,7 @@ struct RouteTrackingDemoView: View {
         }()
         return Text(text)
             .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(status.isAuthorized ? .black : .white)
+            .foregroundStyle(status.isAuthorized ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
             .appTracking(AppTracking.wideLabel)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
@@ -460,11 +468,11 @@ struct RouteTrackingDemoView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(instruccion)
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.onSurface)
                         .lineLimit(2)
                     Text(subtitulo)
                         .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(Color.onSurface.opacity(0.6))
                         .lineLimit(1)
                 }
                 Spacer()
@@ -506,11 +514,11 @@ struct RouteTrackingDemoView: View {
                             .lineLimit(1)
                     }
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color(hex: "#8affc1"))
+                    .foregroundStyle(Color(light: "#087C55", dark: "#8affc1"))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: "#8affc1").opacity(0.10)))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(light: "#087C55", dark: "#8affc1").opacity(0.10)))
                 } else if vm.rutaAproximada {
                     // Aviso cuando la ruta es el trazo directo de respaldo.
                     Label(L.t("Ruta aproximada · sin datos de MapKit",
@@ -520,11 +528,22 @@ struct RouteTrackingDemoView: View {
                         .foregroundStyle(.yellow.opacity(0.9))
                 }
 
+                if let plan = vm.itinerary {
+                    itinerarySummary(plan)
+                }
                 barraProgreso
                 statsRow
                 controlesViaje
             } else {
+                if let stop = vm.nearestStop, let meters = vm.nearestStopMeters {
+                    Label(L.t("Paradero cercano: ", "Nearest stop: ") + stop.nombre + " · \(Int(meters)) m",
+                          systemImage: "bus.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(2)
+                }
                 selectorDestino
+                    .disabled(vm.calculandoRuta)
             }
 
             if vm.estado == .sinPermiso {
@@ -535,10 +554,10 @@ struct RouteTrackingDemoView: View {
                 } label: {
                     Label(L.t("Abrir Ajustes", "Open Settings"), systemImage: "gearshape.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(isDarkMode ? Color.black : Color.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(Color(hex: "#8affc1")))
+                        .background(Capsule().fill(Color(light: "#087C55", dark: "#8affc1")))
                 }
                 .buttonStyle(.plain)
             }
@@ -546,12 +565,12 @@ struct RouteTrackingDemoView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color(hex: "#141414").opacity(0.96))
+                .fill(Color.surfaceContainerLowest.opacity(0.96))
                 .shadow(color: .black.opacity(0.4), radius: 16, x: 0, y: -4)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.onSurface.opacity(0.08), lineWidth: 1)
         )
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
@@ -563,7 +582,7 @@ struct RouteTrackingDemoView: View {
         VStack(alignment: .leading, spacing: 4) {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.15))
+                    Capsule().fill(Color.onSurface.opacity(0.15))
                     Capsule()
                         .fill(colorRuta)
                         .frame(width: max(8, geo.size.width * vm.progreso))
@@ -575,7 +594,7 @@ struct RouteTrackingDemoView: View {
             HStack {
                 Text(L.t("Avance del recorrido", "Trip progress"))
                     .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(Color.onSurface.opacity(0.5))
                 Spacer()
                 Text("\(Int(vm.progreso * 100))%")
                     .font(.system(size: 10, weight: .bold))
@@ -591,17 +610,17 @@ struct RouteTrackingDemoView: View {
                  valor: horaLlegadaTexto,
                  etiqueta: L.t("Llegada", "Arrival"))
                 .frame(maxWidth: .infinity)
-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
+            Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
             stat(icono: "clock.fill",
                  valor: "\(vm.minutosRestantes) min",
                  etiqueta: L.t("Restante", "Remaining"))
                 .frame(maxWidth: .infinity)
-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
+            Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
             stat(icono: "point.topleft.down.curvedto.point.bottomright.up",
                  valor: vm.distanciaRestanteTexto,
                  etiqueta: L.t("Por recorrer", "To go"))
                 .frame(maxWidth: .infinity)
-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
+            Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
             stat(icono: "record.circle",
                  valor: "\(vm.sesion?.puntosRecorridos.count ?? 0)",
                  etiqueta: L.t("Puntos GPS", "GPS points"))
@@ -611,8 +630,8 @@ struct RouteTrackingDemoView: View {
 
     /// Hora de llegada estimada al ritmo de la ruta calculada.
     private var horaLlegadaTexto: String {
-        guard let eta = vm.etaTotalSeg else { return "—" }
-        let fecha = Date().addingTimeInterval(eta * (1 - vm.progreso))
+        guard vm.etaTotalSeg != nil else { return "—" }
+        let fecha = Date().addingTimeInterval(vm.remainingSeconds)
         let formato = DateFormatter()
         formato.dateFormat = "HH:mm"
         return formato.string(from: fecha)
@@ -622,15 +641,15 @@ struct RouteTrackingDemoView: View {
         VStack(spacing: 3) {
             Image(systemName: icono)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(Color.onSurface.opacity(0.55))
             Text(valor)
                 .font(.system(size: 15, weight: .heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.onSurface)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Text(etiqueta.uppercased())
                 .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Color.onSurface.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
         }
     }
@@ -641,9 +660,31 @@ struct RouteTrackingDemoView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(L.t("DESTINO", "DESTINATION"))
                 .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Color.onSurface.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
 
+            HStack(spacing: 8) {
+                TextField(L.t("Busca una dirección o lugar", "Search an address or place"), text: $destinoTexto)
+                    .font(.system(size: 13)).submitLabel(.search)
+                    .focused($destinationFocused)
+                    .onSubmit { searchDestination() }
+                Button(action: searchDestination) {
+                    if vm.buscandoDestino { ProgressView() }
+                    else { Image(systemName: "magnifyingglass") }
+                }
+                .disabled(vm.buscandoDestino || destinoTexto.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel(L.t("Buscar destino", "Search destination"))
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerHigh))
+            Picker(L.t("Caminata máxima en cada extremo", "Maximum walk at each end"), selection: $vm.radioParadero) {
+                Text("200 m").tag(200.0)
+                Text("500 m").tag(500.0)
+            }
+            .pickerStyle(.segmented)
+            Text(L.t("Paraderos a menos de \(Int(vm.radioParadero)) m del origen y destino",
+                     "Stops within \(Int(vm.radioParadero)) m of origin and destination"))
+                .font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)
             HStack(spacing: 8) {
                 ForEach(vm.destinos) { destino in
                     let seleccionado = destino.id == destinoActual.id
@@ -660,17 +701,18 @@ struct RouteTrackingDemoView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .lineLimit(1)
                         }
-                        .foregroundStyle(seleccionado ? .black : .white)
+                        .foregroundStyle(seleccionado ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(seleccionado ? Color(hex: "#8affc1")
-                                                                : Color.white.opacity(0.12)))
+                        .background(Capsule().fill(seleccionado ? Color(light: "#087C55", dark: "#8affc1")
+                                                                : Color.onSurface.opacity(0.12)))
                     }
                     .buttonStyle(.plain)
                 }
             }
 
             Button {
+                destinationFocused = false
                 Task { await vm.iniciar(destino: destinoActual) }
             } label: {
                 HStack(spacing: 8) {
@@ -692,10 +734,10 @@ struct RouteTrackingDemoView: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(vm.posicion == nil ? Color.white.opacity(0.25) : Color.primaryContainer))
+                    .fill(vm.posicion == nil ? Color.onSurface.opacity(0.25) : Color.primaryContainer))
             }
             .buttonStyle(.plain)
-            .disabled(vm.posicion == nil || vm.calculandoRuta)
+            .disabled(vm.posicion == nil || vm.calculandoRuta || vm.buscandoDestino)
             .accessibilityHint(L.t("Calcula la ruta real y activa el tracking",
                                    "Calculates the real route and starts tracking"))
         }
@@ -715,11 +757,11 @@ struct RouteTrackingDemoView: View {
                                       : L.t("Simular avance", "Simulate progress"),
                           systemImage: vm.modoDemo ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(vm.modoDemo ? .black : .white)
+                        .foregroundStyle(vm.modoDemo ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(vm.modoDemo ? Color(hex: "#8affc1")
-                                                               : Color.white.opacity(0.12)))
+                        .background(Capsule().fill(vm.modoDemo ? Color(light: "#087C55", dark: "#8affc1")
+                                                               : Color.onSurface.opacity(0.12)))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L.t("Simular avance por la ruta", "Simulate progress along the route"))
@@ -732,7 +774,7 @@ struct RouteTrackingDemoView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(Color.appError.opacity(0.85)))
+                        .background(Capsule().fill(Color.appPrimary))
                 }
                 .buttonStyle(.plain)
             }
@@ -750,22 +792,22 @@ struct RouteTrackingDemoView: View {
                             } label: {
                                 Text("\(Int(factor))×")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(activo ? .black : .white.opacity(0.8))
+                                    .foregroundStyle(activo ? (isDarkMode ? Color.black : Color.white) : Color.onSurface.opacity(0.8))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 7)
-                                    .background(Capsule().fill(activo ? Color(hex: "#8affc1") : .clear))
+                                    .background(Capsule().fill(activo ? Color(light: "#087C55", dark: "#8affc1") : .clear))
                             }
                             .buttonStyle(.plain)
                         }
                     }
                     .padding(3)
-                    .background(Capsule().fill(Color.white.opacity(0.10)))
+                    .background(Capsule().fill(Color.onSurface.opacity(0.10)))
                     .accessibilityLabel(L.t("Velocidad de la simulación", "Simulation speed"))
 
                     Text(L.t("1× = ritmo real (~\(vm.velocidadSimKmh) km/h)",
                              "1× = real pace (~\(vm.velocidadSimKmh) km/h)"))
                         .font(.system(size: 9))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .foregroundStyle(Color.onSurface.opacity(0.45))
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -779,7 +821,7 @@ struct RouteTrackingDemoView: View {
         case .esperandoGPS:  return "antenna.radiowaves.left.and.right"
         case .sinPermiso:    return "location.slash.fill"
         case .listo:         return "location.fill"
-        case .enRuta:        return "bus.fill"
+        case .enRuta:        return vm.journeyLeg == .riding ? "bus.fill" : "figure.walk"
         case .fueraDeRuta:   return "exclamationmark.triangle.fill"
         case .cercaDestino:  return "bell.badge.fill"
         case .finalizado:    return "checkmark.circle.fill"
@@ -788,13 +830,13 @@ struct RouteTrackingDemoView: View {
 
     private var colorEstado: Color {
         switch vm.estado {
-        case .esperandoGPS:  return .white
+        case .esperandoGPS:  return Color.onSurface
         case .sinPermiso:    return .red
-        case .listo:         return Color(hex: "#8affc1")
+        case .listo:         return Color(light: "#087C55", dark: "#8affc1")
         case .enRuta:        return Color.primaryContainer
         case .fueraDeRuta:   return .orange
-        case .cercaDestino:  return .yellow
-        case .finalizado:    return Color(hex: "#8affc1")
+        case .cercaDestino:  return Color(light: "#946200", dark: "#FFD166")
+        case .finalizado:    return Color(light: "#087C55", dark: "#8affc1")
         }
     }
 
@@ -807,7 +849,11 @@ struct RouteTrackingDemoView: View {
         case .listo:
             return L.t("GPS listo · elige un destino", "GPS ready · pick a destination")
         case .enRuta:
-            return L.t("Tracking activo", "Tracking active")
+            switch vm.journeyLeg {
+            case .walkingToBoard: return L.t("Camina al paradero de subida", "Walk to your boarding stop")
+            case .riding: return L.t("Toma el micro \(vm.rutaGTFS?.linea ?? "")", "Take bus \(vm.rutaGTFS?.linea ?? "")")
+            case .walkingToDestination: return L.t("Baja y camina a tu destino", "Get off and walk to your destination")
+            }
         case .fueraDeRuta(let metros):
             return L.t("Te alejaste de la ruta (\(Int(metros)) m)",
                        "You went off route (\(Int(metros)) m)")
@@ -827,8 +873,12 @@ struct RouteTrackingDemoView: View {
         case .listo:
             return L.t("Inicia el viaje para probar el tracking", "Start the trip to test tracking")
         case .enRuta:
-            return L.t("Hacia \(vm.destinoSeleccionado?.label ?? "…")",
-                       "To \(vm.destinoSeleccionado?.label ?? "…")")
+            guard let plan = vm.itinerary else { return "" }
+            switch vm.journeyLeg {
+            case .walkingToBoard: return plan.board.nombre
+            case .riding: return L.t("Baja en ", "Get off at ") + plan.alight.nombre
+            case .walkingToDestination: return vm.destinoSeleccionado?.label ?? ""
+            }
         case .fueraDeRuta:
             return L.t("Recalculando automáticamente", "Recalculating automatically")
         case .cercaDestino:
@@ -843,17 +893,50 @@ struct RouteTrackingDemoView: View {
 
     // MARK: Negocios en ruta
 
-    /// Recarga las burbujas cada 120 m de avance (o la primera vez). En un
-    /// micro a 30 km/h es ~1 refresh cada 14 s: las burbujas van apareciendo
-    /// durante el viaje sin parpadear.
-    private func refrescarNegocios() {
-        guard let pos = vm.posicion else { return }
-        if let ultimo = ultimoRefreshNegocios,
+    /// Al mover el mapa selecciona negocios espaciados según el zoom.
+    /// En seguimiento, las actualizaciones de cámara mantienen el área al día.
+    private func refrescarNegocios(force: Bool = false) {
+        let pos = businessMapCenter ?? vm.posicion ?? GTFSRepository.coordenadaUTP
+        if !force, let ultimo = ultimoRefreshNegocios,
            NegociosService.distanciaMetros(ultimo, pos) < 120 { return }
         ultimoRefreshNegocios = pos
-        negociosCerca = NegociosService.shared.cerca(de: pos, radioMetros: 900, limite: 4)
+        negociosCerca = NegociosService.shared.distribuidos(cercaDe: pos, radioMetros: businessMapRadius, limite: 14)
         // El negocio abierto se mantiene aunque salga del top cercano: el
         // usuario ya mostró interés; se cierra solo con el botón.
+    }
+
+    private func searchDestination() {
+        destinationFocused = false
+        Task {
+            if let destination = await vm.buscarDestino(destinoTexto) {
+                destinoElegido = destination
+                cameraPosition = .region(MKCoordinateRegion(center: destination.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)))
+            }
+        }
+    }
+
+    private func itinerarySummary(_ plan: TransitItinerary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("1 · " + plan.board.nombre + " · \(Int(plan.walkToBoardMeters)) m " + L.t("a pie", "walk"),
+                  systemImage: "figure.walk")
+            Label(L.t("Micro ", "Bus ") + plan.route.linea + " · " + plan.route.precioTexto,
+                  systemImage: "bus.fill")
+            Label("2 · " + plan.alight.nombre + " · \(Int(plan.walkToDestinationMeters)) m " + L.t("al destino", "to destination"),
+                  systemImage: "flag.checkered")
+            Text(L.t("··· Caminata     ━ Recorrido del micro", "··· Walk     ━ Bus route"))
+                .font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)
+            if plan.walkingApproximate {
+                Text(L.t("Caminata aproximada: sin cobertura peatonal. Distancias estimadas.",
+                         "Approximate walk: pedestrian directions unavailable. Estimated distances."))
+                    .font(.system(size: 10)).foregroundStyle(Color.appError)
+            }
+        }
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(Color.onSurface)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerHigh))
     }
 
     /// Color estable por línea para los vehículos del provider.

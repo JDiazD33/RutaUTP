@@ -63,6 +63,20 @@ final class NegociosService {
             .map(\.0)
     }
 
+    /// Selección espaciada según el zoom, para explorar toda la ciudad sin amontonar pins.
+    func distribuidos(cercaDe center: CLLocationCoordinate2D, radioMetros: Double,
+                      limite: Int) -> [Negocio] {
+        let candidates = cerca(de: center, radioMetros: radioMetros, limite: cantidad)
+        let separation = max(110, radioMetros / 5)
+        var result: [Negocio] = []
+        for business in candidates {
+            guard result.allSatisfy({ Self.distanciaMetros($0.coordinate, business.coordinate) >= separation }) else { continue }
+            result.append(business)
+            if result.count >= limite { break }
+        }
+        return result
+    }
+
     /// Distancia en metros entre dos coordenadas (Haversine). Suficiente para
     /// filtrar por radio; no hace falta precisión de navegación peatonal.
     static func distanciaMetros(_ a: CLLocationCoordinate2D,
@@ -80,8 +94,8 @@ final class NegociosService {
     // MARK: - Cupones guardados
 
     /// Llave de UserDefaults con los ids de negocios cuyo cupón se guardó.
-    /// Fase 1: "wallet" mínimo sin pantalla propia; el estado se refleja en
-    /// la card. La métrica de negocio (canjes) llegará con el backend.
+    static let cuponesActualizados = Notification.Name("negocios.cupones.actualizados")
+
     private static let llaveCupones = "negocios.cupones.guardados"
 
     private static func idsGuardados() -> Set<String> {
@@ -93,6 +107,24 @@ final class NegociosService {
         Self.idsGuardados().contains(negocio.id)
     }
 
+    /// Comparte con Perfil los cupones guardados desde cualquier mapa.
+    func cuponesGuardados() -> [Negocio] {
+        let ids = Self.idsGuardados()
+        return todos().filter { ids.contains($0.id) && $0.cupon != nil }
+            .sorted { $0.nombre.localizedStandardCompare($1.nombre) == .orderedAscending }
+    }
+
+    func quitarCupon(_ negocio: Negocio) {
+        var ids = Self.idsGuardados()
+        ids.remove(negocio.id)
+        guardarCupones(ids)
+    }
+
+    private func guardarCupones(_ ids: Set<String>) {
+        UserDefaults.standard.set(Array(ids).sorted(), forKey: Self.llaveCupones)
+        NotificationCenter.default.post(name: Self.cuponesActualizados, object: nil)
+    }
+
     /// Alterna el cupón (guardar / quitar) y devuelve el nuevo estado.
     @discardableResult
     func alternarCupon(_ negocio: Negocio) -> Bool {
@@ -102,7 +134,7 @@ final class NegociosService {
         } else {
             ids.insert(negocio.id)
         }
-        UserDefaults.standard.set(Array(ids).sorted(), forKey: Self.llaveCupones)
+        guardarCupones(ids)
         return ids.contains(negocio.id)
     }
 }

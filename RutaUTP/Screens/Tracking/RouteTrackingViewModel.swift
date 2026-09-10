@@ -1,30 +1,7 @@
-//
-//  RouteTrackingViewModel.swift
-//  RutaUTP
-//
-//  ViewModel del Tracking Demo: banco de pruebas del módulo de tracking.
-//  Integra TODO el stack actual:
-//   - Ruteo con RUTAS REALES primero: línea del feed GTFS de Trujillo cuyo
-//     recorrido pase por origen y destino (shape del tramo + ritmo real de
-//     la línea según stop_times). Respaldo: RouteCalculationService
-//     (transit → automobile → trazo directo) con aviso de "aproximada".
-//   - El modo demo simula el avance A RITMO REAL de la ruta activa
-//     (m/s derivados del ETA), con multiplicador 1× / 3× / 10×.
-//   - Snap-to-road y progreso con PolylineMatching (mismos umbrales de
-//     NavegacionRutaView: 60 m, anti-jitter de progreso, llegada < 120 m).
-//   - Máquina de estados de navegación igual a NavegacionRutaView
-//     (esperandoGPS / sinPermiso / listo / enRuta / fueraDeRuta /
-//     cercaDestino / finalizado).
-//   - Modo demo: simula el avance a lo largo de la ruta calculada
-//     (mismo enfoque que NavegacionRutaView.modoDemo) para probar sin
-//     moverse del sitio — imprescindible en simulador.
-//   - Posiciones de vehículos vía VehicleTrackingProviding
-//     (SimulatedTrackingProvider) con badge de fuente (DEMO / EN VIVO).
-//   - Registro del viaje en un TripSession (puntos recorridos) listo para
-//     el backend futuro.
-//
-//  Recibe `LocationServiceProtocol` por init para testear con mocks.
-//
+// Tracking Demo: itinerarios directos de transporte público sobre GTFS.
+// Separa caminata de subida, recorrido del micro y caminata final.
+// La ubicación puede ser GPS o simulación; la flota es siempre demo hasta
+// conectar un VehicleTrackingProviding real. No requiere un backend para el feed.
 
 import Foundation
 import Combine
@@ -125,13 +102,79 @@ final class RouteTrackingViewModel: ObservableObject {
     }
     @Published private(set) var resumen: ResumenViaje?
 
+    @Published var radioParadero: Double = 500
+    @Published private(set) var itinerary: TransitItinerary?
+    @Published private(set) var nearestStop: ParaderoGTFS?
+    @Published private(set) var nearestStopMeters: Double?
+    @Published var buscandoDestino = false
+    private var routeRevision = UUID()
+    private var lastRecalculation = Date.distantPast
+    private var allStops: [ParaderoGTFS] = []
+    private var nearestAnchor: CLLocationCoordinate2D?
+
+    enum JourneyLeg { case walkingToBoard, riding, walkingToDestination }
+    var journeyLeg: JourneyLeg {
+        guard let plan = itinerary else { return .walkingToBoard }
+        let meters = progreso * distanciaTotalM
+        if meters < plan.walkToBoardMeters { return .walkingToBoard }
+        if meters < plan.walkToBoardMeters + plan.busMeters { return .riding }
+        return .walkingToDestination
+    }
+
+    var remainingSeconds: Double {
+        guard let plan = itinerary else { return (etaTotalSeg ?? 0) * (1 - progreso) }
+        let traveled = progreso * distanciaTotalM
+        let first = max(0, plan.walkToBoardMeters - traveled) / 1.4
+        let bus = max(0, plan.busMeters - max(0, traveled - plan.walkToBoardMeters)) / plan.busSpeed
+        let last = max(0, plan.walkToDestinationMeters - max(0, traveled - plan.walkToBoardMeters - plan.busMeters)) / 1.4
+        return first + bus + last
+    }
+
+    func buscarDestino(_ text: String) async -> DestinoDemo? {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, !buscandoDestino else { return nil }
+        buscandoDestino = true
+        defer { buscandoDestino = false }
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query + ", Trujillo, Perú"
+        request.region = MKCoordinateRegion(center: GTFSRepository.coordenadaUTP,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.3, longitudeDelta: 0.3))
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            guard let item = response.mapItems.first else {
+                errorMessage = L.t("No encontramos ese lugar en Trujillo.", "No matching place found in Trujillo.")
+                return nil
+            }
+            errorMessage = nil
+            return DestinoDemo(id: 999, label: item.name ?? query, icon: "mappin.circle.fill",
+                               coordinate: item.placemark.coordinate)
+        } catch {
+            errorMessage = L.t("No pudimos buscar ese destino. Comprueba tu conexión.",
+                               "Could not search for that destination. Check your connection.")
+            return nil
+        }
+    }
+
+    private func refreshNearestStop(at coordinate: CLLocationCoordinate2D) {
+        guard !allStops.isEmpty else { return }
+        if let anchor = nearestAnchor, PolylineMatching.distanceMeters(anchor, coordinate) < 25 { return }
+        if nearestAnchor == nil {
+            (vehicleProvider as? SimulatedTrackingProvider)?.setCenter(lat: coordinate.latitude, lon: coordinate.longitude)
+        }
+        nearestAnchor = coordinate
+        let nearest = allStops.map { ($0, PolylineMatching.distanceMeters(coordinate, $0.coordinate)) }
+            .min { $0.1 < $1.1 }
+        nearestStop = nearest?.0
+        nearestStopMeters = nearest?.1
+    }
+
     // MARK: - Dependencias
 
     private let locationService: LocationServiceProtocol
     private let routeService: RouteCalculationService
     private let vehicleProvider: VehicleTrackingProviding
 
-    // Shape decimado para matching + distancias acumuladas (como NavegacionRutaView).
+    // Shape completo: conserva todas las esquinas de la calle para matching y simulación.
     private var polyCoords: [CLLocationCoordinate2D] = []
     private var distanciasAcumuladas: [Double] = []
     private var distanciaTotalM: Double = 0
@@ -176,6 +219,7 @@ final class RouteTrackingViewModel: ObservableObject {
 
     func requestPermissionAndStart() async {
         let status = await locationService.requestPermission()
+        guard !Task.isCancelled else { return }
         authStatus = status
         if status.isAuthorized {
             startObservingLocation()
@@ -186,6 +230,11 @@ final class RouteTrackingViewModel: ObservableObject {
                                "Location permission denied. Enable it in Settings to use tracking.")
         }
         iniciarVehiculos()
+        let feed = await GTFSRepository.shared.rutas()
+        guard !Task.isCancelled else { return }
+        var seen = Set<String>()
+        allStops = feed.flatMap(\.paraderos).filter { seen.insert($0.id).inserted }
+        if let posicion { refreshNearestStop(at: posicion) }
     }
 
     private func startObservingLocation() {
@@ -204,11 +253,12 @@ final class RouteTrackingViewModel: ObservableObject {
 
     private func procesar(coordenada: CLLocationCoordinate2D, rumbo: Double) {
         posicion = coordenada
+        refreshNearestStop(at: coordenada)
         posicionTick += 1
         self.rumbo = rumbo
 
         // Sin viaje en curso: GPS listo, a la espera de destino.
-        guard tripInProgress, !polyCoords.isEmpty else {
+        guard tripInProgress, estado != .finalizado, !polyCoords.isEmpty else {
             if estado == .esperandoGPS || estado == .sinPermiso { estado = .listo }
             return
         }
@@ -238,13 +288,20 @@ final class RouteTrackingViewModel: ObservableObject {
             Task { await recalcular(desde: coordenada) }
         }
 
-        if progreso >= 0.985 || distanciaRestanteM < 120 {
-            estado = progreso >= 0.985 ? .finalizado : .cercaDestino
+        let destinationDistance = destinoSeleccionado.map {
+            PolylineMatching.distanceMeters(coordenada, $0.coordinate)
+        } ?? .infinity
+        if match.isOnRoute && distanciaRestanteM < 20 && destinationDistance < 25 {
+            estado = .finalizado
+        } else if match.isOnRoute && distanciaRestanteM < 120 {
+            estado = .cercaDestino
         } else if !match.isOnRoute {
             estado = .fueraDeRuta(metros: match.distanceToRoute)
         } else {
             estado = .enRuta
         }
+
+        registrarPunto(coordenada, rumbo: rumbo)
 
         // Llegó: cerrar la sesión (una sola vez) y frenar la simulación demo
         // para no seguir tick-eando sobre el destino.
@@ -255,7 +312,6 @@ final class RouteTrackingViewModel: ObservableObject {
             if modoDemo { modoDemo = false }
         }
 
-        registrarPunto(coordenada, rumbo: rumbo)
     }
 
     // MARK: - Inicio de viaje
@@ -275,32 +331,23 @@ final class RouteTrackingViewModel: ObservableObject {
 
         errorMessage = nil
         destinoSeleccionado = destino
-        tripInProgress = true
+        tripInProgress = false
+        itinerary = nil
+        routePolyline = nil
         progreso = 0
         consecutiveOffRoute = 0
         resumen = nil
-
-        sesion = TripSession(
-            linea: destino.label,
-            empresa: "Tracking Demo",
-            origen: TrackingPoint(lat: origen.latitude, lon: origen.longitude),
-            destino: TrackingPoint(lat: destino.coordinate.latitude, lon: destino.coordinate.longitude),
-            estado: .inProgress,
-            startedAt: Date().timeIntervalSince1970
-        )
-
-        // Demo: reubica los vehículos simulados a mitad del recorrido para
-        // cruzarse con ellos durante el viaje.
-        if let simulado = vehicleProvider as? SimulatedTrackingProvider {
-            simulado.setCenter(lat: (origen.latitude + destino.coordinate.latitude) / 2,
-                               lon: (origen.longitude + destino.coordinate.longitude) / 2)
-        }
 
         calculandoRuta = true
         defer { calculandoRuta = false }
         await calcularRuta(desde: origen, hacia: destino.coordinate)
 
-        if routePolyline != nil {
+        if let plan = itinerary, routePolyline != nil {
+            sesion = TripSession(linea: plan.route.linea, empresa: plan.route.empresa,
+                origen: TrackingPoint(lat: origen.latitude, lon: origen.longitude),
+                destino: TrackingPoint(lat: destino.coordinate.latitude, lon: destino.coordinate.longitude),
+                estado: .inProgress, startedAt: Date().timeIntervalSince1970)
+            tripInProgress = true
             estado = .enRuta
             distanciaRestanteM = distanciaTotalM
         } else {
@@ -313,6 +360,9 @@ final class RouteTrackingViewModel: ObservableObject {
     /// Recalcular desde la posición actual hacia el destino guardado.
     private func recalcular(desde origen: CLLocationCoordinate2D) async {
         guard let destino = destinoSeleccionado else { return }
+        guard !recalculando, !calculandoRuta,
+              Date().timeIntervalSince(lastRecalculation) >= 20 else { return }
+        lastRecalculation = Date()
         recalculando = true
         sesion?.estado = .recalculating
 
@@ -323,157 +373,48 @@ final class RouteTrackingViewModel: ObservableObject {
         if sesion?.estado == .recalculating { sesion?.estado = .inProgress }
     }
 
-    /// Pipeline de ruteo: 1) línea REAL del feed GTFS (micros de Trujillo)
-    /// que pase por origen y destino → 2) transit → 3) automobile →
-    /// 4) trazo directo de respaldo.
+    /// Solo itinerarios de transporte del feed: nunca sustituye un micro por una ruta de auto.
     private func calcularRuta(desde origen: CLLocationCoordinate2D,
                               hacia destino: CLLocationCoordinate2D) async {
-        // 1) Ruta real: el shape del micro entre tu posición y el destino,
-        //    con el ritmo real de la línea (stop_times del GTFS).
-        if let real = await rutaGTFSDesde(origen, hacia: destino) {
-            rutaGTFS = real.ruta
-            rutaAproximada = false
-            routePolyline = MKPolyline(coordinates: real.coords, count: real.coords.count)
-            etaTotalSeg = real.segundos
-            instalarShape(real.coords)
-            return
-        }
-        rutaGTFS = nil
-
-        var ruta: CalculatedRoute? = nil
-        do {
-            ruta = try await routeService.calculateRoute(from: origen, to: destino,
-                                                         transportType: .transit)
-        } catch {
-            #if DEBUG
-            print("[TrackingDemo] transit falló: \(error.localizedDescription)")
-            #endif
-        }
-        if ruta == nil {
-            do {
-                ruta = try await routeService.calculateRoute(from: origen, to: destino,
-                                                             transportType: .automobile)
-            } catch {
-                #if DEBUG
-                print("[TrackingDemo] automobile falló: \(error.localizedDescription)")
-                #endif
-            }
-        }
-
-        if let ruta {
-            rutaAproximada = false
-            routePolyline = ruta.polyline
-            etaTotalSeg = ruta.expectedTravelTime
-            instalarShape(PolylineMatching.coordinates(from: ruta.polyline))
-        } else {
-            // Sin respuesta de MKDirections (sin red, sin cobertura): trazo
-            // directo para que SIEMPRE haya ruta visible, igual que el Mapa.
-            #if DEBUG
-            print("[TrackingDemo] sin respuesta de MKDirections → trazo directo")
-            #endif
-            rutaAproximada = true
-            routePolyline = MKPolyline(coordinates: [origen, destino], count: 2)
-            let metros = PolylineMatching.distanceMeters(origen, destino)
-            etaTotalSeg = metros / 83.0 * 60   // ~5 km/h, mismo criterio del Mapa
-            instalarShape([origen, destino])
-        }
-    }
-
-    /// Busca una línea real del GTFS cuyo recorrido pase cerca del origen Y
-    /// del destino, y arma el tramo del shape entre ambos puntos (con una
-    /// piernita a pie al inicio y al final). Prefiere líneas cuyo sentido
-    /// (orden del shape) vaya del origen hacia el destino.
-    private func rutaGTFSDesde(_ origen: CLLocationCoordinate2D,
-                               hacia destino: CLLocationCoordinate2D)
-        async -> (ruta: RutaGTFS, coords: [CLLocationCoordinate2D], segundos: TimeInterval)? {
-        let porDestino = await GTFSRepository.shared.rutasQuePasanPor(destino, radioMetros: 450)
-        guard !porDestino.isEmpty else { return nil }
-
-        // Candidatas: las que además pasan cerca del origen.
-        let porOrigen = await GTFSRepository.shared.rutasQuePasanPor(origen, radioMetros: 350)
-        let idsOrigen = Set(porOrigen.map(\.id))
-        let candidatas = porDestino.filter { idsOrigen.contains($0.id) }
-        guard !candidatas.isEmpty else { return nil }
-
-        // Mejor candidata: primera cuyo shape va del origen al destino en
-        // orden; si ninguna, la primera (tramo invertido ≈ sentido de retorno).
-        var elegida: (ruta: RutaGTFS, coords: [CLLocationCoordinate2D], segundos: TimeInterval, sentidoCorrecto: Bool)? = nil
-        for ruta in candidatas {
-            guard let tramo = tramoShape(ruta.shape,
-                                         desde: origen,
-                                         hacia: destino,
-                                         duracionLineaSeg: TimeInterval(ruta.duracionMin * 60)) else { continue }
-            if tramo.sentidoCorrecto {
-                elegida = (ruta, tramo.coords, tramo.segundos, true)
+        let revision = UUID()
+        routeRevision = revision
+        let radio = radioParadero
+        let feed = await GTFSRepository.shared.rutas()
+        guard revision == routeRevision, !Task.isCancelled else { return }
+        let candidates = await TransitPlanner.shared.candidates(in: feed, origin: origen,
+                                                     destination: destino, radius: radio)
+        var selected: TransitItinerary?
+        // Limita peticiones a MapKit; cada candidato conserva paraderos y sentido GTFS.
+        for candidate in candidates.prefix(4) {
+            guard !Task.isCancelled, revision == routeRevision else { return }
+            let resolved = await candidate.withWalkingDirections(using: routeService)
+            guard !Task.isCancelled, revision == routeRevision else { return }
+            if resolved.walkToBoardMeters <= radio && resolved.walkToDestinationMeters <= radio {
+                selected = resolved
                 break
             }
-            if elegida == nil {
-                elegida = (ruta, tramo.coords, tramo.segundos, false)
-            }
         }
-        guard let resultado = elegida else { return nil }
-        #if DEBUG
-        print("[TrackingDemo] ruta GTFS: \(resultado.ruta.linea) (sentido \(resultado.sentidoCorrecto ? "de ida" : "de retorno"))")
-        #endif
-        return (resultado.ruta, resultado.coords, resultado.segundos)
+        guard revision == routeRevision, !Task.isCancelled else { return }
+        guard let plan = selected else {
+            errorMessage = L.t("No encontramos una línea directa con paraderos a menos de \(Int(radio)) m de ambos extremos. Prueba 500 m u otro destino.",
+                               "No direct line has stops within \(Int(radio)) m of both ends. Try 500 m or another destination.")
+            return
+        }
+        errorMessage = nil
+        itinerary = plan
+        rutaGTFS = plan.route
+        rutaAproximada = plan.walkingApproximate
+        routePolyline = MKPolyline(coordinates: plan.coordinates, count: plan.coordinates.count)
+        etaTotalSeg = plan.totalSeconds
+        progreso = 0
+        instalarShape(plan.coordinates)
+        distanciaRestanteM = distanciaTotalM
+        (vehicleProvider as? SimulatedTrackingProvider)?.follow(routeID: plan.route.id, near: plan.board.coordinate)
+        sesion?.estado = .inProgress
     }
 
-    /// Trama el slice del shape entre los puntos más cercanos a origen y
-    /// destino, más la caminata de conexión en ambos extremos.
-    private func tramoShape(_ shape: [CLLocationCoordinate2D],
-                            desde origen: CLLocationCoordinate2D,
-                            hacia destino: CLLocationCoordinate2D,
-                            duracionLineaSeg: TimeInterval)
-        -> (coords: [CLLocationCoordinate2D], segundos: TimeInterval, sentidoCorrecto: Bool)? {
-        guard shape.count >= 2,
-              let iOrigen = indiceMasCercano(shape, a: origen),
-              let iDestino = indiceMasCercano(shape, a: destino) else { return nil }
-
-        let sentidoCorrecto = iOrigen < iDestino
-        let tramo: [CLLocationCoordinate2D] = sentidoCorrecto
-            ? Array(shape[iOrigen...iDestino])
-            : Array(shape[iDestino...iOrigen]).reversed()
-        guard tramo.count >= 2, let primerParadero = tramo.first, let ultimoParadero = tramo.last else {
-            return nil
-        }
-
-        var coords = [origen]
-        coords.append(contentsOf: tramo)
-        coords.append(destino)
-
-        // Ritmo real: el tramo dura lo que dice el stop_times de la línea,
-        // proporcional a la fracción del shape recorrido.
-        let metrosTramo = PolylineMatching.totalLengthMeters(tramo)
-        let metrosTotales = max(PolylineMatching.totalLengthMeters(shape), 1)
-        let segundosBus = duracionLineaSeg > 0
-            ? duracionLineaSeg * (metrosTramo / metrosTotales)
-            : metrosTramo / 6.0
-        // Caminatas de conexión (origen → paradero y paradero → destino) a paso humano.
-        let metrosCaminata = PolylineMatching.distanceMeters(origen, primerParadero)
-                          + PolylineMatching.distanceMeters(ultimoParadero, destino)
-        let segundos = segundosBus + metrosCaminata / 1.4
-
-        return (coords, segundos, sentidoCorrecto)
-    }
-
-    /// Índice del punto del array más cercano a `objetivo`.
-    private func indiceMasCercano(_ puntos: [CLLocationCoordinate2D],
-                                  a objetivo: CLLocationCoordinate2D) -> Int? {
-        guard !puntos.isEmpty else { return nil }
-        var mejor = 0
-        var mejorDistancia = Double.greatestFiniteMagnitude
-        for (i, punto) in puntos.enumerated() {
-            let d = PolylineMatching.distanceMeters(punto, objetivo)
-            if d < mejorDistancia {
-                mejorDistancia = d
-                mejor = i
-            }
-        }
-        return mejor
-    }
     private func instalarShape(_ coords: [CLLocationCoordinate2D]) {
-        let decimada = PolylineMatching.decimate(coords, maxPoints: 240)
-        polyCoords = decimada.count >= 2 ? decimada : coords
+        polyCoords = coords // conservar esquinas: no atravesar manzanas
         distanciaTotalM = PolylineMatching.totalLengthMeters(polyCoords)
 
         distanciasAcumuladas = [0]
@@ -530,8 +471,8 @@ final class RouteTrackingViewModel: ObservableObject {
     // MARK: - Salidas formateadas (mismo estilo de NavegacionRutaView)
 
     var minutosRestantes: Int {
-        guard let total = etaTotalSeg else { return 0 }
-        return max(0, Int((total / 60.0 * (1 - progreso)).rounded()))
+        guard etaTotalSeg != nil else { return 0 }
+        return max(0, Int(ceil(remainingSeconds / 60)))
     }
 
     var distanciaRestanteTexto: String {
@@ -560,12 +501,14 @@ final class RouteTrackingViewModel: ObservableObject {
                 // Avance por METROS reales: velocidad real de la ruta (m/s)
                 // × multiplicador elegido. 1× = ritmo real de la línea.
                 guard let total = self.distanciasAcumuladas.last, total > 1 else { return }
-                let deltaMetros = self.velocidadSimMs * self.velocidadDemo * 0.08
+                let speed = self.journeyLeg == .riding ? (self.itinerary?.busSpeed ?? 6) : 1.4
+                let deltaMetros = speed * self.velocidadDemo * 0.08
                 self.demoProgreso = min(1.0, self.demoProgreso + deltaMetros / total)
                 let coord = self.coordenadaEnFraccion(self.demoProgreso)
                 let siguiente = self.coordenadaEnFraccion(min(1.0, self.demoProgreso + 0.002))
-                let rumbo = atan2(siguiente.longitude - coord.longitude,
-                                  siguiente.latitude - coord.latitude) * 180 / .pi
+                let degrees = atan2((siguiente.longitude - coord.longitude) * cos(coord.latitude * .pi / 180),
+                                    siguiente.latitude - coord.latitude) * 180 / .pi
+                let rumbo = (degrees + 360).truncatingRemainder(dividingBy: 360)
                 self.procesar(coordenada: coord, rumbo: rumbo)
             }
         }
@@ -665,6 +608,9 @@ final class RouteTrackingViewModel: ObservableObject {
 
     func cancelTrip() {
         if tripInProgress { finalizarSesion(estado: .cancelled) }
+        routeRevision = UUID()
+        lastRecalculation = .distantPast
+        itinerary = nil
         tripInProgress = false
         modoDemo = false
         destinoSeleccionado = nil
@@ -694,5 +640,110 @@ final class RouteTrackingViewModel: ObservableObject {
         vehiculoTask?.cancel()
         vehicleProvider.stop()
         locationService.stopUpdating()
+    }
+}
+
+
+/// Un viaje directo: caminata → paradero de subida → shape GTFS → bajada → caminata.
+/// Los radios se verifican primero en línea recta y después sobre la caminata disponible.
+struct TransitItinerary {
+    let route: RutaGTFS
+    let board: ParaderoGTFS
+    let alight: ParaderoGTFS
+    var walkToBoard: [CLLocationCoordinate2D]
+    let bus: [CLLocationCoordinate2D]
+    var walkToDestination: [CLLocationCoordinate2D]
+    var walkingApproximate = true
+    var walkToBoardMeters: Double { PolylineMatching.totalLengthMeters(walkToBoard) }
+    let busMeters: Double
+    var walkToDestinationMeters: Double { PolylineMatching.totalLengthMeters(walkToDestination) }
+    var coordinates: [CLLocationCoordinate2D] { walkToBoard + bus + walkToDestination }
+    let busSpeed: Double
+
+    init(route: RutaGTFS, board: ParaderoGTFS, alight: ParaderoGTFS,
+         walkToBoard: [CLLocationCoordinate2D], bus: [CLLocationCoordinate2D],
+         walkToDestination: [CLLocationCoordinate2D]) {
+        self.route = route
+        self.board = board
+        self.alight = alight
+        self.walkToBoard = walkToBoard
+        self.bus = bus
+        self.walkToDestination = walkToDestination
+        self.busMeters = PolylineMatching.totalLengthMeters(bus)
+        self.busSpeed = min(14, max(3, route.distanciaKm * 1000 / Double(max(1, route.duracionMin) * 60)))
+    }
+
+    var totalSeconds: Double { (walkToBoardMeters + walkToDestinationMeters) / 1.4 + busMeters / busSpeed }
+
+    static func candidates(in routes: [RutaGTFS], origin: CLLocationCoordinate2D,
+                           destination: CLLocationCoordinate2D, radius: Double) -> [TransitItinerary] {
+        var result: [TransitItinerary] = []
+        for route in routes where route.shape.count >= 2 {
+            let boarding = route.paraderos.enumerated().filter {
+                PolylineMatching.distanceMeters(origin, $0.element.coordinate) <= radius
+            }
+            let arriving = route.paraderos.enumerated().filter {
+                PolylineMatching.distanceMeters(destination, $0.element.coordinate) <= radius
+            }
+            guard !boarding.isEmpty, !arriving.isEmpty else { continue }
+            // Mapear en orden evita invertir un recorrido o elegir el inicio de un bucle.
+            var shapeIndices: [Int] = []
+            var lower = 0
+            for stop in route.paraderos {
+                let best = (lower..<route.shape.count).min {
+                    PolylineMatching.distanceMeters(stop.coordinate, route.shape[$0]) <
+                    PolylineMatching.distanceMeters(stop.coordinate, route.shape[$1])
+                } ?? lower
+                shapeIndices.append(best)
+                lower = best
+            }
+            for board in boarding {
+                for alight in arriving where alight.offset > board.offset {
+                    let first = shapeIndices[board.offset], last = shapeIndices[alight.offset]
+                    guard last > first else { continue }
+                    let segment = Array(route.shape[first...last])
+                    guard PolylineMatching.distanceMeters(board.element.coordinate, segment[0]) < 80,
+                          PolylineMatching.distanceMeters(alight.element.coordinate, segment[segment.count - 1]) < 80 else { continue }
+                    // Conectores peatonales hasta el shape; el trazo continuo es siempre el GTFS.
+                    let plan = TransitItinerary(route: route, board: board.element, alight: alight.element,
+                        walkToBoard: [origin, board.element.coordinate, segment[0]], bus: segment,
+                        walkToDestination: [segment[segment.count - 1], alight.element.coordinate, destination])
+                    if plan.busMeters > 50 { result.append(plan) }
+                }
+            }
+        }
+        return result.sorted {
+            if abs($0.totalSeconds - $1.totalSeconds) > 0.01 { return $0.totalSeconds < $1.totalSeconds }
+            return $0.route.id < $1.route.id
+        }
+    }
+
+    func withWalkingDirections(using service: RouteCalculationService) async -> TransitItinerary {
+        var result = self
+        guard let origin = walkToBoard.first, let destination = walkToDestination.last else { return result }
+        // Secuencial para no saturar MKDirections; el respaldo se identifica en pantalla.
+        let first = try? await service.calculateRoute(from: origin, to: board.coordinate, transportType: .walking)
+        if Task.isCancelled { return result }
+        let last = try? await service.calculateRoute(from: alight.coordinate, to: destination, transportType: .walking)
+        if let first {
+            let points = PolylineMatching.coordinates(from: first.polyline)
+            if points.count >= 2 { result.walkToBoard = [origin] + points + [board.coordinate, bus[0]] }
+        }
+        if let last {
+            let points = PolylineMatching.coordinates(from: last.polyline)
+            if points.count >= 2 { result.walkToDestination = [bus[bus.count - 1], alight.coordinate] + points + [destination] }
+        }
+        result.walkingApproximate = first == nil || last == nil || (first?.polyline.pointCount ?? 0) < 2 || (last?.polyline.pointCount ?? 0) < 2
+        return result
+    }
+}
+
+
+/// El cálculo geométrico del feed no bloquea los gestos ni las animaciones.
+actor TransitPlanner {
+    static let shared = TransitPlanner()
+    func candidates(in routes: [RutaGTFS], origin: CLLocationCoordinate2D,
+                    destination: CLLocationCoordinate2D, radius: Double) -> [TransitItinerary] {
+        TransitItinerary.candidates(in: routes, origin: origin, destination: destination, radius: radius)
     }
 }

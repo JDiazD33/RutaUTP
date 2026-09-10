@@ -40,6 +40,7 @@ struct ReporteComunidad: Identifiable, Equatable {
     let hace: String
     let tipo: TipoReporte
     let cuerpo: String
+    let cuerpoIngles: String?
     let utiles: Int
     /// Conteo base de "no me gusta". El voto del usuario se suma en vivo
     /// vía `ComunidadReacciones` (no se persiste, es demo).
@@ -49,12 +50,23 @@ struct ReporteComunidad: Identifiable, Equatable {
     let avatarColor: Color
     let avatarForeground: Color
 
+    var cuerpoLocalizado: String { L.esIngles ? (cuerpoIngles ?? cuerpo) : cuerpo }
+    var tiempoLocalizado: String {
+        guard L.esIngles else { return hace }
+        let translations = ["HACE 3 MIN": "3 MIN AGO", "HACE 8 MIN": "8 MIN AGO",
+                            "HACE 12 MIN": "12 MIN AGO", "HACE 20 MIN": "20 MIN AGO",
+                            "HACE 35 MIN": "35 MIN AGO", "HACE 1 HORA": "1 HOUR AGO",
+                            "HACE 2 HORAS": "2 HOURS AGO"]
+        return translations[hace] ?? hace
+    }
+
     init(id: UUID = UUID(),
          iniciales: String,
          nombre: String,
          hace: String,
          tipo: TipoReporte,
          cuerpo: String,
+         cuerpoIngles: String? = nil,
          utiles: Int,
          dislikes: Int = 0,
          comentarios: Int,
@@ -67,6 +79,7 @@ struct ReporteComunidad: Identifiable, Equatable {
         self.hace = hace
         self.tipo = tipo
         self.cuerpo = cuerpo
+        self.cuerpoIngles = cuerpoIngles
         self.utiles = utiles
         self.dislikes = dislikes
         self.comentarios = comentarios

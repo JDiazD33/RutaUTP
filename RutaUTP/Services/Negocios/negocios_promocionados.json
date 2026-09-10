@@ -1,16 +1,16 @@
 {
-  "version": 4,
-  "actualizado": "2026-09-08",
-  "nota": "DATOS DEMO: nombres, promociones, teléfonos y coordenadas son inventados para validar la experiencia de 'negocios en ruta'. Locales repartidos por Trujillo, La Esperanza, Víctor Larco, Huanchaco, El Porvenir, Florencia de Mora y La Rinconada. Contenido bilingüe (es/en) para el Modo Inglés. Al incorporar locales reales se reemplaza este archivo (o se migra a backend) sin tocar el modelo.",
+  "version": 5,
+  "actualizado": "2026-09-09",
+  "nota": "DATOS DEMO: 100 locales ficticios distribuidos junto a paraderos del GTFS por Trujillo metropolitano. No representan comercios, ofertas ni direcciones verificadas. Sin teléfonos reales. Distribución espacial para probar el mapa, con contenido bilingüe.",
   "negocios": [
     {
       "id": "polleria-la-brasita-nortena",
       "nombre": "Pollería La Brasita Norteña",
       "categoria": "polleria",
-      "latitud": -8.09745,
-      "longitud": -79.03799,
-      "direccion": "Av. Nicolás de Piérola 1150",
-      "distrito": "Trujillo",
+      "latitud": -8.098012,
+      "longitud": -79.0375801,
+      "direccion": "Ubicación demo junto a Avenida Nicolás de Piérola",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍗 1/4 pollo + papas 2x1",
         "en": "🍗 1/4 chicken + fries 2x1"
@@ -35,7 +35,7 @@
         "es": "Lun-Sáb 11:00-22:30 · Dom 12:00-22:00",
         "en": "Mon-Sat 11:00-22:30 · Sun 12:00-22:00"
       },
-      "telefono": "+51 944 302 118",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.6
     },
@@ -43,10 +43,10 @@
       "id": "menu-dona-teo",
       "nombre": "Menú Doña Teo",
       "categoria": "menu",
-      "latitud": -8.09953,
-      "longitud": -79.03902,
-      "direccion": "Jr. Orbegoso 450",
-      "distrito": "Trujillo",
+      "latitud": -8.1891112,
+      "longitud": -78.9793857,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍲 Menú criollo S/ 8",
         "en": "🍲 Criollo set menu S/ 8"
@@ -71,7 +71,7 @@
         "es": "Lun-Vie 08:00-16:00 · Sáb 09:00-15:00",
         "en": "Mon-Fri 08:00-16:00 · Sat 09:00-15:00"
       },
-      "telefono": "+51 949 551 762",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.7
     },
@@ -79,10 +79,10 @@
       "id": "cafeteria-aromas-del-centro",
       "nombre": "Cafetería Aromas del Centro",
       "categoria": "cafeteria",
-      "latitud": -8.09682,
-      "longitud": -79.03675,
-      "direccion": "Jr. Pizarro 812",
-      "distrito": "Trujillo",
+      "latitud": -8.0005997,
+      "longitud": -79.0721406,
+      "direccion": "Ubicación demo junto a Carretera Panamericana Norte",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "☕ Café + sándwich S/ 7",
         "en": "☕ Coffee + sandwich S/ 7"
@@ -107,7 +107,7 @@
         "es": "Lun-Sáb 07:00-21:30",
         "en": "Mon-Sat 07:00-21:30"
       },
-      "telefono": "+51 936 208 447",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -115,10 +115,10 @@
       "id": "chifa-dragon-del-norte",
       "nombre": "Chifa Dragón del Norte",
       "categoria": "chifa",
-      "latitud": -8.09896,
-      "longitud": -79.03947,
-      "direccion": "Jr. Gamarra 655",
-      "distrito": "Trujillo",
+      "latitud": -8.082151,
+      "longitud": -79.1231178,
+      "direccion": "Ubicación demo junto a Avenida la Rivera",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥡 Chowfan familiar -25%",
         "en": "🥡 Family chowfan -25%"
@@ -143,7 +143,7 @@
         "es": "Lun-Dom 11:30-22:00",
         "en": "Mon-Sun 11:30-22:00"
       },
-      "telefono": "+51 951 774 039",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -151,10 +151,10 @@
       "id": "salchipapas-rincon-del-sabor",
       "nombre": "El Rincón del Sabor",
       "categoria": "salchipapas",
-      "latitud": -8.0987,
-      "longitud": -79.03762,
-      "direccion": "Jr. Diego de Almagro 210",
-      "distrito": "Trujillo",
+      "latitud": -8.085338,
+      "longitud": -78.9604676,
+      "direccion": "Ubicación demo junto a Avenida Luis Condemarín y Avenida Carlos Larco Cox",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍟 Salchipapa doble + refresco",
         "en": "🍟 Double salchipapa + soda"
@@ -179,7 +179,7 @@
         "es": "Lun-Dom 16:00-23:30",
         "en": "Mon-Sun 16:00-23:30"
       },
-      "telefono": "+51 958 190 225",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.3
     },
@@ -187,10 +187,10 @@
       "id": "panaderia-la-espiga-de-oro",
       "nombre": "Panadería La Espiga de Oro",
       "categoria": "panaderia",
-      "latitud": -8.10098,
-      "longitud": -79.03989,
-      "direccion": "Av. España 1120",
-      "distrito": "Trujillo",
+      "latitud": -8.0443931,
+      "longitud": -79.0069758,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥐 Pan + queso + café S/ 5",
         "en": "🥐 Bread + cheese + coffee S/ 5"
@@ -215,7 +215,7 @@
         "es": "Lun-Sáb 06:00-21:00 · Dom 06:30-13:00",
         "en": "Mon-Sat 06:00-21:00 · Sun 06:30-13:00"
       },
-      "telefono": "+51 943 617 884",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.8
     },
@@ -223,10 +223,10 @@
       "id": "heladeria-el-glaciar",
       "nombre": "Heladería El Glaciar",
       "categoria": "heladeria",
-      "latitud": -8.09715,
-      "longitud": -79.04001,
-      "direccion": "Jr. Junín 340",
-      "distrito": "Trujillo",
+      "latitud": -8.1350335,
+      "longitud": -78.9950451,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍦 2 helados x 1",
         "en": "🍦 2 ice creams for 1"
@@ -251,7 +251,7 @@
         "es": "Lun-Dom 12:00-22:00",
         "en": "Mon-Sun 12:00-22:00"
       },
-      "telefono": "+51 926 833 510",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.6
     },
@@ -259,10 +259,10 @@
       "id": "jugueria-natural-vita",
       "nombre": "Juguería Natural Vita",
       "categoria": "jugueria",
-      "latitud": -8.09639,
-      "longitud": -79.03915,
-      "direccion": "Av. España 1450",
-      "distrito": "Trujillo",
+      "latitud": -8.0564525,
+      "longitud": -79.0741431,
+      "direccion": "Ubicación demo junto a Avenida las Orquídeas",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥤 Jugo + emoliente 2x1",
         "en": "🥤 Juice + emoliente 2x1"
@@ -287,7 +287,7 @@
         "es": "Lun-Sáb 06:30-20:00",
         "en": "Mon-Sat 06:30-20:00"
       },
-      "telefono": "+51 937 445 096",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -295,10 +295,10 @@
       "id": "pizza-centro-trujillo",
       "nombre": "Pizza al Paso Centro",
       "categoria": "pizza",
-      "latitud": -8.09994,
-      "longitud": -79.03665,
-      "direccion": "Jr. Independencia 780",
-      "distrito": "Trujillo",
+      "latitud": -8.1507179,
+      "longitud": -79.0470748,
+      "direccion": "Ubicación demo junto a Calle Callao",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍕 Porción + gaseosa S/ 6",
         "en": "🍕 Slice + soda S/ 6"
@@ -323,7 +323,7 @@
         "es": "Lun-Dom 11:00-23:00",
         "en": "Mon-Sun 11:00-23:00"
       },
-      "telefono": "+51 955 281 663",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -331,10 +331,10 @@
       "id": "burger-mansiche",
       "nombre": "Burger Mansiche",
       "categoria": "burger",
-      "latitud": -8.09499,
-      "longitud": -79.04012,
-      "direccion": "Av. Mansiche 850",
-      "distrito": "Trujillo",
+      "latitud": -8.0847607,
+      "longitud": -79.0003183,
+      "direccion": "Ubicación demo junto a Calle Hermanos Angulo",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍔 Combo burger 2x1",
         "en": "🍔 Burger combo 2x1"
@@ -359,7 +359,7 @@
         "es": "Lun-Dom 17:00-00:00",
         "en": "Mon-Sun 17:00-00:00"
       },
-      "telefono": "+51 948 366 907",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -367,10 +367,10 @@
       "id": "cevicheria-el-muelle",
       "nombre": "Cevichería El Muelle",
       "categoria": "cevicheria",
-      "latitud": -8.10025,
-      "longitud": -79.03591,
-      "direccion": "Jr. Unión 905",
-      "distrito": "Trujillo",
+      "latitud": -8.1784251,
+      "longitud": -79.0154117,
+      "direccion": "Ubicación demo junto a Jirón Real y Jirón Pasco",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🐟 Ceviche chico -20%",
         "en": "🐟 Small ceviche -20%"
@@ -395,7 +395,7 @@
         "es": "Lun-Sáb 10:00-17:00",
         "en": "Mon-Sat 10:00-17:00"
       },
-      "telefono": "+51 941 502 348",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.8
     },
@@ -403,10 +403,10 @@
       "id": "empanadas-muchik",
       "nombre": "Empanadas Muchik",
       "categoria": "empanadas",
-      "latitud": -8.09789,
-      "longitud": -79.03572,
-      "direccion": "Jr. Ayacucho 520",
-      "distrito": "Trujillo",
+      "latitud": -8.0933353,
+      "longitud": -79.0758771,
+      "direccion": "Ubicación demo junto a Avenida Chan Chan",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥟 3 empanadas S/ 5",
         "en": "🥟 3 empanadas S/ 5"
@@ -431,7 +431,7 @@
         "es": "Lun-Sáb 09:00-20:00",
         "en": "Mon-Sat 09:00-20:00"
       },
-      "telefono": "+51 932 774 159",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.7
     },
@@ -439,10 +439,10 @@
       "id": "heladeria-colonial",
       "nombre": "Heladería Colonial",
       "categoria": "heladeria",
-      "latitud": -8.1094,
-      "longitud": -79.0287,
-      "direccion": "Jr. Pizarro 655",
-      "distrito": "Trujillo",
+      "latitud": -8.0634803,
+      "longitud": -79.035324,
+      "direccion": "Ubicación demo junto a Calle Micaela Bastidas",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍦 2 copas artesanales x 1",
         "en": "🍦 2 artisan sundaes for 1"
@@ -467,7 +467,7 @@
         "es": "Lun-Dom 12:00-23:00",
         "en": "Mon-Sun 12:00-23:00"
       },
-      "telefono": "+51 946 118 273",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.6
     },
@@ -475,10 +475,10 @@
       "id": "chifa-la-alegria",
       "nombre": "Chifa La Alegría",
       "categoria": "chifa",
-      "latitud": -8.1198,
-      "longitud": -79.0265,
-      "direccion": "Av. América Sur 3450",
-      "distrito": "La Esperanza",
+      "latitud": -8.1256664,
+      "longitud": -79.0262555,
+      "direccion": "Ubicación demo junto a Avenida América Sur",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥡 Aeropuerto chifa -15%",
         "en": "🥡 Aeropuerto chifa -15%"
@@ -503,7 +503,7 @@
         "es": "Lun-Dom 11:00-22:00",
         "en": "Mon-Sun 11:00-22:00"
       },
-      "telefono": "+51 952 604 891",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -511,10 +511,10 @@
       "id": "cevicheria-ola-peruana",
       "nombre": "Cevichería Ola Peruana",
       "categoria": "cevicheria",
-      "latitud": -8.1152,
-      "longitud": -79.0638,
-      "direccion": "Av. Buenos Aires 1450",
-      "distrito": "Víctor Larco",
+      "latitud": -8.0614916,
+      "longitud": -78.9776919,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🐟 Ceviche + jalea -15%",
         "en": "🐟 Ceviche + jalea -15%"
@@ -539,7 +539,7 @@
         "es": "Mar-Dom 10:00-17:00",
         "en": "Tue-Sun 10:00-17:00"
       },
-      "telefono": "+51 938 772 540",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.7
     },
@@ -547,10 +547,10 @@
       "id": "cafe-miramar-huanchaco",
       "nombre": "Café Miramar Huanchaco",
       "categoria": "cafeteria",
-      "latitud": -8.0782,
-      "longitud": -79.1188,
-      "direccion": "Malecón de Huanchaco 210",
-      "distrito": "Huanchaco",
+      "latitud": -8.029355,
+      "longitud": -79.0628551,
+      "direccion": "Ubicación demo junto a Avenida Miguel Grau",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "☕ Desayuno con vista S/ 10",
         "en": "☕ Breakfast with a view S/ 10"
@@ -575,7 +575,7 @@
         "es": "Lun-Dom 07:00-21:00",
         "en": "Mon-Sun 07:00-21:00"
       },
-      "telefono": "+51 943 290 167",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.8
     },
@@ -583,10 +583,10 @@
       "id": "polleria-rio-santa",
       "nombre": "Pollería Río Santa",
       "categoria": "polleria",
-      "latitud": -8.1285,
-      "longitud": -79.0336,
-      "direccion": "Calle Chepén 420",
-      "distrito": "El Porvenir",
+      "latitud": -8.1091769,
+      "longitud": -78.9888807,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍗 1/8 pollo + gaseosa S/ 22",
         "en": "🍗 1/8 chicken + soda S/ 22"
@@ -611,7 +611,7 @@
         "es": "Lun-Dom 11:30-22:30",
         "en": "Mon-Sun 11:30-22:30"
       },
-      "telefono": "+51 957 836 412",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -619,10 +619,10 @@
       "id": "menu-la-florencia",
       "nombre": "Menú La Florencia",
       "categoria": "menu",
-      "latitud": -8.1158,
-      "longitud": -79.0462,
-      "direccion": "Av. Condorcanqui 950",
-      "distrito": "Florencia de Mora",
+      "latitud": -8.075826,
+      "longitud": -79.0575719,
+      "direccion": "Ubicación demo junto a Avenida Cahuide",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍲 Menú del día S/ 9",
         "en": "🍲 Daily menu S/ 9"
@@ -647,7 +647,7 @@
         "es": "Lun-Sáb 08:00-16:00",
         "en": "Mon-Sat 08:00-16:00"
       },
-      "telefono": "+51 949 523 780",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.6
     },
@@ -655,10 +655,10 @@
       "id": "burguer-la-rinconada",
       "nombre": "Burguer La Rinconada",
       "categoria": "burger",
-      "latitud": -8.1482,
-      "longitud": -79.0205,
-      "direccion": "Alto Trujillo, Mz. C Lt. 24",
-      "distrito": "La Rinconada",
+      "latitud": -8.1536056,
+      "longitud": -79.0122164,
+      "direccion": "Ubicación demo junto a Panamericana Norte",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍔 Combo familiar -20%",
         "en": "🍔 Family combo -20%"
@@ -683,7 +683,7 @@
         "es": "Mar-Dom 17:00-23:30",
         "en": "Tue-Sun 17:00-23:30"
       },
-      "telefono": "+51 934 651 098",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.3
     },
@@ -691,10 +691,10 @@
       "id": "pizza-horno-y-lena",
       "nombre": "Pizza Horno y Leña",
       "categoria": "pizza",
-      "latitud": -8.09351,
-      "longitud": -79.04153,
-      "direccion": "Av. Mansiche 1450",
-      "distrito": "Trujillo",
+      "latitud": -8.1052564,
+      "longitud": -79.0131682,
+      "direccion": "Ubicación demo junto a Avenida César Vallejo",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍕 2 pizzas medianas x 1",
         "en": "🍕 2 medium pizzas for 1"
@@ -719,7 +719,7 @@
         "es": "Mar-Dom 17:30-23:30",
         "en": "Tue-Sun 17:30-23:30"
       },
-      "telefono": "+51 945 811 362",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -727,10 +727,10 @@
       "id": "jugueria-la-surenita",
       "nombre": "Juguería La Sureñita",
       "categoria": "jugueria",
-      "latitud": -8.11028,
-      "longitud": -79.03005,
-      "direccion": "Jr. Orbegoso 720",
-      "distrito": "Trujillo",
+      "latitud": -8.0866696,
+      "longitud": -79.0995187,
+      "direccion": "Ubicación demo junto a Avenida la Rivera",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥤 Emoliente + pan caliente S/ 4",
         "en": "🥤 Emoliente + warm bread S/ 4"
@@ -755,7 +755,7 @@
         "es": "Lun-Dom 06:00-21:00",
         "en": "Mon-Sun 06:00-21:00"
       },
-      "telefono": "+51 953 427 689",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -763,10 +763,10 @@
       "id": "panaderia-trujillana",
       "nombre": "Panadería Trujillana",
       "categoria": "panaderia",
-      "latitud": -8.10453,
-      "longitud": -79.03431,
-      "direccion": "Jr. Bolívar 380",
-      "distrito": "Trujillo",
+      "latitud": -8.066146,
+      "longitud": -79.0126541,
+      "direccion": "Ubicación demo junto a Calle 59",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥐 6 bollitos calientes S/ 3",
         "en": "🥐 6 warm anise buns S/ 3"
@@ -791,7 +791,7 @@
         "es": "Lun-Sáb 06:00-20:00",
         "en": "Mon-Sat 06:00-20:00"
       },
-      "telefono": "+51 942 963 175",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -799,10 +799,10 @@
       "id": "polleria-campina-verde",
       "nombre": "Pollería Campiña Verde",
       "categoria": "polleria",
-      "latitud": -8.11648,
-      "longitud": -79.02783,
-      "direccion": "Av. América Sur 2890",
-      "distrito": "La Esperanza",
+      "latitud": -8.0489842,
+      "longitud": -79.0527212,
+      "direccion": "Ubicación demo junto a Calle Libertad",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍗 1/4 pollo + cremolada S/ 11",
         "en": "🍗 1/4 chicken + slushie S/ 11"
@@ -827,7 +827,7 @@
         "es": "Lun-Dom 11:00-22:00",
         "en": "Mon-Sun 11:00-22:00"
       },
-      "telefono": "+51 948 205 741",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -835,10 +835,10 @@
       "id": "menu-el-estudiante",
       "nombre": "Menú El Estudiante",
       "categoria": "menu",
-      "latitud": -8.12154,
-      "longitud": -79.02421,
-      "direccion": "Jr. León 150",
-      "distrito": "La Esperanza",
+      "latitud": -8.1291667,
+      "longitud": -79.0488697,
+      "direccion": "Ubicación demo junto a Avenida Juan Pablo II",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍲 Menú estudiante S/ 7",
         "en": "🍲 Student menu S/ 7"
@@ -863,7 +863,7 @@
         "es": "Lun-Sáb 08:00-17:00",
         "en": "Mon-Sat 08:00-17:00"
       },
-      "telefono": "+51 956 178 423",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -871,10 +871,10 @@
       "id": "cafeteria-villa-mar",
       "nombre": "Cafetería Villa Mar",
       "categoria": "cafeteria",
-      "latitud": -8.12283,
-      "longitud": -79.02591,
-      "direccion": "Av. América Sur 3720",
-      "distrito": "La Esperanza",
+      "latitud": -8.085123,
+      "longitud": -79.0212234,
+      "direccion": "Ubicación demo junto a Calle 31 de Enero",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "☕ 2 cafés + dulce S/ 8",
         "en": "☕ 2 coffees + sweet S/ 8"
@@ -899,7 +899,7 @@
         "es": "Lun-Dom 07:00-21:30",
         "en": "Mon-Sun 07:00-21:30"
       },
-      "telefono": "+51 939 640 852",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.6
     },
@@ -907,10 +907,10 @@
       "id": "burger-dublin",
       "nombre": "Burger Dublin",
       "categoria": "burger",
-      "latitud": -8.11278,
-      "longitud": -79.06115,
-      "direccion": "Av. Buenos Aires 980",
-      "distrito": "Víctor Larco",
+      "latitud": -8.1762244,
+      "longitud": -78.9952755,
+      "direccion": "Ubicación demo junto a Panamericana Norte",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍔 Burger doble -20%",
         "en": "🍔 Double burger -20%"
@@ -935,7 +935,7 @@
         "es": "Mar-Dom 16:00-23:00",
         "en": "Tue-Sun 16:00-23:00"
       },
-      "telefono": "+51 944 736 298",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.6
     },
@@ -943,10 +943,10 @@
       "id": "polleria-las-delicias",
       "nombre": "Pollería Las Delicias",
       "categoria": "polleria",
-      "latitud": -8.11852,
-      "longitud": -79.06522,
-      "direccion": "Camino a Las Delicias 240",
-      "distrito": "Víctor Larco",
+      "latitud": -8.0882873,
+      "longitud": -78.9803809,
+      "direccion": "Ubicación demo junto a Avenida Pumacahua",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍗 Pollada familiar S/ 35",
         "en": "🍗 Family chicken feast S/ 35"
@@ -971,7 +971,7 @@
         "es": "Mié-Dom 11:00-20:00",
         "en": "Wed-Sun 11:00-20:00"
       },
-      "telefono": "+51 951 084 537",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -979,10 +979,10 @@
       "id": "jugueria-verde-mar",
       "nombre": "Juguería Verde Mar",
       "categoria": "jugueria",
-      "latitud": -8.11748,
-      "longitud": -79.06602,
-      "direccion": "Av. Buenos Aires 1720",
-      "distrito": "Víctor Larco",
+      "latitud": -8.1010294,
+      "longitud": -79.0573284,
+      "direccion": "Ubicación demo junto a Avenida Mansiche",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥤 3 jugos x 2",
         "en": "🥤 3 juices for 2"
@@ -1007,7 +1007,7 @@
         "es": "Lun-Dom 06:30-20:30",
         "en": "Mon-Sun 06:30-20:30"
       },
-      "telefono": "+51 935 918 264",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.3
     },
@@ -1015,10 +1015,10 @@
       "id": "cevicheria-huanchaquera",
       "nombre": "Cevichería Huanchaquera",
       "categoria": "cevicheria",
-      "latitud": -8.07748,
-      "longitud": -79.11602,
-      "direccion": "Av. Larco 380",
-      "distrito": "Huanchaco",
+      "latitud": -8.0677757,
+      "longitud": -78.9946841,
+      "direccion": "Ubicación demo junto a Calle Andres Razuri y Calle Baltazar Villalonga",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🐟 Ceviche de tollo S/ 12",
         "en": "🐟 Tollo ceviche S/ 12"
@@ -1043,7 +1043,7 @@
         "es": "Lun-Dom 10:00-18:00",
         "en": "Mon-Sun 10:00-18:00"
       },
-      "telefono": "+51 946 372 981",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.7
     },
@@ -1051,10 +1051,10 @@
       "id": "heladeria-beach-huanchaco",
       "nombre": "Heladería Beach Huanchaco",
       "categoria": "heladeria",
-      "latitud": -8.07879,
-      "longitud": -79.12012,
-      "direccion": "Malecón de Huanchaco 480",
-      "distrito": "Huanchaco",
+      "latitud": -8.1213656,
+      "longitud": -79.0060148,
+      "direccion": "Ubicación demo junto a Carretera Industrial",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🧇 Waffle + helado S/ 8",
         "en": "🧇 Waffle + ice cream S/ 8"
@@ -1079,7 +1079,7 @@
         "es": "Lun-Dom 11:00-23:00",
         "en": "Mon-Sun 11:00-23:00"
       },
-      "telefono": "+51 943 527 608",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -1087,10 +1087,10 @@
       "id": "pizza-huanchaco",
       "nombre": "Pizza Huanchaco",
       "categoria": "pizza",
-      "latitud": -8.07681,
-      "longitud": -79.11448,
-      "direccion": "Jr. Unión 145",
-      "distrito": "Huanchaco",
+      "latitud": -8.0810566,
+      "longitud": -79.0407628,
+      "direccion": "Ubicación demo junto a Calle José Marti",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍕 Personal + chilcano S/ 15",
         "en": "🍕 Personal + chilcano S/ 15"
@@ -1115,7 +1115,7 @@
         "es": "Lun-Dom 12:00-22:30",
         "en": "Mon-Sun 12:00-22:30"
       },
-      "telefono": "+51 957 263 419",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -1123,10 +1123,10 @@
       "id": "chifa-feliz",
       "nombre": "Chifa Feliz",
       "categoria": "chifa",
-      "latitud": -8.12579,
-      "longitud": -79.03115,
-      "direccion": "Jr. Cusco 280",
-      "distrito": "El Porvenir",
+      "latitud": -8.0963698,
+      "longitud": -79.1135128,
+      "direccion": "Ubicación demo junto a Avenida la Rivera",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥡 Tipakay familiar -20%",
         "en": "🥡 Tipakay family -20%"
@@ -1151,7 +1151,7 @@
         "es": "Mar-Dom 11:00-21:30",
         "en": "Tue-Sun 11:00-21:30"
       },
-      "telefono": "+51 949 815 036",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.3
     },
@@ -1159,10 +1159,10 @@
       "id": "menu-sabor-porvenireno",
       "nombre": "Menú Sabor Porvenireño",
       "categoria": "menu",
-      "latitud": -8.13102,
-      "longitud": -79.03601,
-      "direccion": "Jr. Lambayeque 340",
-      "distrito": "El Porvenir",
+      "latitud": -8.112912,
+      "longitud": -79.0457868,
+      "direccion": "Ubicación demo junto a Calle 8",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍲 Menú + postre S/ 10",
         "en": "🍲 Menu + dessert S/ 10"
@@ -1187,7 +1187,7 @@
         "es": "Lun-Dom 08:00-17:00",
         "en": "Mon-Sun 08:00-17:00"
       },
-      "telefono": "+51 936 491 752",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
     },
@@ -1195,10 +1195,10 @@
       "id": "salchipapas-la-esquina",
       "nombre": "Salchipapas La Esquina",
       "categoria": "salchipapas",
-      "latitud": -8.13019,
-      "longitud": -79.02978,
-      "direccion": "Jr. Puno 190",
-      "distrito": "El Porvenir",
+      "latitud": -8.1381663,
+      "longitud": -79.0154669,
+      "direccion": "Ubicación demo junto a Panamericana Norte",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍟 Salchipapa especial + huevo S/ 8",
         "en": "🍟 Special salchipapa + egg S/ 8"
@@ -1223,7 +1223,7 @@
         "es": "Lun-Dom 17:00-00:30",
         "en": "Mon-Sun 17:00-00:30"
       },
-      "telefono": "+51 952 347 180",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.2
     },
@@ -1231,10 +1231,10 @@
       "id": "empanadas-santa-rosa",
       "nombre": "Empanadas Santa Rosa",
       "categoria": "empanadas",
-      "latitud": -8.11721,
-      "longitud": -79.04754,
-      "direccion": "Av. Condorcanqui 1200",
-      "distrito": "Florencia de Mora",
+      "latitud": -8.0163638,
+      "longitud": -79.0721188,
+      "direccion": "Ubicación demo junto a Pasaje A y Avenida Victor Raul Haya de la Torre",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥟 Docena de empanadas S/ 15",
         "en": "🥟 Dozen empanadas S/ 15"
@@ -1259,7 +1259,7 @@
         "es": "Lun-Dom 09:00-20:00",
         "en": "Mon-Sun 09:00-20:00"
       },
-      "telefono": "+51 941 628 093",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.6
     },
@@ -1267,10 +1267,10 @@
       "id": "panaderia-fina-estampa",
       "nombre": "Panadería Fina Estampa",
       "categoria": "panaderia",
-      "latitud": -8.11378,
-      "longitud": -79.04482,
-      "direccion": "Calle Los Claveles 210",
-      "distrito": "Florencia de Mora",
+      "latitud": -8.1381823,
+      "longitud": -79.0610887,
+      "direccion": "Ubicación demo junto a Jirón Desamparados",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥐 Tortilla de semana + café S/ 5",
         "en": "🥐 Week tortilla + coffee S/ 5"
@@ -1295,7 +1295,7 @@
         "es": "Lun-Sáb 05:30-20:00",
         "en": "Mon-Sat 05:30-20:00"
       },
-      "telefono": "+51 934 705 926",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -1303,10 +1303,10 @@
       "id": "jugueria-mora-natural",
       "nombre": "Juguería Mora Natural",
       "categoria": "jugueria",
-      "latitud": -8.11426,
-      "longitud": -79.04503,
-      "direccion": "Av. Condorcanqui 680",
-      "distrito": "Florencia de Mora",
+      "latitud": -8.0546719,
+      "longitud": -79.0233223,
+      "direccion": "Ubicación demo junto a Via Evitamiento Milagro",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥤 Jugo + tostada S/ 5",
         "en": "🥤 Juice + toast S/ 5"
@@ -1331,7 +1331,7 @@
         "es": "Lun-Sáb 06:00-19:00",
         "en": "Mon-Sat 06:00-19:00"
       },
-      "telefono": "+51 958 162 470",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.3
     },
@@ -1339,10 +1339,10 @@
       "id": "menu-dona-rosa",
       "nombre": "Menú Doña Rosa",
       "categoria": "menu",
-      "latitud": -8.14551,
-      "longitud": -79.01882,
-      "direccion": "Alto Trujillo, Mz. G Lt. 8",
-      "distrito": "La Rinconada",
+      "latitud": -8.0537105,
+      "longitud": -78.990472,
+      "direccion": "Ubicación demo junto a Avenida José Faustino Sánchez Carrión",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🍲 Menú casero S/ 8",
         "en": "🍲 Homestyle menu S/ 8"
@@ -1367,7 +1367,7 @@
         "es": "Lun-Sáb 08:00-16:30",
         "en": "Mon-Sat 08:00-16:30"
       },
-      "telefono": "+51 947 830 615",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.5
     },
@@ -1375,10 +1375,10 @@
       "id": "chifa-fortune",
       "nombre": "Chifa Fortune",
       "categoria": "chifa",
-      "latitud": -8.15082,
-      "longitud": -79.02219,
-      "direccion": "La Rinconada Alta, Mz. E Lt. 15",
-      "distrito": "La Rinconada",
+      "latitud": -8.1893058,
+      "longitud": -79.0055707,
+      "direccion": "Ubicación demo junto a Avenida Independencia",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥡 Chowfan + tipakay 2x1",
         "en": "🥡 Chowfan + tipakay 2x1"
@@ -1403,7 +1403,7 @@
         "es": "Lun-Dom 11:00-21:00",
         "en": "Mon-Sun 11:00-21:00"
       },
-      "telefono": "+51 933 574 208",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.2
     },
@@ -1411,10 +1411,10 @@
       "id": "panaderia-amanecer",
       "nombre": "Panadería Amanecer",
       "categoria": "panaderia",
-      "latitud": -8.14669,
-      "longitud": -79.01678,
-      "direccion": "Alto Trujillo, Mz. B Lt. 3",
-      "distrito": "La Rinconada",
+      "latitud": -8.0635011,
+      "longitud": -79.0495793,
+      "direccion": "Ubicación demo junto a Calle José Marti",
+      "distrito": "Trujillo metropolitano",
       "promoCorta": {
         "es": "🥐 Pan recién horneado -10%",
         "en": "🥐 Fresh bread -10%"
@@ -1439,9 +1439,2169 @@
         "es": "Lun-Dom 05:30-19:30",
         "en": "Mon-Sun 05:30-19:30"
       },
-      "telefono": "+51 955 096 384",
+      "telefono": null,
       "patrocinado": true,
       "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-041",
+      "nombre": "Polleria del barrio 41",
+      "categoria": "polleria",
+      "latitud": -8.1670413,
+      "longitud": -79.0072149,
+      "direccion": "Ubicación demo junto a Panamericana Norte",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍗 1/4 pollo + papas 2x1",
+        "en": "🍗 1/4 chicken + fries 2x1"
+      },
+      "promoDetalle": {
+        "es": "De a dos: pide un 1/4 de pollo a la brasa con papas doradas y el segundo va por nuestra cuenta. Válido de lunes a jueves después de las 3 pm.",
+        "en": "For two: order a 1/4 rotisserie chicken with golden fries and the second one is on us. Valid Monday through Thursday after 3 pm."
+      },
+      "cupon": {
+        "codigo": "DEMO-041",
+        "detalle": {
+          "es": "2x1 en 1/4 de pollo + papas",
+          "en": "2x1 on 1/4 chicken + fries"
+        },
+        "condiciones": {
+          "es": "Lun a Jue desde las 3 pm. Mostrando el cupón en la app. No acumulable con otras promos.",
+          "en": "Mon-Thu from 3 pm. Showing the in-app coupon. Not combinable with other deals."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 11:00-22:30 · Dom 12:00-22:00",
+        "en": "Mon-Sat 11:00-22:30 · Sun 12:00-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-042",
+      "nombre": "Menu del barrio 42",
+      "categoria": "menu",
+      "latitud": -8.0499752,
+      "longitud": -79.0865242,
+      "direccion": "Ubicación demo junto a Avenida las Orquídeas",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍲 Menú criollo S/ 8",
+        "en": "🍲 Criollo set menu S/ 8"
+      },
+      "promoDetalle": {
+        "es": "Menú universitario de tres tiempos: entrada, segundo criollo y refresco de la casa. Maracuyá free mientras rinda la olla.",
+        "en": "Three-course university set menu: starter, criollo main and house refreshment. Free passion fruit juice while the pot lasts."
+      },
+      "cupon": {
+        "codigo": "DEMO-042",
+        "detalle": {
+          "es": "Menú de 3 tiempos a S/ 8",
+          "en": "3-course set menu for S/ 8"
+        },
+        "condiciones": {
+          "es": "Lun a Vie de 12:00 a 15:00. Presentando el estudiante/carné de la app.",
+          "en": "Mon-Fri 12:00-15:00. Showing your student ID in the app."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Vie 08:00-16:00 · Sáb 09:00-15:00",
+        "en": "Mon-Fri 08:00-16:00 · Sat 09:00-15:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.7
+    },
+    {
+      "id": "demo-ciudad-043",
+      "nombre": "Cafeteria del barrio 43",
+      "categoria": "cafeteria",
+      "latitud": -8.1375715,
+      "longitud": -79.0378185,
+      "direccion": "Ubicación demo junto a Avenida Huamán",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "☕ Café + sándwich S/ 7",
+        "en": "☕ Coffee + sandwich S/ 7"
+      },
+      "promoDetalle": {
+        "es": "Combo estudio: café pasado o latte + sándwich caliente de jamón y queso. Wifi y enchufes para laptops.",
+        "en": "Study combo: drip coffee or latte + hot ham and cheese sandwich. Wi-Fi and power outlets for laptops."
+      },
+      "cupon": {
+        "codigo": "DEMO-043",
+        "detalle": {
+          "es": "Café + sándwich caliente a S/ 7",
+          "en": "Coffee + hot sandwich for S/ 7"
+        },
+        "condiciones": {
+          "es": "Todos los días de 07:00 a 11:00 y de 18:00 a 21:00.",
+          "en": "Every day 07:00-11:00 and 18:00-21:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 07:00-21:30",
+        "en": "Mon-Sat 07:00-21:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-044",
+      "nombre": "Chifa del barrio 44",
+      "categoria": "chifa",
+      "latitud": -8.0699713,
+      "longitud": -79.070112,
+      "direccion": "Ubicación demo junto a Avenida Cardenales",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥡 Chowfan familiar -25%",
+        "en": "🥡 Family chowfan -25%"
+      },
+      "promoDetalle": {
+        "es": "Chowfan de pollo o chancho tallarinero en porción familiar con 25% de descuento para que llegue caliente a casa.",
+        "en": "Chicken or pork chowfan noodle stir-fry in family portion with 25% off so it arrives hot at home."
+      },
+      "cupon": {
+        "codigo": "DEMO-044",
+        "detalle": {
+          "es": "25% de descuento en porción familiar",
+          "en": "25% off family portion"
+        },
+        "condiciones": {
+          "es": "Pedidos al local o WhatsApp. No incluye bebidas.",
+          "en": "Orders at the restaurant or via WhatsApp. Drinks not included."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:30-22:00",
+        "en": "Mon-Sun 11:30-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-045",
+      "nombre": "Salchipapas del barrio 45",
+      "categoria": "salchipapas",
+      "latitud": -8.0984097,
+      "longitud": -79.0010372,
+      "direccion": "Ubicación demo junto a Avenida 5 de Abril",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍟 Salchipapa doble + refresco",
+        "en": "🍟 Double salchipapa + soda"
+      },
+      "promoDetalle": {
+        "es": "Salchipapa doble con huevo, cremas de la casa y refresco de medio litro. La clásica parada de salida.",
+        "en": "Double salchipapa with fried egg, house sauces and a half-liter soda. The classic after-class stop."
+      },
+      "cupon": {
+        "codigo": "DEMO-045",
+        "detalle": {
+          "es": "Salchipapa doble con refresco a S/ 9",
+          "en": "Double salchipapa with soda for S/ 9"
+        },
+        "condiciones": {
+          "es": "Todos los días desde las 17:00.",
+          "en": "Every day from 5 pm."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 16:00-23:30",
+        "en": "Mon-Sun 16:00-23:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.3
+    },
+    {
+      "id": "demo-ciudad-046",
+      "nombre": "Panaderia del barrio 46",
+      "categoria": "panaderia",
+      "latitud": -8.044886,
+      "longitud": -79.0672563,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥐 Pan + queso + café S/ 5",
+        "en": "🥐 Bread + cheese + coffee S/ 5"
+      },
+      "promoDetalle": {
+        "es": "Desayuno recién horneado: pan francés de la primera hornada, queso fresco y café bien cargado.",
+        "en": "Freshly baked breakfast: French bread from the first batch, fresh cheese and a strong coffee."
+      },
+      "cupon": {
+        "codigo": "DEMO-046",
+        "detalle": {
+          "es": "Combo desayuno a S/ 5",
+          "en": "Breakfast combo for S/ 5"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 06:30 a 09:30, solo primera hornada.",
+          "en": "Mon-Sat 06:30-09:30, first batch only."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 06:00-21:00 · Dom 06:30-13:00",
+        "en": "Mon-Sat 06:00-21:00 · Sun 06:30-13:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.8
+    },
+    {
+      "id": "demo-ciudad-047",
+      "nombre": "Heladeria del barrio 47",
+      "categoria": "heladeria",
+      "latitud": -8.0723527,
+      "longitud": -79.0254191,
+      "direccion": "Ubicación demo junto a Avenida los Laureles y Calle las Margaritas",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍦 2 helados x 1",
+        "en": "🍦 2 ice creams for 1"
+      },
+      "promoDetalle": {
+        "es": "Coprera artesanal de leche y frutas de temporada. Llévate dos copas de dos bolas y paga una.",
+        "en": "Artisanal sundae with milk and seasonal fruit. Take two two-scoop cups and pay for one."
+      },
+      "cupon": {
+        "codigo": "DEMO-047",
+        "detalle": {
+          "es": "2x1 en copas de dos bolas",
+          "en": "2x1 on two-scoop sundaes"
+        },
+        "condiciones": {
+          "es": "Todos los días. Sabores de temporada incluidos.",
+          "en": "Every day. Seasonal flavors included."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 12:00-22:00",
+        "en": "Mon-Sun 12:00-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-048",
+      "nombre": "Jugueria del barrio 48",
+      "categoria": "jugueria",
+      "latitud": -8.1052447,
+      "longitud": -79.0263793,
+      "direccion": "Ubicación demo junto a Avenida España",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥤 Jugo + emoliente 2x1",
+        "en": "🥤 Juice + emoliente 2x1"
+      },
+      "promoDetalle": {
+        "es": "Jugo surtido de la estación o emoliente bien herbal, en vaso grande. Ideal para aguantar la tarde de clases.",
+        "en": "Seasonal mixed fruit juice or a big glass of emoliente herbal tea. Perfect to power through afternoon classes."
+      },
+      "cupon": {
+        "codigo": "DEMO-048",
+        "detalle": {
+          "es": "2x1 en jugos y emolientes",
+          "en": "2x1 on juices and emolientes"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 07:00 a 13:00.",
+          "en": "Mon-Sat 07:00-13:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 06:30-20:00",
+        "en": "Mon-Sat 06:30-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-049",
+      "nombre": "Pizza del barrio 49",
+      "categoria": "pizza",
+      "latitud": -8.1467163,
+      "longitud": -79.0007676,
+      "direccion": "Ubicación demo junto a Calle Entrada a la Campiña",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍕 Porción + gaseosa S/ 6",
+        "en": "🍕 Slice + soda S/ 6"
+      },
+      "promoDetalle": {
+        "es": "Porción generosa de pizza recién salida del horno de piedra + gaseosa personal. Recarga de energía entre clases.",
+        "en": "Generous slice of stone-oven pizza fresh out + personal soda. An energy recharge between classes."
+      },
+      "cupon": {
+        "codigo": "DEMO-049",
+        "detalle": {
+          "es": "Porción + gaseosa a S/ 6",
+          "en": "Slice + soda for S/ 6"
+        },
+        "condiciones": {
+          "es": "Válido en sabores del día.",
+          "en": "Valid on daily flavors."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:00-23:00",
+        "en": "Mon-Sun 11:00-23:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-050",
+      "nombre": "Burger del barrio 50",
+      "categoria": "burger",
+      "latitud": -8.0880061,
+      "longitud": -79.0531563,
+      "direccion": "Ubicación demo junto a Avenida el Cortijo",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍔 Combo burger 2x1",
+        "en": "🍔 Burger combo 2x1"
+      },
+      "promoDetalle": {
+        "es": "Combo completo: burger a la plancha con tocino, papas y refresco. De a dos, pagando uno.",
+        "en": "Full combo: griddled burger with bacon, fries and soda. For two, paying for one."
+      },
+      "cupon": {
+        "codigo": "DEMO-050",
+        "detalle": {
+          "es": "2x1 en combos burger",
+          "en": "2x1 on burger combos"
+        },
+        "condiciones": {
+          "es": "Mar y Jue desde las 18:00. Mostrando el cupón en la app.",
+          "en": "Tue and Thu from 6 pm. Showing the in-app coupon."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 17:00-00:00",
+        "en": "Mon-Sun 17:00-00:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-051",
+      "nombre": "Cevicheria del barrio 51",
+      "categoria": "cevicheria",
+      "latitud": -8.0569866,
+      "longitud": -79.0031115,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🐟 Ceviche chico -20%",
+        "en": "🐟 Small ceviche -20%"
+      },
+      "promoDetalle": {
+        "es": "Ceviche de lenguado del día en tamaño chico, con camote y choclo. Pescado fresco de la caleta de Huanchaco.",
+        "en": "Sea bass ceviche of the day, small size, with sweet potato and corn. Fresh fish from the Huanchaco cove."
+      },
+      "cupon": {
+        "codigo": "DEMO-051",
+        "detalle": {
+          "es": "20% de descuento en ceviche chico",
+          "en": "20% off small ceviche"
+        },
+        "condiciones": {
+          "es": "Lun a Vie de 11:00 a 15:00, sujeto a disponibilidad del día.",
+          "en": "Mon-Fri 11:00-15:00, subject to daily availability."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 10:00-17:00",
+        "en": "Mon-Sat 10:00-17:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.8
+    },
+    {
+      "id": "demo-ciudad-052",
+      "nombre": "Empanadas del barrio 52",
+      "categoria": "empanadas",
+      "latitud": -8.1166964,
+      "longitud": -79.0179744,
+      "direccion": "Ubicación demo junto a Santa Cruz",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥟 3 empanadas S/ 5",
+        "en": "🥟 3 empanadas S/ 5"
+      },
+      "promoDetalle": {
+        "es": "Empanadas recién horneadas de lomo saltado, pollo y ají de gallina. La docena familia a precio de alumno.",
+        "en": "Freshly baked empanadas filled with lomo saltado, chicken and aji de gallina. Family dozen at a student price."
+      },
+      "cupon": {
+        "codigo": "DEMO-052",
+        "detalle": {
+          "es": "3 empanadas a S/ 5",
+          "en": "3 empanadas for S/ 5"
+        },
+        "condiciones": {
+          "es": "Todos los días, sabores a elección.",
+          "en": "Every day, flavors of your choice."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 09:00-20:00",
+        "en": "Mon-Sat 09:00-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.7
+    },
+    {
+      "id": "demo-ciudad-053",
+      "nombre": "Heladeria del barrio 53",
+      "categoria": "heladeria",
+      "latitud": -8.0902166,
+      "longitud": -79.0875381,
+      "direccion": "Ubicación demo junto a Avenida Ramón Castilla",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍦 2 copas artesanales x 1",
+        "en": "🍦 2 artisan sundaes for 1"
+      },
+      "promoDetalle": {
+        "es": "Helados artesanales de lúcuma, guanábana y chocolate porteño, frente a la Plaza de Armas. En pareja: dos copas de dos bolas, una sola cuenta.",
+        "en": "Artisanal ice cream with lucuma, guanabana and chocolate, right across from the Plaza de Armas. For two: two two-scoop cups, one bill."
+      },
+      "cupon": {
+        "codigo": "DEMO-053",
+        "detalle": {
+          "es": "2x1 en copas de dos bolas",
+          "en": "2x1 on two-scoop sundaes"
+        },
+        "condiciones": {
+          "es": "Todos los días desde las 19:00. Frente a la Plaza de Armas.",
+          "en": "Every day from 7 pm. Across from the Plaza de Armas."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 12:00-23:00",
+        "en": "Mon-Sun 12:00-23:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-054",
+      "nombre": "Chifa del barrio 54",
+      "categoria": "chifa",
+      "latitud": -8.1237589,
+      "longitud": -79.0381396,
+      "direccion": "Ubicación demo junto a Avenida Victor Larco Herrera",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥡 Aeropuerto chifa -15%",
+        "en": "🥡 Aeropuerto chifa -15%"
+      },
+      "promoDetalle": {
+        "es": "Aeropuerto de pollo o kam lu wantan en porción completa con 15% de descuento. El chifa de la familia esperancina.",
+        "en": "Chicken aeropuerto (mixed rice and noodles) or kam lu wantan at full portion with 15% off. The family chifa of La Esperanza."
+      },
+      "cupon": {
+        "codigo": "DEMO-054",
+        "detalle": {
+          "es": "15% de descuento en platos de la carta",
+          "en": "15% off menu dishes"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 12:00 a 21:00. Delivery al WhatsApp del local.",
+          "en": "Mon-Sat 12:00-21:00. Delivery via the restaurant's WhatsApp."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:00-22:00",
+        "en": "Mon-Sun 11:00-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-055",
+      "nombre": "Cevicheria del barrio 55",
+      "categoria": "cevicheria",
+      "latitud": -8.1898868,
+      "longitud": -78.993604,
+      "direccion": "Ubicación demo junto a Avenida de La Marina",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🐟 Ceviche + jalea -15%",
+        "en": "🐟 Ceviche + jalea -15%"
+      },
+      "promoDetalle": {
+        "es": "Ceviche de pescado del día más jalea crocante, a dos cuadras del malecón de Buenos Aires.",
+        "en": "Fish-of-the-day ceviche plus crispy jalea mix, two blocks from the Buenos Aires boardwalk."
+      },
+      "cupon": {
+        "codigo": "DEMO-055",
+        "detalle": {
+          "es": "15% en combo ceviche + jalea",
+          "en": "15% on ceviche + jalea combo"
+        },
+        "condiciones": {
+          "es": "Mar a Dom de 11:00 a 16:00, según desembarque del día.",
+          "en": "Tue-Sun 11:00-16:00, depending on the day's catch."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 10:00-17:00",
+        "en": "Tue-Sun 10:00-17:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.7
+    },
+    {
+      "id": "demo-ciudad-056",
+      "nombre": "Cafeteria del barrio 56",
+      "categoria": "cafeteria",
+      "latitud": -8.0919767,
+      "longitud": -79.0115254,
+      "direccion": "Ubicación demo junto a Calle Oswaldo Hercelles",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "☕ Desayuno con vista S/ 10",
+        "en": "☕ Breakfast with a view S/ 10"
+      },
+      "promoDetalle": {
+        "es": "Desayuno frente a los caballitos de totora: café de especialidad, pan con palta y jugo de frutas de la estación.",
+        "en": "Breakfast facing the totora reed boats: specialty coffee, avocado toast and seasonal fruit juice."
+      },
+      "cupon": {
+        "codigo": "DEMO-056",
+        "detalle": {
+          "es": "Desayuno completo a S/ 10",
+          "en": "Full breakfast for S/ 10"
+        },
+        "condiciones": {
+          "es": "Todos los días de 07:00 a 11:00 con vista al mar.",
+          "en": "Every day 07:00-11:00 with an ocean view."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 07:00-21:00",
+        "en": "Mon-Sun 07:00-21:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.8
+    },
+    {
+      "id": "demo-ciudad-057",
+      "nombre": "Polleria del barrio 57",
+      "categoria": "polleria",
+      "latitud": -8.0569797,
+      "longitud": -79.0613507,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍗 1/8 pollo + gaseosa S/ 22",
+        "en": "🍗 1/8 chicken + soda S/ 22"
+      },
+      "promoDetalle": {
+        "es": "Octavo de pollo a la brasa con papas, ensalada y gaseosa de un litro y medio para compartir en familia.",
+        "en": "Eighth of rotisserie chicken with fries, salad and a one-and-a-half-liter soda to share as a family."
+      },
+      "cupon": {
+        "codigo": "DEMO-057",
+        "detalle": {
+          "es": "1/8 pollo + papas + gaseosa a S/ 22",
+          "en": "1/8 chicken + fries + soda for S/ 22"
+        },
+        "condiciones": {
+          "es": "Jue a Dom desde las 12:00. También delivery.",
+          "en": "Thu-Sun from 12:00. Delivery available."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:30-22:30",
+        "en": "Mon-Sun 11:30-22:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-058",
+      "nombre": "Menu del barrio 58",
+      "categoria": "menu",
+      "latitud": -8.0775117,
+      "longitud": -79.0099924,
+      "direccion": "Ubicación demo junto a Avenida Capac Yupanqui",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍲 Menú del día S/ 9",
+        "en": "🍲 Daily menu S/ 9"
+      },
+      "promoDetalle": {
+        "es": "Menú casero de tres tiempos con caldo verde de entrada y segundo a elección. La sazón de las mamás de Florencia.",
+        "en": "Homestyle three-course menu with green soup starter and a main of your choice. The flavor of Florencia's home cooking."
+      },
+      "cupon": {
+        "codigo": "DEMO-058",
+        "detalle": {
+          "es": "Menú de 3 tiempos a S/ 9",
+          "en": "3-course set menu for S/ 9"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 11:30 a 15:00.",
+          "en": "Mon-Sat 11:30-15:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 08:00-16:00",
+        "en": "Mon-Sat 08:00-16:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-059",
+      "nombre": "Burger del barrio 59",
+      "categoria": "burger",
+      "latitud": -8.1106697,
+      "longitud": -79.0029528,
+      "direccion": "Ubicación demo junto a Avenida Honorio Delgado",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍔 Combo familiar -20%",
+        "en": "🍔 Family combo -20%"
+      },
+      "promoDetalle": {
+        "es": "Combo familiar: cuatro burgers a la plancha con papas y jarra de maracuyá. El punto de reunión de La Rinconada Alta.",
+        "en": "Family combo: four griddled burgers with fries and a jug of passion fruit juice. La Rinconada Alta's meeting point."
+      },
+      "cupon": {
+        "codigo": "DEMO-059",
+        "detalle": {
+          "es": "20% en combo familiar",
+          "en": "20% off family combo"
+        },
+        "condiciones": {
+          "es": "Vie a Dom desde las 18:00. Mostrando el cupón.",
+          "en": "Fri-Sun from 6 pm. Showing the coupon."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 17:00-23:30",
+        "en": "Tue-Sun 17:00-23:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.3
+    },
+    {
+      "id": "demo-ciudad-060",
+      "nombre": "Pizza del barrio 60",
+      "categoria": "pizza",
+      "latitud": -8.1130469,
+      "longitud": -79.0347742,
+      "direccion": "Ubicación demo junto a Avenida Juan Pablo II",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍕 2 pizzas medianas x 1",
+        "en": "🍕 2 medium pizzas for 1"
+      },
+      "promoDetalle": {
+        "es": "Pizzas al horno de leña de masa madre. De a dos: una para cada uno, pagando una sola. La de la casa lleva lomo saltado.",
+        "en": "Wood-fired sourdough pizzas. For two: one each, paying for one. The house special comes with lomo saltado."
+      },
+      "cupon": {
+        "codigo": "DEMO-060",
+        "detalle": {
+          "es": "2x1 en pizzas medianas",
+          "en": "2x1 on medium pizzas"
+        },
+        "condiciones": {
+          "es": "Lun a Mié desde las 18:00. Sabores de la carta.",
+          "en": "Mon-Wed from 6 pm. Menu flavors."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 17:30-23:30",
+        "en": "Tue-Sun 17:30-23:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-061",
+      "nombre": "Jugueria del barrio 61",
+      "categoria": "jugueria",
+      "latitud": -8.0945463,
+      "longitud": -79.0268251,
+      "direccion": "Ubicación demo junto a Avenida América Norte",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥤 Emoliente + pan caliente S/ 4",
+        "en": "🥤 Emoliente + warm bread S/ 4"
+      },
+      "promoDetalle": {
+        "es": "Emoliente siete hierbas con huevo y pan francés recién horneado, a una cuadra del mercado central.",
+        "en": "Seven-herb emoliente with egg and freshly baked French bread, one block from the central market."
+      },
+      "cupon": {
+        "codigo": "DEMO-061",
+        "detalle": {
+          "es": "Emoliente + pan caliente a S/ 4",
+          "en": "Emoliente + warm bread for S/ 4"
+        },
+        "condiciones": {
+          "es": "Todos los días de 06:00 a 10:00.",
+          "en": "Every day 06:00-10:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 06:00-21:00",
+        "en": "Mon-Sun 06:00-21:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-062",
+      "nombre": "Panaderia del barrio 62",
+      "categoria": "panaderia",
+      "latitud": -8.092421,
+      "longitud": -78.968117,
+      "direccion": "Ubicación demo junto a Avenida Pumacahua",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥐 6 bollitos calientes S/ 3",
+        "en": "🥐 6 warm anise buns S/ 3"
+      },
+      "promoDetalle": {
+        "es": "Bollitos de anís de la primera hornada, para el recreo o el viaje de vuelta a casa.",
+        "en": "Anise buns from the first batch, for recess or the ride back home."
+      },
+      "cupon": {
+        "codigo": "DEMO-062",
+        "detalle": {
+          "es": "6 bollitos de anís a S/ 3",
+          "en": "6 anise buns for S/ 3"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 06:30 a 09:00.",
+          "en": "Mon-Sat 06:30-09:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 06:00-20:00",
+        "en": "Mon-Sat 06:00-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-063",
+      "nombre": "Polleria del barrio 63",
+      "categoria": "polleria",
+      "latitud": -8.0989568,
+      "longitud": -79.0673528,
+      "direccion": "Ubicación demo junto a Avenida Chan Chan",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍗 1/4 pollo + cremolada S/ 11",
+        "en": "🍗 1/4 chicken + slushie S/ 11"
+      },
+      "promoDetalle": {
+        "es": "1/4 de pollo a la brasa con papas, ensalada y cremolada de la casa en vaso grande.",
+        "en": "Quarter rotisserie chicken with fries, salad and a large house fruit slushie."
+      },
+      "cupon": {
+        "codigo": "DEMO-063",
+        "detalle": {
+          "es": "1/4 pollo + papas + cremolada a S/ 11",
+          "en": "1/4 chicken + fries + slushie for S/ 11"
+        },
+        "condiciones": {
+          "es": "Lun a Vie de 12:00 a 16:00.",
+          "en": "Mon-Fri 12:00-16:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:00-22:00",
+        "en": "Mon-Sun 11:00-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-064",
+      "nombre": "Menu del barrio 64",
+      "categoria": "menu",
+      "latitud": -8.0112109,
+      "longitud": -79.0634294,
+      "direccion": "Ubicación demo junto a Calle José la Rivera",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍲 Menú estudiante S/ 7",
+        "en": "🍲 Student menu S/ 7"
+      },
+      "promoDetalle": {
+        "es": "Tres tiempos con segundo a elección y refresco de carambola. El menú más apretado de La Esperanza, pensado para la semana de exámenes.",
+        "en": "Three courses with a main of your choice and starfruit refreshment. The tightest menu in La Esperanza, made for exam week."
+      },
+      "cupon": {
+        "codigo": "DEMO-064",
+        "detalle": {
+          "es": "Menú de 3 tiempos a S/ 7",
+          "en": "3-course set menu for S/ 7"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 12:00 a 15:30. Mostrando la app.",
+          "en": "Mon-Sat 12:00-15:30. Showing the app."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 08:00-17:00",
+        "en": "Mon-Sat 08:00-17:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-065",
+      "nombre": "Cafeteria del barrio 65",
+      "categoria": "cafeteria",
+      "latitud": -8.0812635,
+      "longitud": -79.0306566,
+      "direccion": "Ubicación demo junto a Calle José Cabrera y Calle José Antonio Paez",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "☕ 2 cafés + dulce S/ 8",
+        "en": "☕ 2 coffees + sweet S/ 8"
+      },
+      "promoDetalle": {
+        "es": "Dos cafés pasados o lattes para compartir mesa, más un dulce casero de la vitrina (torta helada o alfajores).",
+        "en": "Two drip coffees or lattes to share the table, plus a homemade treat from the display (ice cream cake or alfajores)."
+      },
+      "cupon": {
+        "codigo": "DEMO-065",
+        "detalle": {
+          "es": "2 cafés + dulce casero a S/ 8",
+          "en": "2 coffees + homemade treat for S/ 8"
+        },
+        "condiciones": {
+          "es": "Todos los días de 15:00 a 21:00.",
+          "en": "Every day 15:00-21:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 07:00-21:30",
+        "en": "Mon-Sun 07:00-21:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-066",
+      "nombre": "Burger del barrio 66",
+      "categoria": "burger",
+      "latitud": -8.0854514,
+      "longitud": -78.9902496,
+      "direccion": "Ubicación demo junto a Avenida Pumacahua",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍔 Burger doble -20%",
+        "en": "🍔 Double burger -20%"
+      },
+      "promoDetalle": {
+        "es": "Doble carne a la plancha, doble queso, tocino y salsa de la casa, camino a la playa de Dublin.",
+        "en": "Double patty, double cheese, bacon and house sauce, on the way to Dublin beach."
+      },
+      "cupon": {
+        "codigo": "DEMO-066",
+        "detalle": {
+          "es": "20% de descuento en burger doble",
+          "en": "20% off double burger"
+        },
+        "condiciones": {
+          "es": "Todos los días desde las 17:00. Mostrando el cupón.",
+          "en": "Every day from 5 pm. Showing the coupon."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 16:00-23:00",
+        "en": "Tue-Sun 16:00-23:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-067",
+      "nombre": "Polleria del barrio 67",
+      "categoria": "polleria",
+      "latitud": -8.100935,
+      "longitud": -79.047271,
+      "direccion": "Ubicación demo junto a Avenida Mansiche",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍗 Pollada familiar S/ 35",
+        "en": "🍗 Family chicken feast S/ 35"
+      },
+      "promoDetalle": {
+        "es": "Pollada completa para cuatro: medio pollo a la leña por cabeza con papas, ensalada y chicha morada de la casa.",
+        "en": "Full feast for four: half wood-fired chicken per person with fries, salad and house chicha morada."
+      },
+      "cupon": {
+        "codigo": "DEMO-067",
+        "detalle": {
+          "es": "Pollada familiar (4 personas) a S/ 35",
+          "en": "Family feast (4 people) for S/ 35"
+        },
+        "condiciones": {
+          "es": "Sáb y Dom de 12:00 a 17:00, previa reserva.",
+          "en": "Sat and Sun 12:00-17:00, by reservation."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mié-Dom 11:00-20:00",
+        "en": "Wed-Sun 11:00-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-068",
+      "nombre": "Jugueria del barrio 68",
+      "categoria": "jugueria",
+      "latitud": -8.1388876,
+      "longitud": -79.0511028,
+      "direccion": "Ubicación demo junto a Avenida Victor Larco Herrera",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥤 3 jugos x 2",
+        "en": "🥤 3 juices for 2"
+      },
+      "promoDetalle": {
+        "es": "Jugos naturales de fresa, lucuma y naranja en vaso grande: paga dos, llévate tres.",
+        "en": "Natural strawberry, lucuma and orange juices in large glasses: pay for two, take three."
+      },
+      "cupon": {
+        "codigo": "DEMO-068",
+        "detalle": {
+          "es": "3 jugos grandes al precio de 2",
+          "en": "3 large juices for the price of 2"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 07:00 a 12:00.",
+          "en": "Mon-Sat 07:00-12:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 06:30-20:30",
+        "en": "Mon-Sun 06:30-20:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.3
+    },
+    {
+      "id": "demo-ciudad-069",
+      "nombre": "Cevicheria del barrio 69",
+      "categoria": "cevicheria",
+      "latitud": -8.0733573,
+      "longitud": -79.118581,
+      "direccion": "Ubicación demo junto a Avenida Circunvalación",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🐟 Ceviche de tollo S/ 12",
+        "en": "🐟 Tollo ceviche S/ 12"
+      },
+      "promoDetalle": {
+        "es": "Ceviche de tollo del desembarque de la mañana, con camote, choclo y sarza criolla, a tres cuadras del muelle.",
+        "en": "Morning-catch smoothhound ceviche with sweet potato, corn and criolla salsa, three blocks from the pier."
+      },
+      "cupon": {
+        "codigo": "DEMO-069",
+        "detalle": {
+          "es": "Ceviche de tollo a S/ 12",
+          "en": "Tollo ceviche for S/ 12"
+        },
+        "condiciones": {
+          "es": "Lun a Dom de 11:00 a 15:00, sujeto a desembarque.",
+          "en": "Mon-Sun 11:00-15:00, subject to the daily catch."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 10:00-18:00",
+        "en": "Mon-Sun 10:00-18:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.7
+    },
+    {
+      "id": "demo-ciudad-070",
+      "nombre": "Heladeria del barrio 70",
+      "categoria": "heladeria",
+      "latitud": -8.081598,
+      "longitud": -79.113161,
+      "direccion": "Ubicación demo junto a Calle Santo Toribio y Avenida Juan Pablo II",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🧇 Waffle + helado S/ 8",
+        "en": "🧇 Waffle + ice cream S/ 8"
+      },
+      "promoDetalle": {
+        "es": "Waffle caliente de la plancha con dos bolas de helado artesanal y sirope, frente al mar.",
+        "en": "Hot waffle off the griddle with two scoops of artisanal ice cream and syrup, facing the sea."
+      },
+      "cupon": {
+        "codigo": "DEMO-070",
+        "detalle": {
+          "es": "Waffle + 2 bolas de helado a S/ 8",
+          "en": "Waffle + 2 scoops for S/ 8"
+        },
+        "condiciones": {
+          "es": "Todos los días de 16:00 a 22:00.",
+          "en": "Every day 16:00-22:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:00-23:00",
+        "en": "Mon-Sun 11:00-23:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-071",
+      "nombre": "Pizza del barrio 71",
+      "categoria": "pizza",
+      "latitud": -8.0688528,
+      "longitud": -78.9842423,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍕 Personal + chilcano S/ 15",
+        "en": "🍕 Personal + chilcano S/ 15"
+      },
+      "promoDetalle": {
+        "es": "Pizza personal de masa a la piedra + chilcano de pescado bien caliente: el combo después de la playa.",
+        "en": "Stone-baked personal pizza + a steaming fish chilcano: the combo after the beach."
+      },
+      "cupon": {
+        "codigo": "DEMO-071",
+        "detalle": {
+          "es": "Pizza personal + chilcano a S/ 15",
+          "en": "Personal pizza + chilcano for S/ 15"
+        },
+        "condiciones": {
+          "es": "Todos los días desde las 12:00.",
+          "en": "Every day from 12:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 12:00-22:30",
+        "en": "Mon-Sun 12:00-22:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-072",
+      "nombre": "Chifa del barrio 72",
+      "categoria": "chifa",
+      "latitud": -8.1826105,
+      "longitud": -78.9869676,
+      "direccion": "Ubicación demo junto a Panamericana Norte",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥡 Tipakay familiar -20%",
+        "en": "🥡 Tipakay family -20%"
+      },
+      "promoDetalle": {
+        "es": "Tipakay de pollo dorado con arroz chaufa en porción familiar para cuatro, con 20% de descuento.",
+        "en": "Golden fried chicken tipakay with chaufa rice in a family portion for four, 20% off."
+      },
+      "cupon": {
+        "codigo": "DEMO-072",
+        "detalle": {
+          "es": "20% en tipakay familiar",
+          "en": "20% off family tipakay"
+        },
+        "condiciones": {
+          "es": "Mar a Dom de 12:00 a 20:00. Delivery sin costo en El Porvenir.",
+          "en": "Tue-Sun 12:00-20:00. Free delivery in El Porvenir."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 11:00-21:30",
+        "en": "Tue-Sun 11:00-21:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.3
+    },
+    {
+      "id": "demo-ciudad-073",
+      "nombre": "Menu del barrio 73",
+      "categoria": "menu",
+      "latitud": -8.0741764,
+      "longitud": -79.0478617,
+      "direccion": "Ubicación demo junto a Calle Mariano Moreno y Avenida Tahuantinsuyo",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍲 Menú + postre S/ 10",
+        "en": "🍲 Menu + dessert S/ 10"
+      },
+      "promoDetalle": {
+        "es": "Menú de tres tiempos con segundo a elección, refresco y postre casero (mazamorra de chancaca o arroz con leche).",
+        "en": "Three-course menu with a main of your choice, refreshment and homemade dessert (chancaca pudding or rice pudding)."
+      },
+      "cupon": {
+        "codigo": "DEMO-073",
+        "detalle": {
+          "es": "Menú de 3 tiempos + postre a S/ 10",
+          "en": "3-course menu + dessert for S/ 10"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 11:30 a 15:00.",
+          "en": "Mon-Sat 11:30-15:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 08:00-17:00",
+        "en": "Mon-Sun 08:00-17:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-074",
+      "nombre": "Salchipapas del barrio 74",
+      "categoria": "salchipapas",
+      "latitud": -8.0517132,
+      "longitud": -79.0140141,
+      "direccion": "Ubicación demo junto a Calle las Lomas",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍟 Salchipapa especial + huevo S/ 8",
+        "en": "🍟 Special salchipapa + egg S/ 8"
+      },
+      "promoDetalle": {
+        "es": "Salchipapa especial con huevo frito, queso rayado y las cremas de la casa. Abierta hasta tarde los fines de semana.",
+        "en": "Special salchipapa with fried egg, shredded cheese and the house sauces. Open late on weekends."
+      },
+      "cupon": {
+        "codigo": "DEMO-074",
+        "detalle": {
+          "es": "Salchipapa especial con huevo a S/ 8",
+          "en": "Special salchipapa with egg for S/ 8"
+        },
+        "condiciones": {
+          "es": "Todos los días desde las 18:00.",
+          "en": "Every day from 6 pm."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 17:00-00:30",
+        "en": "Mon-Sun 17:00-00:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.2
+    },
+    {
+      "id": "demo-ciudad-075",
+      "nombre": "Empanadas del barrio 75",
+      "categoria": "empanadas",
+      "latitud": -8.0910052,
+      "longitud": -79.044041,
+      "direccion": "Ubicación demo junto a Avenida Metropolitana 1",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥟 Docena de empanadas S/ 15",
+        "en": "🥟 Dozen empanadas S/ 15"
+      },
+      "promoDetalle": {
+        "es": "Docena de empanadas al horno de carne, pollo y queso, recién hechas para llevar calientes a casa.",
+        "en": "Baked dozen of beef, chicken and cheese empanadas, made fresh to take home hot."
+      },
+      "cupon": {
+        "codigo": "DEMO-075",
+        "detalle": {
+          "es": "Docena de empanadas a S/ 15",
+          "en": "Dozen empanadas for S/ 15"
+        },
+        "condiciones": {
+          "es": "Todos los días, sabores a elección. Previo aviso para docenas de más.",
+          "en": "Every day, flavors of your choice. Order ahead for extra dozens."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 09:00-20:00",
+        "en": "Mon-Sun 09:00-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-076",
+      "nombre": "Panaderia del barrio 76",
+      "categoria": "panaderia",
+      "latitud": -8.0383825,
+      "longitud": -79.0599894,
+      "direccion": "Ubicación demo junto a Avenida Miguel Grau",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥐 Tortilla de semana + café S/ 5",
+        "en": "🥐 Week tortilla + coffee S/ 5"
+      },
+      "promoDetalle": {
+        "es": "Tortilla de semana recién salida con café pasado bien cargado, el desayuno clásico del barrio.",
+        "en": "Fresh-out week tortilla (traditional Trujillo bread) with strong drip coffee, the neighborhood classic breakfast."
+      },
+      "cupon": {
+        "codigo": "DEMO-076",
+        "detalle": {
+          "es": "Tortilla de semana + café a S/ 5",
+          "en": "Week tortilla + coffee for S/ 5"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 06:00 a 09:30.",
+          "en": "Mon-Sat 06:00-09:30."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 05:30-20:00",
+        "en": "Mon-Sat 05:30-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-077",
+      "nombre": "Jugueria del barrio 77",
+      "categoria": "jugueria",
+      "latitud": -8.0597785,
+      "longitud": -79.0830103,
+      "direccion": "Ubicación demo junto a Avenida los Cipreses y Avenida los Tulipanes",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥤 Jugo + tostada S/ 5",
+        "en": "🥤 Juice + toast S/ 5"
+      },
+      "promoDetalle": {
+        "es": "Jugo surtido en vaso grande con tostada con mantequilla y miel. Energía para la caminata al paradero.",
+        "en": "Large mixed fruit juice with butter-and-honey toast. Energy for the walk to the bus stop."
+      },
+      "cupon": {
+        "codigo": "DEMO-077",
+        "detalle": {
+          "es": "Jugo grande + tostada a S/ 5",
+          "en": "Large juice + toast for S/ 5"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 06:30 a 11:00.",
+          "en": "Mon-Sat 06:30-11:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 06:00-19:00",
+        "en": "Mon-Sat 06:00-19:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.3
+    },
+    {
+      "id": "demo-ciudad-078",
+      "nombre": "Menu del barrio 78",
+      "categoria": "menu",
+      "latitud": -8.0670626,
+      "longitud": -79.0608257,
+      "direccion": "Ubicación demo junto a Avenida Cahuide Norte y Avenida Cahuide",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍲 Menú casero S/ 8",
+        "en": "🍲 Homestyle menu S/ 8"
+      },
+      "promoDetalle": {
+        "es": "Menú casero de tres tiempos con sopa criolla y segundo a elección. Cocina de olla batida a fuego lento.",
+        "en": "Homestyle three-course menu with criollo soup and a main of your choice. Slow-cooked pot cooking."
+      },
+      "cupon": {
+        "codigo": "DEMO-078",
+        "detalle": {
+          "es": "Menú de 3 tiempos a S/ 8",
+          "en": "3-course set menu for S/ 8"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 11:30 a 15:00.",
+          "en": "Mon-Sat 11:30-15:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 08:00-16:30",
+        "en": "Mon-Sat 08:00-16:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-079",
+      "nombre": "Chifa del barrio 79",
+      "categoria": "chifa",
+      "latitud": -8.0696947,
+      "longitud": -79.003909,
+      "direccion": "Ubicación demo junto a Calle Sinchi Roca",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥡 Chowfan + tipakay 2x1",
+        "en": "🥡 Chowfan + tipakay 2x1"
+      },
+      "promoDetalle": {
+        "es": "Chowfan de chancho con tipakay de pollo en porción individual: pide uno y el segundo va de yapa.",
+        "en": "Pork chowfan with chicken tipakay in individual portions: order one and the second is on the house."
+      },
+      "cupon": {
+        "codigo": "DEMO-079",
+        "detalle": {
+          "es": "2x1 en platos individuales",
+          "en": "2x1 on individual dishes"
+        },
+        "condiciones": {
+          "es": "Lun a Vie de 12:00 a 20:00. No acumulable.",
+          "en": "Mon-Fri 12:00-20:00. Not combinable."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:00-21:00",
+        "en": "Mon-Sun 11:00-21:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.2
+    },
+    {
+      "id": "demo-ciudad-080",
+      "nombre": "Panaderia del barrio 80",
+      "categoria": "panaderia",
+      "latitud": -8.0365242,
+      "longitud": -79.0709942,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥐 Pan recién horneado -10%",
+        "en": "🥐 Fresh bread -10%"
+      },
+      "promoDetalle": {
+        "es": "Diez por ciento en toda la primera hornada: pan francés, bollitos y tortillas, de las 6 de la mañana en adelante.",
+        "en": "Ten percent off the entire first batch: French bread, buns and tortillas, from 6 am on."
+      },
+      "cupon": {
+        "codigo": "DEMO-080",
+        "detalle": {
+          "es": "10% de descuento en primera hornada",
+          "en": "10% off first batch"
+        },
+        "condiciones": {
+          "es": "Todos los días de 06:00 a 09:00.",
+          "en": "Every day 06:00-09:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 05:30-19:30",
+        "en": "Mon-Sun 05:30-19:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-081",
+      "nombre": "Polleria del barrio 81",
+      "categoria": "polleria",
+      "latitud": -8.0636671,
+      "longitud": -79.0224751,
+      "direccion": "Ubicación demo junto a Prolongación Avenida 12 de Noviembre",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍗 1/4 pollo + papas 2x1",
+        "en": "🍗 1/4 chicken + fries 2x1"
+      },
+      "promoDetalle": {
+        "es": "De a dos: pide un 1/4 de pollo a la brasa con papas doradas y el segundo va por nuestra cuenta. Válido de lunes a jueves después de las 3 pm.",
+        "en": "For two: order a 1/4 rotisserie chicken with golden fries and the second one is on us. Valid Monday through Thursday after 3 pm."
+      },
+      "cupon": {
+        "codigo": "DEMO-081",
+        "detalle": {
+          "es": "2x1 en 1/4 de pollo + papas",
+          "en": "2x1 on 1/4 chicken + fries"
+        },
+        "condiciones": {
+          "es": "Lun a Jue desde las 3 pm. Mostrando el cupón en la app. No acumulable con otras promos.",
+          "en": "Mon-Thu from 3 pm. Showing the in-app coupon. Not combinable with other deals."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 11:00-22:30 · Dom 12:00-22:00",
+        "en": "Mon-Sat 11:00-22:30 · Sun 12:00-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-082",
+      "nombre": "Menu del barrio 82",
+      "categoria": "menu",
+      "latitud": -8.0769599,
+      "longitud": -78.9958637,
+      "direccion": "Ubicación demo junto a Avenida Jaime Blanco",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍲 Menú criollo S/ 8",
+        "en": "🍲 Criollo set menu S/ 8"
+      },
+      "promoDetalle": {
+        "es": "Menú universitario de tres tiempos: entrada, segundo criollo y refresco de la casa. Maracuyá free mientras rinda la olla.",
+        "en": "Three-course university set menu: starter, criollo main and house refreshment. Free passion fruit juice while the pot lasts."
+      },
+      "cupon": {
+        "codigo": "DEMO-082",
+        "detalle": {
+          "es": "Menú de 3 tiempos a S/ 8",
+          "en": "3-course set menu for S/ 8"
+        },
+        "condiciones": {
+          "es": "Lun a Vie de 12:00 a 15:00. Presentando el estudiante/carné de la app.",
+          "en": "Mon-Fri 12:00-15:00. Showing your student ID in the app."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Vie 08:00-16:00 · Sáb 09:00-15:00",
+        "en": "Mon-Fri 08:00-16:00 · Sat 09:00-15:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.7
+    },
+    {
+      "id": "demo-ciudad-083",
+      "nombre": "Cafeteria del barrio 83",
+      "categoria": "cafeteria",
+      "latitud": -8.0720988,
+      "longitud": -79.0341664,
+      "direccion": "Ubicación demo junto a Calle Prolongación Blanco Encalada y Calle Ramon Castilla",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "☕ Café + sándwich S/ 7",
+        "en": "☕ Coffee + sandwich S/ 7"
+      },
+      "promoDetalle": {
+        "es": "Combo estudio: café pasado o latte + sándwich caliente de jamón y queso. Wifi y enchufes para laptops.",
+        "en": "Study combo: drip coffee or latte + hot ham and cheese sandwich. Wi-Fi and power outlets for laptops."
+      },
+      "cupon": {
+        "codigo": "DEMO-083",
+        "detalle": {
+          "es": "Café + sándwich caliente a S/ 7",
+          "en": "Coffee + hot sandwich for S/ 7"
+        },
+        "condiciones": {
+          "es": "Todos los días de 07:00 a 11:00 y de 18:00 a 21:00.",
+          "en": "Every day 07:00-11:00 and 18:00-21:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 07:00-21:30",
+        "en": "Mon-Sat 07:00-21:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-084",
+      "nombre": "Chifa del barrio 84",
+      "categoria": "chifa",
+      "latitud": -8.0975537,
+      "longitud": -79.0181484,
+      "direccion": "Ubicación demo junto a Avenida del Ejército",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥡 Chowfan familiar -25%",
+        "en": "🥡 Family chowfan -25%"
+      },
+      "promoDetalle": {
+        "es": "Chowfan de pollo o chancho tallarinero en porción familiar con 25% de descuento para que llegue caliente a casa.",
+        "en": "Chicken or pork chowfan noodle stir-fry in family portion with 25% off so it arrives hot at home."
+      },
+      "cupon": {
+        "codigo": "DEMO-084",
+        "detalle": {
+          "es": "25% de descuento en porción familiar",
+          "en": "25% off family portion"
+        },
+        "condiciones": {
+          "es": "Pedidos al local o WhatsApp. No incluye bebidas.",
+          "en": "Orders at the restaurant or via WhatsApp. Drinks not included."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:30-22:00",
+        "en": "Mon-Sun 11:30-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-085",
+      "nombre": "Salchipapas del barrio 85",
+      "categoria": "salchipapas",
+      "latitud": -8.1252568,
+      "longitud": -79.017526,
+      "direccion": "Ubicación demo junto a Avenida Gonzales Prada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍟 Salchipapa doble + refresco",
+        "en": "🍟 Double salchipapa + soda"
+      },
+      "promoDetalle": {
+        "es": "Salchipapa doble con huevo, cremas de la casa y refresco de medio litro. La clásica parada de salida.",
+        "en": "Double salchipapa with fried egg, house sauces and a half-liter soda. The classic after-class stop."
+      },
+      "cupon": {
+        "codigo": "DEMO-085",
+        "detalle": {
+          "es": "Salchipapa doble con refresco a S/ 9",
+          "en": "Double salchipapa with soda for S/ 9"
+        },
+        "condiciones": {
+          "es": "Todos los días desde las 17:00.",
+          "en": "Every day from 5 pm."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 16:00-23:30",
+        "en": "Mon-Sun 16:00-23:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.3
+    },
+    {
+      "id": "demo-ciudad-086",
+      "nombre": "Panaderia del barrio 86",
+      "categoria": "panaderia",
+      "latitud": -8.1162963,
+      "longitud": -79.0264238,
+      "direccion": "Ubicación demo junto a Avenida España",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥐 Pan + queso + café S/ 5",
+        "en": "🥐 Bread + cheese + coffee S/ 5"
+      },
+      "promoDetalle": {
+        "es": "Desayuno recién horneado: pan francés de la primera hornada, queso fresco y café bien cargado.",
+        "en": "Freshly baked breakfast: French bread from the first batch, fresh cheese and a strong coffee."
+      },
+      "cupon": {
+        "codigo": "DEMO-086",
+        "detalle": {
+          "es": "Combo desayuno a S/ 5",
+          "en": "Breakfast combo for S/ 5"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 06:30 a 09:30, solo primera hornada.",
+          "en": "Mon-Sat 06:30-09:30, first batch only."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 06:00-21:00 · Dom 06:30-13:00",
+        "en": "Mon-Sat 06:00-21:00 · Sun 06:30-13:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.8
+    },
+    {
+      "id": "demo-ciudad-087",
+      "nombre": "Heladeria del barrio 87",
+      "categoria": "heladeria",
+      "latitud": -8.0919508,
+      "longitud": -78.9957767,
+      "direccion": "Ubicación demo junto a Avenida Libertad y Calle Hualcan",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍦 2 helados x 1",
+        "en": "🍦 2 ice creams for 1"
+      },
+      "promoDetalle": {
+        "es": "Coprera artesanal de leche y frutas de temporada. Llévate dos copas de dos bolas y paga una.",
+        "en": "Artisanal sundae with milk and seasonal fruit. Take two two-scoop cups and pay for one."
+      },
+      "cupon": {
+        "codigo": "DEMO-087",
+        "detalle": {
+          "es": "2x1 en copas de dos bolas",
+          "en": "2x1 on two-scoop sundaes"
+        },
+        "condiciones": {
+          "es": "Todos los días. Sabores de temporada incluidos.",
+          "en": "Every day. Seasonal flavors included."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 12:00-22:00",
+        "en": "Mon-Sun 12:00-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-088",
+      "nombre": "Jugueria del barrio 88",
+      "categoria": "jugueria",
+      "latitud": -8.1306489,
+      "longitud": -79.0328446,
+      "direccion": "Ubicación demo junto a Avenida Prolongación César Vallejo",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥤 Jugo + emoliente 2x1",
+        "en": "🥤 Juice + emoliente 2x1"
+      },
+      "promoDetalle": {
+        "es": "Jugo surtido de la estación o emoliente bien herbal, en vaso grande. Ideal para aguantar la tarde de clases.",
+        "en": "Seasonal mixed fruit juice or a big glass of emoliente herbal tea. Perfect to power through afternoon classes."
+      },
+      "cupon": {
+        "codigo": "DEMO-088",
+        "detalle": {
+          "es": "2x1 en jugos y emolientes",
+          "en": "2x1 on juices and emolientes"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 07:00 a 13:00.",
+          "en": "Mon-Sat 07:00-13:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 06:30-20:00",
+        "en": "Mon-Sat 06:30-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-089",
+      "nombre": "Pizza del barrio 89",
+      "categoria": "pizza",
+      "latitud": -8.1065192,
+      "longitud": -79.0406455,
+      "direccion": "Ubicación demo junto a Calle Pedro Muñiz",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍕 Porción + gaseosa S/ 6",
+        "en": "🍕 Slice + soda S/ 6"
+      },
+      "promoDetalle": {
+        "es": "Porción generosa de pizza recién salida del horno de piedra + gaseosa personal. Recarga de energía entre clases.",
+        "en": "Generous slice of stone-oven pizza fresh out + personal soda. An energy recharge between classes."
+      },
+      "cupon": {
+        "codigo": "DEMO-089",
+        "detalle": {
+          "es": "Porción + gaseosa a S/ 6",
+          "en": "Slice + soda for S/ 6"
+        },
+        "condiciones": {
+          "es": "Válido en sabores del día.",
+          "en": "Valid on daily flavors."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:00-23:00",
+        "en": "Mon-Sun 11:00-23:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-090",
+      "nombre": "Burger del barrio 90",
+      "categoria": "burger",
+      "latitud": -8.0242143,
+      "longitud": -79.0692619,
+      "direccion": "Ubicación demo junto a Avenida Victor Raul Haya de la Torre",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍔 Combo burger 2x1",
+        "en": "🍔 Burger combo 2x1"
+      },
+      "promoDetalle": {
+        "es": "Combo completo: burger a la plancha con tocino, papas y refresco. De a dos, pagando uno.",
+        "en": "Full combo: griddled burger with bacon, fries and soda. For two, paying for one."
+      },
+      "cupon": {
+        "codigo": "DEMO-090",
+        "detalle": {
+          "es": "2x1 en combos burger",
+          "en": "2x1 on burger combos"
+        },
+        "condiciones": {
+          "es": "Mar y Jue desde las 18:00. Mostrando el cupón en la app.",
+          "en": "Tue and Thu from 6 pm. Showing the in-app coupon."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 17:00-00:00",
+        "en": "Mon-Sun 17:00-00:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-091",
+      "nombre": "Cevicheria del barrio 91",
+      "categoria": "cevicheria",
+      "latitud": -8.0893672,
+      "longitud": -79.119266,
+      "direccion": "Ubicación demo junto a Avenida la Rivera",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🐟 Ceviche chico -20%",
+        "en": "🐟 Small ceviche -20%"
+      },
+      "promoDetalle": {
+        "es": "Ceviche de lenguado del día en tamaño chico, con camote y choclo. Pescado fresco de la caleta de Huanchaco.",
+        "en": "Sea bass ceviche of the day, small size, with sweet potato and corn. Fresh fish from the Huanchaco cove."
+      },
+      "cupon": {
+        "codigo": "DEMO-091",
+        "detalle": {
+          "es": "20% de descuento en ceviche chico",
+          "en": "20% off small ceviche"
+        },
+        "condiciones": {
+          "es": "Lun a Vie de 11:00 a 15:00, sujeto a disponibilidad del día.",
+          "en": "Mon-Fri 11:00-15:00, subject to daily availability."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 10:00-17:00",
+        "en": "Mon-Sat 10:00-17:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.8
+    },
+    {
+      "id": "demo-ciudad-092",
+      "nombre": "Empanadas del barrio 92",
+      "categoria": "empanadas",
+      "latitud": -8.0613266,
+      "longitud": -78.9872718,
+      "direccion": "Ubicación demo junto a Calle Tupac Amaru",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥟 3 empanadas S/ 5",
+        "en": "🥟 3 empanadas S/ 5"
+      },
+      "promoDetalle": {
+        "es": "Empanadas recién horneadas de lomo saltado, pollo y ají de gallina. La docena familia a precio de alumno.",
+        "en": "Freshly baked empanadas filled with lomo saltado, chicken and aji de gallina. Family dozen at a student price."
+      },
+      "cupon": {
+        "codigo": "DEMO-092",
+        "detalle": {
+          "es": "3 empanadas a S/ 5",
+          "en": "3 empanadas for S/ 5"
+        },
+        "condiciones": {
+          "es": "Todos los días, sabores a elección.",
+          "en": "Every day, flavors of your choice."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 09:00-20:00",
+        "en": "Mon-Sat 09:00-20:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.7
+    },
+    {
+      "id": "demo-ciudad-093",
+      "nombre": "Heladeria del barrio 93",
+      "categoria": "heladeria",
+      "latitud": -8.0923295,
+      "longitud": -79.1053494,
+      "direccion": "Ubicación demo junto a Avenida la Rivera",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍦 2 copas artesanales x 1",
+        "en": "🍦 2 artisan sundaes for 1"
+      },
+      "promoDetalle": {
+        "es": "Helados artesanales de lúcuma, guanábana y chocolate porteño, frente a la Plaza de Armas. En pareja: dos copas de dos bolas, una sola cuenta.",
+        "en": "Artisanal ice cream with lucuma, guanabana and chocolate, right across from the Plaza de Armas. For two: two two-scoop cups, one bill."
+      },
+      "cupon": {
+        "codigo": "DEMO-093",
+        "detalle": {
+          "es": "2x1 en copas de dos bolas",
+          "en": "2x1 on two-scoop sundaes"
+        },
+        "condiciones": {
+          "es": "Todos los días desde las 19:00. Frente a la Plaza de Armas.",
+          "en": "Every day from 7 pm. Across from the Plaza de Armas."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 12:00-23:00",
+        "en": "Mon-Sun 12:00-23:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-094",
+      "nombre": "Chifa del barrio 94",
+      "categoria": "chifa",
+      "latitud": -8.0654779,
+      "longitud": -79.0772407,
+      "direccion": "Ubicación demo junto a Cajabamba",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🥡 Aeropuerto chifa -15%",
+        "en": "🥡 Aeropuerto chifa -15%"
+      },
+      "promoDetalle": {
+        "es": "Aeropuerto de pollo o kam lu wantan en porción completa con 15% de descuento. El chifa de la familia esperancina.",
+        "en": "Chicken aeropuerto (mixed rice and noodles) or kam lu wantan at full portion with 15% off. The family chifa of La Esperanza."
+      },
+      "cupon": {
+        "codigo": "DEMO-094",
+        "detalle": {
+          "es": "15% de descuento en platos de la carta",
+          "en": "15% off menu dishes"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 12:00 a 21:00. Delivery al WhatsApp del local.",
+          "en": "Mon-Sat 12:00-21:00. Delivery via the restaurant's WhatsApp."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:00-22:00",
+        "en": "Mon-Sun 11:00-22:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
+    },
+    {
+      "id": "demo-ciudad-095",
+      "nombre": "Cevicheria del barrio 95",
+      "categoria": "cevicheria",
+      "latitud": -8.0493549,
+      "longitud": -79.0006945,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🐟 Ceviche + jalea -15%",
+        "en": "🐟 Ceviche + jalea -15%"
+      },
+      "promoDetalle": {
+        "es": "Ceviche de pescado del día más jalea crocante, a dos cuadras del malecón de Buenos Aires.",
+        "en": "Fish-of-the-day ceviche plus crispy jalea mix, two blocks from the Buenos Aires boardwalk."
+      },
+      "cupon": {
+        "codigo": "DEMO-095",
+        "detalle": {
+          "es": "15% en combo ceviche + jalea",
+          "en": "15% on ceviche + jalea combo"
+        },
+        "condiciones": {
+          "es": "Mar a Dom de 11:00 a 16:00, según desembarque del día.",
+          "en": "Tue-Sun 11:00-16:00, depending on the day's catch."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 10:00-17:00",
+        "en": "Tue-Sun 10:00-17:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.7
+    },
+    {
+      "id": "demo-ciudad-096",
+      "nombre": "Cafeteria del barrio 96",
+      "categoria": "cafeteria",
+      "latitud": -8.0747296,
+      "longitud": -79.0178359,
+      "direccion": "Ubicación demo junto a Calle Sinchi Roca",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "☕ Desayuno con vista S/ 10",
+        "en": "☕ Breakfast with a view S/ 10"
+      },
+      "promoDetalle": {
+        "es": "Desayuno frente a los caballitos de totora: café de especialidad, pan con palta y jugo de frutas de la estación.",
+        "en": "Breakfast facing the totora reed boats: specialty coffee, avocado toast and seasonal fruit juice."
+      },
+      "cupon": {
+        "codigo": "DEMO-096",
+        "detalle": {
+          "es": "Desayuno completo a S/ 10",
+          "en": "Full breakfast for S/ 10"
+        },
+        "condiciones": {
+          "es": "Todos los días de 07:00 a 11:00 con vista al mar.",
+          "en": "Every day 07:00-11:00 with an ocean view."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 07:00-21:00",
+        "en": "Mon-Sun 07:00-21:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.8
+    },
+    {
+      "id": "demo-ciudad-097",
+      "nombre": "Polleria del barrio 97",
+      "categoria": "polleria",
+      "latitud": -8.1459278,
+      "longitud": -79.0123569,
+      "direccion": "Ubicación demo junto a Panamericana Norte",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍗 1/8 pollo + gaseosa S/ 22",
+        "en": "🍗 1/8 chicken + soda S/ 22"
+      },
+      "promoDetalle": {
+        "es": "Octavo de pollo a la brasa con papas, ensalada y gaseosa de un litro y medio para compartir en familia.",
+        "en": "Eighth of rotisserie chicken with fries, salad and a one-and-a-half-liter soda to share as a family."
+      },
+      "cupon": {
+        "codigo": "DEMO-097",
+        "detalle": {
+          "es": "1/8 pollo + papas + gaseosa a S/ 22",
+          "en": "1/8 chicken + fries + soda for S/ 22"
+        },
+        "condiciones": {
+          "es": "Jue a Dom desde las 12:00. También delivery.",
+          "en": "Thu-Sun from 12:00. Delivery available."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Dom 11:30-22:30",
+        "en": "Mon-Sun 11:30-22:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.4
+    },
+    {
+      "id": "demo-ciudad-098",
+      "nombre": "Menu del barrio 98",
+      "categoria": "menu",
+      "latitud": -8.1150009,
+      "longitud": -79.0100426,
+      "direccion": "Ubicación demo junto a Carlos Wiesse",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍲 Menú del día S/ 9",
+        "en": "🍲 Daily menu S/ 9"
+      },
+      "promoDetalle": {
+        "es": "Menú casero de tres tiempos con caldo verde de entrada y segundo a elección. La sazón de las mamás de Florencia.",
+        "en": "Homestyle three-course menu with green soup starter and a main of your choice. The flavor of Florencia's home cooking."
+      },
+      "cupon": {
+        "codigo": "DEMO-098",
+        "detalle": {
+          "es": "Menú de 3 tiempos a S/ 9",
+          "en": "3-course set menu for S/ 9"
+        },
+        "condiciones": {
+          "es": "Lun a Sáb de 11:30 a 15:00.",
+          "en": "Mon-Sat 11:30-15:00."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Lun-Sáb 08:00-16:00",
+        "en": "Mon-Sat 08:00-16:00"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.6
+    },
+    {
+      "id": "demo-ciudad-099",
+      "nombre": "Burger del barrio 99",
+      "categoria": "burger",
+      "latitud": -8.0572973,
+      "longitud": -79.0538078,
+      "direccion": "Ubicación demo junto a Avenida 4 y Avenida José Gabriel Condorcanqui",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍔 Combo familiar -20%",
+        "en": "🍔 Family combo -20%"
+      },
+      "promoDetalle": {
+        "es": "Combo familiar: cuatro burgers a la plancha con papas y jarra de maracuyá. El punto de reunión de La Rinconada Alta.",
+        "en": "Family combo: four griddled burgers with fries and a jug of passion fruit juice. La Rinconada Alta's meeting point."
+      },
+      "cupon": {
+        "codigo": "DEMO-099",
+        "detalle": {
+          "es": "20% en combo familiar",
+          "en": "20% off family combo"
+        },
+        "condiciones": {
+          "es": "Vie a Dom desde las 18:00. Mostrando el cupón.",
+          "en": "Fri-Sun from 6 pm. Showing the coupon."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 17:00-23:30",
+        "en": "Tue-Sun 17:00-23:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.3
+    },
+    {
+      "id": "demo-ciudad-100",
+      "nombre": "Pizza del barrio 100",
+      "categoria": "pizza",
+      "latitud": -8.0587825,
+      "longitud": -79.0104336,
+      "direccion": "Ubicación demo junto a innominada",
+      "distrito": "Trujillo metropolitano",
+      "promoCorta": {
+        "es": "🍕 2 pizzas medianas x 1",
+        "en": "🍕 2 medium pizzas for 1"
+      },
+      "promoDetalle": {
+        "es": "Pizzas al horno de leña de masa madre. De a dos: una para cada uno, pagando una sola. La de la casa lleva lomo saltado.",
+        "en": "Wood-fired sourdough pizzas. For two: one each, paying for one. The house special comes with lomo saltado."
+      },
+      "cupon": {
+        "codigo": "DEMO-100",
+        "detalle": {
+          "es": "2x1 en pizzas medianas",
+          "en": "2x1 on medium pizzas"
+        },
+        "condiciones": {
+          "es": "Lun a Mié desde las 18:00. Sabores de la carta.",
+          "en": "Mon-Wed from 6 pm. Menu flavors."
+        },
+        "vence": "2026-12-31"
+      },
+      "horario": {
+        "es": "Mar-Dom 17:30-23:30",
+        "en": "Tue-Sun 17:30-23:30"
+      },
+      "telefono": null,
+      "patrocinado": true,
+      "calificacion": 4.5
     }
   ]
 }

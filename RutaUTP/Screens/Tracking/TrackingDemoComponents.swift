@@ -101,11 +101,11 @@ struct BotonFlotanteMapa: View {
 
                 Image(systemName: icono)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(destacado ? Color(hex: "#0a0a0a") : .white)
+                    .foregroundStyle(destacado ? Color.black : Color.onSurface)
                     .frame(width: 46, height: 46)
                     .background(Circle().fill(destacado ? Color(hex: "#8affc1")
-                                                        : Color(hex: "#141414").opacity(0.92)))
-                    .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                                                        : Color.surfaceContainerLowest.opacity(0.92)))
+                    .overlay(Circle().stroke(Color.onSurface.opacity(0.12), lineWidth: 1))
                     .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 2)
             }
         }
@@ -155,16 +155,16 @@ struct VehiclePopupCard: View {
                 HStack(spacing: 6) {
                     Text(L.t("Unidad \(vehiculo.id)", "Unit \(vehiculo.id)"))
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.onSurface)
                         .lineLimit(1)
                     Text(enVivo ? L.t("EN VIVO", "LIVE") : "DEMO")
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(enVivo ? .black : .white)
+                        .foregroundStyle(enVivo ? .black : Color.onSurface)
                         .appTracking(AppTracking.wideLabel)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(enVivo ? Color(hex: "#8affc1")
-                                                           : Color.white.opacity(0.14)))
+                                                           : Color.onSurface.opacity(0.14)))
                 }
 
                 HStack(spacing: 10) {
@@ -180,14 +180,14 @@ struct VehiclePopupCard: View {
                     }
                 }
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(Color.onSurface.opacity(0.7))
                 .lineLimit(1)
 
                 (Text(L.t("Actualizado ", "Updated "))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(Color.onSurface.opacity(0.45))
                  + Text(Date(timeIntervalSince1970: vehiculo.timestamp), style: .relative)
                     .bold()
-                    .foregroundStyle(.white.opacity(0.7)))
+                    .foregroundStyle(Color.onSurface.opacity(0.7)))
                     .font(.system(size: 10))
             }
 
@@ -196,7 +196,7 @@ struct VehiclePopupCard: View {
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(Color.onSurface.opacity(0.5))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Cerrar", "Close"))
@@ -204,12 +204,12 @@ struct VehiclePopupCard: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(hex: "#141414").opacity(0.96))
+                .fill(Color.surfaceContainerLowest.opacity(0.96))
                 .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 4)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(Color.onSurface.opacity(0.1), lineWidth: 1)
         )
     }
 
@@ -245,15 +245,15 @@ struct ResumenLlegadaCard: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 50))
-                .foregroundStyle(Color(hex: "#8affc1"))
+                .foregroundStyle(Color(light: "#087C55", dark: "#8affc1"))
 
             VStack(spacing: 4) {
                 Text(L.t("¡Llegaste a tu destino!", "You arrived!"))
                     .font(.system(size: 20, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.onSurface)
                 Text(destino)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color(hex: "#8affc1"))
+                    .foregroundStyle(Color(light: "#087C55", dark: "#8affc1"))
             }
 
             HStack(spacing: 8) {
@@ -284,12 +284,12 @@ struct ResumenLlegadaCard: View {
         .frame(maxWidth: 320)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(hex: "#141414"))
+                .fill(Color.surfaceContainerLowest)
                 .shadow(color: .black.opacity(0.5), radius: 24)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(Color.onSurface.opacity(0.1), lineWidth: 1)
         )
     }
 
@@ -297,18 +297,18 @@ struct ResumenLlegadaCard: View {
         VStack(spacing: 4) {
             Image(systemName: icono)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Color.onSurface.opacity(0.5))
             Text(valor)
                 .font(.system(size: 15, weight: .heavy))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.onSurface)
             Text(etiqueta.uppercased())
                 .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Color.onSurface.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.06)))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.onSurface.opacity(0.06)))
     }
 
     /// "12:45" o "1h 05m".
@@ -323,7 +323,7 @@ struct ResumenLlegadaCard: View {
 
 #Preview("Marcador + botones") {
     ZStack {
-        Color(hex: "#0a0a0a").ignoresSafeArea()
+        Color.appBackground.ignoresSafeArea()
         VStack(spacing: 28) {
             UserNavMarker(heading: 45)
             HStack(spacing: 16) {
@@ -337,7 +337,7 @@ struct ResumenLlegadaCard: View {
 
 #Preview("Popup vehículo") {
     ZStack {
-        Color(hex: "#0a0a0a").ignoresSafeArea()
+        Color.appBackground.ignoresSafeArea()
         VehiclePopupCard(
             vehiculo: VehiclePosition(id: "SIM-3", linea: "B",
                                       lat: -8.11, lon: -79.03, heading: 130, speed: -1),
@@ -352,11 +352,35 @@ struct ResumenLlegadaCard: View {
 
 #Preview("Resumen llegada") {
     ZStack {
-        Color(hex: "#0a0a0a").ignoresSafeArea()
+        Color.appBackground.ignoresSafeArea()
         ResumenLlegadaCard(
             resumen: .init(duracionS: 1140, distanciaM: 3200, puntos: 87, velocidadKmh: 10.1),
             destino: "UTP",
             onCerrar: {}
         )
+    }
+}
+
+
+struct TransitStopMarker: View {
+    let number: String
+    let title: String
+    let color: Color
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 5) {
+                Image(systemName: "bus.fill")
+                Text(number.isEmpty ? title : number + " · " + title)
+            }
+            .font(.system(size: 10, weight: .heavy))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10).padding(.vertical, 8)
+            .background(Capsule().fill(color))
+            .overlay(Capsule().stroke(Color.appSurface, lineWidth: 2))
+            Rectangle().fill(color).frame(width: 3, height: 10)
+            Circle().fill(color).frame(width: 7, height: 7)
+        }
+        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+        .accessibilityLabel(title)
     }
 }

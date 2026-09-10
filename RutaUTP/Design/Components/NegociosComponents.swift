@@ -58,41 +58,46 @@ struct NegocioBubbleMarker: View {
     let negocio: Negocio
     var seleccionado: Bool = false
 
-    private let radio: CGFloat = 13
-    private let alturaCola: CGFloat = 22
-
-    /// Alto del globo dibujado (círculo + cola + margen del borde).
-    private var altoGlobo: CGFloat { radio + alturaCola + 3 }
-
-    /// Corrimiento vertical para que la PUNTA de la cola caiga en el centro
-    /// del frame: el Annotation centra su contenido sobre la coordenada, y
-    /// sin esto el pin apuntaba varios puntos más abajo del local.
-    private var desplazamientoPunta: CGFloat {
-        22 - ((44 - altoGlobo) / 2 + radio + 1 + alturaCola)
-    }
-
     var body: some View {
-        BurbujaGloboShape(radio: radio, alturaCola: alturaCola)
-            .fill(negocio.categoria.color)
-            .frame(width: radio * 2 + 2, height: altoGlobo)
-            .overlay(
-                BurbujaGloboShape(radio: radio, alturaCola: alturaCola)
-                    .stroke(Color.white, lineWidth: 2)
-            )
-            .overlay(
-                Image(systemName: negocio.categoria.icono)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
-                    .position(x: (radio * 2 + 2) / 2, y: radio + 1)
-            )
-            .shadow(color: .black.opacity(0.30), radius: 3, x: 0, y: 2)
-            .offset(y: desplazamientoPunta)
-            // Área de toque de 44pt (HIG): con el globo pelado, los taps
-            // cerca del borde no siempre caían dentro del gesto.
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
-            .scaleEffect(seleccionado ? 1.18 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: seleccionado)
+        VStack(spacing: 0) {
+            ZStack(alignment: .bottomTrailing) {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(LinearGradient(colors: [negocio.categoria.color.opacity(0.85), negocio.categoria.color],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 44, height: 44)
+                    .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.appSurface, lineWidth: 3))
+                Text(negocio.categoria.emoji)
+                    .font(.system(size: 25))
+                    .frame(width: 44, height: 44)
+                if negocio.cupon?.vigente == true {
+                    Image(systemName: "ticket.fill")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(Color.appPrimary)
+                        .padding(4)
+                        .background(Circle().fill(Color.appSurface))
+                        .offset(x: 3, y: 3)
+                }
+            }
+            if seleccionado {
+                Text(negocio.nombre)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.onSurface).lineLimit(1)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Capsule().fill(Color.surfaceContainerLowest))
+                    .frame(maxWidth: 150)
+            }
+            Image(systemName: "arrowtriangle.down.fill")
+                .font(.system(size: 9)).foregroundStyle(negocio.categoria.color)
+                .offset(y: -1)
+        }
+        .shadow(color: negocio.categoria.color.opacity(0.3), radius: 5, y: 3)
+        .frame(minWidth: 48, minHeight: 54)
+        .contentShape(Rectangle())
+        .scaleEffect(seleccionado ? 1.12 : 1, anchor: .bottom)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: seleccionado)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(negocio.nombre + ", " + negocio.categoria.etiqueta)
+        .accessibilityHint(L.t("Toca para ver la promoción de demostración", "Tap to view the demo offer"))
     }
 }
 
@@ -122,6 +127,8 @@ struct NegocioDetailCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             encabezado
+            Text(L.t("NEGOCIO DEMO · PROMOCIÓN DE EJEMPLO", "DEMO BUSINESS · SAMPLE OFFER"))
+                .font(.system(size: 9, weight: .bold)).foregroundStyle(Color.onSurfaceVariant)
             infoLugar
             promo
             if let cupon = negocio.cupon {
@@ -138,6 +145,10 @@ struct NegocioDetailCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(negocio.categoria.color.opacity(0.45), lineWidth: 1)
         )
+        .onReceive(NotificationCenter.default.publisher(for: NegociosService.cuponesActualizados)
+            .receive(on: RunLoop.main)) { _ in
+                cuponGuardado = NegociosService.shared.cuponGuardado(negocio)
+            }
     }
 
     // MARK: Encabezado (icono, nombre, rating, cerrar)

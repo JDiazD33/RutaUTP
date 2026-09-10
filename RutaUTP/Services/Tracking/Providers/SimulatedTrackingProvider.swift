@@ -1,149 +1,138 @@
-//
-//  SimulatedTrackingProvider.swift
-//  RutaUTP
-//
-//  Implementación de VehicleTrackingProviding que genera posiciones de
-//  vehículos de forma LOCAL usando un Timer. Reemplaza conceptualmente
-//  a la lógica que antes vivía dentro de MapaViewModel.spawnBuses/iniciarAnimacion.
-//
-//  - NO usa red ni CLLocationManager.
-//  - Genera 6 vehículos en círculo alrededor de un "centro" configurable,
-//    los mueve con velocidad y rumbo aleatorios igual que el código original.
-//  - Permite reutilizar MapaViewModel sin borrar su Timer interno todavía
-//    (ver regla #3 del plan: fallback en paralelo).
-//
-
 import Foundation
-import Combine
+import CoreLocation
 
-final class SimulatedTrackingProvider: NSObject, VehicleTrackingProviding {
-
+/// Flota demo sobre los vértices originales del GTFS, en el sentido publicado.
+final class SimulatedTrackingProvider: VehicleTrackingProviding {
     let source: VehicleTrackingSource = .simulated
-
-    /// Centro de la simulación (UTP Trujillo por defecto).
-    private(set) var centerLat: Double
-    private(set) var centerLon: Double
-    private let vehicleCount: Int
-    private let tickInterval: TimeInterval  // segundos
-
-    private var vehicles: [VehiclePosition] = []
-    private var tickTimer: Timer?
+    private(set) var currentPositions: [VehiclePosition] = []
     private var continuation: AsyncStream<[VehiclePosition]>.Continuation?
     private var stream: AsyncStream<[VehiclePosition]>?
+    private var timer: Timer?
+    private var loading: Task<Void, Never>?
+    private var generation = UUID()
+    private var previousTick: Date?
+    private var center = GTFSRepository.coordenadaUTP
+    private var routes: [RutaGTFS] = []
+    private var preferredRouteID: String?
 
-    /// Estado interno mutable (rumbo/velocidad por vehículo).
-    private struct Dynamics {
-        var heading: Double   // grados
-        var speed: Double      // grados-lat/lon por tick (escala approximate del código original)
+    private struct Motion {
+        let route: RutaGTFS
+        let cumulative: [Double]
+        let speed: Double
+        var distance: Double
+        var segment: Int = 0
     }
-    private var dynamics: [String: Dynamics] = [:]
-
-    init(centerLat: Double = -8.1116,
-         centerLon: Double = -79.0287,
-         vehicleCount: Int = 6,
-         tickInterval: TimeInterval = 0.05) {
-        self.centerLat = centerLat
-        self.centerLon = centerLon
-        self.vehicleCount = vehicleCount
-        self.tickInterval = tickInterval
-        super.init()
-        spawnVehicles()
-    }
-
-    // MARK: - VehicleTrackingProviding
+    private var fleet: [Motion] = []
 
     func start() {
-        guard tickTimer == nil else { return }
-        // (Re)crear stream para que un nuevo consumidor reciba datos frescos.
-        var localContinuation: AsyncStream<[VehiclePosition]>.Continuation?
-        stream = AsyncStream { continuation in
-            localContinuation = continuation
-            // Entrega snapshot inmediato.
-            continuation.yield(self.vehicles)
-        }
-        self.continuation = localContinuation
-
-        tickTimer = Timer.scheduledTimer(withTimeInterval: tickInterval, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            self.tick()
+        guard timer == nil, loading == nil else { return }
+        let token = UUID()
+        generation = token
+        loading = Task { @MainActor [weak self] in
+            let feed = await GTFSRepository.shared.rutas()
+            guard let self, !Task.isCancelled, self.generation == token else { return }
+            self.routes = feed.filter { $0.shape.count >= 2 }
+            self.rebuild()
+            self.previousTick = Date()
+            self.timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+                self?.tick()
+            }
+            self.loading = nil
         }
     }
 
     func stop() {
-        tickTimer?.invalidate()
-        tickTimer = nil
+        generation = UUID()
+        loading?.cancel()
+        loading = nil
+        timer?.invalidate()
+        timer = nil
+        previousTick = nil
         continuation?.finish()
         continuation = nil
         stream = nil
     }
 
     func positions() -> AsyncStream<[VehiclePosition]> {
-        if let stream = stream { return stream }
-        // Si aún no se ha llamado a start(), crea un stream vacío pero válido
-        // para que el consumidor pueda colgarse y esperar.
-        let s = AsyncStream<[VehiclePosition]> { continuation in
+        if let stream { return stream }
+        let result = AsyncStream<[VehiclePosition]>(bufferingPolicy: .bufferingNewest(1)) { continuation in
             self.continuation = continuation
-            continuation.yield(self.vehicles)
+            continuation.yield(self.currentPositions)
         }
-        self.stream = s
-        return s
+        stream = result
+        return result
     }
 
-    private(set) var currentPositions: [VehiclePosition] = []
-
-    // MARK: - Public API
-
-    /// Recentra la simulación (ej. cuando el usuario elige un destino distinto).
     func setCenter(lat: Double, lon: Double) {
-        centerLat = lat
-        centerLon = lon
-        spawnVehicles()
+        center = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        rebuild()
     }
 
-    // MARK: - Internos
+    func follow(routeID: String, near coordinate: CLLocationCoordinate2D) {
+        preferredRouteID = routeID
+        center = coordinate
+        rebuild()
+    }
 
-    private func spawnVehicles() {
-        let lineas = ["B", "10", "4", "C", "7", "A"]
-        vehicles.removeAll()
-        dynamics.removeAll()
-        for i in 0..<vehicleCount {
-            let angulo = Double(i) * 60.0
-            let radio = 0.008 + Double.random(in: 0...0.004)
-            let rad = angulo * .pi / 180
-            let id = "SIM-\(i)"                       // id estable para identificarlo en UI
-            let v = VehiclePosition(
-                id: id,
-                linea: lineas[i % lineas.count],
-                lat: centerLat + sin(rad) * radio,
-                lon: centerLon + cos(rad) * radio,
-                heading: angulo,
-                timestamp: Date().timeIntervalSince1970
-            )
-            vehicles.append(v)
-            dynamics[id] = Dynamics(
-                heading: angulo,
-                speed: 0.0001 + Double.random(in: 0...0.00005)
-            )
+    private func rebuild() {
+        let ranked = routes.map { route in
+            (route, PolylineMatching.match(point: center, on: route.shape))
+        }.sorted {
+            if ($0.0.id == preferredRouteID) != ($1.0.id == preferredRouteID) {
+                return $0.0.id == preferredRouteID
+            }
+            return ($0.1?.distanceToRoute ?? .infinity) < ($1.1?.distanceToRoute ?? .infinity)
         }
-        currentPositions = vehicles
-        continuation?.yield(vehicles)
+        fleet = ranked.prefix(12).enumerated().compactMap { index, entry in
+            let route = entry.0
+            var cumulative = [0.0]
+            for i in 1..<route.shape.count {
+                cumulative.append(cumulative[i - 1] + PolylineMatching.distanceMeters(route.shape[i - 1], route.shape[i]))
+            }
+            guard let total = cumulative.last, total > 10 else { return nil }
+            let anchor = (entry.1?.progressFraction ?? 0.5) * total
+            let offset = Double(index % 4 + 1) * 130
+            return Motion(route: route, cumulative: cumulative,
+                          speed: min(12, max(4, total / Double(max(1, route.duracionMin) * 60))),
+                          distance: max(0, anchor - offset))
+        }
+        previousTick = Date()
+        publish()
     }
 
     private func tick() {
-        for i in vehicles.indices {
-            let id = vehicles[i].id
-            guard var d = dynamics[id] else { continue }
-            let rad = d.heading * .pi / 180
-            vehicles[i].lat += sin(rad) * d.speed
-            vehicles[i].lon += cos(rad) * d.speed
-            if Double.random(in: 0...1) < 0.002 {
-                d.heading = Double.random(in: 0...360)
-                dynamics[id] = d
-            }
-            vehicles[i].heading = d.heading
-            vehicles[i].timestamp = Date().timeIntervalSince1970
+        let now = Date()
+        let dt = min(1, max(0, now.timeIntervalSince(previousTick ?? now)))
+        previousTick = now
+        for i in fleet.indices {
+            let end = fleet[i].cumulative.last ?? 0
+            fleet[i].distance = min(end, fleet[i].distance + fleet[i].speed * dt)
         }
-        currentPositions = vehicles
-        continuation?.yield(vehicles)
+        publish()
+    }
+
+    private func publish() {
+        var positions: [VehiclePosition] = []
+        for i in fleet.indices {
+            var motion = fleet[i]
+            let points = motion.route.shape
+            while motion.segment < points.count - 2 && motion.distance > motion.cumulative[motion.segment + 1] {
+                motion.segment += 1
+            }
+            let j = motion.segment
+            let a = points[j], b = points[j + 1]
+            let length = motion.cumulative[j + 1] - motion.cumulative[j]
+            let fraction = length > 0 ? min(1, max(0, (motion.distance - motion.cumulative[j]) / length)) : 0
+            let heading = atan2((b.longitude - a.longitude) * cos(a.latitude * .pi / 180),
+                                b.latitude - a.latitude) * 180 / .pi
+            positions.append(VehiclePosition(id: "SIM-\(motion.route.id)", linea: motion.route.linea,
+                lat: a.latitude + (b.latitude - a.latitude) * fraction,
+                lon: a.longitude + (b.longitude - a.longitude) * fraction,
+                heading: (heading + 360).truncatingRemainder(dividingBy: 360),
+                speed: motion.distance >= (motion.cumulative.last ?? 0) ? 0 : motion.speed))
+            fleet[i] = motion
+        }
+        currentPositions = positions
+        continuation?.yield(positions)
     }
 }

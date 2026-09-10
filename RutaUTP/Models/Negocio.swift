@@ -100,6 +100,23 @@ enum CategoriaNegocio: String, Codable, CaseIterable {
     case cevicheria
     case empanadas
 
+    var emoji: String {
+        switch self {
+        case .polleria: return "🍗"
+        case .menu: return "🍲"
+        case .cafeteria: return "☕️"
+        case .chifa: return "🥡"
+        case .salchipapas: return "🍟"
+        case .panaderia: return "🥐"
+        case .heladeria: return "🍦"
+        case .jugueria: return "🥤"
+        case .pizza: return "🍕"
+        case .burger: return "🍔"
+        case .cevicheria: return "🐟"
+        case .empanadas: return "🥟"
+        }
+    }
+
     var etiqueta: String {
         switch self {
         case .polleria:    return L.t("Pollería", "Grill chicken")

@@ -20,7 +20,8 @@ struct SeguridadView: View {
     /// Likes/dislikes de la sección Comunidad (compartido entre las cards
     /// y el detalle para que el conteo coincida).
     @StateObject private var reacciones = ComunidadReacciones()
-    @State private var paginaZona: Int? = 0            // página del carrusel
+    @State private var buscandoZona = false
+    @State private var errorZona: String?
     @State private var zonaSeleccionada: RutaSegura? = nil  // detalle (alert)
 
     // Paraderos iluminados (reales del feed GTFS) + mapa fullscreen
@@ -51,8 +52,7 @@ struct SeguridadView: View {
     /// Caché para el preview del banner (BannerParaderosPreview).
     static var paraderosCache: [ParaderoGTFS]? = nil
 
-    // Pool de 30 opiniones de la comunidad; se muestran 3 por vez y la
-    // ventana rota cada 5 minutos (10 ventanas antes de repetir).
+    // 18 publicaciones de demostración bilingües, tres por ventana de cuatro minutos.
     private static let reportes: [ReporteComunidad] = {
         let nombres: [(String, String)] = [
             ("Jorge D.", "JD"), ("Maria A.", "MA"), ("Rosa C.", "RC"),
@@ -86,6 +86,26 @@ struct SeguridadView: View {
             ("Av. Larco de Huanchaco congestionada al mediodía por turistas.", .trafico),
             ("Los paraderos nuevos de Av. España tienen techo y cámaras, bien ahí.", .otro)
         ]
+        let englishPosts = [
+            "Buses are full on Av. Larco. Three passed without stopping on the way to UTP.",
+            "Roadworks are causing delays at Óvalo Papal. Allow an extra 10 minutes.",
+            "Taking Av. Miraflores at 7:30 AM avoids traffic on España.",
+            "The C-01 driver was very kind and waited for an older woman running to the stop.",
+            "Watch out for pickpockets at the Mercado Mayorista stop during rush hour.",
+            "Av. América Sur is gridlocked after 6 PM. Mansiche may be a better option.",
+            "The C-07 is quiet on Saturday mornings; seats are usually available.",
+            "The stop across from UTP has had no lighting since Monday. I reported it to 105.",
+            "A parade is slowing traffic on Av. César Vallejo. Try La Ribera.",
+            "Tip: getting off one block before UTP on Piérola avoids about 5 minutes of traffic.",
+            "A mototaxi ran a red light at España and Mansiche. Luckily it stopped in time.",
+            "Huanchaco's waterfront is busy on Sundays. Leave early.",
+            "The 6:20 AM bus reaches the Urb. El Recreo stop nearly empty.",
+            "A combi crashed near Óvalo Faustino Sánchez. Traffic has been blocked for 40 minutes.",
+            "The M-05 takes unusual detours to avoid traffic, but arrives quickly.",
+            "The C-01 fare is S/ 2.50. Some drivers try to charge more at night.",
+            "Av. Larco in Huanchaco gets congested around noon because of visitors.",
+            "The new stops on Av. España have roofs and cameras. Great improvement."
+        ]
         let tiempos = ["HACE 3 MIN", "HACE 8 MIN", "HACE 12 MIN", "HACE 20 MIN",
                        "HACE 35 MIN", "HACE 1 HORA", "HACE 2 HORAS"]
         let avatares: [(Color, Color)] = [
@@ -100,9 +120,10 @@ struct SeguridadView: View {
             return ReporteComunidad(
                 iniciales: persona.1,
                 nombre: persona.0,
-                hace: tiempos[(i * 7 + 3) % tiempos.count],
+                hace: tiempos[(i * 3 + 1) % tiempos.count],
                 tipo: par.1,
                 cuerpo: par.0,
+                cuerpoIngles: englishPosts[i],
                 utiles: 6 + (i * 13) % 78,
                 dislikes: 1 + (i * 7) % 9,
                 comentarios: (i * 5) % 11,
@@ -257,25 +278,43 @@ struct SeguridadView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert(L.t("Llamar al 105", "Call 911"), isPresented: $showLlamarAlert) {
-            Button("Llamar") {
+        .alert(L.t("Llamar al 105", "Call 105"), isPresented: $showLlamarAlert) {
+            Button(L.t("Llamar", "Call")) {
                 if let url = URL(string: "tel://105") {
                     UIApplication.shared.open(url)
                 }
             }
-            Button("Cancelar", role: .cancel) { }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
         } message: {
-            Text("Se abrirá la aplicación de teléfono para llamar a la central de emergencias.")
+            Text(L.t("Se abrirá la aplicación de teléfono para llamar a la central de emergencias.", "The Phone app will open to call emergency services."))
         }
-        .alert(item: $zonaSeleccionada) { zona in
-            Alert(
-                title: Text(zona.titulo),
-                message: Text(zona.descripcion),
-                primaryButton: .default(Text("Ver en mapa")) {
-                    router.navigate(to: .mapaPrincipal)
-                },
-                secondaryButton: .cancel(Text("Cerrar"))
-            )
+        .sheet(item: $zonaSeleccionada) { zona in
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    Image(systemName: zona.icono).font(.system(size: 28)).foregroundStyle(Color.secondary)
+                    Spacer()
+                    Button(L.t("Cerrar", "Close")) { zonaSeleccionada = nil }
+                }
+                Text(zona.titulo).font(.system(size: 24, weight: .bold, design: .rounded))
+                Text(zona.descripcion).font(.bodyMd).foregroundStyle(Color.onSurfaceVariant)
+                Label(L.t("Referencia de demostración · verifica las condiciones del lugar", "Demo reference · check conditions at the location"), systemImage: "info.circle")
+                    .font(.system(size: 12)).foregroundStyle(Color.onSurfaceVariant)
+                if let errorZona { Text(errorZona).foregroundStyle(Color.appError).font(.bodySm) }
+                Button {
+                    buscarZona(zona)
+                } label: {
+                    HStack {
+                        if buscandoZona { ProgressView().tint(.white) }
+                        Label(L.t("Ver ubicación en el mapa", "View location on map"), systemImage: "map.fill")
+                    }
+                    .font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.appPrimary))
+                }.disabled(buscandoZona)
+                Spacer(minLength: 0)
+            }
+            .padding(24).presentationDetents([.medium, .large]).seguirTemaForzado()
+            .onAppear { errorZona = nil }
         }
         // Detalle del lugar (mismo sheet que Guardado: info + acciones reales)
         .sheet(item: $selectedLugar) { lugar in
@@ -338,7 +377,7 @@ struct SeguridadView: View {
                 .background(Capsule().fill(Color.appPrimary))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Reportar incidente")
+            .accessibilityLabel(L.t("Reportar incidente", "Report an incident"))
             .seniable("seguridad.reportar")
         }
         .padding(.horizontal, 20)
@@ -358,7 +397,7 @@ struct SeguridadView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(L.t("Alertas hoy:", "Alerts today:") + " **2**")
                     .font(.bodySmMedium)
-                Text("Paraderos iluminados: **\(paraderosIluminados.count)**")
+                Text(L.t("Paraderos para explorar: \(paraderosIluminados.count)", "Stops to explore: \(paraderosIluminados.count)"))
                     .font(.bodySmMedium)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -366,7 +405,7 @@ struct SeguridadView: View {
                 // Modo Señas: deja ver el videito antes de que la alerta tape el miniplayer.
                 SeniasPresenter.shared.ejecutarTrasVerSenia { showLlamarAlert = true }
             } label: {
-                Text(L.signable("seguridad.emergencia", "Llamar 105", "Call 911"))
+                Text(L.signable("seguridad.emergencia", "Llamar 105", "Call 105"))
                     .font(.bodyXsMedium)
                     .foregroundStyle(.onSurface)
                     .padding(.horizontal, 12)
@@ -374,7 +413,7 @@ struct SeguridadView: View {
                     .background(RoundedRectangle(cornerRadius: 8).fill(Color.surfaceContainerHigh))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Llamar al 105 emergencias")
+            .accessibilityLabel(L.t("Llamar al 105 emergencias", "Call emergency services at 105"))
             .seniable("seguridad.emergencia")
         }
         .padding(12)
@@ -470,9 +509,10 @@ struct SeguridadView: View {
         let noFijos = lugares.filter { !$0.esFijo }
 
         let elegidos: [LugarGuardado]
-        if let seleccion, !seleccion.isEmpty {
+        if let seleccion {
+            guardarTilesSeleccion(seleccion)
             elegidos = noFijos.filter { seleccion.contains($0.id) }
-        } else if let idsGuardados = idsTilesGuardados(), !idsGuardados.isEmpty {
+        } else if let idsGuardados = idsTilesGuardados() {
             let porId = Dictionary(uniqueKeysWithValues: noFijos.map { ($0.id, $0) })
             elegidos = idsGuardados.compactMap { porId[$0] }
         } else {
@@ -570,7 +610,7 @@ struct SeguridadView: View {
                     .buttonStyle(.plain)
                     .offset(x: -7, y: -7)
                     .transition(.scale(scale: 0.3).combined(with: .opacity))
-                    .accessibilityLabel("Eliminar \(lugar.nombre)")
+                    .accessibilityLabel(L.t("Eliminar \(lugar.nombre)", "Remove \(lugar.nombre)"))
                 }
             }
         }
@@ -638,7 +678,7 @@ struct SeguridadView: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.shield.fill")
                     .foregroundStyle(.tertiary)
-                Text(L.signable("seguridad.rutas_seguras", "Rutas Seguras Hoy", "Safe Routes Today"))
+                Text(L.signable("seguridad.rutas_seguras", "Paraderos y referencias", "Stops and landmarks"))
                     .font(.headlineSm)
                     .seniable("seguridad.rutas_seguras", distintivoDx: 10)
             }
@@ -650,66 +690,77 @@ struct SeguridadView: View {
                 BannerParaderosPreview(cantidad: paraderosIluminados.count)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Ver mapa de paraderos iluminados")
+            .accessibilityLabel(L.t("Explorar el mapa de paraderos", "Explore the bus stop map"))
 
-            // Carrusel deslizable: 10 zonas seguras de Trujillo
-            TabView(selection: $paginaZona) {
-                ForEach(rutasSeguras) { ruta in
-                    Button {
-                        zonaSeleccionada = ruta
-                    } label: {
-                        rutaSeguraRow(ruta: ruta)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(rutasSeguras) { ruta in
+                        Button { zonaSeleccionada = ruta } label: { rutaSeguraRow(ruta: ruta) }
+                            .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 2)
-                    .tag(ruta.id)
-                }
+                }.scrollTargetLayout()
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .frame(height: 104)
+            .scrollTargetBehavior(.viewAligned)
+            Text(L.t("Desliza para explorar los puntos de referencia", "Swipe to explore reference locations"))
+                .font(.system(size: 11)).foregroundStyle(Color.onSurfaceVariant)
         }
     }
 
     private func rutaSeguraRow(ruta: RutaSegura) -> some View {
-        HStack(alignment: .top, spacing: 0) {
-            if let accent = ruta.accent {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(accent)
-                    .frame(width: 4)
-            }
-            HStack(alignment: .top, spacing: 12) {
-                ZStack {
-                    Circle().fill(ruta.iconoBg).frame(width: 40, height: 40)
-                    Image(systemName: ruta.icono)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(ruta.iconoFg)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(ruta.titulo)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
-                        .lineLimit(1)
-                    Text(ruta.descripcion)
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .lineLimit(2)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: ruta.icono).font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(ruta.iconoFg).frame(width: 48, height: 48)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(ruta.iconoBg))
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.onSurfaceVariant)
+                Text(String(format: "%02d", ruta.id + 1))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.onSurfaceVariant)
             }
-            .padding(14)
+            Text(ruta.titulo).font(.system(size: 17, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.onSurface).lineLimit(2).multilineTextAlignment(.leading)
+            Text(ruta.descripcion).font(.system(size: 12))
+                .foregroundStyle(Color.onSurfaceVariant).lineLimit(3).multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+            HStack {
+                Text(L.t("Explorar ubicación", "Explore location")).font(.system(size: 12, weight: .bold))
+                Spacer()
+                Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold))
+            }.foregroundStyle(Color.secondary)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.surfaceContainerLowest)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
-                )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(18).frame(width: 270, height: 238, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 22).fill(Color.surfaceContainerLowest))
+        .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.outlineVariant.opacity(0.3), lineWidth: 1))
+    }
+
+    private func buscarZona(_ zona: RutaSegura) {
+        guard !buscandoZona else { return }
+        buscandoZona = true; errorZona = nil
+        let names = ["Óvalo Papal", "Avenida España 1450", "Comisaría Víctor Larco", "Real Plaza",
+                     "Plaza de Armas", "Mall Aventura", "Paseo de los Héroes", "Hospital Belén",
+                     "Estadio Mansiche", "Cineplanet"]
+        Task { @MainActor in
+            defer { buscandoZona = false }
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = names[zona.id] + ", Trujillo, Perú"
+            request.region = MKCoordinateRegion(center: GTFSRepository.coordenadaUTP,
+                span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15))
+            do {
+                let response = try await MKLocalSearch(request: request).start()
+                guard zonaSeleccionada?.id == zona.id else { return }
+                guard let item = response.mapItems.first else {
+                    errorZona = L.t("No encontramos esta ubicación.", "This location was not found.")
+                    return
+                }
+                let coord = item.placemark.coordinate
+                router.destinoPendiente = DestinoPendiente(titulo: item.name ?? zona.titulo, lat: coord.latitude, lon: coord.longitude)
+                zonaSeleccionada = nil
+                router.navigate(to: .mapaPrincipal)
+            } catch {
+                guard zonaSeleccionada?.id == zona.id else { return }
+                errorZona = L.t("No pudimos buscar el lugar. Revisa tu conexión.", "Could not find the location. Check your connection.")
+            }
+        }
     }
 
     // MARK: - Comunidad (18 opiniones, rotan cada 4 minutos)
@@ -723,7 +774,7 @@ struct SeguridadView: View {
                         Text(L.signable("seguridad.comunidad", "Comunidad", "Community"))
                             .font(.headlineSm)
                             .seniable("seguridad.comunidad", distintivoDx: 10)
-                        Text(L.t("18 opiniones que cambian cada 4 min", "18 posts · rotate every 4 min"))
+                        Text(L.t("Opiniones de demostración · cada 4 min", "Demo posts · rotate every 4 min"))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                     }
@@ -738,19 +789,16 @@ struct SeguridadView: View {
                         .appTracking(AppTracking.wideLabel)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Añadir publicación a la comunidad")
+                .accessibilityLabel(L.t("Añadir publicación a la comunidad", "Add a community post"))
             }
 
             // Se re-evalúa cada 4 min → rota la ventana de opiniones.
             TimelineView(.periodic(from: .now, by: 240)) { _ in
                 VStack(spacing: 12) {
                     ForEach(reportesVisibles) { r in
-                        Button {
-                            selectedReporte = r
-                        } label: {
-                            ReporteCard(reporte: r, reacciones: reacciones)
-                        }
-                        .buttonStyle(.plain)
+                        ReporteCard(reporte: r, reacciones: reacciones)
+                        .onTapGesture { selectedReporte = r }
+                        .accessibilityAction(named: Text(L.t("Ver publicación", "View post"))) { selectedReporte = r }
                         .transition(.asymmetric(
                             insertion: .move(edge: .trailing).combined(with: .opacity),
                             removal:   .opacity
@@ -777,8 +825,8 @@ struct SeguridadView: View {
 
     private func fechaActual() -> String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "es_PE")
-        f.dateFormat = "EEEE d 'de' MMMM"
+        f.locale = Locale(identifier: L.esIngles ? "en_US" : "es_PE")
+        f.dateFormat = L.esIngles ? "EEEE, MMMM d" : "EEEE d 'de' MMMM"
         return f.string(from: Date()).capitalized
     }
 }
@@ -829,7 +877,7 @@ private struct ReporteCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 ZStack {
-                    Circle().fill(reporte.avatarColor).frame(width: 32, height: 32)
+                    Circle().fill(reporte.avatarColor).frame(width: 40, height: 40)
                     Text(reporte.iniciales)
                         .font(.labelCapsMd)
                         .foregroundStyle(reporte.avatarForeground)
@@ -838,13 +886,13 @@ private struct ReporteCard: View {
                     Text(reporte.nombre)
                         .font(.bodyMdMedium)
                         .foregroundStyle(.onSurface)
-                    Text(reporte.hace)
+                    Text(reporte.tiempoLocalizado)
                         .font(.labelCapsSm)
                         .foregroundStyle(.onSurfaceVariant)
                         .appTracking(AppTracking.wideLabel)
                 }
                 Spacer()
-                Text(reporte.tipo.rawValue)
+                Text(reporte.tipo.titulo.uppercased())
                     .font(.labelCapsSm)
                     .foregroundStyle(reporte.tipo.foreground)
                     .appTracking(AppTracking.wideLabel)
@@ -853,10 +901,13 @@ private struct ReporteCard: View {
                     .background(RoundedRectangle(cornerRadius: 4).fill(reporte.tipo.background))
             }
 
-            Text(reporte.cuerpo)
-                .font(.bodyMd)
+            Text(reporte.cuerpoLocalizado)
+                .font(.system(size: 15))
+                .lineSpacing(3)
+                .lineLimit(4)
                 .foregroundStyle(.onSurface)
 
+            Divider().overlay(Color.outlineVariant.opacity(0.2))
             HStack(spacing: 8) {
                 votoButton(.util)
                 votoButton(.noUtil)
@@ -874,17 +925,17 @@ private struct ReporteCard: View {
                 .accessibilityLabel(L.t("\(reporte.comentarios) comentarios", "\(reporte.comentarios) comments"))
 
                 Spacer()
-                Image(systemName: "chevron.right")
+                Image(systemName: "arrow.up.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.onSurfaceVariant)
             }
         }
-        .padding(16)
+        .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color.surfaceContainerLowest)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
                 )
         )
@@ -973,13 +1024,13 @@ private struct ReporteDetailSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(reporte.nombre)
                                 .font(.headlineSm)
-                            Text(reporte.hace)
+                            Text(reporte.tiempoLocalizado)
                                 .font(.labelCapsSm)
                                 .foregroundStyle(.onSurfaceVariant)
                                 .appTracking(AppTracking.wideLabel)
                         }
                         Spacer()
-                        Text(reporte.tipo.rawValue)
+                        Text(reporte.tipo.titulo.uppercased())
                             .font(.labelCapsMd)
                             .foregroundStyle(reporte.tipo.foreground)
                             .appTracking(AppTracking.wideLabel)
@@ -988,7 +1039,7 @@ private struct ReporteDetailSheet: View {
                             .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
                     }
 
-                    Text(reporte.cuerpo)
+                    Text(reporte.cuerpoLocalizado)
                         .font(.bodyLg)
                         .foregroundStyle(.onSurface)
 
@@ -1020,7 +1071,7 @@ private struct ReporteDetailSheet: View {
                         .padding(.vertical, 8)
                     } else {
                         VStack(spacing: 10) {
-                            ForEach(comentariosMuestra, id: \.nombre) { c in
+                            ForEach(Array(comentariosMuestra.enumerated()), id: \.offset) { _, c in
                                 HStack(alignment: .top, spacing: 10) {
                                     ZStack {
                                         Circle().fill(Color.surfaceContainerHigh).frame(width: 30, height: 30)
@@ -1115,9 +1166,9 @@ private struct ElegirLugaresSheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Elige los lugares que verás aquí")
+                Text(L.t("Elige los lugares que verás aquí", "Choose which places appear here"))
                     .font(.headlineMd)
-                Text("Tus lugares guardados de la pestaña Guardado. UTP siempre aparece.")
+                Text(L.t("Tus lugares guardados de la pestaña Guardado. UTP siempre aparece.", "Your saved places. UTP always appears."))
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
 
@@ -1126,13 +1177,13 @@ private struct ElegirLugaresSheet: View {
                         Image(systemName: "bookmark.slash")
                             .font(.system(size: 40, weight: .light))
                             .foregroundStyle(.onSurfaceVariant)
-                        Text("Aún no tienes lugares guardados")
+                        Text(L.t("Aún no tienes lugares guardados", "No saved places yet"))
                             .font(.bodyMdMedium)
                             .foregroundStyle(.onSurface)
                         Button {
                             irAGuardado()
                         } label: {
-                            Label("Ir a Guardado", systemImage: "plus.circle.fill")
+                            Label(L.t("Ir a Guardado", "Go to Saved"), systemImage: "plus.circle.fill")
                                 .font(.headlineSm)
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity, minHeight: 48)
@@ -1158,7 +1209,7 @@ private struct ElegirLugaresSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") { dismiss() }
+                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
                 }
             }
             .onAppear { elegidos = seleccion }
@@ -1338,8 +1389,8 @@ private struct BannerParaderosPreview: View {
                     // Calles
                     Path { p in
                         for calle in Self.calles {
-                            p.move(to: calle.from)
-                            p.addLine(to: calle.to)
+                            p.move(to: CGPoint(x: calle.from.x * geo.size.width, y: calle.from.y * geo.size.height))
+                            p.addLine(to: CGPoint(x: calle.to.x * geo.size.width, y: calle.to.y * geo.size.height))
                         }
                     }
                     .stroke(Color.white.opacity(0.16), style: StrokeStyle(lineWidth: 5, lineCap: .round))
@@ -1347,8 +1398,8 @@ private struct BannerParaderosPreview: View {
 
                     Path { p in
                         for calle in Self.calles {
-                            p.move(to: calle.from)
-                            p.addLine(to: calle.to)
+                            p.move(to: CGPoint(x: calle.from.x * geo.size.width, y: calle.from.y * geo.size.height))
+                            p.addLine(to: CGPoint(x: calle.to.x * geo.size.width, y: calle.to.y * geo.size.height))
                         }
                     }
                     .stroke(Color(hex: "#5cc8ff").opacity(0.35), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [3, 5]))
@@ -1377,30 +1428,43 @@ private struct BannerParaderosPreview: View {
                 .clipped()
             }
         }
+        .overlay(alignment: .topLeading) {
+            VStack(alignment: .leading, spacing: 5) {
+                Label(L.t("EXPLORA TU CIUDAD", "EXPLORE YOUR CITY"), systemImage: "map.fill")
+                    .font(.system(size: 10, weight: .bold)).tracking(1.2)
+                    .foregroundStyle(Color(hex: "#8FD8FF"))
+                Text(L.t("Encuentra tu próxima parada", "Find your next stop"))
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white).lineLimit(2)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(LinearGradient(colors: [Color.black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom))
+        }
         .overlay(alignment: .bottom) {
             // Cápsula de info
             HStack(spacing: 6) {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Color(hex: "#8fd8ff"))
-                Text("Paraderos iluminados activos: \(max(cantidad, 24))")
+                Text(L.t("\(cantidad) paraderos por explorar", "\(cantidad) stops to explore"))
                     .font(.bodySm)
                     .foregroundStyle(.white)
                 Spacer()
                 Image(systemName: "map.fill")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.white.opacity(0.9))
-                Text("VER MAPA")
+                Text(L.t("VER MAPA", "OPEN MAP"))
                     .font(.labelCapsSm)
                     .foregroundStyle(.white)
                     .appTracking(AppTracking.wideLabel)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Capsule().fill(.ultraThinMaterial).opacity(0.9))
+            .background(Capsule().fill(Color.black.opacity(0.55)))
             .padding(12)
         }
-        .frame(height: 192)
+        .frame(height: 212)
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
