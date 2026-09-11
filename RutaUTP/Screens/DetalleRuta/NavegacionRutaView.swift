@@ -24,6 +24,7 @@ final class NavegacionRutaViewModel: ObservableObject {
 
     enum Estado: Equatable {
         case esperandoGPS
+        case sinRecorrido
         case sinPermiso
         case enRuta
         case fueraDeRuta(metros: Double)
@@ -39,8 +40,15 @@ final class NavegacionRutaViewModel: ObservableObject {
     @Published private(set) var paraderosRestantes: Int = 0
     @Published private(set) var posicion: CLLocationCoordinate2D?
     @Published private(set) var heading: Double = 0
+    @Published private(set) var paraderoCercano: ParaderoGTFS?
+    @Published private(set) var distanciaParaderoM: Double?
+    @Published private(set) var haEntradoEnRuta = false
     @Published var modoDemo: Bool = false {
-        didSet { modoDemo ? iniciarDemo() : detenerDemo() }
+        didSet {
+            guard modoDemo != oldValue else { return }
+            reiniciarProgreso()
+            if modoDemo { iniciarDemo() } else { detenerDemo(); iniciar() }
+        }
     }
 
     let ruta: RutaOpcion
@@ -70,6 +78,7 @@ final class NavegacionRutaViewModel: ObservableObject {
     /// Proyección de cada paradero sobre el shape (fracción 0...1), una vez.
     private func precomputarParaderos() {
         distanciasAcumuladas = [0]
+        guard shape.count >= 2 else { return }
         for i in 1..<shape.count {
             distanciasAcumuladas.append(
                 distanciasAcumuladas[i - 1] + PolylineMatching.distanceMeters(shape[i - 1], shape[i])
@@ -85,6 +94,11 @@ final class NavegacionRutaViewModel: ObservableObject {
 
     // MARK: - Ciclo de vida
     func iniciar() {
+        locationTask?.cancel()
+        guard shape.count >= 2, distanciaTotalM > 0 else {
+            estado = .sinRecorrido
+            return
+        }
         estado = .esperandoGPS
         locationTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -99,6 +113,8 @@ final class NavegacionRutaViewModel: ObservableObject {
                 for await location in self.locationService.currentLocation() {
                     guard !Task.isCancelled else { break }
                     if self.modoDemo { continue }   // el demo toma el control
+                    guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= 65,
+                          abs(location.timestamp.timeIntervalSinceNow) < 30 else { continue }
                     self.procesar(coordenada: location.coordinate, rumbo: location.course)
                 }
             }
@@ -112,16 +128,30 @@ final class NavegacionRutaViewModel: ObservableObject {
     }
 
     // MARK: - Procesamiento de fixes
-    private func procesar(coordenada: CLLocationCoordinate2D, rumbo: Double) {
+    private func procesar(coordenada: CLLocationCoordinate2D, rumbo: Double, progresoDemo: Double? = nil) {
+        guard estado != .finalizado else { return }
         guard let match = PolylineMatching.match(point: coordenada, on: shape,
                                                  thresholdMeters: 60) else { return }
 
         posicion = coordenada
         heading = rumbo
+        if let cercano = ruta.paraderos.min(by: {
+            PolylineMatching.distanceMeters(coordenada, $0.coordinate) <
+            PolylineMatching.distanceMeters(coordenada, $1.coordinate)
+        }) {
+            paraderoCercano = cercano
+            distanciaParaderoM = PolylineMatching.distanceMeters(coordenada, cercano.coordinate)
+        }
+        // Una proyección lejana no representa avance ni llegada.
+        guard match.isOnRoute else {
+            estado = .fueraDeRuta(metros: match.distanceToRoute)
+            return
+        }
+        haEntradoEnRuta = true
 
         // Anti-jitter: el progreso no retrocede por pequeños saltos de GPS;
         // sí se recalcula si el usuario "re-embarca" mucho más atrás.
-        let nuevo = match.progressFraction
+        let nuevo = progresoDemo ?? match.progressFraction
         if nuevo >= progreso || (progreso - nuevo) > 0.03 {
             progreso = nuevo
         }
@@ -132,17 +162,21 @@ final class NavegacionRutaViewModel: ObservableObject {
             .first { $0.fraccion > progreso + 0.001 }?.paradero
             ?? fraccionesParaderos.last?.paradero
 
-        if progreso >= 0.985 || distanciaRestanteM < 120 {
-            estado = progreso >= 0.985 ? .finalizado : .cercaDestino
-        } else if !match.isOnRoute {
-            estado = .fueraDeRuta(metros: match.distanceToRoute)
+        let distanciaFinal = shape.last.map {
+            PolylineMatching.distanceMeters(coordenada, $0)
+        } ?? .infinity
+        if distanciaRestanteM <= 25 && distanciaFinal <= 35 {
+            estado = .finalizado
+            detenerDemo()
+        } else if distanciaRestanteM < 180 {
+            estado = .cercaDestino
         } else {
             estado = .enRuta
         }
     }
 
     var minutosRestantes: Int {
-        max(0, Int((Double(ruta.duracionMin) * (1 - progreso)).rounded()))
+        estado == .finalizado ? 0 : max(1, Int(ceil(Double(ruta.duracionMin) * (1 - progreso))))
     }
 
     var distanciaRestanteTexto: String {
@@ -151,9 +185,28 @@ final class NavegacionRutaViewModel: ObservableObject {
             : "\(Int(distanciaRestanteM)) m"
     }
 
+    var distanciaProximoParaderoTexto: String? {
+        guard let proximo = fraccionesParaderos.first(where: { $0.fraccion > progreso + 0.001 }) else { return nil }
+        let metros = max(0, (proximo.fraccion - progreso) * distanciaTotalM)
+        return metros >= 1000 ? String(format: "%.1f km", metros / 1000) : "\(Int(metros)) m"
+    }
+
+    private func reiniciarProgreso() {
+        progreso = 0
+        posicion = nil
+        haEntradoEnRuta = false
+        distanciaRestanteM = distanciaTotalM
+        paraderosRestantes = fraccionesParaderos.count
+        paraderoSiguiente = fraccionesParaderos.first?.paradero
+        paraderoCercano = nil
+        distanciaParaderoM = nil
+        estado = shape.count >= 2 ? .esperandoGPS : .sinRecorrido
+    }
+
     // MARK: - Modo demo
     private func iniciarDemo() {
         detenerDemo()
+        guard shape.count >= 2, distanciaTotalM > 0 else { return }
         demoProgreso = 0
         demoTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -163,7 +216,7 @@ final class NavegacionRutaViewModel: ObservableObject {
                 let siguiente = self.coordenadaEnFraccion(min(1.0, self.demoProgreso + 0.002))
                 let rumbo = atan2(siguiente.longitude - coord.longitude,
                                   siguiente.latitude - coord.latitude) * 180 / .pi
-                self.procesar(coordenada: coord, rumbo: rumbo)
+                self.procesar(coordenada: coord, rumbo: rumbo, progresoDemo: self.demoProgreso)
             }
         }
     }
@@ -198,7 +251,8 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
     let paraderos: [ParaderoGTFS]
     let colorLinea: UIColor
     let posicion: CLLocationCoordinate2D?
-    let seguir: Bool
+    @Binding var seguir: Bool
+    let modoDemo: Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator(color: colorLinea)
@@ -208,7 +262,7 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
         let mapView = MKMapView()
         mapView.delegate = context.coordinator
         mapView.pointOfInterestFilter = .excludingAll
-        mapView.showsUserLocation = true
+        mapView.showsUserLocation = !modoDemo
         mapView.userTrackingMode = .none
         mapView.isRotateEnabled = false
 
@@ -233,16 +287,53 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
-        guard seguir, let posicion else { return }
-        let region = MKCoordinateRegion(
-            center: posicion,
-            span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
-        )
+        let coordinator = context.coordinator
+        coordinator.onPan = { seguir = false }
+        mapView.showsUserLocation = !modoDemo
+        if modoDemo, let posicion {
+            if !mapView.annotations.contains(where: { $0 === coordinator.demoPin }) {
+                coordinator.demoPin.title = L.t("Tu posición · demo", "Your position · demo")
+                mapView.addAnnotation(coordinator.demoPin)
+            }
+            coordinator.demoPin.coordinate = posicion
+        } else {
+            mapView.removeAnnotation(coordinator.demoPin)
+        }
+        if !seguir {
+            if coordinator.wasFollowing, let overlay = mapView.overlays.first {
+                mapView.setVisibleMapRect(overlay.boundingMapRect,
+                    edgePadding: UIEdgeInsets(top: 110, left: 40, bottom: 360, right: 40), animated: true)
+            }
+            coordinator.wasFollowing = false
+            return
+        }
+        let changedMode = !coordinator.wasFollowing
+        coordinator.wasFollowing = true
+        guard let posicion else { return }
+        if !changedMode, let previous = coordinator.lastCenter,
+           PolylineMatching.distanceMeters(previous, posicion) < 8 { return }
+        coordinator.lastCenter = posicion
+        let region = MKCoordinateRegion(center: posicion,
+            span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008))
         mapView.setRegion(region, animated: true)
     }
 
     final class Coordinator: NSObject, MKMapViewDelegate {
         let color: UIColor
+        let demoPin = MKPointAnnotation()
+        var wasFollowing = true
+        var lastCenter: CLLocationCoordinate2D?
+        var onPan: (() -> Void)?
+
+        func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+            let gestures = mapView.subviews.flatMap { $0.gestureRecognizers ?? [] }
+            if gestures.contains(where: { $0.state == .began || $0.state == .changed }) {
+                // Evita que la siguiente actualización de GPS interrumpa la exploración.
+                wasFollowing = false
+                onPan?()
+            }
+        }
+
         init(color: UIColor) { self.color = color }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -258,7 +349,16 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            if annotation is MKUserLocation { return nil }   // punto azul del sistema
+            if annotation is MKUserLocation { return nil }
+            if annotation === demoPin {
+                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: "demo") as? MKMarkerAnnotationView)
+                    ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "demo")
+                view.annotation = annotation
+                view.markerTintColor = .systemBlue
+                view.glyphImage = UIImage(systemName: "location.fill")
+                view.displayPriority = .required
+                return view
+            }
             guard let paradero = annotation as? ParaderoExploraAnnotation else { return nil }
             if paradero.esFin {
                 let view = (mapView.dequeueReusableAnnotationView(withIdentifier: "fin")
@@ -291,6 +391,8 @@ struct NavegacionRutaView: View {
 
     @StateObject private var viewModel: NavegacionRutaViewModel
     @State private var seguir: Bool = true
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
 
     init(ruta: RutaOpcion, onFinish: @escaping () -> Void) {
         self.ruta = ruta
@@ -307,7 +409,8 @@ struct NavegacionRutaView: View {
                 paraderos: ruta.paraderos,
                 colorLinea: UIColor(ruta.colorLinea),
                 posicion: viewModel.posicion,
-                seguir: seguir
+                seguir: $seguir,
+                modoDemo: viewModel.modoDemo
             )
             .ignoresSafeArea()
 
@@ -324,13 +427,18 @@ struct NavegacionRutaView: View {
         .preferredColorScheme(.dark)
         .onAppear { viewModel.iniciar() }
         .onDisappear { viewModel.terminar() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active && !viewModel.modoDemo && viewModel.estado != .finalizado {
+                viewModel.iniciar()
+            }
+        }
     }
 
     // MARK: - Top bar
     private var topBar: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("NAVEGANDO")
+                Text(viewModel.modoDemo ? L.t("SIMULACIÓN", "SIMULATION") : L.t("TU VIAJE", "YOUR TRIP"))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white.opacity(0.6))
                     .appTracking(AppTracking.wideLabel)
@@ -353,7 +461,8 @@ struct NavegacionRutaView: View {
                     .background(Capsule().fill(viewModel.modoDemo ? Color(hex: "#8affc1") : Color.white.opacity(0.14)))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Simular recorrido")
+            .accessibilityLabel(L.t("Simular recorrido", "Simulate route"))
+            .disabled(viewModel.shape.count < 2)
 
             Button {
                 onFinish()
@@ -395,10 +504,28 @@ struct NavegacionRutaView: View {
                     Text(subtitulo)
                         .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.6))
-                        .lineLimit(1)
+                        .lineLimit(3)
                 }
                 Spacer()
             }
+
+            if viewModel.estado == .sinPermiso {
+                Button(L.t("Abrir Ajustes", "Open Settings")) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: "flag.fill").foregroundStyle(ruta.colorLinea)
+                Text(L.t("Hasta ", "To ") + ruta.paradaFin)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+                Text(ruta.costo).fontWeight(.semibold)
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(.white.opacity(0.8))
 
             // Barra de progreso del recorrido
             VStack(alignment: .leading, spacing: 4) {
@@ -413,7 +540,7 @@ struct NavegacionRutaView: View {
                 .frame(height: 6)
 
                 HStack {
-                    Text("Avance del recorrido")
+                    Text(L.t("Avance de la línea · tiempos estimados", "Route progress · estimated times"))
                         .font(.system(size: 9))
                         .foregroundStyle(.white.opacity(0.5))
                     Spacer()
@@ -425,7 +552,7 @@ struct NavegacionRutaView: View {
 
             // Stats
             HStack(spacing: 0) {
-                stat(icono: "clock.fill", valor: "\(viewModel.minutosRestantes) min", etiqueta: "Restante")
+                stat(icono: "clock.fill", valor: viewModel.posicion == nil || ruta.duracionMin <= 0 ? "—" : "~\(viewModel.minutosRestantes) min", etiqueta: L.t("Restante", "Remaining"))
                     .frame(maxWidth: .infinity)
                 Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
                 stat(icono: "point.topleft.down.curvedto.point.bottomright.up",
@@ -441,8 +568,8 @@ struct NavegacionRutaView: View {
             Button {
                 seguir.toggle()
             } label: {
-                Label(seguir ? "Siguiendo tu ubicación" : "Centrar en mi ubicación",
-                      systemImage: seguir ? "location.fill" : "location.slash.fill")
+                Label(seguir ? L.t("Ver toda la ruta", "Show full route") : L.t("Seguir mi ubicación", "Follow my location"),
+                      systemImage: seguir ? "arrow.up.left.and.arrow.down.right" : "location.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -483,6 +610,7 @@ struct NavegacionRutaView: View {
     // MARK: - Estado → UI
     private var iconoEstado: String {
         switch viewModel.estado {
+        case .sinRecorrido: return "map.fill"
         case .esperandoGPS:  return "antenna.radiowaves.left.and.right"
         case .sinPermiso:    return "location.slash.fill"
         case .enRuta:        return "bus.fill"
@@ -494,6 +622,7 @@ struct NavegacionRutaView: View {
 
     private var colorEstado: Color {
         switch viewModel.estado {
+        case .sinRecorrido: return .orange
         case .esperandoGPS:  return .white
         case .sinPermiso:    return .red
         case .enRuta:        return ruta.colorLinea
@@ -505,31 +634,46 @@ struct NavegacionRutaView: View {
 
     private var instruccion: String {
         switch viewModel.estado {
+        case .sinRecorrido:
+            return L.t("Recorrido no disponible", "Route unavailable")
         case .esperandoGPS:
-            return "Buscando señal GPS…"
+            return L.t("Buscando señal GPS…", "Finding GPS signal…")
         case .sinPermiso:
-            return "Activa la ubicación para navegar"
+            return L.t("Activa la ubicación para navegar", "Enable location to navigate")
         case .enRuta:
             return viewModel.paraderoSiguiente != nil
-                ? "Continúa · próximo paradero"
-                : "Continúa por el recorrido"
+                ? L.t("Próximo paradero", "Next stop")
+                : L.t("Continúa por el recorrido", "Continue along the route")
         case .fueraDeRuta(let metros):
-            return "Te alejaste del recorrido (\(Int(metros)) m)"
+            return viewModel.haEntradoEnRuta
+                ? L.t("Fuera del recorrido · \(Int(metros)) m", "Off route · \(Int(metros)) m")
+                : L.t("Acércate a un paradero", "Head to a stop")
         case .cercaDestino:
-            return "Prepárate para bajar"
+            return L.t("Prepárate para bajar", "Get ready to get off")
         case .finalizado:
-            return "¡Llegaste a tu paradero!"
+            return L.t("Llegaste al final de la línea", "You reached the end of the line")
         }
     }
 
     private var subtitulo: String {
         switch viewModel.estado {
-        case .esperandoGPS:  return "Asegúrate de estar cerca del recorrido de la línea \(ruta.linea)"
-        case .sinPermiso:    return "Ajustes → Privacidad → Ubicación"
-        case .enRuta:        return viewModel.paraderoSiguiente?.nombre ?? ruta.paradaFin
-        case .fueraDeRuta:   return "Camina hacia la línea \(ruta.linea)"
-        case .cercaDestino:  return ruta.paradaFin
-        case .finalizado:    return ruta.paradaFin
+        case .sinRecorrido:
+            return L.t("Esta línea no tiene un trazado válido para navegar.", "This line has no valid route geometry.")
+        case .esperandoGPS:
+            return L.t("Usaremos tu ubicación para mostrar tu avance.", "Your location will show your progress.")
+        case .sinPermiso:
+            return L.t("Permite el acceso a tu ubicación en Ajustes.", "Allow location access in Settings.")
+        case .enRuta:
+            let nombre = viewModel.paraderoSiguiente?.nombre ?? ruta.paradaFin
+            return nombre + (viewModel.distanciaProximoParaderoTexto.map { " · " + $0 } ?? "")
+        case .fueraDeRuta:
+            guard let paradero = viewModel.paraderoCercano, let metros = viewModel.distanciaParaderoM else {
+                return L.t("Busca un paradero de la línea ", "Look for a stop on line ") + ruta.linea
+            }
+            let distancia = metros >= 1000 ? String(format: "%.1f km", metros / 1000) : "\(Int(metros)) m"
+            return paradero.nombre + " · " + distancia + L.t(" en línea recta", " straight-line distance")
+        case .cercaDestino, .finalizado:
+            return ruta.paradaFin
         }
     }
 

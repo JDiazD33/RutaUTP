@@ -75,7 +75,9 @@ struct PublicarComunidadSheet: View {
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button(L.t("Tomar foto", "Take photo")) { showCamara = true }
             }
-            Button(L.t("Elegir de la galería", "Choose from library")) { showGaleria = true }
+            Button(L.t("Elegir de la galería / biblioteca de fotos", "Choose from photo library")) {
+                showGaleria = true
+            }
             Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
         }
         .sheet(isPresented: $showCamara) {
@@ -680,7 +682,7 @@ private struct MapaUbicacionPicker: View {
 
 // MARK: - Galería (PHPicker, sin permiso de fotos)
 
-private struct GaleriaPicker: UIViewControllerRepresentable {
+struct GaleriaPicker: UIViewControllerRepresentable {
     let onImagePicked: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -702,12 +704,15 @@ private struct GaleriaPicker: UIViewControllerRepresentable {
         init(_ parent: GaleriaPicker) { self.parent = parent }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            // Conservar el callback antes de cerrar el sheet: el coordinador
+            // puede liberarse mientras Fotos carga la imagen seleccionada.
+            let onImagePicked = parent.onImagePicked
             parent.dismiss()
             guard let provider = results.first?.itemProvider,
                   provider.canLoadObject(ofClass: UIImage.self) else { return }
-            provider.loadObject(ofClass: UIImage.self) { [weak self] objeto, _ in
-                guard let self, let imagen = objeto as? UIImage else { return }
-                DispatchQueue.main.async { self.parent.onImagePicked(imagen) }
+            provider.loadObject(ofClass: UIImage.self) { objeto, _ in
+                guard let imagen = objeto as? UIImage else { return }
+                DispatchQueue.main.async { onImagePicked(imagen) }
             }
         }
     }

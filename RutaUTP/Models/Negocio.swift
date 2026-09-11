@@ -100,23 +100,6 @@ enum CategoriaNegocio: String, Codable, CaseIterable {
     case cevicheria
     case empanadas
 
-    var emoji: String {
-        switch self {
-        case .polleria: return "🍗"
-        case .menu: return "🍲"
-        case .cafeteria: return "☕️"
-        case .chifa: return "🥡"
-        case .salchipapas: return "🍟"
-        case .panaderia: return "🥐"
-        case .heladeria: return "🍦"
-        case .jugueria: return "🥤"
-        case .pizza: return "🍕"
-        case .burger: return "🍔"
-        case .cevicheria: return "🐟"
-        case .empanadas: return "🥟"
-        }
-    }
-
     var etiqueta: String {
         switch self {
         case .polleria:    return L.t("Pollería", "Grill chicken")
@@ -134,23 +117,8 @@ enum CategoriaNegocio: String, Codable, CaseIterable {
         }
     }
 
-    /// SF Symbol para la card de detalle y el filtro por categoría.
-    var icono: String {
-        switch self {
-        case .polleria:    return "flame.fill"
-        case .menu:        return "fork.knife"
-        case .cafeteria:   return "cup.and.saucer.fill"
-        case .chifa:       return "frying.pan.fill"
-        case .salchipapas: return "takeoutbag.and.cup.and.straw.fill"
-        case .panaderia:   return "croissant"
-        case .heladeria:   return "snowflake"
-        case .jugueria:    return "cup.and.straw.fill"
-        case .pizza:       return "fork.knife.circle.fill"
-        case .burger:      return "takeoutbag.and.cup.and.straw.fill"
-        case .cevicheria:  return "water.waves"
-        case .empanadas:   return "birthday.cake.fill"
-        }
-    }
+    /// Asset vectorial Uicons Regular Rounded; crédito en Sobre nosotros.
+    var iconoAsset: String { "negocio-" + rawValue }
 
     /// Color de acento por categoría. Se apoya en la paleta Material del app
     /// (contenedores secundarios) para no romper el tema claro/oscuro.

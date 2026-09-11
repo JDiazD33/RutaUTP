@@ -66,8 +66,8 @@ struct NegocioBubbleMarker: View {
                                          startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 44, height: 44)
                     .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.appSurface, lineWidth: 3))
-                Text(negocio.categoria.emoji)
-                    .font(.system(size: 25))
+                NegocioIcono(categoria: negocio.categoria, size: 23)
+                    .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
                 if negocio.cupon?.vigente == true {
                     Image(systemName: "ticket.fill")
@@ -159,8 +159,7 @@ struct NegocioDetailCard: View {
                 Circle()
                     .fill(negocio.categoria.color.opacity(0.20))
                     .frame(width: 44, height: 44)
-                Image(systemName: negocio.categoria.icono)
-                    .font(.system(size: 18, weight: .bold))
+                NegocioIcono(categoria: negocio.categoria, size: 23)
                     .foregroundStyle(negocio.categoria.color)
             }
 
@@ -445,5 +444,20 @@ extension Negocio {
             patrocinado: true,
             calificacion: 4.6
         )
+    }
+}
+
+/// Símbolo compartido por cupones, marcadores y detalle del negocio.
+struct NegocioIcono: View {
+    let categoria: CategoriaNegocio
+    var size: CGFloat = 24
+
+    var body: some View {
+        Image(categoria.iconoAsset)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
     }
 }

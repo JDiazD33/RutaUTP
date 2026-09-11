@@ -1255,7 +1255,8 @@ private struct PerfilCuponCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 Button(action: abrir) {
                     HStack(spacing: 10) {
-                        Text(negocio.categoria.emoji).font(.system(size: 28))
+                        NegocioIcono(categoria: negocio.categoria, size: 26)
+                            .foregroundStyle(Color.onSurface)
                             .frame(width: 50, height: 50)
                             .background(negocio.categoria.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
                         VStack(alignment: .leading, spacing: 4) {

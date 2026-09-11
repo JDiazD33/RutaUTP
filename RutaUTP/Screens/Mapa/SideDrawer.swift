@@ -745,6 +745,10 @@ private struct SobreNosotrosSheet: View {
                         .appTracking(AppTracking.wideLabel)
                     creditoRow("Diseño y desarrollo", "Universidad Tecnológica del Perú S.A.C")
                     creditoRow("Institución", "Universidad Tecnológica del Perú")
+                    Link("Uicons by Flaticon", destination: URL(string: "https://www.flaticon.com/uicons")!)
+                        .font(.bodySm)
+                        .foregroundStyle(Color.appPrimary)
+                        .accessibilityLabel(L.t("Iconos de negocios por Flaticon", "Business icons by Flaticon"))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -992,6 +996,8 @@ struct DatosPersonalesSheet: View {
 
     // Foto de perfil
     @State private var perfilImage: UIImage? = nil
+    @State private var showFuenteFoto = false
+    @State private var showGaleria = false
     @State private var showCamera: Bool = false
 
     // Edición contacto de emergencia
@@ -1040,7 +1046,7 @@ struct DatosPersonalesSheet: View {
                         .overlay(alignment: .bottomTrailing) {
                             Button {
                                 AppHaptics.impact(.light)
-                                showCamera = true
+                                showFuenteFoto = true
                             } label: {
                                 ZStack {
                                     Circle()
@@ -1056,8 +1062,8 @@ struct DatosPersonalesSheet: View {
                             }
                             .buttonStyle(.plain)
                             .offset(x: 4, y: 4)
-                            .accessibilityLabel("Tomar foto de perfil")
-                            .accessibilityHint("Doble toque para abrir la cámara y capturar tu foto")
+                            .accessibilityLabel(L.t("Cambiar foto de perfil", "Change profile photo"))
+                            .accessibilityHint(L.t("Elige entre cámara y biblioteca de fotos", "Choose camera or photo library"))
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
@@ -1435,6 +1441,24 @@ struct DatosPersonalesSheet: View {
                 perfilImage = ProfileImageStore.load()
             }
         }
+        .confirmationDialog(L.t("Foto de perfil", "Profile photo"),
+                            isPresented: $showFuenteFoto,
+                            titleVisibility: .visible) {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button(L.t("Tomar foto", "Take photo")) { showCamera = true }
+            }
+            Button(L.t("Elegir de la galería / biblioteca de fotos", "Choose from photo library")) {
+                showGaleria = true
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
+        }
+        .sheet(isPresented: $showGaleria) {
+            GaleriaPicker { img in
+                perfilImage = img
+                ProfileImageStore.save(img)
+            }
+            .seguirTemaForzado()
+        }
         .sheet(isPresented: $showCamera) {
             ImagePicker(sourceType: .camera) { img in
                 perfilImage = img
@@ -1570,4 +1594,3 @@ private struct SheetHeader: View {
         .accessibilityAddTraits(.isHeader)
     }
 }
-
