@@ -34,6 +34,53 @@ struct MapaView: View {
 
     private let tabBarHeight: CGFloat = 64
 
+    private var resumenItinerario: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                if vm.calculandoItinerario {
+                    ProgressView().controlSize(.small)
+                    Text(L.t("Buscando paradero y transporte…", "Finding stops and transit…"))
+                } else {
+                    Text(vm.busquedaResultado.map { L.t("Hacia ", "To ") + $0.titulo } ?? "")
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Button { vm.limpiar() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.onSurfaceVariant)
+                        .frame(width: 32, height: 32)
+                }
+                .accessibilityLabel(L.t("Quitar ruta", "Clear route"))
+            }
+            .font(.system(size: 13, weight: .semibold))
+            if let plan = vm.itinerario {
+                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(plan.walkToBoardMeters))) m · " + plan.board.nombre,
+                      systemImage: "figure.walk")
+                Label(L.t("Toma la línea ", "Take line ") + plan.route.linea + " · " + plan.route.precioTexto,
+                      systemImage: "bus.fill")
+                Label(L.t("Baja en ", "Get off at ") + plan.alight.nombre,
+                      systemImage: "mappin.and.ellipse")
+                Text(L.t("Luego camina \(Int(ceil(plan.walkToDestinationMeters))) m hasta tu destino.",
+                         "Then walk \(Int(ceil(plan.walkToDestinationMeters))) m to your destination."))
+                    .foregroundStyle(Color.onSurfaceVariant)
+                Text(L.t("··· A pie   ━ En bus", "··· Walk   ━ Bus") + " · ~\(vm.etaMinutos ?? 0) min")
+                    .foregroundStyle(Color.onSurfaceVariant)
+                if plan.walkingApproximate {
+                    Text(L.t("Caminata aproximada; sin indicaciones peatonales disponibles.",
+                             "Approximate walk; pedestrian directions unavailable."))
+                        .foregroundStyle(Color.appError)
+                }
+            } else if let mensaje = vm.mensajeRuta {
+                Text(mensaje).foregroundStyle(Color.onSurfaceVariant)
+            }
+        }
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(Color.onSurface)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
 
@@ -50,16 +97,24 @@ struct MapaView: View {
                     Annotation(L.t("Mi Ubicación", "My Location"), coordinate: userCoord) {
                         PulsingUserMarker()
                     }
-                } else {
-                    Annotation(L.t("Mi Ubicación", "My Location"), coordinate: CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)) {
-                        PulsingUserMarker()
-                    }
                 }
 
-                // 3. Trazo de Ruta Real (Polyline MKDirections - como Demo Tracking)
-                if let polyline = vm.routePolyline {
-                    MapPolyline(polyline)
-                        .stroke(Color.appPrimary, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                // Caminatas punteadas y recorrido del transporte en línea continua.
+                if let plan = vm.itinerario {
+                    MapPolyline(coordinates: plan.walkToBoard)
+                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
+                    MapPolyline(coordinates: plan.bus)
+                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                    MapPolyline(coordinates: plan.bus)
+                        .stroke(plan.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    MapPolyline(coordinates: plan.walkToDestination)
+                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
+                    Annotation(L.t("Sube aquí", "Board here"), coordinate: plan.board.coordinate, anchor: .bottom) {
+                        TransitStopMarker(number: "1", title: L.t("SUBE", "BOARD"), color: .secondary)
+                    }
+                    Annotation(L.t("Baja aquí", "Get off here"), coordinate: plan.alight.coordinate, anchor: .bottom) {
+                        TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .appPrimary)
+                    }
                 }
 
                 // 4. Marcador del Destino Buscado (ej. UPAO, Casa, Mall Plaza)
@@ -106,56 +161,10 @@ struct MapaView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
-                // Info de Ruta Calculada (ETA + Distancia)
-                if let eta = vm.etaMinutos, let dist = vm.distanciaKm, let res = vm.busquedaResultado {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.primaryContainer).frame(width: 38, height: 38)
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Color.onPrimaryContainer)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(L.t("Ruta hacia", "Route to") + " \(res.titulo)")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.onSurface)
-                                .lineLimit(1)
-                            HStack(spacing: 8) {
-                                Text("\(eta) MIN")
-                                    .font(.labelCapsSm)
-                                    .foregroundStyle(Color.onPrimaryContainer)
-                                    .appTracking(AppTracking.wideLabel)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.primaryContainer))
-                                Text("\(dist, specifier: "%.1f") km • \(L.t("Ruta activa", "Active route"))")
-                                    .font(.bodySm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                            }
-                        }
-                        Spacer()
-                        Button {
-                            vm.limpiar()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(.onSurfaceVariant.opacity(0.6))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.outlineVariant.opacity(0.35), lineWidth: 0.5)
-                    )
-                    .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 3)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                if vm.busquedaResultado != nil {
+                    resumenItinerario
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
                 }
 
                 Spacer()
@@ -224,6 +233,16 @@ struct MapaView: View {
         .onDisappear { vm.detenerSimulacionBuses() }
         .onChange(of: router.destinoPendiente) { _ in
             consumirDestinoPendiente()
+        }
+        .onChange(of: vm.itinerarioFocusTick) { _, _ in
+            guard let polyline = vm.routePolyline else { return }
+            // Dejar espacio a la guía superior y mostrar el itinerario completo.
+            let rect = polyline.boundingMapRect
+            withAnimation(.easeInOut(duration: 0.4)) {
+                panelColapsado = true
+                cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
+                                                   dy: -max(rect.height * 0.65, 1800)))
+            }
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
             withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }

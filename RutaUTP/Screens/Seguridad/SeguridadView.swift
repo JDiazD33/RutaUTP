@@ -52,7 +52,7 @@ struct SeguridadView: View {
     /// Caché para el preview del banner (BannerParaderosPreview).
     static var paraderosCache: [ParaderoGTFS]? = nil
 
-    // 18 publicaciones de demostración bilingües, tres por ventana de cuatro minutos.
+    // 24 publicaciones demo: una con foto y tres de texto por ventana de cuatro minutos.
     private static let reportes: [ReporteComunidad] = {
         let nombres: [(String, String)] = [
             ("Jorge D.", "JD"), ("Maria A.", "MA"), ("Rosa C.", "RC"),
@@ -114,7 +114,7 @@ struct SeguridadView: View {
             (.tertiaryContainer, .onTertiaryContainer)
         ]
 
-        return cuerpos.enumerated().map { i, par in
+        let originales = cuerpos.enumerated().map { i, par in
             let persona = nombres[i % nombres.count]
             let avatar = avatares[i % avatares.count]
             return ReporteComunidad(
@@ -132,25 +132,53 @@ struct SeguridadView: View {
                 avatarForeground: avatar.1
             )
         }
+        let ilustrados: [(String, String, TipoReporte, FotoComunidad, String, String)] = [
+            ("Andrea M.", "AM", .alerta, .centro,
+             "Ojo al esperar el micro en el centro: hay vehículos junto a la vereda. Busquen un punto de subida que deje libre el paso peatonal.",
+             "Take care while waiting for a bus downtown: vehicles are next to the sidewalk. Choose a boarding point that keeps pedestrian access clear."),
+            ("Víctor S.", "VS", .trafico, .papal,
+             "Los accesos al Óvalo Papal pueden demorar el viaje. Salgan con tiempo y revisen su línea antes de ir al paradero.",
+             "The approaches to Óvalo Papal can delay your trip. Leave with time to spare and check your line before heading to the stop."),
+            ("Rocío F.", "RF", .sugerencia, .pizarro,
+             "Para moverme a pie por el centro prefiero el paseo Pizarro. Al buscar un micro, reviso en el mapa el paradero de subida fuera del tramo peatonal.",
+             "I prefer the Pizarro pedestrian street when walking downtown. To catch a bus, I check the map for a boarding stop outside the pedestrian section."),
+            ("Héctor Z.", "HZ", .otro, .papal,
+             "Comparto esta referencia del Óvalo Papal para quienes recién conocen Trujillo. Confirmen el sentido de su línea antes de abordar.",
+             "Sharing this reference of Óvalo Papal for newcomers to Trujillo. Check your line's direction before boarding."),
+            ("Natalia O.", "NO", .alerta, .pizarro,
+             "Al salir del paseo Pizarro, atentos a los cruces con calles vehiculares. Antes de seguir hacia el paradero, miren ambos lados.",
+             "Watch for crossings with vehicle traffic when leaving Pizarro street. Look both ways before continuing to your stop."),
+            ("Iván P.", "IP", .trafico, .centro,
+             "En las calles del centro se comparte espacio con taxis y vehículos de reparto. Evitemos pedir al micro que se detenga en una esquina.",
+             "Downtown streets share space with taxis and delivery vehicles. Avoid asking the bus to stop at a corner.")
+        ]
+        // Cada bloque conserva los reportes existentes y añade una publicación con foto.
+        return ilustrados.enumerated().flatMap { index, dato -> [ReporteComunidad] in
+            let nuevo = ReporteComunidad(iniciales: dato.1, nombre: dato.0,
+                hace: "HACE 3 MIN", tipo: dato.2, cuerpo: dato.4, cuerpoIngles: dato.5,
+                foto: dato.3, utiles: 8 + index * 3, comentarios: 2,
+                avatarColor: .secondaryContainer, avatarForeground: .onSecondaryContainer)
+            return [nuevo] + Array(originales[(index * 3)..<(index * 3 + 3)])
+        }
     }()
 
-    /// Índice de ventana de 4 minutos (6 ventanas para 18 reportes de a 3).
+    /// Índice de ventana de 4 minutos (6 ventanas para 24 reportes de a 4).
     /// DEBUG: --comunidad N fuerza la ventana para pruebas visuales.
     private var indiceVentana: Int {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "--comunidad"), i + 1 < args.count,
            let n = Int(args[i + 1]) {
-            return n % (Self.reportes.count / 3)
+            return n % (Self.reportes.count / 4)
         }
         #endif
         let epoch = Int(Date().timeIntervalSinceReferenceDate)
-        return (epoch / 240) % (Self.reportes.count / 3)
+        return (epoch / 240) % (Self.reportes.count / 4)
     }
 
     private var reportesVisibles: [ReporteComunidad] {
-        let inicio = indiceVentana * 3
-        return Array(Self.reportes[inicio..<(inicio + 3)])
+        let inicio = indiceVentana * 4
+        return Array(Self.reportes[inicio..<(inicio + 4)])
     }
 
     // 10 puntos/zonas de seguridad de Trujillo; se deslizan como carrusel.
@@ -763,7 +791,7 @@ struct SeguridadView: View {
         }
     }
 
-    // MARK: - Comunidad (18 opiniones, rotan cada 4 minutos)
+    // MARK: - Comunidad (24 publicaciones, rotan cada 4 minutos)
     private var comunidadSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -907,6 +935,10 @@ private struct ReporteCard: View {
                 .lineLimit(4)
                 .foregroundStyle(.onSurface)
 
+            if let foto = reporte.foto {
+                FotoReporteView(foto: foto)
+            }
+
             Divider().overlay(Color.outlineVariant.opacity(0.2))
             HStack(spacing: 8) {
                 votoButton(.util)
@@ -1042,6 +1074,10 @@ private struct ReporteDetailSheet: View {
                     Text(reporte.cuerpoLocalizado)
                         .font(.bodyLg)
                         .foregroundStyle(.onSurface)
+
+                    if let foto = reporte.foto {
+                        FotoReporteView(foto: foto, detalle: true)
+                    }
 
                     // Votos interactivos
                     HStack(spacing: 10) {
@@ -1484,3 +1520,48 @@ private struct FABStyle: ButtonStyle {
     SeguridadView().environmentObject(AppRouter())
 }
 
+
+// MARK: - Foto de referencia compartida entre publicación y detalle
+private struct FotoReporteView: View {
+    let foto: FotoComunidad
+    var detalle = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Group {
+                if detalle {
+                    Image(foto.asset).resizable().scaledToFit()
+                } else {
+                    GeometryReader { geo in
+                        Image(foto.asset).resizable().scaledToFill()
+                            .frame(width: geo.size.width, height: 180)
+                            .clipped()
+                    }
+                    .frame(height: 180)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .accessibilityLabel(L.t("Foto de archivo: ", "Archive photo: ") + foto.lugar)
+            Label(foto.lugar, systemImage: "mappin.and.ellipse")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.onSurface)
+            Text(L.t("PUBLICACIÓN DEMO · FOTO DE REFERENCIA", "DEMO POST · REFERENCE PHOTO"))
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.onSurfaceVariant)
+            Text("© " + foto.autor + " · " + foto.fecha + " · CC BY-SA " + foto.licencia)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.onSurfaceVariant)
+            if detalle {
+                Text(L.t("Autor del post ficticio. La foto es de archivo y no documenta un incidente actual. Vista previa recortada; imagen completa arriba.",
+                         "Fictional post author. This archive photo does not document a current incident. Cropped preview; full image above."))
+                    .font(.caption)
+                    .foregroundStyle(Color.onSurfaceVariant)
+                HStack(spacing: 16) {
+                    if let url = URL(string: foto.fuente) { Link(L.t("Ver fuente", "View source"), destination: url) }
+                    if let url = URL(string: foto.licenciaURL) { Link(L.t("Licencia", "License"), destination: url) }
+                }
+                .font(.caption.weight(.medium))
+            }
+        }
+    }
+}

@@ -95,7 +95,7 @@ Los módulos de mapa, rutas y seguimiento tienen ViewModels. Parte de la lógica
 El feed incluido contiene **102 rutas, 102 viajes, 4067 paraderos y 53 616 puntos de recorrido**. El repositorio relaciona agencias, rutas, viajes, shapes, paraderos, horarios, frecuencias y tarifas. El parser actual selecciona un viaje por ruta, de acuerdo con este feed.
 
 - La geometría se encuentra en el área de Trujillo. Los metadatos de `feed_info.txt` aún identifican al publicador como «Arequipa Bus» y requieren revisión de procedencia y actualización; estos datos no acreditan operación en vivo.
-- `MapaViewModel` intenta calcular con Apple Directions y utiliza alternativas de automóvil y, si no hay respuesta, una línea directa con tiempo aproximado.
+- `MapaViewModel` calcula desde el GPS del usuario un itinerario de transporte GTFS con paraderos hasta 800 m de ambos extremos. Muestra caminatas punteadas, recorrido del bus continuo y marcadores de subida/bajada; si falta ubicación o no hay línea directa, muestra un aviso. Las caminatas usan Apple Directions y se identifican como aproximadas cuando ese servicio no responde.
 - `TransitPlanner` busca una **línea directa** con paraderos próximos a ambos extremos y respeta el orden del recorrido. No calcula transbordos. Los tramos a pie se consultan con Apple Directions y tienen un respaldo aproximado.
 - `PolylineMatching` proyecta el GPS sobre el recorrido para calcular avance y distancia a la ruta.
 - El mapa principal tiene su propia simulación de buses; Tracking utiliza `SimulatedTrackingProvider`. `RealTrackingProvider` es un stub sin conexión a un servidor.
@@ -133,3 +133,5 @@ Para validar cambios funcionales, comprobar en simulador y, cuando corresponda, 
 La compilación por sí sola no verifica GPS, cámara, biblioteca de fotos ni cobertura de Apple Directions.
 
 Los iconos de categorías de negocios y cupones usan **Uicons Regular Rounded de Flaticon**, incluidos como SVG locales. La atribución está en «Sobre nosotros» y la licencia y procedencia en `ThirdPartyNotices/Flaticon/`.
+
+Comunidad incluye 24 publicaciones demo (6 con fotografías de referencia de Trujillo). Cada ventana muestra una publicación con foto y tres de texto. Créditos, fechas y enlaces a las licencias están en el detalle y en `ThirdPartyNotices/Comunidad/`. Las imágenes se incluyen en el bundle y se ven sin conexión.

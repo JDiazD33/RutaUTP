@@ -80,7 +80,7 @@ struct MarcadorDestinoBuscado: View {
     }
 }
 
-// MARK: - Bus: línea legible, rumbo separado y selección
+// MARK: - Bus: etiqueta compacta con acento de línea y rumbo discreto
 struct AnimatedBusMarker: View {
     let linea: String
     let color: Color
@@ -89,63 +89,60 @@ struct AnimatedBusMarker: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 4) {
+        HStack(spacing: 6) {
+            // El color identifica la línea sin teñir todo el vehículo.
+            Capsule()
+                .fill(color)
+                .frame(width: 3, height: 19)
+
+            Image(systemName: "bus.fill")
+                .symbolRenderingMode(.monochrome)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(Color.onSurface)
+                .frame(width: 23, height: 23)
+
             Text(linea)
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(Color.onSurface)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color.surfaceContainerLowest, in: Capsule())
-                .overlay(Capsule().stroke(color.opacity(0.55), lineWidth: 1))
+                .minimumScaleFactor(0.75)
+                .layoutPriority(1)
 
-            ZStack {
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(color.opacity(seleccionado ? 0.22 : 0.09))
-                    .frame(width: 52, height: 52)
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.surfaceContainerLowest)
-                    .frame(width: 42, height: 42)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(color, lineWidth: seleccionado ? 3 : 1.5)
-                    }
-                // El vehículo permanece derecho aunque cambie de rumbo.
-                Image(systemName: "bus.fill")
-                    .font(.system(size: 21, weight: .semibold))
-                    .foregroundStyle(Color.onSurface)
-                if heading.isFinite && heading >= 0 {
-                    Image(systemName: "arrowtriangle.up.fill")
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(Color.onSurface)
-                        .padding(3)
-                        .background(Color.surfaceContainerLowest, in: Circle())
-                        .offset(y: -25)
-                        .rotationEffect(.degrees(heading))
-                }
-                if seleccionado {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 8, weight: .heavy))
-                        .foregroundStyle(Color.onSurface)
-                        .frame(width: 17, height: 17)
-                        .background(Color.surfaceContainerLowest, in: Circle())
-                        .overlay(Circle().stroke(color, lineWidth: 1.5))
-                        .offset(x: 20, y: 20)
-                }
+            if heading.isFinite && heading >= 0 {
+                Image(systemName: "location.north.fill")
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(Color.onSurfaceVariant.opacity(0.65))
+                    .rotationEffect(.degrees(heading))
+                    .frame(width: 10, height: 12)
             }
         }
-        .frame(minWidth: 60, maxWidth: 88)
-        .padding(3)
-        .shadow(color: .black.opacity(0.16), radius: 4, x: 0, y: 2)
+        .padding(.horizontal, 9)
+        .frame(height: 36)
+        .frame(minWidth: 78, maxWidth: 120)
+        .background {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(Color.surfaceContainerLowest)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(color.opacity(seleccionado ? 0.08 : 0))
+                }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .strokeBorder(seleccionado ? Color.onSurface.opacity(0.75) : Color.onSurface.opacity(0.16),
+                              lineWidth: seleccionado ? 1.5 : 0.75)
+        }
+        .shadow(color: .black.opacity(seleccionado ? 0.16 : 0.10), radius: 3, x: 0, y: 2)
+        // Área táctil suficiente sin agrandar la etiqueta visible.
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
-        .scaleEffect(seleccionado ? 1.08 : 1)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: seleccionado)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.t("Micro, línea ", "Bus, line ") + linea)
         .accessibilityValue(seleccionado ? L.t("Seleccionado", "Selected") : "")
         .accessibilityHint(L.t("Toca para ver la información del micro", "Tap to view bus information"))
         .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(seleccionado ? .isSelected : [])
     }
 }

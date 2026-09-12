@@ -396,8 +396,11 @@ final class RouteTrackingViewModel: ObservableObject {
         }
         guard revision == routeRevision, !Task.isCancelled else { return }
         guard let plan = selected else {
-            errorMessage = L.t("No encontramos una línea directa con paraderos a menos de \(Int(radio)) m de ambos extremos. Prueba 500 m u otro destino.",
-                               "No direct line has stops within \(Int(radio)) m of both ends. Try 500 m or another destination.")
+            let sugerencia = radio < 800
+                ? L.t("Prueba un radio mayor u otro destino.", "Try a larger radius or another destination.")
+                : L.t("Prueba otro destino.", "Try another destination.")
+            errorMessage = L.t("No encontramos una línea directa con paraderos a menos de \(Int(radio)) m de ambos extremos. ",
+                               "No direct line has stops within \(Int(radio)) m of both ends. ") + sugerencia
             return
         }
         errorMessage = nil

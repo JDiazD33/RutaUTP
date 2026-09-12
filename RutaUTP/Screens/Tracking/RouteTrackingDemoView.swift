@@ -1,5 +1,5 @@
 // Tracking Demo: tema persistido, transporte GTFS y tramos a pie diferenciados.
-// El usuario puede buscar un destino y escoger un radio de 200 o 500 metros.
+// El usuario puede buscar un destino y escoger un radio de 200, 500 u 800 metros.
 // Los comercios son datos demo, distribuidos según el área visible del mapa.
 
 import SwiftUI
@@ -43,6 +43,9 @@ struct RouteTrackingDemoView: View {
     @State private var confirmarDetener: Bool = false
     @State private var destinoTexto = ""
     @FocusState private var destinationFocused: Bool
+    @State private var showDestinationSearch = false
+    @State private var destinationSearchError: String?
+    @State private var destinationSearchTask: Task<Void, Never>?
     @State private var businessMapCenter: CLLocationCoordinate2D?
     @State private var businessMapRadius: Double = 1800
     @State private var businessViewportRevision = 0
@@ -140,6 +143,13 @@ struct RouteTrackingDemoView: View {
                     .transition(.scale(scale: 0.92).combined(with: .opacity))
                 }
             }
+        }
+        .sheet(isPresented: $showDestinationSearch, onDismiss: {
+            destinationFocused = false
+            destinationSearchTask?.cancel()
+            destinationSearchTask = nil
+        }) {
+            destinationSearchSheet
         }
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -680,23 +690,28 @@ struct RouteTrackingDemoView: View {
                 .foregroundStyle(Color.onSurface.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
 
-            HStack(spacing: 8) {
-                TextField(L.t("Busca una dirección o lugar", "Search an address or place"), text: $destinoTexto)
-                    .font(.system(size: 13)).submitLabel(.search)
-                    .focused($destinationFocused)
-                    .onSubmit { searchDestination() }
-                Button(action: searchDestination) {
-                    if vm.buscandoDestino { ProgressView() }
-                    else { Image(systemName: "magnifyingglass") }
+            Button {
+                destinationSearchError = nil
+                showDestinationSearch = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                    Text(destinoElegido?.id == 999 ? destinoActual.label : L.t("Busca una dirección o lugar", "Search an address or place"))
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
                 }
-                .disabled(vm.buscandoDestino || destinoTexto.trimmingCharacters(in: .whitespaces).isEmpty)
-                .accessibilityLabel(L.t("Buscar destino", "Search destination"))
+                .font(.system(size: 13))
+                .foregroundStyle(Color.onSurface)
+                .padding(12)
+                .frame(minHeight: 44)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerHigh))
             }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerHigh))
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.t("Buscar destino", "Search destination"))
             Picker(L.t("Caminata máxima en cada extremo", "Maximum walk at each end"), selection: $vm.radioParadero) {
                 Text("200 m").tag(200.0)
                 Text("500 m").tag(500.0)
+                Text("800 m").tag(800.0)
             }
             .pickerStyle(.segmented)
             Text(L.t("Paraderos a menos de \(Int(vm.radioParadero)) m del origen y destino",
@@ -925,13 +940,94 @@ struct RouteTrackingDemoView: View {
         // usuario ya mostró interés; se cierra solo con el botón.
     }
 
+    /// Hoja independiente: el campo queda arriba y respeta el teclado de iOS.
+    private var destinationSearchSheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Color.onSurfaceVariant)
+                    TextField(L.t("Dirección o lugar en Trujillo", "Address or place in Trujillo"), text: $destinoTexto)
+                        .font(.body)
+                        .foregroundStyle(Color.onSurface)
+                        .tint(Color.appPrimary)
+                        .submitLabel(.search)
+                        .focused($destinationFocused)
+                        .onSubmit { searchDestination() }
+                    if !destinoTexto.isEmpty {
+                        Button {
+                            destinoTexto = ""
+                            destinationSearchError = nil
+                            destinationFocused = true
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(Color.onSurfaceVariant)
+                                .frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel(L.t("Borrar búsqueda", "Clear search"))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 52)
+                .background(Color.surfaceContainerHigh, in: RoundedRectangle(cornerRadius: 12))
+
+                Button(action: searchDestination) {
+                    HStack {
+                        if vm.buscandoDestino { ProgressView().tint(.white) }
+                        Text(vm.buscandoDestino ? L.t("Buscando…", "Searching…") : L.t("Buscar destino", "Search destination"))
+                    }
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.appPrimary)
+                .disabled(vm.buscandoDestino || destinoTexto.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                if let error = destinationSearchError {
+                    Text(error)
+                        .font(.callout)
+                        .foregroundStyle(Color.appError)
+                } else {
+                    Text(L.t("Escribe el nombre del lugar o su dirección. Al encontrarlo, lo seleccionaremos como destino del viaje.",
+                             "Enter a place name or address. Once found, it will be selected as your trip destination."))
+                        .font(.callout)
+                        .foregroundStyle(Color.onSurfaceVariant)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(20)
+            .background(Color.appBackground)
+            .navigationTitle(L.t("Buscar destino", "Search destination"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L.t("Cancelar", "Cancel")) { showDestinationSearch = false }
+                }
+            }
+            .task { destinationFocused = true }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
     private func searchDestination() {
+        guard !vm.buscandoDestino,
+              !destinoTexto.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         destinationFocused = false
-        Task {
-            if let destination = await vm.buscarDestino(destinoTexto) {
+        destinationSearchError = nil
+        let query = destinoTexto
+        destinationSearchTask?.cancel()
+        destinationSearchTask = Task {
+            let destination = await vm.buscarDestino(query)
+            guard !Task.isCancelled, showDestinationSearch else { return }
+            if let destination {
                 destinoElegido = destination
+                seguir = false
                 cameraPosition = .region(MKCoordinateRegion(center: destination.coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)))
+                showDestinationSearch = false
+            } else {
+                destinationSearchError = vm.errorMessage
             }
         }
     }

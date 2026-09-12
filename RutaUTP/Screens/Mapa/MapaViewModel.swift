@@ -143,6 +143,9 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         routeTask = nil
         buscando = false
         routePolyline = nil
+        itinerario = nil
+        mensajeRuta = nil
+        calculandoItinerario = false
         etaMinutos = nil
         distanciaKm = nil
         busSeleccionado = nil
@@ -160,6 +163,10 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
     // Tracking & Ruteo Real (igual a RouteTrackingDemoView)
     @Published var routePolyline: MKPolyline? = nil
+    @Published private(set) var itinerario: TransitItinerary?
+    @Published private(set) var calculandoItinerario = false
+    @Published private(set) var mensajeRuta: String?
+    @Published private(set) var itinerarioFocusTick = 0
     @Published var etaMinutos: Int? = nil
     @Published var distanciaKm: Double? = nil
 
@@ -239,12 +246,13 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
            !destinos.contains(where: { $0.id == seleccionado.id && $0.label == seleccionado.label }) {
             destinoSeleccionado = nil
             busquedaResultado = nil
-            routePolyline = nil
+            invalidarSeleccionAnterior()
         }
     }
 
     deinit {
         locationTask?.cancel()
+        routeTask?.cancel()
         locationService.stopUpdating()
         detenerSimulacionBuses()
     }
@@ -262,9 +270,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                     if isInitialFix {
                         if self.busquedaResultado == nil { self.recenterOnUser() }
 
-                        // Si ya había un destino trazado desde el origen mock
-                        // (el usuario llegó antes que el primer fix del GPS),
-                        // recalcular la ruta desde la posición REAL del teléfono.
+                        // Un destino puede elegirse antes del primer fix:
+                        // calcular su itinerario al recibir la ubicación real.
                         if let destino = self.busquedaResultado {
                             #if DEBUG
                             print("[Ruta] primer fix GPS real → recalculando desde (\(location.coordinate.latitude), \(location.coordinate.longitude)) hacia \(destino.titulo)")
@@ -620,58 +627,47 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         recargarLineas(cercaDe: coordenada)
     }
 
-    // MARK: - Ruteo Real (Polilínea MKDirections)
+    // MARK: - Caminata + recorrido GTFS + caminata al destino
     func calcularRutaHacia(_ destinoCoord: CLLocationCoordinate2D) {
         routeTask?.cancel()
         let revision = UUID()
         routeRevision = revision
-        let origen = userRealCoordinate ?? CLLocationCoordinate2D(latitude: -8.1180, longitude: -79.0350)
+        itinerario = nil
+        routePolyline = nil
+        etaMinutos = nil
+        distanciaKm = nil
+        mensajeRuta = nil
+        calculandoItinerario = false
+        guard let origen = userRealCoordinate else {
+            mensajeRuta = L.t("Necesitamos tu ubicación para encontrar dónde subir. Activa el GPS y permite el acceso a la ubicación.",
+                              "We need your location to find a boarding stop. Enable GPS and allow location access.")
+            return
+        }
 
-        #if DEBUG
-        print("[Ruta] calculando desde (\(origen.latitude), \(origen.longitude)) hacia (\(destinoCoord.latitude), \(destinoCoord.longitude))")
-        #endif
-
-        routeTask = Task { @MainActor in
-            var route: CalculatedRoute? = nil
-            do {
-                route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .transit)
-            } catch {
-                #if DEBUG
-                print("[Ruta] transit falló: \(error.localizedDescription)")
-                #endif
+        calculandoItinerario = true
+        routeTask = Task { @MainActor [weak self] in
+            let feed = await GTFSRepository.shared.rutas()
+            guard let self, !Task.isCancelled, self.routeRevision == revision else { return }
+            defer {
+                if self.routeRevision == revision { self.calculandoItinerario = false }
             }
+            // Misma política del Tracking: hasta 800 m a pie en cada extremo.
+            let candidates = await TransitPlanner.shared.candidates(in: feed, origin: origen,
+                destination: destinoCoord, radius: 800)
             guard !Task.isCancelled, self.routeRevision == revision else { return }
-            if route == nil {
-                do {
-                    route = try await self.routeService.calculateRoute(from: origen, to: destinoCoord, transportType: .automobile)
-                } catch {
-                    #if DEBUG
-                    print("[Ruta] automobile falló: \(error.localizedDescription)")
-                    #endif
-                }
+            for candidate in candidates.prefix(4) {
+                let plan = await candidate.withWalkingDirections(using: self.routeService)
+                guard !Task.isCancelled, self.routeRevision == revision else { return }
+                guard plan.walkToBoardMeters <= 800, plan.walkToDestinationMeters <= 800 else { continue }
+                self.itinerario = plan
+                self.routePolyline = MKPolyline(coordinates: plan.coordinates, count: plan.coordinates.count)
+                self.etaMinutos = max(1, Int(ceil(plan.totalSeconds / 60)))
+                self.distanciaKm = (plan.walkToBoardMeters + plan.busMeters + plan.walkToDestinationMeters) / 1000
+                self.itinerarioFocusTick += 1
+                return
             }
-
-            guard !Task.isCancelled, self.routeRevision == revision else { return }
-            if let route {
-                #if DEBUG
-                print("[Ruta] OK por calles: \(Int(route.distance)) m, \(Int(route.expectedTravelTime/60)) min")
-                #endif
-                self.routePolyline = route.polyline
-                self.etaMinutos = Int(ceil(route.expectedTravelTime / 60.0))
-                self.distanciaKm = Double(round(10 * (route.distance / 1000.0)) / 10)
-            } else {
-                // Fallback: MKDirections sin respuesta (sin red, región sin
-                // cobertura, etc). Trazamos la línea directa para que el
-                // usuario SIEMPRE vea origen → destino en el mapa.
-                #if DEBUG
-                print("[Ruta] sin respuesta de MKDirections → trazo directo")
-                #endif
-                var coords = [origen, destinoCoord]
-                self.routePolyline = MKPolyline(coordinates: &coords, count: 2)
-                let metros = PolylineMatching.distanceMeters(origen, destinoCoord)
-                self.distanciaKm = Double(round(10 * (metros / 1000.0)) / 10)
-                self.etaMinutos = Int(ceil(metros / 83.0))   // ~5 km/h caminando
-            }
+            self.mensajeRuta = L.t("No encontramos una línea directa con paraderos a menos de 800 m de ambos extremos. Prueba otro destino.",
+                                   "No direct line has stops within 800 m of both ends. Try another destination.")
         }
     }
 

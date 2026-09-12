@@ -41,6 +41,7 @@ struct ReporteComunidad: Identifiable, Equatable {
     let tipo: TipoReporte
     let cuerpo: String
     let cuerpoIngles: String?
+    let foto: FotoComunidad?
     let utiles: Int
     /// Conteo base de "no me gusta". El voto del usuario se suma en vivo
     /// vía `ComunidadReacciones` (no se persiste, es demo).
@@ -67,6 +68,7 @@ struct ReporteComunidad: Identifiable, Equatable {
          tipo: TipoReporte,
          cuerpo: String,
          cuerpoIngles: String? = nil,
+         foto: FotoComunidad? = nil,
          utiles: Int,
          dislikes: Int = 0,
          comentarios: Int,
@@ -80,6 +82,7 @@ struct ReporteComunidad: Identifiable, Equatable {
         self.tipo = tipo
         self.cuerpo = cuerpo
         self.cuerpoIngles = cuerpoIngles
+        self.foto = foto
         self.utiles = utiles
         self.dislikes = dislikes
         self.comentarios = comentarios
@@ -87,4 +90,22 @@ struct ReporteComunidad: Identifiable, Equatable {
         self.avatarColor = avatarColor
         self.avatarForeground = avatarForeground
     }
+}
+
+/// Fotos de archivo para publicaciones ficticias, con procedencia y licencia.
+struct FotoComunidad: Equatable {
+    let asset: String
+    let lugar: String
+    let autor: String
+    let fecha: String
+    let fuente: String
+    let licencia: String
+    var licenciaURL: String { "https://creativecommons.org/licenses/by-sa/" + licencia + "/" }
+
+    static let pizarro = FotoComunidad(asset: "comunidad-pizarro", lugar: "Jirón Pizarro · Trujillo",
+        autor: "EACC", fecha: "2012", fuente: "https://commons.wikimedia.org/wiki/File:Jir%C3%B3n_Pizarro.jpg", licencia: "3.0")
+    static let centro = FotoComunidad(asset: "comunidad-centro", lugar: "Centro de Trujillo",
+        autor: "Pitxiquin", fecha: "2017", fuente: "https://commons.wikimedia.org/wiki/File:Carrers_del_centre_de_Trujillo.jpg", licencia: "4.0")
+    static let papal = FotoComunidad(asset: "comunidad-papal", lugar: "Óvalo Papal · Trujillo",
+        autor: "Latimax", fecha: "2011", fuente: "https://commons.wikimedia.org/wiki/File:Ovalo_papal_-_Trujillo_,Per%C3%BA.jpg", licencia: "3.0")
 }
