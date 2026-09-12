@@ -212,7 +212,7 @@ struct GuardadoView: View {
         Button {
             AppHaptics.impact(.medium)
             // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
-            SeniasPresenter.shared.ejecutarTrasVerSenia {
+            SeniasPresenter.shared.ejecutarTrasVerSenia(clave: selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea") {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     switch selectedTab {
                     case .lugares: showAddLugar = true
@@ -250,7 +250,7 @@ struct GuardadoView: View {
         .buttonStyle(PressableCapsuleStyle())
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .accessibilityLabel(selectedTab == .lugares ? L.t("Añadir lugar guardado", "Add saved place") : L.t("Añadir línea guardada", "Add saved line"))
-        .seniable(selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea")
+        .seniable(selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea", conGesto: false)
     }
 
     // MARK: - Tabs
@@ -259,16 +259,9 @@ struct GuardadoView: View {
             ForEach(Tab.allCases) { t in
                 Button {
                     AppHaptics.selection()
-                    // 1) El cambio de pestaña PRIMERO y su transacción de
-                    //    animación comprometida...
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTab = t }
-                    // 2) ...y la seña en el siguiente ciclo: mostrar() publica
-                    //    un @Published y despliega la ventana del miniplayer;
-                    //    hacerlo sincrónico aquí dentro rompía el switch (la
-                    //    pestaña no cambiaba, sólo aparecía el miniplayer).
                     let clave = t == .lugares ? "guardado.lugares" : "guardado.lineas"
-                    DispatchQueue.main.async {
-                        SeniasPresenter.shared.mostrar(clave: clave)
+                    SeniasPresenter.shared.ejecutarTrasVerSenia(clave: clave) {
+                        withAnimation(.easeInOut(duration: 0.2)) { selectedTab = t }
                     }
                 } label: {
                     VStack(spacing: 6) {
@@ -1124,15 +1117,17 @@ private struct AddLugarSheet: View {
     private var botonGuardar: some View {
         Button {
             guard let coord = coordElegida else { return }
-            AppHaptics.success()
-            onSave(LugarGuardado(
-                nombre: nombre.trimmingCharacters(in: .whitespaces),
-                direccion: direccion.isEmpty ? "Sin dirección" : direccion,
-                categoria: categoria,
-                lat: coord.latitude,
-                lon: coord.longitude
-            ))
-            dismiss()
+            SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "guardado.guardar_lugar") {
+                AppHaptics.success()
+                onSave(LugarGuardado(
+                    nombre: nombre.trimmingCharacters(in: .whitespaces),
+                    direccion: direccion.isEmpty ? "Sin dirección" : direccion,
+                    categoria: categoria,
+                    lat: coord.latitude,
+                    lon: coord.longitude
+                ))
+                dismiss()
+            }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: coordElegida == nil ? "location.slash.fill" : "mappin.and.ellipse")
@@ -1161,7 +1156,7 @@ private struct AddLugarSheet: View {
         .buttonStyle(PressableCapsuleStyle())
         .disabled(!puedeGuardar)
         .animation(.easeInOut(duration: 0.2), value: puedeGuardar)
-        .seniable(puedeGuardar ? "guardado.guardar_lugar" : nil)
+        .seniable(puedeGuardar ? "guardado.guardar_lugar" : nil, conGesto: false)
     }
 
     // MARK: Geocodificación con debounce

@@ -390,7 +390,7 @@ struct SeguridadView: View {
             // Lado derecho: boton Reportar
             Button {
                 // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
-                SeniasPresenter.shared.ejecutarTrasVerSenia { showReportarSheet = true }
+                SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "seguridad.reportar") { showReportarSheet = true }
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -406,7 +406,7 @@ struct SeguridadView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Reportar incidente", "Report an incident"))
-            .seniable("seguridad.reportar")
+            .seniable("seguridad.reportar", conGesto: false)
         }
         .padding(.horizontal, 20)
         .frame(height: 56)
@@ -431,7 +431,7 @@ struct SeguridadView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             Button {
                 // Modo Señas: deja ver el videito antes de que la alerta tape el miniplayer.
-                SeniasPresenter.shared.ejecutarTrasVerSenia { showLlamarAlert = true }
+                SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "seguridad.emergencia") { showLlamarAlert = true }
             } label: {
                 Text(L.signable("seguridad.emergencia", "Llamar 105", "Call 105"))
                     .font(.bodyXsMedium)
@@ -442,7 +442,7 @@ struct SeguridadView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Llamar al 105 emergencias", "Call emergency services at 105"))
-            .seniable("seguridad.emergencia")
+            .seniable("seguridad.emergencia", conGesto: false)
         }
         .padding(12)
         .background(

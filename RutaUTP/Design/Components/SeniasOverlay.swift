@@ -40,11 +40,11 @@ final class SeniasPlayerUIView: UIView {
     func configurar(url: URL) {
         // Evita reiniciar el bucle en cada updateUIView.
         guard url != urlActual else { return }
-        urlActual = url
         limpiar()
+        urlActual = url
 
         let item = AVPlayerItem(url: url)
-        let queue = AVQueuePlayer(playerItem: item)
+        let queue = AVQueuePlayer()
         queue.isMuted = true                 // las señas son mudas por definición
 
         let layer = AVPlayerLayer(player: queue)
@@ -97,7 +97,6 @@ struct SeniasPlayerView: UIViewRepresentable {
 struct SeniasOverlay: View {
 
     @ObservedObject private var presenter = SeniasPresenter.shared
-    @State private var aparecio = false
 
     private let servicio = SeniasService.shared
 
@@ -111,22 +110,15 @@ struct SeniasOverlay: View {
                 Spacer()
                 if let clave = presenter.claveVisible {
                     tarjeta(clave: clave)
-                        .scaleEffect(aparecio ? 1 : 0.9)
-                        .opacity(aparecio ? 1 : 0)
+                        .onAppear { presenter.tarjetaPresentada(clave: clave) }
+                        .onChange(of: clave) { _, nueva in presenter.tarjetaPresentada(clave: nueva) }
                 }
             }
         }
         .padding(.trailing, 14)
         .padding(.bottom, 104) // justo encima del BottomNavBar flotante
         .animation(.easeOut(duration: 0.22), value: presenter.claveVisible)
-        .onChange(of: presenter.claveVisible) { _, nuevo in
-            if nuevo != nil {
-                aparecio = false
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { aparecio = true }
-            } else {
-                aparecio = false
-            }
-        }
+
     }
 
     private func tarjeta(clave: String) -> some View {
@@ -220,6 +212,7 @@ struct SeniasOverlay: View {
         }
         .padding(6)
         .accessibilityLabel(L.t("Cerrar", "Close"))
+        .accessibilityHint(L.t("Continúa con la acción pendiente, si la hay", "Continues the pending action, if any"))
     }
 }
 
@@ -313,15 +306,14 @@ struct SeniableModifier: ViewModifier {
     /// la acción del botón llama ella misma a `presenter.mostrar(clave:)`.
     var conGesto: Bool = true
     @AppStorage(SeniasService.llaveModo) private var modoActivo = false
-    @ObservedObject private var presenter = SeniasPresenter.shared
+    private let presenter = SeniasPresenter.shared
 
     func body(content: Content) -> some View {
         if modoActivo {
             if conGesto {
                 conDistintivo(content)
-                    // simultaneousGesture: funciona también sobre textos que
-                    // están DENTRO de un Button (chips, CTAs). El tap muestra
-                    // la seña y el botón sigue ejecutando su acción normal.
+                    // Sólo para contenido informativo. Los botones usan
+                    // conGesto: false y coordinan clave y acción explícitamente.
                     .simultaneousGesture(
                         TapGesture().onEnded { presenter.mostrar(clave: clave) }
                     )

@@ -71,7 +71,7 @@ struct BienvenidaView: View {
                 .foregroundStyle(.appPrimary)
             Spacer()
             Button {
-                router.navigate(to: .mapaPrincipal)
+                router.navigate(to: .mapaPrincipal, claveSenia: "bienvenida.saltar")
             } label: {
                 Text(L.signable("bienvenida.saltar", "Saltar", "Skip"))
                     .font(.bodySm)
@@ -81,7 +81,7 @@ struct BienvenidaView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Saltar introducción", "Skip intro"))
-            .seniable("bienvenida.saltar")
+            .seniable("bienvenida.saltar", conGesto: false)
         }
         .padding(.horizontal, 20)
         .frame(height: 56)
@@ -186,7 +186,7 @@ struct BienvenidaView: View {
 
     private var ctaButton: some View {
         Button {
-            router.navigate(to: .mapaPrincipal)
+            router.navigate(to: .mapaPrincipal, claveSenia: "bienvenida.comenzar")
         } label: {
             HStack(spacing: 8) {
                 Text(L.signable("bienvenida.comenzar", "Comenzar", "Get Started"))
@@ -205,7 +205,7 @@ struct BienvenidaView: View {
         }
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel(L.t("Comenzar a usar la aplicación", "Start using the app"))
-        .seniable("bienvenida.comenzar")
+        .seniable("bienvenida.comenzar", conGesto: false)
     }
 
     private var legalFooter: some View {

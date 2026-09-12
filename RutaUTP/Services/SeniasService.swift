@@ -111,43 +111,70 @@ final class SeniasPresenter: ObservableObject {
         }
     }
 
-    /// Momento del último tap que mostró una seña. Las acciones que también
-    /// disparan una transición (navegación, sheets, covers) lo consultan para
-    /// saber si vienen del MISMO tap y darle tiempo al miniplayer.
-    private var momentoUltimaSenia: Date?
+    private var accionPendiente: (() -> Void)?
+    private var espera: DispatchWorkItem?
+    private var esperandoPresentacion = false
+    private var tarjetaVisible: String?
+    private var solicitud = UUID()
 
-    /// Ventana en la que una acción cuenta como hija del mismo tap que mostró
-    /// la seña (el gesto y la acción del botón se disparan juntos).
-    private static let ventanaMismoTap: TimeInterval = 0.5
-
-    /// Cuánto tiempo se deja para ver el videito antes de que corra una
-    /// transición disparada por el mismo tap (ej. CTA "Comenzar").
+    /// Tiempo visible antes de continuar con la acción solicitada.
     static let pausaParaVerSenia: TimeInterval = 3.0
 
     private init() {}
 
+    func cancelarAccionPendiente() {
+        solicitud = UUID()
+        espera?.cancel()
+        espera = nil
+        accionPendiente = nil
+        esperandoPresentacion = false
+    }
+
     func mostrar(clave: String) {
+        cancelarAccionPendiente()
         guard SeniasService.shared.modoActivo else { return }
-        momentoUltimaSenia = Date()
         claveVisible = clave
     }
 
+    /// Cerrar permite continuar sin esperar el resto de la presentación.
     func ocultar() {
+        let accion = accionPendiente
+        cancelarAccionPendiente()
+        tarjetaVisible = nil
         claveVisible = nil
+        accion?()
     }
 
-    /// Ejecuta la acción de inmediato, salvo que el tap que la originó acaba
-    /// de mostrar una seña: entonces espera `pausaParaVerSenia` para que el
-    /// miniplayer sea visible antes de que corra la transición. Con el modo
-    /// señas apagado no añade ninguna espera.
-    func ejecutarTrasVerSenia(_ accion: @escaping () -> Void) {
-        guard SeniasService.shared.modoActivo,
-              let momento = momentoUltimaSenia,
-              Date().timeIntervalSince(momento) < Self.ventanaMismoTap else {
+    /// El botón entrega explícitamente su clave y acción: no depende del
+    /// orden entre un TapGesture y la acción nativa de Button.
+    func ejecutarTrasVerSenia(clave: String? = nil, _ accion: @escaping () -> Void) {
+        // Un segundo toque al mismo botón no reinicia la espera ni lo duplica.
+        if SeniasService.shared.modoActivo, let clave,
+           claveVisible == clave, accionPendiente != nil { return }
+        cancelarAccionPendiente()
+        guard SeniasService.shared.modoActivo, let clave else {
+            tarjetaVisible = nil
+            claveVisible = nil
             accion()
             return
         }
-        momentoUltimaSenia = nil // la pausa se consume una sola vez por tap
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pausaParaVerSenia, execute: accion)
+        accionPendiente = accion
+        esperandoPresentacion = true
+        claveVisible = clave
+        // Si la tarjeta ya estaba montada, su onAppear no se repetirá.
+        if tarjetaVisible == clave { tarjetaPresentada(clave: clave) }
+    }
+
+    func tarjetaPresentada(clave: String) {
+        tarjetaVisible = clave
+        guard claveVisible == clave, esperandoPresentacion else { return }
+        esperandoPresentacion = false
+        let id = solicitud
+        let trabajo = DispatchWorkItem { [weak self] in
+            guard let self, self.solicitud == id, self.claveVisible == clave else { return }
+            self.ocultar()
+        }
+        espera = trabajo
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pausaParaVerSenia, execute: trabajo)
     }
 }

@@ -114,7 +114,7 @@ Los tokens visuales están en `Design/Colors.swift`, `Typography.swift` y `Spaci
 
 `IdiomaManager` persiste el idioma y `L.t` resuelve los textos español/inglés. Cambiar el idioma reconstruye `RootView` y puede reiniciar estado temporal de las pantallas.
 
-El modo de señas relaciona claves estables con `senias/manifest.json` y busca vídeos en `senias/clips/es/` o `senias/clips/en/`. El reproductor vive en una ventana superpuesta para mostrarse también sobre formularios. Cuando falta un clip, muestra el estado pendiente. El manifiesto tiene 29 entradas; todavía faltan archivos para varias claves en ambos idiomas.
+El modo de señas relaciona claves estables con `senias/manifest.json` y busca vídeos en `senias/clips/es/` o `senias/clips/en/`. El reproductor vive en una ventana superpuesta para mostrarse también sobre formularios. Cuando falta un clip, muestra el estado pendiente. El manifiesto tiene 29 entradas; todavía faltan archivos para varias claves en ambos idiomas. Los botones señables muestran primero la tarjeta durante 3 segundos y luego ejecutan su acción una sola vez. Cerrar la tarjeta adelanta la acción; elegir otra acción o salir a otra pantalla cancela la anterior.
 
 ## Verificación y desarrollo
 

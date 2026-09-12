@@ -696,7 +696,7 @@ private struct DetalleRutaView: View {
     private var ctaButton: some View {
         Button {
             // Modo Señas: deja ver el videito antes de que el cover tape el miniplayer.
-            SeniasPresenter.shared.ejecutarTrasVerSenia { showCarPlay = true }
+            SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "nav.iniciar") { showCarPlay = true }
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "location.fill")
@@ -715,7 +715,7 @@ private struct DetalleRutaView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Iniciar navegación")
-        .seniable("nav.iniciar")
+        .seniable("nav.iniciar", conGesto: false)
     }
 
     private func bottomSafeArea() -> CGFloat {

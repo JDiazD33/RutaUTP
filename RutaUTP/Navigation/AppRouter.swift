@@ -56,10 +56,9 @@ final class AppRouter: ObservableObject {
     /// Lo publica el popup de bus del Mapa ("Ver Ruta Completa").
     @Published var rutaPendiente: String?
 
-    func navigate(to screen: AppScreen) {
-        // Modo Señas: si el mismo tap mostró una seña, la transición de
-        // pantalla espera para que se vea el videito del miniplayer.
-        SeniasPresenter.shared.ejecutarTrasVerSenia {
+    func navigate(to screen: AppScreen, claveSenia: String? = nil) {
+        // La clave explícita coordina la seña antes de cambiar de pantalla.
+        SeniasPresenter.shared.ejecutarTrasVerSenia(clave: claveSenia) {
             withAnimation(.easeInOut(duration: 0.25)) {
                 self.currentScreen = screen
             }

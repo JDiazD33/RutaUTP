@@ -11,6 +11,8 @@ import UIKit
 
 struct RootView: View {
     @StateObject private var router = AppRouter()
+    @AppStorage(SeniasService.llaveModo) private var modoSenias = false
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Tema claro/oscuro. Se aplica SOLO con aplicarTemaEnVentanas (abajo):
     /// un único escritor de overrideUserInterfaceStyle. No volver a añadir
@@ -71,6 +73,18 @@ struct RootView: View {
         .onChange(of: isDarkMode) { _, nuevo in
             // Un único escritor del tema: inmediato y en ambos sentidos.
             aplicarTemaEnVentanas(nuevo)
+        }
+        .onChange(of: modoSenias) { _, activo in
+            if !activo {
+                SeniasPresenter.shared.cancelarAccionPendiente()
+                SeniasPresenter.shared.ocultar()
+            }
+        }
+        .onChange(of: scenePhase) { _, fase in
+            if fase == .background {
+                SeniasPresenter.shared.cancelarAccionPendiente()
+                SeniasPresenter.shared.ocultar()
+            }
         }
         .onChange(of: router.currentScreen) { _, _ in
             // Pantallas como NavegaciónRuta fuerzan .dark sobre la ventana;

@@ -461,8 +461,10 @@ struct MapaView: View {
             }
         }()
         return Button {
-            campoEnfocado = false
-            vm.seleccionar(destino: destino)
+            SeniasPresenter.shared.ejecutarTrasVerSenia(clave: destino.claveSenia) {
+                campoEnfocado = false
+                vm.seleccionar(destino: destino)
+            }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: destino.icon)
@@ -490,7 +492,7 @@ struct MapaView: View {
         .buttonStyle(.plain)
         .accessibilityValue(activo ? L.t("Seleccionado", "Selected") : "")
         .accessibilityHint(L.t("Mostrar este destino en el mapa", "Show this destination on the map"))
-        .seniable(destino.claveSenia)
+        .seniable(destino.claveSenia, conGesto: false)
     }
 
     // MARK: - Destino pendiente (desde Guardado u otras pantallas)
@@ -528,7 +530,7 @@ struct MapaView: View {
             HStack(alignment: .center) {
                 Button {
                     // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
-                    SeniasPresenter.shared.ejecutarTrasVerSenia { showReportarSheet = true }
+                    SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "mapa.reportar") { showReportarSheet = true }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -547,7 +549,7 @@ struct MapaView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .seniable("mapa.reportar")
+                .seniable("mapa.reportar", conGesto: false)
 
                 Spacer()
 
