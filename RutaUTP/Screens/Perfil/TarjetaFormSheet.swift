@@ -40,8 +40,16 @@ final class TarjetasStore: ObservableObject {
     }
 
     @discardableResult private func guardar(_ nuevas: [TarjetaGuardada]) -> Bool {
+        // La rama de lectura previa ya publica su propio error desde `cargar()`.
         guard cargado else { cargar(); return false }
-        guard let data = try? JSONEncoder().encode(nuevas) else { return false }
+        // Esta era la única ruta realmente silenciosa: si fallaba la
+        // codificación, el botón "Guardar tarjeta" no hacía nada y el usuario
+        // no tenía forma de saber por qué.
+        guard let data = try? JSONEncoder().encode(nuevas) else {
+            error = L.t("No se pudo preparar el cambio para guardarlo. Inténtalo de nuevo.",
+                        "Couldn't prepare the change to be saved. Try again.")
+            return false
+        }
         var status = SecItemUpdate(consulta as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if status == errSecItemNotFound {
             var query = consulta

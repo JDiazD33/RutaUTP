@@ -11,9 +11,14 @@ import UIKit
 struct PerfilView: View {
     @EnvironmentObject private var router: AppRouter
 
+    // Dato institucional del prototipo. DatosPersonalesSheet lo presenta como
+    // "solo lectura" (viene de la universidad), así que aquí no se edita.
     @State private var nombre: String = "Joaquín Díaz"
-    @State private var notifOn: Bool = true
-    @State private var ubicacionOn: Bool = true
+    /// Preferencias del usuario. En @AppStorage para que sobrevivan al cambio
+    /// de pestaña: RootView reconstruye cada pantalla al navegar, así que con
+    /// @State se perdían en cada visita.
+    @AppStorage("perfil_notificaciones") private var notifOn: Bool = true
+    @AppStorage("perfil_compartirUbicacion") private var ubicacionOn: Bool = true
     /// Modo Señas. Se lee desde varias pantallas, por eso va en AppStorage
     /// y no en @State: cualquier vista reacciona al cambio al instante.
     @AppStorage(SeniasService.llaveModo) private var modoSenias: Bool = false
@@ -21,8 +26,6 @@ struct PerfilView: View {
     @State private var showUbicacionPopup: Bool = false
     @State private var ubicacionPopupMensaje: String = ""
     @State private var ubicacionPopupSubtitulo: String = ""
-    @State private var showEditAlert: Bool = false
-    @State private var newNameInput: String = ""
     @State private var showDatosPersonales: Bool = false
     @State private var showVoiceOverHelp: Bool = false
     //  CORREGIDO V3: estado para Wallet
@@ -69,14 +72,14 @@ struct PerfilView: View {
             if ProcessInfo.processInfo.arguments.contains("--carne") { showCarneDigital = true }
             #endif
         }
-        .onChange(of: showDatosPersonales) { abierto in
+        .onChange(of: showDatosPersonales) { _, abierto in
             if !abierto { fotoPerfil = ProfileImageStore.load() }
         }
         // La foto puede cambiar dentro del Carné Digital: recargar al cerrar.
-        .onChange(of: showCarneDigital) { abierto in
+        .onChange(of: showCarneDigital) { _, abierto in
             if !abierto { fotoPerfil = ProfileImageStore.load() }
         }
-        .onChange(of: ubicacionOn) { activo in
+        .onChange(of: ubicacionOn) { _, activo in
             if activo {
                 ubicacionPopupMensaje = "Ubicación compartida"
                 ubicacionPopupSubtitulo = "Tu ubicación en tiempo real se compartirá para el seguimiento de rutas UTP."
@@ -87,20 +90,9 @@ struct PerfilView: View {
             showUbicacionPopup = true
         }
         .alert(ubicacionPopupMensaje, isPresented: $showUbicacionPopup) {
-            Button("Entendido", role: .cancel) { }
+            Button(L.t("Entendido", "Got it"), role: .cancel) { }
         } message: {
             Text(ubicacionPopupSubtitulo)
-        }
-        .alert("Editar nombre", isPresented: $showEditAlert) {
-            TextField("Nombre completo", text: $newNameInput)
-            Button("Guardar") {
-                if !newNameInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    nombre = newNameInput
-                }
-            }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text(L.t("Ingresa tu nuevo nombre para actualizar tu perfil.", "Enter your new name to update your profile."))
         }
         // Sheet de Tarjeta
         .sheet(isPresented: $showTarjetaSheet) {
@@ -187,7 +179,7 @@ struct PerfilView: View {
                                 .foregroundStyle(.white)
                         }
                     }
-                    .accessibilityLabel("Foto de perfil, \(iniciales(nombre))")
+                    .accessibilityLabel(L.t("Foto de perfil, ", "Profile photo, ") + iniciales(nombre))
                     .accessibilityAddTraits(.isImage)
                     VStack(alignment: .leading, spacing: 6) {
                         Text(nombre)
@@ -221,7 +213,8 @@ struct PerfilView: View {
                 }
                 .padding(.horizontal, 20)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(nombre), estudiante UTP\(carnetGuardado ? ", carné guardado" : "")")
+                .accessibilityLabel(nombre + L.t(", estudiante UTP", ", UTP student")
+                                + (carnetGuardado ? L.t(", carné guardado", ", card saved") : ""))
                 .accessibilityAddTraits(.isHeader)
 
                 // Mi Wallet integrado debajo del nombre
@@ -263,9 +256,9 @@ struct PerfilView: View {
                             )
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Método de pago")
+                        .accessibilityLabel(L.t("Método de pago", "Payment method"))
                         .accessibilityValue(tarjetasStore.principal?.etiqueta ?? "Sin tarjeta, agregar")
-                        .accessibilityHint("Doble toque para administrar tu tarjeta")
+                        .accessibilityHint(L.t("Doble toque para administrar tu tarjeta", "Double tap to manage your card"))
 
                         // Carnet UTP translúcido
                         Button {
@@ -434,7 +427,7 @@ struct PerfilView: View {
                     Text(L.t("VoiceOver", "VoiceOver"))
                         .font(.bodyMdMedium)
                         .foregroundStyle(.onSurface)
-                    Text(voiceOverOn ? "Activado" : "Desactivado")
+                    Text(voiceOverOn ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                 }
@@ -449,8 +442,8 @@ struct PerfilView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("VoiceOver")
-        .accessibilityValue(voiceOverOn ? "Activado" : "Desactivado")
-        .accessibilityHint("Doble toque para ver cómo activar VoiceOver en tu iPhone")
+        .accessibilityValue(voiceOverOn ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
+        .accessibilityHint(L.t("Doble toque para ver cómo activar VoiceOver en tu iPhone", "Double tap to see how to enable VoiceOver on your iPhone"))
     }
 
     private func abrirAjustesIOS() {
@@ -479,8 +472,8 @@ struct PerfilView: View {
         .padding(.vertical, 14)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label)
-        .accessibilityValue(isOn.wrappedValue ? "Activado" : "Desactivado")
-        .accessibilityHint("Doble toque para cambiar")
+        .accessibilityValue(isOn.wrappedValue ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
+        .accessibilityHint(L.t("Doble toque para cambiar", "Double tap to change"))
         .accessibilityAddTraits(.isButton)
     }
 
@@ -538,7 +531,7 @@ struct PerfilView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
-        .accessibilityHint("Doble toque para abrir")
+        .accessibilityHint(L.t("Doble toque para abrir", "Double tap to open"))
     }
 
     // MARK: - Helpers
@@ -548,81 +541,18 @@ struct PerfilView: View {
     }
 }
 
-// MARK: - Disponibilidad real de datos locales
-private struct OfflineMapSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var comprobando = true
-    @State private var numeroRutas = 0
-    @State private var revision = 0
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    Image(systemName: comprobando ? "internaldrive" : (numeroRutas > 0 ? "checkmark.circle.fill" : "exclamationmark.triangle"))
-                        .font(.system(size: 48))
-                        .foregroundStyle(Color.appPrimary)
-                        .frame(maxWidth: .infinity)
-                    Text(comprobando
-                         ? L.t("Comprobando datos locales…", "Checking local data…")
-                         : numeroRutas > 0
-                            ? L.t("Rutas disponibles sin conexión", "Routes available offline")
-                            : L.t("No se pudieron cargar las rutas", "Couldn't load routes"))
-                        .font(.title2.bold())
-                    if comprobando {
-                        ProgressView().frame(maxWidth: .infinity)
-                    } else if numeroRutas > 0 {
-                        Label(L.t("\(numeroRutas) rutas cargadas desde la app", "\(numeroRutas) routes loaded from the app"), systemImage: "bus.fill")
-                        Text(L.t("Los recorridos y paraderos vienen incluidos en la app. No necesitas descargarlos ni activar un interruptor para consultarlos sin internet.", "Routes and stops are included in the app. No download or switch is needed to view them offline."))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text(L.t("No podemos confirmar que los datos de rutas estén disponibles. Vuelve a intentarlo o actualiza la app.", "We couldn't confirm route data availability. Try again or update the app."))
-                            .foregroundStyle(.secondary)
-                        Button(L.t("Reintentar", "Retry")) { revision += 1 }
-                            .buttonStyle(.bordered)
-                    }
-                    Divider()
-                    Label(L.t("También se conserva", "Also kept on this device"), systemImage: "bookmark")
-                        .font(.headline)
-                    Text(L.t("Tus lugares y líneas guardados, y las fotos del perfil y carné que hayas añadido.", "Your saved places and lines, plus any profile and card photos you have added."))
-                        .foregroundStyle(.secondary)
-                    Divider()
-                    Label(L.t("Necesita conexión", "Requires a connection"), systemImage: "wifi")
-                        .font(.headline)
-                    Text(L.t("La búsqueda de direcciones y el cálculo de indicaciones de Apple Maps requieren internet. El mapa base puede no mostrarse si no está en caché. Esta app no descarga mapas de Apple para uso offline ni garantiza navegación completa sin conexión.", "Address search and Apple Maps directions require internet. The base map may be unavailable when it isn't cached. This app doesn't download Apple maps for offline use or guarantee fully offline navigation."))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(24)
-            }
-            .background(Color.appSurface)
-            .navigationTitle(L.t("Modo offline", "Offline mode"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L.t("Listo", "Done")) { dismiss() }
-                }
-            }
-        }
-        .task(id: revision) {
-            comprobando = true
-            let rutas = await GTFSRepository.shared.rutas()
-            guard !Task.isCancelled else { return }
-            numeroRutas = rutas.count
-            comprobando = false
-        }
-    }
-}
-
 // MARK: - Sheet de ayuda para activar VoiceOver
 private struct VoiceOverHelpSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    private let pasos: [(icon: String, texto: String)] = [
+    private var pasos: [(icon: String, texto: String)] {
+        [
         ("gearshape.fill", L.t("Abre la app Ajustes de tu iPhone", "Open your iPhone Settings app")),
         ("hand.point.right.fill", L.t("Toca Accesibilidad", "Tap Accessibility")),
         ("speaker.wave.2.fill", L.t("Toca VoiceOver, primera opción", "Tap VoiceOver, first option")),
         ("togglepower", L.t("Activa el interruptor VoiceOver", "Turn on the VoiceOver switch"))
-    ]
+        ]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -666,7 +596,7 @@ private struct VoiceOverHelpSheet: View {
                         Spacer()
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Paso \(i + 1): \(pasos[i].texto)")
+                    .accessibilityLabel(L.t("Paso ", "Step ") + "\(i + 1): \(pasos[i].texto)")
                 }
             }
 
@@ -689,8 +619,8 @@ private struct VoiceOverHelpSheet: View {
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Abrir Ajustes del iPhone")
-            .accessibilityHint("Doble toque para ir directamente a la configuración de la app")
+            .accessibilityLabel(L.t("Abrir Ajustes del iPhone", "Open iPhone Settings"))
+            .accessibilityHint(L.t("Doble toque para ir directamente a la configuración de la app", "Double tap to go straight to the app settings"))
 
             Button {
                 dismiss()
@@ -700,7 +630,7 @@ private struct VoiceOverHelpSheet: View {
                     .foregroundStyle(.onSurfaceVariant)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Cerrar instrucciones")
+            .accessibilityLabel(L.t("Cerrar instrucciones", "Close instructions"))
         }
         .padding(20)
     }

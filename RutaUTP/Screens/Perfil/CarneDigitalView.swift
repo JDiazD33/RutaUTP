@@ -53,7 +53,7 @@ struct CarneDigitalView: View {
                     .foregroundStyle(.black)
                     .padding(12)
                     .background(.white, in: RoundedRectangle(cornerRadius: 10))
-                    .accessibilityLabel("Universidad Tecnológica del Perú")
+                    .accessibilityLabel(L.t("Universidad Tecnológica del Perú", "Universidad Tecnológica del Perú"))
 
             }
             .padding(20)
@@ -122,7 +122,7 @@ struct CarneDigitalView: View {
             .padding(.top, 18)
             .padding(.bottom, 16)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Foto de perfil, \(nombre)")
+            .accessibilityLabel(L.t("Foto de perfil, ", "Profile photo, ") + nombre)
             .accessibilityAddTraits(.isImage)
 
             // Línea gris que separa el nombre del código
@@ -138,7 +138,7 @@ struct CarneDigitalView: View {
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabelMd)
                 Text(codigoUTP)
-                    .font(Font.custom(AppFontFamily.jetBrainsMono, size: 26, relativeTo: .title2).weight(.semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(.onSurface)
                     .tracking(3)
             }
@@ -168,7 +168,7 @@ struct CarneDigitalView: View {
                         .frame(maxWidth: .infinity)
                         .padding(10)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white))
-                        .accessibilityLabel("Código de barras del código \(codigoUTP)")
+                        .accessibilityLabel(L.t("Código de barras del código ", "Barcode for code ") + codigoUTP)
                 }
             }
             .padding(.horizontal, 16)
@@ -196,7 +196,7 @@ struct CarneDigitalView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Carné digital de \(nombre), código UTP \(codigoUTP)")
+        .accessibilityLabel(L.t("Carné digital de ", "Digital ID of ") + "\(nombre)" + L.t(", código UTP ", ", UTP code ") + codigoUTP)
     }
 
     // MARK: - Foto circular con insignia de cámara morada

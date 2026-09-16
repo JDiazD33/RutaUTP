@@ -28,12 +28,8 @@ struct RouteTrackingDemoView: View {
     /// debe seguir el tema del usuario como el resto del app.
     @AppStorage("isDarkMode") private var isDarkMode = false
 
-    // ── Negocios en ruta (fase 1) ──
-    /// Burbujas visibles: los 4 negocios más cercanos a la posición actual,
-    /// refrescados cada ~120 m para que "vayan apareciendo" en el micro.
-    @State private var negociosCerca: [Negocio] = []
-    @State private var negocioSeleccionado: Negocio?
-    @State private var ultimoRefreshNegocios: CLLocationCoordinate2D?
+    // Los negocios en ruta viven en el ViewModel: son datos y una consulta,
+    // no presentación.
 
     // ── Interacción con vehículos ──
     /// ID del bus tocado en el mapa (la card se alimenta del stream en vivo).
@@ -46,9 +42,6 @@ struct RouteTrackingDemoView: View {
     @State private var showDestinationSearch = false
     @State private var destinationSearchError: String?
     @State private var destinationSearchTask: Task<Void, Never>?
-    @State private var businessMapCenter: CLLocationCoordinate2D?
-    @State private var businessMapRadius: Double = 1800
-    @State private var businessViewportRevision = 0
 
     init(locationService: LocationServiceProtocol = LocationService()) {
         _vm = StateObject(wrappedValue: RouteTrackingViewModel(locationService: locationService))
@@ -91,13 +84,13 @@ struct RouteTrackingDemoView: View {
                 // Card del negocio o del vehículo tocado: directamente sobre
                 // el panel inferior, sin taparlo nunca. La de negocio sigue el
                 // tema elegido en Ajustes (la pantalla fuerza oscuro; esa no).
-                if let negocio = negocioSeleccionado {
+                if let negocio = vm.negocioSeleccionado {
                     NegocioDetailCard(
                         negocio: negocio,
                         ubicacion: vm.posicion,
                         onClose: {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                negocioSeleccionado = nil
+                                vm.negocioSeleccionado = nil
                             }
                         }
                     )
@@ -159,7 +152,7 @@ struct RouteTrackingDemoView: View {
             vm.stop()
         }
         .onChange(of: vm.posicionTick) { _, _ in
-            refrescarNegocios()
+            vm.refrescarNegocios()
             seguirPosicion()
         }
         // Al arrancar el viaje: encuadre de toda la ruta (el usuario decide
@@ -222,9 +215,9 @@ struct RouteTrackingDemoView: View {
             if let plan = vm.itinerary {
                 MapPolyline(coordinates: plan.walkToBoard)
                     .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                MapPolyline(coordinates: plan.bus)
+                MapPolyline(coordinates: plan.busDibujo)
                     .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
-                MapPolyline(coordinates: plan.bus)
+                MapPolyline(coordinates: plan.busDibujo)
                     .stroke(colorRuta, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 MapPolyline(coordinates: plan.walkToDestination)
                     .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
@@ -264,23 +257,23 @@ struct RouteTrackingDemoView: View {
                             // Toggle: segundo tap sobre el mismo bus cierra.
                             vehiculoSeleccionadoID = (vehiculoSeleccionadoID == vehiculo.id)
                                 ? nil : vehiculo.id
-                            negocioSeleccionado = nil
+                            vm.negocioSeleccionado = nil
                         }
                     }
                 }
             }
 
             // Catálogo demo espaciado según el área visible, también al explorar la ciudad.
-            ForEach(negociosCerca) { negocio in
+            ForEach(vm.negociosCerca) { negocio in
                 Annotation(negocio.nombre, coordinate: negocio.coordinate, anchor: .bottom) {
                     NegocioBubbleMarker(
                         negocio: negocio,
-                        seleccionado: negocioSeleccionado?.id == negocio.id
+                        seleccionado: vm.negocioSeleccionado?.id == negocio.id
                     )
                     .onTapGesture {
                         AppHaptics.impact(.light)
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            negocioSeleccionado = negocio
+                            vm.negocioSeleccionado = negocio
                             vehiculoSeleccionadoID = nil
                         }
                     }
@@ -289,23 +282,18 @@ struct RouteTrackingDemoView: View {
         }
         .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
         .onMapCameraChange(frequency: .onEnd) { context in
-            let center = context.region.center
-            let radius = max(500, min(16000, context.region.span.latitudeDelta * 111_320 * 0.6))
-            let moved = businessMapCenter.map {
-                NegociosService.distanciaMetros($0, center) >= 120
-            } ?? true
-            let zoomChanged = abs(radius - businessMapRadius) >= max(50, businessMapRadius * 0.1)
-            guard moved || zoomChanged else { return }
-            businessMapCenter = center
-            businessMapRadius = radius
-            businessViewportRevision += 1
+            // El cálculo de si el movimiento «cuenta» vive en el ViewModel.
+            vm.actualizarViewport(
+                center: context.region.center,
+                radius: max(500, min(16000, context.region.span.latitudeDelta * 111_320 * 0.6))
+            )
         }
         // Publicar anotaciones fuera del callback de MapKit; agrupar movimientos rápidos.
-        .task(id: businessViewportRevision) {
+        .task(id: vm.businessViewportRevision) {
             do { try await Task.sleep(for: .milliseconds(180)) }
             catch { return }
             guard !Task.isCancelled else { return }
-            refrescarNegocios(force: true)
+            vm.refrescarNegocios(force: true)
         }
         .mapControls {
             MapCompass()
@@ -547,12 +535,9 @@ struct RouteTrackingDemoView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: 10).fill(Color(light: "#087C55", dark: "#8affc1").opacity(0.10)))
                 } else if vm.rutaAproximada {
-                    // Aviso cuando la ruta es el trazo directo de respaldo.
-                    Label(L.t("Ruta aproximada · sin datos de MapKit",
-                              "Approximate route · no MapKit data"),
-                          systemImage: "wifi.exclamationmark")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.yellow.opacity(0.9))
+                    // El trazado es el respaldo directo: mismo aviso, con el
+                    // motivo cambiado, para no tener dos lenguajes distintos.
+                    AvisoRutaAproximada(motivo: .rutaSinDatos)
                 }
 
                 if let plan = vm.itinerary {
@@ -659,9 +644,8 @@ struct RouteTrackingDemoView: View {
     private var horaLlegadaTexto: String {
         guard vm.etaTotalSeg != nil else { return "—" }
         let fecha = Date().addingTimeInterval(vm.remainingSeconds)
-        let formato = DateFormatter()
-        formato.dateFormat = "HH:mm"
-        return formato.string(from: fecha)
+        return FormatoFecha.formateador(patron: "HH:mm", locale: .current)
+            .string(from: fecha)
     }
 
     private func stat(icono: String, valor: String, etiqueta: String) -> some View {
@@ -927,18 +911,6 @@ struct RouteTrackingDemoView: View {
 
     /// Al mover el mapa selecciona negocios espaciados según el zoom.
     /// En seguimiento, las actualizaciones de cámara mantienen el área al día.
-    private func refrescarNegocios(force: Bool = false) {
-        let pos = businessMapCenter ?? vm.posicion ?? GTFSRepository.coordenadaUTP
-        if !force, let ultimo = ultimoRefreshNegocios,
-           NegociosService.distanciaMetros(ultimo, pos) < 120 { return }
-        ultimoRefreshNegocios = pos
-        let nuevos = NegociosService.shared.distribuidos(cercaDe: pos, radioMetros: businessMapRadius, limite: 14)
-        if nuevos.map(\.id) != negociosCerca.map(\.id) {
-            negociosCerca = nuevos
-        }
-        // El negocio abierto se mantiene aunque salga del top cercano: el
-        // usuario ya mostró interés; se cierra solo con el botón.
-    }
 
     /// Hoja independiente: el campo queda arriba y respeta el teclado de iOS.
     private var destinationSearchSheet: some View {
@@ -1043,9 +1015,7 @@ struct RouteTrackingDemoView: View {
             Text(L.t("··· Caminata     ━ Recorrido del micro", "··· Walk     ━ Bus route"))
                 .font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)
             if plan.walkingApproximate {
-                Text(L.t("Caminata aproximada: sin cobertura peatonal. Distancias estimadas.",
-                         "Approximate walk: pedestrian directions unavailable. Estimated distances."))
-                    .font(.system(size: 10)).foregroundStyle(Color.appError)
+                AvisoRutaAproximada()
             }
         }
         .font(.system(size: 11, weight: .medium))
@@ -1055,12 +1025,15 @@ struct RouteTrackingDemoView: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerHigh))
     }
 
-    /// Color estable por línea para los vehículos del provider.
+    /// Color de la línea, tomado del `route_color` del feed GTFS.
+    ///
+    /// Antes se derivaba de un hash del nombre de la línea, así que la misma
+    /// línea aparecía con un color en Rutas y en el Mapa y con otro aquí. El
+    /// gris neutro solo salta si la línea no está en el feed, que no debería
+    /// ocurrir: los vehículos se generan a partir de rutas del propio feed.
     private func colorDeLinea(_ linea: String) -> Color {
-        let paleta: [Color] = [.primaryContainer, .secondary, .tertiaryContainer,
-                               .secondaryContainer, .tertiary, .appError]
-        let suma = linea.unicodeScalars.reduce(0) { $0 + Int($1.value) }
-        return paleta[suma % paleta.count]
+        guard let hex = vm.coloresPorLinea[linea] else { return .secondary }
+        return Color.colorRuta(hex: hex)
     }
 }
 

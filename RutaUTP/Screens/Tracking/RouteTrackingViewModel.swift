@@ -22,17 +22,21 @@ final class RouteTrackingViewModel: ObservableObject {
         static func == (lhs: DestinoDemo, rhs: DestinoDemo) -> Bool { lhs.id == rhs.id }
     }
 
-    /// Propiedad de instancia (no `static`): se evalúa al crear el VM, que
-    /// RootView reconstruye al cambiar el idioma (.id(codigo)), así el label
-    /// sale siempre en el idioma activo. Mismas claves señables del Mapa.
-    let destinos: [DestinoDemo] = [
+    /// Propiedad CALCULADA, no almacenada: el label sale en el idioma activo
+    /// en cada lectura. Antes era un `let` evaluado al crear el VM y dependía
+    /// de que RootView reconstruyera el árbol al cambiar de idioma; al quitar
+    /// ese `.id()`, un `let` habría quedado congelado en el idioma de arranque.
+    /// Mismas claves señables del Mapa.
+    var destinos: [DestinoDemo] {
+        [
         DestinoDemo(id: 1, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill",
                     coordinate: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645)),
         DestinoDemo(id: 2, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill",
                     coordinate: CLLocationCoordinate2D(latitude: -8.1090, longitude: -79.0270)),
         DestinoDemo(id: 3, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves",
                     coordinate: CLLocationCoordinate2D(latitude: -8.0825, longitude: -79.1197))
-    ]
+        ]
+    }
 
     // MARK: - Estado de navegación (igual a NavegacionRutaView)
 
@@ -70,6 +74,18 @@ final class RouteTrackingViewModel: ObservableObject {
     // Vehículos en el mapa vía provider (badge DEMO / EN VIVO en la UI).
     @Published private(set) var vehiculos: [VehiclePosition] = []
     @Published private(set) var fuenteVehiculos: VehicleTrackingSource = .simulated
+
+    /// Color de cada línea según el `route_color` del feed GTFS, en hex.
+    ///
+    /// La UI lo consulta por nombre de línea: los `VehiclePosition` solo traen
+    /// la línea, no el route_id. Antes el demo pintaba los vehículos con un
+    /// color derivado de un hash del nombre, así que la misma línea salía de
+    /// un color en Rutas/Mapa y de otro aquí.
+    ///
+    /// Se guarda el hex y no un `Color` para que el ViewModel no dependa de
+    /// SwiftUI: la vista lo resuelve con `Color.colorRuta(hex:)`, el mismo
+    /// ajuste de presentación que usan las otras pantallas.
+    @Published private(set) var coloresPorLinea: [String: String] = [:]
 
     // Sesión del viaje en curso (modelo de datos del módulo, listo para backend).
     @Published private(set) var sesion: TripSession?
@@ -182,7 +198,7 @@ final class RouteTrackingViewModel: ObservableObject {
     private var consecutiveOffRoute: Int = 0
     private var locationTask: Task<Void, Never>?
     private var vehiculoTask: Task<Void, Never>?
-    private var demoTimer: Timer?
+    private var demoTask: Task<Void, Never>?
     private var demoProgreso: Double = 0
     private var ultimoFraccionPolyline: Double = 0
     /// Ritmo real de simulación en m/s (de la línea GTFS o del ETA de MapKit).
@@ -211,6 +227,7 @@ final class RouteTrackingViewModel: ObservableObject {
     deinit {
         locationTask?.cancel()
         vehiculoTask?.cancel()
+        demoTask?.cancel()
         vehicleProvider.stop()
         locationService.stopUpdating()
     }
@@ -234,6 +251,17 @@ final class RouteTrackingViewModel: ObservableObject {
         guard !Task.isCancelled else { return }
         var seen = Set<String>()
         allStops = feed.flatMap(\.paraderos).filter { seen.insert($0.id).inserted }
+        // Varias rutas pueden compartir `linea`: en este feed 12 de los 90
+        // nombres son variantes de la misma línea. Como `VehiclePosition` solo
+        // trae la línea y no el route_id, el mapa no puede distinguirlas, así
+        // que se queda un color por línea. Se resuelve de forma DETERMINISTA
+        // (la ruta de id menor) para que no dependa del orden en que llegue el
+        // feed, que va ordenado por cercanía al campus.
+        coloresPorLinea = feed
+            .sorted { $0.id < $1.id }
+            .reduce(into: [String: String]()) { mapa, ruta in
+                if mapa[ruta.linea] == nil { mapa[ruta.linea] = ruta.colorHex }
+            }
         if let posicion { refreshNearestStop(at: posicion) }
     }
 
@@ -498,12 +526,16 @@ final class RouteTrackingViewModel: ObservableObject {
         }
         detenerDemoSimulado()
         demoProgreso = progreso
-        demoTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
+        // Una sola tarea que duerme entre pasos. Antes era un `Timer` que
+        // creaba un `Task` nuevo por tick — doce por segundo — solo para saltar
+        // al hilo principal.
+        demoTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 80_000_000)
+                guard !Task.isCancelled, let self else { return }
+                guard let total = self.distanciasAcumuladas.last, total > 1 else { continue }
                 // Avance por METROS reales: velocidad real de la ruta (m/s)
                 // × multiplicador elegido. 1× = ritmo real de la línea.
-                guard let total = self.distanciasAcumuladas.last, total > 1 else { return }
                 let speed = self.journeyLeg == .riding ? (self.itinerary?.busSpeed ?? 6) : 1.4
                 let deltaMetros = speed * self.velocidadDemo * 0.08
                 self.demoProgreso = min(1.0, self.demoProgreso + deltaMetros / total)
@@ -518,8 +550,8 @@ final class RouteTrackingViewModel: ObservableObject {
     }
 
     private func detenerDemoSimulado() {
-        demoTimer?.invalidate()
-        demoTimer = nil
+        demoTask?.cancel()
+        demoTask = nil
     }
 
     /// Coordenada sobre el shape a una fracción 0...1 (búsqueda binaria).
@@ -574,6 +606,55 @@ final class RouteTrackingViewModel: ObservableObject {
                 self.velocidadesVehiculos = velocidades
                 self.vehiculos = positions
             }
+        }
+    }
+
+    // MARK: - Negocios en ruta
+
+    /// Burbujas visibles: los negocios más cercanos al centro visible del mapa.
+    /// Se refrescan solo cuando el mapa se movió lo suficiente.
+    @Published private(set) var negociosCerca: [Negocio] = []
+
+    /// Negocio cuya card está abierta. El usuario ya mostró interés: se
+    /// mantiene aunque salga del top cercano y se cierra solo con su botón.
+    @Published var negocioSeleccionado: Negocio?
+
+    /// Cambia cuando el viewport se movió lo bastante como para reprocesar las
+    /// burbujas; la vista lo observa para agrupar movimientos rápidos.
+    @Published private(set) var businessViewportRevision = 0
+
+    private var businessMapCenter: CLLocationCoordinate2D?
+    private var businessMapRadius: Double = 1800
+    private var ultimoRefreshNegocios: CLLocationCoordinate2D?
+
+    /// Registra el centro y el radio visibles del mapa. Solo cuenta como
+    /// cambio si se desplazó ≥120 m o si el zoom varió lo suficiente: así un
+    /// gesto pequeño no dispara una consulta.
+    func actualizarViewport(center: CLLocationCoordinate2D, radius: Double) {
+        let moved = businessMapCenter.map {
+            NegociosService.distanciaMetros($0, center) >= 120
+        } ?? true
+        let zoomChanged = abs(radius - businessMapRadius) >= max(50, businessMapRadius * 0.1)
+        guard moved || zoomChanged else { return }
+        businessMapCenter = center
+        businessMapRadius = radius
+        businessViewportRevision += 1
+    }
+
+    /// Recalcula las burbujas visibles alrededor del viewport actual.
+    ///
+    /// `force` salta el filtro de distancia (lo usa el refresco con retardo
+    /// que agrupa movimientos rápidos del mapa).
+    func refrescarNegocios(force: Bool = false) {
+        let pos = businessMapCenter ?? posicion ?? GTFSRepository.coordenadaUTP
+        if !force, let ultimo = ultimoRefreshNegocios,
+           NegociosService.distanciaMetros(ultimo, pos) < 120 { return }
+        ultimoRefreshNegocios = pos
+        let nuevos = NegociosService.shared.distribuidos(cercaDe: pos,
+                                                        radioMetros: businessMapRadius,
+                                                        limite: 14)
+        if nuevos.map(\.id) != negociosCerca.map(\.id) {
+            negociosCerca = nuevos
         }
     }
 
@@ -663,6 +744,14 @@ struct TransitItinerary {
     var coordinates: [CLLocationCoordinate2D] { walkToBoard + bus + walkToDestination }
     let busSpeed: Double
 
+    /// Geometría del tramo en bus lista para DIBUJAR, decimada una sola vez.
+    ///
+    /// `bus` conserva todas las esquinas porque de él salen `busMeters` y el
+    /// avance del viaje, pero para dibujar MapKit no gana nada con 500 puntos
+    /// donde 250 se ven igual — y este tramo se pinta DOS veces (contorno claro
+    /// + color de línea) en cada mapa que lo muestra.
+    let busDibujo: [CLLocationCoordinate2D]
+
     init(route: RutaGTFS, board: ParaderoGTFS, alight: ParaderoGTFS,
          walkToBoard: [CLLocationCoordinate2D], bus: [CLLocationCoordinate2D],
          walkToDestination: [CLLocationCoordinate2D]) {
@@ -674,6 +763,7 @@ struct TransitItinerary {
         self.walkToDestination = walkToDestination
         self.busMeters = PolylineMatching.totalLengthMeters(bus)
         self.busSpeed = min(14, max(3, route.distanciaKm * 1000 / Double(max(1, route.duracionMin) * 60)))
+        self.busDibujo = PolylineMatching.decimate(bus, maxPoints: 250)
     }
 
     var totalSeconds: Double { (walkToBoardMeters + walkToDestinationMeters) / 1.4 + busMeters / busSpeed }

@@ -208,17 +208,21 @@ struct CarnetScannerView: View {
     private func guardar(_ image: UIImage) {
         guard !guardando else { return }
         guardando = true
-        DispatchQueue.global(qos: .userInitiated).async {
-            let result = Result { try CarnetImageStore.save(image) }
-            DispatchQueue.main.async {
-                guardando = false
-                switch result {
-                case .success(let saved):
-                    foto = saved
-                    onCapture()
-                    AppHaptics.success()
-                case .failure: errorGuardado = true
-                }
+        Task { @MainActor in
+            // El guardado normaliza la orientación y escribe el JPEG: trabajo
+            // de disco que no debe bloquear la interfaz. Antes se hacía con
+            // GCD + Result, mezclado con el async/await del resto del módulo.
+            let guardada = await Task.detached(priority: .userInitiated) {
+                try? CarnetImageStore.save(image)
+            }.value
+
+            guardando = false
+            if let guardada {
+                foto = guardada
+                onCapture()
+                AppHaptics.success()
+            } else {
+                errorGuardado = true
             }
         }
     }
@@ -277,10 +281,14 @@ struct EncuadreFotoView: View {
                                                                 height: desplazamiento.height + value.translation.height),
                                                          marco: marco, escala: escalaBase(marco) * zoom)
                             }
-                            .simultaneously(with: MagnificationGesture()
-                                .updating($aumento) { value, state, _ in state = value }
+                            // MagnifyGesture sustituye a MagnificationGesture,
+                            // obsoleta en iOS 17 (el mínimo del proyecto).
+                            .simultaneously(with: MagnifyGesture()
+                                .updating($aumento) { value, state, _ in
+                                    state = value.magnification
+                                }
                                 .onEnded { value in
-                                    zoom = min(6, max(1, zoom * value))
+                                    zoom = min(6, max(1, zoom * value.magnification))
                                     desplazamiento = limitar(desplazamiento, marco: marco, escala: escalaBase(marco) * zoom)
                                 }))
                         .accessibilityLabel(L.t("Vista previa del recorte", "Crop preview"))

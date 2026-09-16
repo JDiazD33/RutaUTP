@@ -209,17 +209,37 @@ struct BienvenidaView: View {
     }
 
     private var legalFooter: some View {
-        (
-            Text(L.t("Al continuar, aceptas nuestros ", "By continuing, you accept our "))
-                .foregroundStyle(.onSurfaceVariant)
-            + Text(L.t("Términos de Servicio", "Terms of Service"))
-                .foregroundStyle(.appPrimary)
-                .underline()
+        // El pie se compone como AttributedString para que SOLO la frase
+        // "Términos de Servicio" sea tocable. Con el Text concatenado
+        // anterior, la frase salía subrayada (la convención de enlace) pero
+        // no tenía gesto, y showLegalSheet nunca se activaba: la hoja legal
+        // era inalcanzable desde toda la app.
+        Text(textoLegal)
+            .font(.bodySm)
+            .multilineTextAlignment(.center)
+            .lineSpacing(4)
+            .frame(maxWidth: .infinity)
+            .environment(\.openURL, OpenURLAction { _ in
+                showLegalSheet = true
+                return .handled
+            })
+    }
+
+    /// Frase legal con el enlace de términos marcado como tal. El URL es
+    /// propio de la app y no sale de ella: lo intercepta el OpenURLAction
+    /// de arriba para abrir la hoja, en vez de abrir un navegador.
+    private var textoLegal: AttributedString {
+        var intro = AttributedString(
+            L.t("Al continuar, aceptas nuestros ", "By continuing, you accept our ")
         )
-        .font(.bodySm)
-        .multilineTextAlignment(.center)
-        .lineSpacing(4)
-        .frame(maxWidth: .infinity)
+        intro.foregroundColor = .onSurfaceVariant
+
+        var enlace = AttributedString(L.t("Términos de Servicio", "Terms of Service"))
+        enlace.link = URL(string: "rutautp://terminos")
+        enlace.foregroundColor = .appPrimary
+        enlace.underlineStyle = .single
+
+        return intro + enlace
     }
 }
 
@@ -272,11 +292,13 @@ private struct LegalSheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text(L.t("Términos de Servicio", "Terms of Service"))
                     .font(.headlineMd)
-                Text("Ruta UTP Trujillo es una aplicación prototipo que facilita la orientación de transporte público hacia el campus de la Universidad Tecnológica del Perú (sede Trujillo). Al usar esta app aceptas las condiciones aquí descritas.")
+                Text(L.t("Ruta UTP Trujillo es una aplicación prototipo que facilita la orientación de transporte público hacia el campus de la Universidad Tecnológica del Perú (sede Trujillo). Al usar esta app aceptas las condiciones aquí descritas.",
+                         "Ruta UTP Trujillo is a prototype app that helps you navigate public transport to the Universidad Tecnológica del Perú campus (Trujillo). By using this app you accept the conditions described here."))
                     .font(.bodyMd)
                 Text(L.t("Privacidad", "Privacy"))
                     .font(.headlineSm)
-                Text("Los datos de ubicación y reportes comunitarios son simulados para efectos de demostración. No se comparte información con terceros.")
+                Text(L.t("Los datos de ubicación y reportes comunitarios son simulados para efectos de demostración. No se comparte información con terceros.",
+                         "Location data and community reports are simulated for demonstration purposes. No information is shared with third parties."))
                     .font(.bodyMd)
                 Spacer(minLength: 20)
             }
