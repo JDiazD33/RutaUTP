@@ -17,40 +17,6 @@ import UIKit
 
 // MARK: - Burbuja del mapa
 
-/// Forma de "globo" tipo pin de Google Maps: círculo con cola que converge
-/// en punta abajo. Un solo path para que el borde blanco sea continuo
-/// (círculo y cola sin costuras).
-struct BurbujaGloboShape: Shape {
-    /// Radio del círculo de la burbuja.
-    let radio: CGFloat
-    /// Distancia del centro del círculo a la punta de la cola.
-    let alturaCola: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let centro = CGPoint(x: rect.midX, y: radio + 1)   // margen para el borde
-        let punta = CGPoint(x: rect.midX, y: centro.y + alturaCola)
-
-        // Puntos de tangencia de la cola con el círculo: cos(β) = r / d.
-        let beta = acos(min(1, radio / max(radio + 0.001, alturaCola)))
-        let abajo = CGFloat.pi / 2
-        let tangente1 = abajo - beta
-        let tangente2 = abajo + beta
-
-        path.move(to: punta)
-        path.addLine(to: CGPoint(x: centro.x + radio * cos(tangente1),
-                                 y: centro.y + radio * sin(tangente1)))
-        // Rodea el círculo por arriba (el camino largo) hasta la otra tangente.
-        path.addArc(center: centro, radius: radio,
-                    startAngle: .radians(Double(tangente1)),
-                    endAngle: .radians(Double(tangente2)),
-                    clockwise: false)
-        path.addLine(to: punta)
-        path.closeSubpath()
-        return path
-    }
-}
-
 /// Pin de negocio estilo Google Maps: globo del color de la categoría con el
 /// ícono de la comida adentro. Sin texto: la promo vive en la card al tocar.
 /// Compacto a propósito: en el mapa compite con buses, usuario y destino.
@@ -366,13 +332,20 @@ struct NegocioDetailCard: View {
     /// "Válido hasta 31 dic. 2026" en el idioma activo.
     private func textoVencimiento(_ cupon: CuponNegocio) -> String? {
         guard let fecha = cupon.fechaVencimiento else { return nil }
-        let formato = DateFormatter()
-        formato.dateFormat = "d MMM yyyy"
-        formato.locale = Locale(identifier: IdiomaManager.shared.esIngles ? "en_US" : "es_PE")
-        return L.t("Válido hasta \(formato.string(from: fecha))",
-                   "Valid until \(formato.string(from: fecha))")
+        let texto = FormatoFecha.formateador(patron: "d MMM yyyy",
+                                             locale: FormatoFecha.localeActivo)
+            .string(from: fecha)
+        return L.t("Válido hasta \(texto)", "Valid until \(texto)")
     }
 }
+
+// Preview y fixture de ejemplo.
+//
+// Todo va bajo #if DEBUG por un detalle importante: el macro #Preview NO
+// envuelve su cuerpo en #if DEBUG, así que las previews se compilan también
+// en Release. Por eso el fixture tiene que existir en ambas configuraciones
+// y, para no viajar en el binario de distribución, se excluye aquí.
+#if DEBUG
 
 #Preview("Burbuja") {
     ZStack {
@@ -446,6 +419,7 @@ extension Negocio {
         )
     }
 }
+#endif
 
 /// Símbolo compartido por cupones, marcadores y detalle del negocio.
 struct NegocioIcono: View {

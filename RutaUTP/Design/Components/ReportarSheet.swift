@@ -13,14 +13,12 @@ import SwiftUI
 
 struct ReportarSheet: View {
 
-    static let maxCaracteres = 200
 
     @Environment(\.dismiss) private var dismiss
     @State private var tipo: TipoReporte = .alerta
     @State private var descripcion: String = ""
     @State private var showSuccess = false
 
-    private var restantes: Int { Self.maxCaracteres - descripcion.count }
     private var puedeEnviar: Bool {
         !descripcion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -30,19 +28,24 @@ struct ReportarSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
                     encabezado
-                    selectorTipo
-                    detalleTipo
-                    campoDescripcion
+                    // Selector, detalle y descripción: compartidos con Publicar.
+                    SelectorTipoReporte(tipo: $tipo)
+                    DetalleTipoReporte(tipo: tipo)
+                    CampoDescripcionReporte(descripcion: $descripcion, tipo: tipo)
                 }
                 .padding(20)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) { botonEnviar }
         }
-        .alert(L.t("Reporte enviado", "Report sent"), isPresented: $showSuccess) {
+        // Mensaje honesto: el reporte no se envía a ningún sitio todavía. El
+        // texto anterior ("Reporte enviado / Gracias por colaborar") prometía
+        // una operación que no ocurre, que es justo lo que el proyecto evita
+        // en otras pantallas (OfflineMapSheet, NegocioDetailCard).
+        .alert(L.t("Reporte registrado", "Report recorded"), isPresented: $showSuccess) {
             Button(L.t("Listo", "Done")) { dismiss() }
         } message: {
-            Text(L.t("Gracias por colaborar con la comunidad.",
-                     "Thanks for helping the community."))
+            Text(L.t("Gracias por colaborar. En esta versión de prueba el reporte no se envía a ningún servidor.",
+                     "Thanks for helping. In this trial version the report isn't sent to any server."))
         }
     }
 
@@ -67,121 +70,6 @@ struct ReportarSheet: View {
                     .foregroundStyle(.onSurfaceVariant)
             }
             Spacer()
-        }
-    }
-
-    // MARK: - Selector de tipo
-
-    private var selectorTipo: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L.t("TIPO DE REPORTE", "REPORT TYPE"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-
-            HStack(spacing: 8) {
-                ForEach(TipoReporte.allCases) { t in
-                    tipoCard(t)
-                }
-            }
-        }
-    }
-
-    private func tipoCard(_ t: TipoReporte) -> some View {
-        let seleccionado = tipo == t
-        return Button {
-            AppHaptics.selection()
-            withAnimation(.easeInOut(duration: 0.18)) { tipo = t }
-        } label: {
-            VStack(spacing: 6) {
-                Image(systemName: t.icono)
-                    .font(.system(size: 17, weight: .semibold))
-                Text(t.titulo)
-                    .font(.system(size: 11, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(seleccionado ? t.foreground : Color.onSurfaceVariant)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(seleccionado ? t.background : Color.surfaceContainerLow)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(seleccionado ? t.foreground.opacity(0.55) : Color.outlineVariant.opacity(0.35),
-                            lineWidth: seleccionado ? 1.5 : 0.5)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(seleccionado ? .isSelected : [])
-    }
-
-    // MARK: - Detalle contextual por tipo
-
-    private var detalleTipo: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: tipo.icono)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tipo.foreground)
-                .frame(width: 20)
-            Text(tipo.detalle)
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(tipo.background.opacity(0.45))
-        )
-        .animation(.easeInOut(duration: 0.2), value: tipo)
-        .id(tipo) // re-anima la entrada al cambiar de tipo
-    }
-
-    // MARK: - Descripción (máx. 200 caracteres)
-
-    private var campoDescripcion: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(L.t("DESCRIPCIÓN", "DESCRIPTION"))
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                Spacer()
-                Text("\(restantes)")
-                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(restantes <= 20 ? Color.appError : Color.onSurfaceVariant)
-                    .accessibilityLabel(L.t("\(restantes) caracteres restantes", "\(restantes) characters left"))
-            }
-
-            TextField(tipo.placeholder, text: $descripcion, axis: .vertical)
-                .lineLimit(4...7)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.surfaceContainerLow)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.35), lineWidth: 0.5)
-                )
-                .onChange(of: descripcion) { _, nuevo in
-                    if nuevo.count > Self.maxCaracteres {
-                        descripcion = String(nuevo.prefix(Self.maxCaracteres))
-                        AppHaptics.impact(.light)
-                    }
-                }
-
-            // Sugerencias rápidas según el tipo: insertan texto inicial
-            if !tipo.sugerencias.isEmpty && descripcion.isEmpty {
-                FlowLayoutSugerencias(sugerencias: tipo.sugerencias) { texto in
-                    descripcion = texto
-                    AppHaptics.impact(.light)
-                }
-            }
         }
     }
 
@@ -288,37 +176,6 @@ extension TipoReporte {
                     L.t("Mejor limpieza", "Better cleanliness")]
         case .otro:
             return []
-        }
-    }
-}
-
-// MARK: - Chips de sugerencias (flujo simple en filas)
-
-private struct FlowLayoutSugerencias: View {
-    let sugerencias: [String]
-    let alTocar: (String) -> Void
-
-    var body: some View {
-        // Filas apiladas: suficiente para 2-3 frases cortas, sin layout math.
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(sugerencias, id: \.self) { texto in
-                Button {
-                    alTocar(texto)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .bold))
-                        Text(texto)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundStyle(.appPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color.appPrimary.opacity(0.09)))
-                    .overlay(Capsule().stroke(Color.appPrimary.opacity(0.25), lineWidth: 0.5))
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 }

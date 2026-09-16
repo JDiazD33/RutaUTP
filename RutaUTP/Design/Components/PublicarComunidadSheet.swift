@@ -20,8 +20,6 @@ import CoreLocation
 
 struct PublicarComunidadSheet: View {
 
-    static let maxCaracteres = 200
-
     @Environment(\.dismiss) private var dismiss
 
     // Contenido base (mismos campos que ReportarSheet)
@@ -43,7 +41,6 @@ struct PublicarComunidadSheet: View {
 
     @State private var showSuccess = false
 
-    private var restantes: Int { Self.maxCaracteres - descripcion.count }
     private var puedeEnviar: Bool {
         !descripcion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -53,9 +50,10 @@ struct PublicarComunidadSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
                     encabezado
-                    selectorTipo
-                    detalleTipo
-                    campoDescripcion
+                    // Selector, detalle y descripción: compartidos con Reportar.
+                    SelectorTipoReporte(tipo: $tipo)
+                    DetalleTipoReporte(tipo: tipo)
+                    CampoDescripcionReporte(descripcion: $descripcion, tipo: tipo)
                     seccionFoto
                     seccionUbicacion
                 }
@@ -92,12 +90,15 @@ struct PublicarComunidadSheet: View {
                 geocodificar(coord)
             }
         }
-        .alert(L.t("Publicado en la comunidad", "Posted to the community"),
+        // Mismo criterio que ReportarSheet: la publicación no llega a ningún
+        // servidor todavía, así que la confirmación lo dice en lugar de
+        // prometer un envío que no ocurre.
+        .alert(L.t("Publicación registrada", "Post recorded"),
                isPresented: $showSuccess) {
             Button(L.t("Listo", "Done")) { dismiss() }
         } message: {
-            Text(L.t("Gracias por aportar a la comunidad UTP.",
-                     "Thanks for contributing to the UTP community."))
+            Text(L.t("Gracias por aportar a la comunidad UTP. En esta versión de prueba la publicación no se comparte con otros usuarios.",
+                     "Thanks for contributing to the UTP community. In this trial version the post isn't shared with other users."))
         }
     }
 
@@ -123,141 +124,6 @@ struct PublicarComunidadSheet: View {
                     .foregroundStyle(.onSurfaceVariant)
             }
             Spacer()
-        }
-    }
-
-    // MARK: - Selector de tipo (mismo contenido que ReportarSheet)
-
-    private var selectorTipo: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L.t("TIPO DE REPORTE", "REPORT TYPE"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-
-            HStack(spacing: 8) {
-                ForEach(TipoReporte.allCases) { t in
-                    tipoCard(t)
-                }
-            }
-        }
-    }
-
-    private func tipoCard(_ t: TipoReporte) -> some View {
-        let seleccionado = tipo == t
-        return Button {
-            AppHaptics.selection()
-            withAnimation(.easeInOut(duration: 0.18)) { tipo = t }
-        } label: {
-            VStack(spacing: 6) {
-                Image(systemName: t.icono)
-                    .font(.system(size: 17, weight: .semibold))
-                Text(t.titulo)
-                    .font(.system(size: 11, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(seleccionado ? t.foreground : Color.onSurfaceVariant)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(seleccionado ? t.background : Color.surfaceContainerLow)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(seleccionado ? t.foreground.opacity(0.55) : Color.outlineVariant.opacity(0.35),
-                            lineWidth: seleccionado ? 1.5 : 0.5)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(seleccionado ? .isSelected : [])
-    }
-
-    // MARK: - Detalle contextual por tipo
-
-    private var detalleTipo: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: tipo.icono)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tipo.foreground)
-                .frame(width: 20)
-            Text(tipo.detalle)
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(tipo.background.opacity(0.45))
-        )
-        .animation(.easeInOut(duration: 0.2), value: tipo)
-        .id(tipo)
-    }
-
-    // MARK: - Descripción (máx. 200 caracteres)
-
-    private var campoDescripcion: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(L.t("DESCRIPCIÓN", "DESCRIPTION"))
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                Spacer()
-                Text("\(restantes)")
-                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(restantes <= 20 ? Color.appError : Color.onSurfaceVariant)
-                    .accessibilityLabel(L.t("\(restantes) caracteres restantes", "\(restantes) characters left"))
-            }
-
-            TextField(tipo.placeholder, text: $descripcion, axis: .vertical)
-                .lineLimit(4...7)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.surfaceContainerLow)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.35), lineWidth: 0.5)
-                )
-                .onChange(of: descripcion) { _, nuevo in
-                    if nuevo.count > Self.maxCaracteres {
-                        descripcion = String(nuevo.prefix(Self.maxCaracteres))
-                        AppHaptics.impact(.light)
-                    }
-                }
-
-            if !tipo.sugerencias.isEmpty && descripcion.isEmpty {
-                chipsSugerencias(tipo.sugerencias)
-            }
-        }
-    }
-
-    private func chipsSugerencias(_ sugerencias: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(sugerencias, id: \.self) { texto in
-                Button {
-                    descripcion = texto
-                    AppHaptics.impact(.light)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .bold))
-                        Text(texto)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundStyle(.appPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color.appPrimary.opacity(0.09)))
-                    .overlay(Capsule().stroke(Color.appPrimary.opacity(0.25), lineWidth: 0.5))
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
@@ -522,7 +388,7 @@ private struct MapaUbicacionPicker: View {
     // GPS real (mismo servicio que la pestaña Mapa)
     @State private var userRealCoordinate: CLLocationCoordinate2D?
     @State private var locationTask: Task<Void, Never>?
-    private let locationService = LocationService()
+    @StateObject private var locationService = LocationService()
 
     init(inicial: CLLocationCoordinate2D?, onConfirmar: @escaping (CLLocationCoordinate2D) -> Void) {
         self.onConfirmar = onConfirmar
@@ -573,8 +439,7 @@ private struct MapaUbicacionPicker: View {
 
     // MARK: - Botón Mi Ubicación (idéntico al de la pestaña Mapa)
     private var botonMiUbicacion: some View {
-        Button {
-            AppHaptics.impact(.light)
+        BotonMiUbicacion(tieneUbicacion: userRealCoordinate != nil) {
             if let userCoord = userRealCoordinate {
                 withAnimation(.spring(response: 0.5)) {
                     posicion = .region(MKCoordinateRegion(
@@ -586,16 +451,7 @@ private struct MapaUbicacionPicker: View {
             } else {
                 iniciarGPS(autoCentrar: true)
             }
-        } label: {
-            Image(systemName: "location.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(userRealCoordinate != nil ? Color.appPrimary : Color.onSurfaceVariant)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Color.surfaceContainerLowest))
-                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
         }
-        .buttonStyle(PressableCapsuleStyle())
-        .accessibilityLabel("Centrar en mi ubicación")
     }
 
     // MARK: - GPS (mismo flujo que MapaViewModel.iniciarGPS)
