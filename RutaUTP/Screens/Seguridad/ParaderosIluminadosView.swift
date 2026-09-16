@@ -37,6 +37,11 @@ struct ParaderosIluminadosView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)))
     @State private var loadedStops: [ParaderoGTFS] = []
     @State private var routes: [RutaGTFS] = []
+    /// Líneas que sirven cada paradero visible. Se resuelve UNA vez al cargar
+    /// la pantalla, no en cada render: antes el cálculo vivía dentro de
+    /// `stopCard`, así que se repetía por cada tarjeta y en cada redibujado,
+    /// recorriendo las 102 rutas y sus 4 067 paraderos cada vez.
+    @State private var lineasPorParadero: [String: [RutaGTFS]] = [:]
     @State private var selectedID: String?
     @State private var cardID: String?
     @State private var query = ""
@@ -45,7 +50,7 @@ struct ParaderosIluminadosView: View {
     @State private var locating = false
     @State private var location: CLLocationCoordinate2D?
     @State private var locationMessage: String?
-    @State private var locationService = LocationService()
+    @StateObject private var locationService = LocationService()
     @State private var locationTask: Task<Void, Never>?
     @State private var walkingTask: Task<Void, Never>?
     @State private var walkingLine: MKPolyline?
@@ -104,6 +109,8 @@ struct ParaderosIluminadosView: View {
             routes = await GTFSRepository.shared.rutas()
             guard !Task.isCancelled else { return }
             loadedStops = paraderos.isEmpty ? ParaderosIluminados.seleccionar(routes) : paraderos
+            lineasPorParadero = Self.lineasQueSirven(loadedStops, en: routes)
+            guard !Task.isCancelled else { return }
             loading = false
             refreshSaved()
             if let first = visible.first { select(first) }
@@ -223,8 +230,47 @@ struct ParaderosIluminadosView: View {
         .background(RoundedRectangle(cornerRadius: 26).fill(.regularMaterial).ignoresSafeArea(edges: .bottom))
     }
 
+    /// Líneas que sirven cada paradero, con el MISMO criterio que se usaba
+    /// antes dentro de `stopCard`: coincide el `stop_id` **o** hay un paradero
+    /// del feed a menos de 20 m.
+    ///
+    /// El respaldo por proximidad NO es redundante: en este feed 648 de los
+    /// 4 067 paraderos obtienen líneas adicionales por esa vía, porque un
+    /// mismo punto físico aparece con más de un `stop_id` (la lista visible
+    /// viene deduplicada por coordenada). Quitarlo cambiaría el resultado.
+    ///
+    /// CÓMO se calcula cambió dos veces, y conviene saber por qué:
+    ///   1. Antes vivía dentro de `stopCard`, así que se repetía por tarjeta y
+    ///      por render. Pasó a resolverse una vez por carga de pantalla.
+    ///   2. Seguía siendo un barrido lineal: por cada paradero visible se
+    ///      recorrían las 102 rutas y sus 4 067 paradas calculando la distancia
+    ///      de TODAS —unas 98 000 por carga—. Ahora los paraderos del feed se
+    ///      indexan una vez en una rejilla espacial y cada consulta mira solo su
+    ///      vecindario: unas 500 en total.
+    ///
+    /// El criterio no se toca, y una prueba lo fija: compara este resultado con
+    /// el de la versión por fuerza bruta sobre el feed real.
+    static func lineasQueSirven(_ paraderos: [ParaderoGTFS],
+                                en rutas: [RutaGTFS]) -> [String: [RutaGTFS]] {
+        let rejilla = RejillaEspacial(rutas.flatMap(\.paraderos),
+                                      radioMetros: radioDeServicioMetros,
+                                      coordenada: \.coordinate)
+        var resultado: [String: [RutaGTFS]] = [:]
+        for paradero in paraderos {
+            let idsCerca = Set(rejilla.cerca(de: paradero.coordinate,
+                                             radioMetros: radioDeServicioMetros).map(\.id))
+            resultado[paradero.id] = rutas.filter { ruta in
+                ruta.paraderos.contains { idsCerca.contains($0.id) }
+            }
+        }
+        return resultado
+    }
+
+    /// Radio con el que un paradero del feed «sirve» a un punto físico.
+    static let radioDeServicioMetros: Double = 20
+
     private func stopCard(_ stop: ParaderoGTFS) -> some View {
-        let lines = routes.filter { route in route.paraderos.contains { $0.id == stop.id || PolylineMatching.distanceMeters($0.coordinate, stop.coordinate) < 20 } }
+        let lines = lineasPorParadero[stop.id] ?? []
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "bus.fill").font(.system(size: 20)).foregroundStyle(accent)

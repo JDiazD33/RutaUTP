@@ -66,9 +66,7 @@ struct MapaView: View {
                 Text(L.t("··· A pie   ━ En bus", "··· Walk   ━ Bus") + " · ~\(vm.etaMinutos ?? 0) min")
                     .foregroundStyle(Color.onSurfaceVariant)
                 if plan.walkingApproximate {
-                    Text(L.t("Caminata aproximada; sin indicaciones peatonales disponibles.",
-                             "Approximate walk; pedestrian directions unavailable."))
-                        .foregroundStyle(Color.appError)
+                    AvisoRutaAproximada()
                 }
             } else if let mensaje = vm.mensajeRuta {
                 Text(mensaje).foregroundStyle(Color.onSurfaceVariant)
@@ -103,9 +101,9 @@ struct MapaView: View {
                 if let plan = vm.itinerario {
                     MapPolyline(coordinates: plan.walkToBoard)
                         .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                    MapPolyline(coordinates: plan.bus)
+                    MapPolyline(coordinates: plan.busDibujo)
                         .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                    MapPolyline(coordinates: plan.bus)
+                    MapPolyline(coordinates: plan.busDibujo)
                         .stroke(plan.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                     MapPolyline(coordinates: plan.walkToDestination)
                         .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
@@ -231,7 +229,7 @@ struct MapaView: View {
             #endif
         }
         .onDisappear { vm.detenerSimulacionBuses() }
-        .onChange(of: router.destinoPendiente) { _ in
+        .onChange(of: router.destinoPendiente) { _, _ in
             consumirDestinoPendiente()
         }
         .onChange(of: vm.itinerarioFocusTick) { _, _ in
@@ -247,17 +245,17 @@ struct MapaView: View {
         .onChange(of: vm.destinoFocusTick) { _, _ in
             withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }
         }
-        .onChange(of: vm.region.center.latitude) { _ in
+        .onChange(of: vm.region.center.latitude) { _, _ in
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
         }
-        .onChange(of: vm.region.center.longitude) { _ in
+        .onChange(of: vm.region.center.longitude) { _, _ in
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
         }
-        .onChange(of: vm.recentrarToken) { _ in
+        .onChange(of: vm.recentrarToken) { _, _ in
             // Recentrado explícito (botón flecha): siempre mueve la cámara,
             // sin depender de que `region` cambie de valor.
             withAnimation(.spring(response: 0.5)) {
@@ -297,7 +295,7 @@ struct MapaView: View {
                     .shadow(color: .black.opacity(0.08), radius: 4)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Abrir menú")
+            .accessibilityLabel(L.t("Abrir menú", "Open menu"))
 
             Text(L.t("Mapa", "Map"))
                 .font(.headlineLgMobile)
@@ -356,7 +354,12 @@ struct MapaView: View {
                         campoEnfocado = false
                         vm.buscarTexto(vm.textoBusqueda)
                     }
-                    .onChange(of: vm.textoBusqueda) { nuevo in
+                    .onChange(of: vm.textoBusqueda) { _, nuevo in
+                        // Solo se autocompleta mientras el usuario escribe en
+                        // el campo. Cuando el texto lo pone el código (al
+                        // elegir un chip, un resultado o un lugar guardado) el
+                        // campo no está enfocado y no hay que consultar nada.
+                        guard campoEnfocado else { return }
                         vm.actualizarTextoBusqueda(nuevo)
                     }
                 if vm.buscando {
@@ -508,19 +511,9 @@ struct MapaView: View {
 
     // MARK: - Botón Mi Ubicación (centra el mapa en el GPS real)
     private var botonMiUbicacion: some View {
-        Button {
-            AppHaptics.impact(.light)
+        BotonMiUbicacion(tieneUbicacion: vm.userRealCoordinate != nil) {
             vm.recenterOnUser()
-        } label: {
-            Image(systemName: "location.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(vm.userRealCoordinate != nil ? Color.appPrimary : Color.onSurfaceVariant)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Color.surfaceContainerLowest))
-                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
         }
-        .buttonStyle(PressableCapsuleStyle())
-        .accessibilityLabel("Centrar en mi ubicación")
     }
 
     // MARK: - Bottom panel
@@ -593,7 +586,9 @@ struct MapaView: View {
                 }
                 .buttonStyle(PressableCapsuleStyle())
                 .padding(.trailing, 4)
-                .accessibilityLabel(panelColapsado ? "Mostrar transportes cercanos" : "Ocultar transportes cercanos")
+                .accessibilityLabel(panelColapsado
+                                    ? L.t("Mostrar transportes cercanos", "Show nearby transport")
+                                    : L.t("Ocultar transportes cercanos", "Hide nearby transport"))
             }
             .padding(.horizontal, 20)
 
@@ -931,7 +926,7 @@ private struct BusDetailPopup: View {
                 HStack(spacing: 8) {
                     Image(systemName: "map.fill")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Ver Ruta Completa")
+                    Text(L.t("Ver Ruta Completa", "View full route"))
                         .font(.system(size: 14, weight: .bold))
                 }
                 .foregroundStyle(.white)

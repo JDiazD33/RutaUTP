@@ -6,7 +6,10 @@
 //  - Usa un unico MKMapView (UIViewRepresentable) con anotaciones y polyline.
 //  - Esto evita el problema de doble mapa (SwiftUI Map + MKMapView overlay)
 //    donde los tiles del MKMapView ocultaban las anotaciones.
-//  - Badge "RUTA SEGURA" sobre el mapa en esquina superior derecha.
+//  - Badge "RECORRIDO OFICIAL" sobre el mapa en esquina superior derecha.
+//    Antes decía "RUTA SEGURA", que afirmaba una seguridad que el feed GTFS
+//    no respalda: el feed describe el trazado y los paraderos, no si la zona
+//    es segura. "Recorrido oficial" sí es cierto y verificable.
 //  - Se usa con .disabled(true) y .allowsHitTesting(false) desde el padre
 //    para no capturar gestos de scroll.
 //
@@ -14,44 +17,6 @@
 import SwiftUI
 import MapKit
 import UIKit
-
-// MARK: - Coordenadas de las rutas
-struct RutaCoordenadas {
-    static let linea10: [CLLocationCoordinate2D] = [
-        CLLocationCoordinate2D(latitude: -8.0780, longitude: -79.0420),
-        CLLocationCoordinate2D(latitude: -8.0850, longitude: -79.0390),
-        CLLocationCoordinate2D(latitude: -8.0920, longitude: -79.0360),
-        CLLocationCoordinate2D(latitude: -8.0990, longitude: -79.0330),
-        CLLocationCoordinate2D(latitude: -8.1040, longitude: -79.0310),
-        CLLocationCoordinate2D(latitude: -8.1080, longitude: -79.0295),
-        CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0287)
-    ]
-
-    static let linea4: [CLLocationCoordinate2D] = [
-        CLLocationCoordinate2D(latitude: -8.0825, longitude: -79.1197),
-        CLLocationCoordinate2D(latitude: -8.0920, longitude: -79.0900),
-        CLLocationCoordinate2D(latitude: -8.1000, longitude: -79.0600),
-        CLLocationCoordinate2D(latitude: -8.1050, longitude: -79.0400),
-        CLLocationCoordinate2D(latitude: -8.1090, longitude: -79.0320),
-        CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0287)
-    ]
-
-    static let lineaB: [CLLocationCoordinate2D] = [
-        CLLocationCoordinate2D(latitude: -8.1200, longitude: -79.0350),
-        CLLocationCoordinate2D(latitude: -8.1170, longitude: -79.0330),
-        CLLocationCoordinate2D(latitude: -8.1145, longitude: -79.0310),
-        CLLocationCoordinate2D(latitude: -8.1116, longitude: -79.0287)
-    ]
-
-    static func para(linea: String) -> [CLLocationCoordinate2D] {
-        switch linea.uppercased() {
-        case "10": return linea10
-        case "4":  return linea4
-        case "B":  return lineaB
-        default:   return linea10
-        }
-    }
-}
 
 // MARK: - Anotacion personalizada
 enum TipoMarcadorRuta { case origen, destino, bus }
@@ -83,11 +48,16 @@ struct MapaRutaRepresentable: UIViewRepresentable {
     let coordenadas: [CLLocationCoordinate2D]
     let colorLinea: UIColor
     let linea: String
+    /// `route_id` de la ruta. Identifica la geometría: si cambia, SwiftUI
+    /// reutilizó esta vista para OTRA ruta y hay que rehacer overlays y
+    /// marcadores. Sin esto, `updateUIView` era un no-op y el mapa seguía
+    /// mostrando el trazado anterior.
+    let idRuta: String
     var tituloOrigen: String? = nil
     var tituloDestino: String? = nil
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(color: colorLinea, linea: linea)
+        Coordinator(color: colorLinea, linea: linea, idRuta: idRuta)
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -95,8 +65,28 @@ struct MapaRutaRepresentable: UIViewRepresentable {
         mapView.delegate = context.coordinator
         mapView.isUserInteractionEnabled = false
         mapView.pointOfInterestFilter = .excludingAll
+        construir(mapView)
+        return mapView
+    }
 
-        guard !coordenadas.isEmpty else { return mapView }
+    func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Solo se rehace si la geometría es de otra ruta. Comparar el route_id
+        // es fiable; `[CLLocationCoordinate2D]` no es Equatable y comparar
+        // solo el número de puntos no distinguiría dos rutas del mismo tamaño.
+        guard context.coordinator.idRuta != idRuta else { return }
+        context.coordinator.idRuta = idRuta
+        context.coordinator.color = colorLinea
+        context.coordinator.linea = linea
+        construir(mapView)
+    }
+
+    /// Dibuja el recorrido y sus marcadores. Se usa al crear la vista y cuando
+    /// se reutiliza para otra ruta.
+    private func construir(_ mapView: MKMapView) {
+        mapView.removeOverlays(mapView.overlays)
+        mapView.removeAnnotations(mapView.annotations)
+
+        guard !coordenadas.isEmpty else { return }
 
         // Polyline
         let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
@@ -136,19 +126,17 @@ struct MapaRutaRepresentable: UIViewRepresentable {
                 linea: linea
             ))
         }
-
-        return mapView
     }
 
-    func updateUIView(_ uiView: MKMapView, context: Context) {}
-
     final class Coordinator: NSObject, MKMapViewDelegate {
-        let color: UIColor
-        let linea: String
+        var color: UIColor
+        var linea: String
+        var idRuta: String
 
-        init(color: UIColor, linea: String) {
+        init(color: UIColor, linea: String, idRuta: String) {
             self.color = color
             self.linea = linea
+            self.idRuta = idRuta
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -201,27 +189,35 @@ struct MapaRutaRepresentable: UIViewRepresentable {
 struct RutaMapKitView: View {
     let ruta: RutaOpcion
 
-    /// Shape real del feed GTFS; fallback a las líneas demo si la ruta no trae shape.
-    private var coordenadas: [CLLocationCoordinate2D] {
-        ruta.shape.count >= 2 ? ruta.shape : RutaCoordenadas.para(linea: ruta.linea)
-    }
+    /// Shape real del feed GTFS.
+    ///
+    /// Ya NO hay trazado de respaldo. Antes, si la ruta no traía geometría, se
+    /// dibujaba una línea inventada: el usuario veía como "su recorrido" un
+    /// trazado que no era el suyo, sin nada que lo delatara. Ahora se muestra
+    /// un estado vacío explícito.
+    private var coordenadas: [CLLocationCoordinate2D] { ruta.shape }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            MapaRutaRepresentable(
-                coordenadas: coordenadas,
-                colorLinea: UIColor(ruta.colorLinea),
-                linea: ruta.linea,
-                tituloOrigen: ruta.paradaInicio,
-                tituloDestino: ruta.paradaFin
-            )
+            if coordenadas.count >= 2 {
+                MapaRutaRepresentable(
+                    coordenadas: coordenadas,
+                    colorLinea: UIColor(ruta.colorLinea),
+                    linea: ruta.linea,
+                    idRuta: ruta.id,
+                    tituloOrigen: ruta.paradaInicio,
+                    tituloDestino: ruta.paradaFin
+                )
+            } else {
+                sinTrazado
+            }
 
-            // Badge "RUTA SEGURA"
+            // Badge "RECORRIDO OFICIAL"
             HStack(spacing: 5) {
                 Image(systemName: "shield.fill")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
-                Text("RUTA SEGURA")
+                Text(L.t("RECORRIDO OFICIAL", "OFFICIAL ROUTE"))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white)
                     .appTracking(0.5)
@@ -238,6 +234,25 @@ struct RutaMapKitView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
+
+    /// Estado honesto para una ruta sin geometría en el feed.
+    private var sinTrazado: some View {
+        ZStack {
+            Color.surfaceContainerLow
+            VStack(spacing: 8) {
+                Image(systemName: "map")
+                    .font(.system(size: 26))
+                    .foregroundStyle(.onSurfaceVariant.opacity(0.55))
+                Text(L.t("Esta línea no trae trazado en el feed",
+                         "This line has no geometry in the feed"))
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(20)
+        }
+        .accessibilityElement(children: .combine)
+    }
 }
 
 #Preview {
@@ -246,7 +261,7 @@ struct RutaMapKitView: View {
         recorrido: "Vía Panamericana Norte (ramal circular)",
         frecuenciaMin: 5, duracionMin: 45, costo: "S/ 2.00",
         numParaderos: 120, distanciaKm: 18.4, colorLinea: Color(hex: "#9999FF"),
-        shape: RutaCoordenadas.linea10, paraderos: [],
+        shape: [], paraderos: [],
         paradaInicio: "Panamericana Norte", paradaFin: "Av. América"
     ))
     .frame(height: 280)

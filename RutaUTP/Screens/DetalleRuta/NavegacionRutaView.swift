@@ -57,7 +57,7 @@ final class NavegacionRutaViewModel: ObservableObject {
 
     private let locationService: LocationServiceProtocol
     private var locationTask: Task<Void, Never>?
-    private var demoTimer: Timer?
+    private var demoTask: Task<Void, Never>?
     private var demoProgreso: Double = 0
     private var fraccionesParaderos: [(paradero: ParaderoGTFS, fraccion: Double)] = []
     private var distanciasAcumuladas: [Double] = []
@@ -69,27 +69,49 @@ final class NavegacionRutaViewModel: ObservableObject {
         self.shape = decimada.count >= 2 ? decimada : ruta.shape
         self.distanciaTotalM = PolylineMatching.totalLengthMeters(self.shape)
 
-        precomputarParaderos()
-        self.paraderosRestantes = fraccionesParaderos.count
-        self.paraderoSiguiente = fraccionesParaderos.first?.paradero
+        // Solo la longitud acumulada: es lineal sobre el trazado decimado y no
+        // cuesta nada. La proyección de los paraderos se aplaza a `iniciar()`.
+        distanciasAcumuladas = Self.longitudesAcumuladas(shape)
         self.distanciaRestanteM = distanciaTotalM
     }
 
-    /// Proyección de cada paradero sobre el shape (fracción 0...1), una vez.
-    private func precomputarParaderos() {
-        distanciasAcumuladas = [0]
-        guard shape.count >= 2 else { return }
-        for i in 1..<shape.count {
-            distanciasAcumuladas.append(
-                distanciasAcumuladas[i - 1] + PolylineMatching.distanceMeters(shape[i - 1], shape[i])
+    /// Longitud acumulada (m) de cada punto del trazado respecto al inicio.
+    private static func longitudesAcumuladas(_ puntos: [CLLocationCoordinate2D]) -> [Double] {
+        guard !puntos.isEmpty else { return [] }
+        var acumuladas: [Double] = [0]
+        acumuladas.reserveCapacity(puntos.count)
+        for i in 1..<puntos.count {
+            acumuladas.append(
+                acumuladas[i - 1] + PolylineMatching.distanceMeters(puntos[i - 1], puntos[i])
             )
         }
-        fraccionesParaderos = ruta.paraderos.compactMap { paradero in
-            guard let m = PolylineMatching.match(point: paradero.coordinate,
-                                                 on: shape, thresholdMeters: 80) else { return nil }
-            return (paradero, m.progressFraction)
-        }
-        .sorted { $0.fraccion < $1.fraccion }
+        return acumuladas
+    }
+
+    /// Proyecta cada paradero sobre el trazado (fracción 0...1).
+    ///
+    /// Se ejecuta FUERA del hilo principal. Antes se hacía en el `init`, dentro
+    /// del `StateObject`: para la C-01 son ~59 000 proyecciones sobre el
+    /// trazado, y bloqueaban la aparición de la pantalla sin que hubiera nada
+    /// dibujado todavía que lo explicara.
+    private func prepararParaderos() async {
+        guard fraccionesParaderos.isEmpty, shape.count >= 2 else { return }
+        let trazado = shape
+        let paraderos = ruta.paraderos
+
+        let calculadas = await Task.detached(priority: .userInitiated) {
+            paraderos.compactMap { paradero -> (paradero: ParaderoGTFS, fraccion: Double)? in
+                guard let m = PolylineMatching.match(point: paradero.coordinate,
+                                                     on: trazado, thresholdMeters: 80) else { return nil }
+                return (paradero, m.progressFraction)
+            }
+            .sorted { $0.fraccion < $1.fraccion }
+        }.value
+
+        guard !Task.isCancelled else { return }
+        fraccionesParaderos = calculadas
+        paraderosRestantes = calculadas.count
+        paraderoSiguiente = calculadas.first?.paradero
     }
 
     // MARK: - Ciclo de vida
@@ -102,6 +124,9 @@ final class NavegacionRutaViewModel: ObservableObject {
         estado = .esperandoGPS
         locationTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            // Proyección de paraderos fuera del hilo principal, antes del GPS.
+            await self.prepararParaderos()
+            guard !Task.isCancelled else { return }
             let status = await self.locationService.requestPermission()
             guard !Task.isCancelled else { return }
             if status.isDenied {
@@ -208,9 +233,13 @@ final class NavegacionRutaViewModel: ObservableObject {
         detenerDemo()
         guard shape.count >= 2, distanciaTotalM > 0 else { return }
         demoProgreso = 0
-        demoTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
+        // Una sola tarea que duerme entre pasos. Antes era un `Timer` que
+        // creaba un `Task` nuevo por tick — doce por segundo — solo para saltar
+        // al hilo principal.
+        demoTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 80_000_000)
+                guard !Task.isCancelled, let self else { return }
                 self.demoProgreso = min(1.0, self.demoProgreso + 1.0 / 900.0)  // ~72 s todo el viaje
                 let coord = self.coordenadaEnFraccion(self.demoProgreso)
                 let siguiente = self.coordenadaEnFraccion(min(1.0, self.demoProgreso + 0.002))
@@ -222,8 +251,8 @@ final class NavegacionRutaViewModel: ObservableObject {
     }
 
     private func detenerDemo() {
-        demoTimer?.invalidate()
-        demoTimer = nil
+        demoTask?.cancel()
+        demoTask = nil
     }
 
     private func coordenadaEnFraccion(_ fraccion: Double) -> CLLocationCoordinate2D {
@@ -442,7 +471,7 @@ struct NavegacionRutaView: View {
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white.opacity(0.6))
                     .appTracking(AppTracking.wideLabel)
-                Text("Línea \(ruta.linea) · \(ruta.empresa)")
+                Text(L.t("Línea ", "Line ") + "\(ruta.linea) · \(ruta.empresa)")
                     .font(.system(size: 16, weight: .heavy))
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -467,7 +496,7 @@ struct NavegacionRutaView: View {
             Button {
                 onFinish()
             } label: {
-                Text("Finalizar")
+                Text(L.t("Finalizar", "End"))
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
@@ -556,11 +585,11 @@ struct NavegacionRutaView: View {
                     .frame(maxWidth: .infinity)
                 Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
                 stat(icono: "point.topleft.down.curvedto.point.bottomright.up",
-                     valor: viewModel.distanciaRestanteTexto, etiqueta: "Por recorrer")
+                     valor: viewModel.distanciaRestanteTexto, etiqueta: L.t("Por recorrer", "To go"))
                     .frame(maxWidth: .infinity)
                 Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
                 stat(icono: "mappin.and.ellipse",
-                     valor: "\(viewModel.paraderosRestantes)", etiqueta: "Paraderos")
+                     valor: "\(viewModel.paraderosRestantes)", etiqueta: L.t("Paraderos", "Stops"))
                     .frame(maxWidth: .infinity)
             }
 
@@ -683,10 +712,10 @@ struct NavegacionRutaView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 52))
                 .foregroundStyle(.green)
-            Text("Fin del recorrido")
+            Text(L.t("Fin del recorrido", "End of the route"))
                 .font(.system(size: 20, weight: .heavy))
                 .foregroundStyle(.white)
-            Text("Llegaste a \(ruta.paradaFin)")
+            Text(L.t("Llegaste a ", "You arrived at ") + ruta.paradaFin)
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
@@ -694,7 +723,7 @@ struct NavegacionRutaView: View {
             Button {
                 onFinish()
             } label: {
-                Text("Terminar")
+                Text(L.t("Terminar", "Done"))
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

@@ -28,29 +28,34 @@ struct SeguridadView: View {
     @State private var paraderosIluminados: [ParaderoGTFS] = []
     @State private var showParaderosMap = false
 
-    // Lugares guardados (mismos datos que GuardadoView, vía LugaresStore)
-    @State private var lugares: [LugarGuardado] = []
+    /// Lugares guardados, tiles y modo edición (estilo Springboard).
+    /// Los datos y sus operaciones viven en el modelo; en la vista solo queda
+    /// qué sheet está abierto y qué lugar está seleccionado.
+    @StateObject private var lugaresVM = SeguridadLugaresModel()
     @State private var selectedLugar: LugarGuardado?
     @State private var showElegirLugares = false
 
-    // Modo edición (estilo Springboard): jiggle + borrar + reordenar
-    @State private var modoEdicion = false
-    @State private var tilesActuales: [LugarGuardado] = []
-    @State private var arrastrando: LugarGuardado?
-
-    private static let tilesKey = "seguridad.tiles.v1"
-    private static let ordenKey = "seguridad.tiles.orden.v1"
-
     private let tabBarHeight: CGFloat = 64
 
-    /// DEBUG: --comunidad N (solo comunidad) / --zonas (solo zonas seguras).
-    private static let soloComunidadDebug = ProcessInfo.processInfo.arguments.contains("--comunidad")
-    private var soloComunidadDebug: Bool { Self.soloComunidadDebug }
-    private static let soloZonasDebug = ProcessInfo.processInfo.arguments.contains("--zonas")
-    private var soloZonasDebug: Bool { Self.soloZonasDebug }
-
-    /// Caché para el preview del banner (BannerParaderosPreview).
-    static var paraderosCache: [ParaderoGTFS]? = nil
+    /// DEBUG: `--comunidad` deja solo la sección de comunidad y `--zonas` solo
+    /// la de zonas seguras. Van bajo `#if DEBUG` para que la lectura de
+    /// argumentos no viaje al binario de distribución: en Release son `false`.
+    /// Antes cada uno tenía además una propiedad de instancia que solo devolvía
+    /// la estática; se usan directamente con `Self.`.
+    private static let soloComunidadDebug: Bool = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--comunidad")
+        #else
+        false
+        #endif
+    }()
+    private static let soloZonasDebug: Bool = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--zonas")
+        #else
+        false
+        #endif
+    }()
 
     // 24 publicaciones demo: una con foto y tres de texto por ventana de cuatro minutos.
     private static let reportes: [ReporteComunidad] = {
@@ -162,6 +167,27 @@ struct SeguridadView: View {
         }
     }()
 
+    /// Alertas del feed de comunidad, contadas del MISMO array que alimenta
+    /// las cards. Antes la barra de resumen mostraba un "2" escrito a mano
+    /// que no correspondía a ningún dato; así el número no puede
+    /// desincronizarse del contenido.
+    private static var alertasEnFeed: Int {
+        reportes.filter { $0.tipo == .alerta }.count
+    }
+
+    /// Publicaciones por ventana del feed de comunidad.
+    private static let tamanoVentana = 4
+
+    /// Número de ventanas del feed.
+    ///
+    /// Tolerante a un total que no sea múltiplo exacto del tamaño de ventana:
+    /// antes se calculaba como `reportes.count / 4` y `reportesVisibles`
+    /// indexaba `[inicio..<inicio+4]`, así que añadir o quitar una publicación
+    /// sin respetar el bloque provocaba un índice fuera de rango al dibujar.
+    private static var numeroDeVentanas: Int {
+        max(1, Int(ceil(Double(reportes.count) / Double(tamanoVentana))))
+    }
+
     /// Índice de ventana de 4 minutos (6 ventanas para 24 reportes de a 4).
     /// DEBUG: --comunidad N fuerza la ventana para pruebas visuales.
     private var indiceVentana: Int {
@@ -169,20 +195,23 @@ struct SeguridadView: View {
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "--comunidad"), i + 1 < args.count,
            let n = Int(args[i + 1]) {
-            return n % (Self.reportes.count / 4)
+            return n % Self.numeroDeVentanas
         }
         #endif
         let epoch = Int(Date().timeIntervalSinceReferenceDate)
-        return (epoch / 240) % (Self.reportes.count / 4)
+        return (epoch / 240) % Self.numeroDeVentanas
     }
 
     private var reportesVisibles: [ReporteComunidad] {
-        let inicio = indiceVentana * 4
-        return Array(Self.reportes[inicio..<(inicio + 4)])
+        let inicio = indiceVentana * Self.tamanoVentana
+        let fin = min(inicio + Self.tamanoVentana, Self.reportes.count)
+        guard inicio < fin else { return [] }
+        return Array(Self.reportes[inicio..<fin])
     }
 
     // 10 puntos/zonas de seguridad de Trujillo; se deslizan como carrusel.
-    private let rutasSeguras: [RutaSegura] = [
+    private var rutasSeguras: [RutaSegura] {
+        [
         RutaSegura(id: 0,
                    titulo: L.t("Zona Segura: Óvalo Papal", "Safe Zone: Óvalo Papal"),
                    descripcion: L.t("Patrullaje activo y alta iluminación hasta las 11:00 PM.", "Active patrol and high lighting until 11:00 PM."),
@@ -233,7 +262,8 @@ struct SeguridadView: View {
                    descripcion: L.t("Área vigilada por cámaras privadas, con movimiento constante.", "Area monitored by private cameras, constant foot traffic."),
                    icono: "video.fill", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil)
-    ]
+        ]
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -245,9 +275,9 @@ struct SeguridadView: View {
                 summaryBar
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 28) {
-                        if soloComunidadDebug {
+                        if Self.soloComunidadDebug {
                             comunidadSection
-                        } else if soloZonasDebug {
+                        } else if Self.soloZonasDebug {
                             rutasSegurasSection
                         } else {
                             greetingCard
@@ -268,14 +298,21 @@ struct SeguridadView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear {
-            lugares = LugaresStore.cargar()
-            reconstruirTiles()
+            lugaresVM.cargar()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--editar") {
-                modoEdicion = true
+                lugaresVM.modoEdicion = true
             }
             if ProcessInfo.processInfo.arguments.contains("--paraderos") {
                 showParaderosMap = true
+            }
+            // Las dos hojas del formulario comparten piezas con ReportarSheet;
+            // estos hooks permiten mirarlas sin tener que navegar hasta ellas.
+            if ProcessInfo.processInfo.arguments.contains("--reportar") {
+                showReportarSheet = true
+            }
+            if ProcessInfo.processInfo.arguments.contains("--publicar") {
+                showPublicarComunidad = true
             }
             #endif
         }
@@ -284,7 +321,6 @@ struct SeguridadView: View {
             if paraderosIluminados.isEmpty {
                 let feed = await GTFSRepository.shared.rutas()
                 paraderosIluminados = ParaderosIluminados.seleccionar(feed)
-                Self.paraderosCache = paraderosIluminados
             }
         }
         // Mapa fullscreen de paraderos iluminados (desde el banner)
@@ -347,23 +383,20 @@ struct SeguridadView: View {
         // Detalle del lugar (mismo sheet que Guardado: info + acciones reales)
         .sheet(item: $selectedLugar) { lugar in
             LugarDetailSheet(lugar: lugar) {
-                LugaresStore.eliminar(lugar)
-                lugares = LugaresStore.cargar()
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    tilesActuales.removeAll { $0.id == lugar.id }
+                    lugaresVM.eliminar(lugar)
                 }
-                persistirOrden()
             }
             .presentationDetents([.medium, .large])
         }
         // Añadir: elegir qué lugares guardados aparecen como tiles
         .sheet(isPresented: $showElegirLugares) {
             ElegirLugaresSheet(
-                lugares: lugares.filter { !$0.esFijo },
-                seleccion: Set(tilesActuales.filter { !$0.esFijo }.map(\.id)),
+                lugares: lugaresVM.lugares.filter { !$0.esFijo },
+                seleccion: Set(lugaresVM.tilesActuales.filter { !$0.esFijo }.map(\.id)),
                 irAGuardado: { showElegirLugares = false; router.navigate(to: .guardado) }
             ) { nuevaSeleccion in
-                reconstruirTiles(seleccion: nuevaSeleccion)
+                lugaresVM.reconstruirTiles(seleccion: nuevaSeleccion)
             }
             .presentationDetents([.medium])
         }
@@ -423,7 +456,11 @@ struct SeguridadView: View {
     private var summaryBar: some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(L.t("Alertas hoy:", "Alerts today:") + " **2**")
+                // Sin concatenar ni Markdown: el texto se resuelve como un
+                // String de runtime, así que "**2**" se dibujaba con los
+                // asteriscos literales a la vista.
+                Text(L.t("Alertas hoy: \(Self.alertasEnFeed)",
+                         "Alerts today: \(Self.alertasEnFeed)"))
                     .font(.bodySmMedium)
                 Text(L.t("Paraderos para explorar: \(paraderosIluminados.count)", "Stops to explore: \(paraderosIluminados.count)"))
                     .font(.bodySmMedium)
@@ -496,117 +533,61 @@ struct SeguridadView: View {
                 Button {
                     AppHaptics.impact(.medium)
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        modoEdicion.toggle()
+                        lugaresVM.alternarEdicion()
                     }
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: modoEdicion ? "checkmark.circle.fill" : "pencil")
+                        Image(systemName: lugaresVM.modoEdicion ? "checkmark.circle.fill" : "pencil")
                             .font(.system(size: 14, weight: .semibold))
-                        Text(modoEdicion ? L.t("LISTO", "DONE") : L.t("EDITAR", "EDIT"))
+                        Text(lugaresVM.modoEdicion ? L.t("LISTO", "DONE") : L.t("EDITAR", "EDIT"))
                             .font(.labelCapsSm)
                             .appTracking(AppTracking.wideLabel)
                     }
-                    .foregroundStyle(modoEdicion ? Color.appPrimary : Color.onSurfaceVariant)
+                    .foregroundStyle(lugaresVM.modoEdicion ? Color.appPrimary : Color.onSurfaceVariant)
                 }
                 .buttonStyle(.plain)
             }
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-                ForEach(tilesActuales) { lugar in
+                ForEach(lugaresVM.tilesActuales) { lugar in
                     lugarTileLugar(lugar)
                         .onDrag {
                             AppHaptics.impact(.light)
-                            arrastrando = lugar
+                            lugaresVM.arrastrando = lugar
                             return NSItemProvider(object: lugar.id.uuidString as NSString)
                         }
                         .onDrop(of: [.text],
                                 delegate: TileDropDelegate(
                                     destino: lugar,
-                                    tiles: $tilesActuales,
-                                    arrastrando: $arrastrando,
-                                    onPersistir: persistirOrden))
+                                    tiles: $lugaresVM.tilesActuales,
+                                    arrastrando: $lugaresVM.arrastrando,
+                                    onPersistir: lugaresVM.persistirOrden))
                 }
                 lugarTileAñadir
             }
         }
     }
 
-    /// UTP fijo primero + extras en el orden guardado por el usuario.
-    private func reconstruirTiles(seleccion: Set<UUID>? = nil) {
-        let utp = lugares.first(where: { $0.esFijo })
-        let noFijos = lugares.filter { !$0.esFijo }
-
-        let elegidos: [LugarGuardado]
-        if let seleccion {
-            guardarTilesSeleccion(seleccion)
-            elegidos = noFijos.filter { seleccion.contains($0.id) }
-        } else if let idsGuardados = idsTilesGuardados() {
-            let porId = Dictionary(uniqueKeysWithValues: noFijos.map { ($0.id, $0) })
-            elegidos = idsGuardados.compactMap { porId[$0] }
-        } else {
-            elegidos = Array(noFijos.prefix(2))
-        }
-
-        // Orden guardado por el usuario (arrastrar en modo edición)
-        var resultado: [LugarGuardado] = []
-        if let utp { resultado.append(utp) }
-        if let orden = idsOrdenGuardados(), !orden.isEmpty {
-            let porId = Dictionary(uniqueKeysWithValues: elegidos.map { ($0.id, $0) })
-            var ordenados = orden.compactMap { porId[$0] }
-            // Los que no tenían posición guardada van al final, en su orden natural.
-            ordenados += elegidos.filter { s in !ordenados.contains(where: { $0.id == s.id }) }
-            resultado += ordenados
-        } else {
-            resultado += elegidos
-        }
-        tilesActuales = resultado
-    }
-
-    private func idsTilesGuardados() -> [UUID]? {
-        guard let data = UserDefaults.standard.data(forKey: Self.tilesKey),
-              let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
-        return ids
-    }
-
-    private func idsOrdenGuardados() -> [UUID]? {
-        guard let data = UserDefaults.standard.data(forKey: Self.ordenKey),
-              let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
-        return ids
-    }
-
-    private func persistirOrden() {
-        let ids = tilesActuales.filter { !$0.esFijo }.map(\.id)
-        if let data = try? JSONEncoder().encode(ids) {
-            UserDefaults.standard.set(data, forKey: Self.ordenKey)
-        }
-    }
-
-    private func guardarTilesSeleccion(_ ids: Set<UUID>) {
-        if let data = try? JSONEncoder().encode(Array(ids)) {
-            UserDefaults.standard.set(data, forKey: Self.tilesKey)
-        }
-    }
-
     private func lugarTileLugar(_ lugar: LugarGuardado) -> some View {
-        let esArrastrado = arrastrando?.id == lugar.id
+        let esArrastrado = lugaresVM.arrastrando?.id == lugar.id
         return lugarTile(nombre: lugar.nombre,
                          icon: lugar.categoria.icono,
                          bg: lugar.esFijo ? Color.appPrimary : Color.primaryContainer.opacity(0.12),
                          fg: lugar.esFijo ? .white : .appPrimary,
                          border: lugar.esFijo,
                          badgeFrecuente: lugar.esFrecuente,
-                         faseJiggle: Double(tilesActuales.firstIndex(where: { $0.id == lugar.id }) ?? 0) * 1.7)
+                         faseJiggle: Double(lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) ?? 0) * 1.7)
         {
-            if modoEdicion {
+            if lugaresVM.modoEdicion {
                 AppHaptics.impact(.light)
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    modoEdicion = false
+                    lugaresVM.modoEdicion = false
                 }
             }
             selectedLugar = lugar
         }
         .overlay(alignment: .topLeading) {
-            if modoEdicion {
+            if lugaresVM.modoEdicion {
                 if lugar.esFijo {
                     // UTP es fijo: no se puede borrar ni mover
                     Image(systemName: "lock.fill")
@@ -621,11 +602,8 @@ struct SeguridadView: View {
                     Button {
                         AppHaptics.warning()
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            tilesActuales.removeAll { $0.id == lugar.id }
+                            lugaresVM.eliminar(lugar)
                         }
-                        LugaresStore.eliminar(lugar)
-                        lugares = LugaresStore.cargar()
-                        persistirOrden()
                     } label: {
                         Image(systemName: "minus")
                             .font(.system(size: 10, weight: .heavy))
@@ -642,13 +620,14 @@ struct SeguridadView: View {
                 }
             }
         }
-        .scaleEffect(esArrastrado ? 1.08 : (modoEdicion ? 0.97 : 1.0))
+        .scaleEffect(esArrastrado ? 1.08 : (lugaresVM.modoEdicion ? 0.97 : 1.0))
         .opacity(esArrastrado ? 0.75 : 1.0)
         .zIndex(esArrastrado ? 10 : 0)
     }
 
     private var lugarTileAñadir: some View {
-        lugarTile(nombre: modoEdicion ? "Añadir" : (tilesActuales.count <= 1 ? "Añadir" : L.t("Elegir", "Choose")),
+        lugarTile(nombre: lugaresVM.modoEdicion ? L.t("Añadir", "Add")
+                     : (lugaresVM.tilesActuales.count <= 1 ? L.t("Añadir", "Add") : L.t("Elegir", "Choose")),
                   icon: "plus",
                   bg: Color.surfaceContainerLow,
                   fg: .outline,
@@ -697,7 +676,7 @@ struct SeguridadView: View {
             )
         }
         .buttonStyle(.plain)
-        .modifier(JiggleEffect(active: modoEdicion && !dashed, fase: faseJiggle))
+        .modifier(JiggleEffect(active: lugaresVM.modoEdicion && !dashed, fase: faseJiggle))
     }
 
     // MARK: - Rutas seguras
@@ -715,7 +694,8 @@ struct SeguridadView: View {
                 AppHaptics.impact(.light)
                 showParaderosMap = true
             } label: {
-                BannerParaderosPreview(cantidad: paraderosIluminados.count)
+                BannerParaderosPreview(cantidad: paraderosIluminados.count,
+                                       paraderos: paraderosIluminados)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Explorar el mapa de paraderos", "Explore the bus stop map"))
@@ -852,336 +832,10 @@ struct SeguridadView: View {
     }
 
     private func fechaActual() -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: L.esIngles ? "en_US" : "es_PE")
-        f.dateFormat = L.esIngles ? "EEEE, MMMM d" : "EEEE d 'de' MMMM"
-        return f.string(from: Date()).capitalized
-    }
-}
-
-// MARK: - Modelo de Ruta Segura
-private struct RutaSegura: Identifiable {
-    let id: Int
-    let titulo: String
-    let descripcion: String
-    let icono: String
-    let iconoBg: Color
-    let iconoFg: Color
-    let accent: Color?
-}
-
-// MARK: - Votos de la comunidad (like / dislike)
-/// Reacción del usuario por reporte. Vive en la sesión (demo; no persiste).
-/// Tocar el mismo voto lo retira; votar el lado opuesto cambia el voto.
-final class ComunidadReacciones: ObservableObject {
-    enum Voto { case ninguno, util, noUtil }
-
-    @Published private var votos: [UUID: Voto] = [:]
-
-    func voto(para reporte: ReporteComunidad) -> Voto {
-        votos[reporte.id] ?? .ninguno
-    }
-
-    func votar(_ reporte: ReporteComunidad, a nuevo: Voto) {
-        votos[reporte.id] = (voto(para: reporte) == nuevo) ? .ninguno : nuevo
-        AppHaptics.selection()
-    }
-
-    func utiles(_ reporte: ReporteComunidad) -> Int {
-        reporte.utiles + (voto(para: reporte) == .util ? 1 : 0)
-    }
-
-    func noUtiles(_ reporte: ReporteComunidad) -> Int {
-        reporte.dislikes + (voto(para: reporte) == .noUtil ? 1 : 0)
-    }
-}
-
-// MARK: - Reporte card
-private struct ReporteCard: View {
-    let reporte: ReporteComunidad
-    @ObservedObject var reacciones: ComunidadReacciones
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                ZStack {
-                    Circle().fill(reporte.avatarColor).frame(width: 40, height: 40)
-                    Text(reporte.iniciales)
-                        .font(.labelCapsMd)
-                        .foregroundStyle(reporte.avatarForeground)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(reporte.nombre)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
-                    Text(reporte.tiempoLocalizado)
-                        .font(.labelCapsSm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                }
-                Spacer()
-                Text(reporte.tipo.titulo.uppercased())
-                    .font(.labelCapsSm)
-                    .foregroundStyle(reporte.tipo.foreground)
-                    .appTracking(AppTracking.wideLabel)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(reporte.tipo.background))
-            }
-
-            Text(reporte.cuerpoLocalizado)
-                .font(.system(size: 15))
-                .lineSpacing(3)
-                .lineLimit(4)
-                .foregroundStyle(.onSurface)
-
-            if let foto = reporte.foto {
-                FotoReporteView(foto: foto)
-            }
-
-            Divider().overlay(Color.outlineVariant.opacity(0.2))
-            HStack(spacing: 8) {
-                votoButton(.util)
-                votoButton(.noUtil)
-
-                HStack(spacing: 5) {
-                    Image(systemName: "bubble.left")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("\(reporte.comentarios)")
-                        .font(.bodySm)
-                }
-                .foregroundStyle(.onSurfaceVariant)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(L.t("\(reporte.comentarios) comentarios", "\(reporte.comentarios) comments"))
-
-                Spacer()
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.onSurfaceVariant)
-            }
-        }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.surfaceContainerLowest)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
-                )
-        )
-    }
-
-    @ViewBuilder
-    private func votoButton(_ tipo: ComunidadReacciones.Voto) -> some View {
-        let esUtil = tipo == .util
-        let activo = reacciones.voto(para: reporte) == tipo
-        let cantidad = esUtil ? reacciones.utiles(reporte) : reacciones.noUtiles(reporte)
-        let color: Color = esUtil ? .appPrimary : .appError
-
-        Button {
-            reacciones.votar(reporte, a: tipo)
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: esUtil
-                      ? (activo ? "hand.thumbsup.fill" : "hand.thumbsup")
-                      : (activo ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
-                    .font(.system(size: 13, weight: .semibold))
-                if esUtil {
-                    Text(L.t("Útil", "Useful") + " (\(cantidad))")
-                        .font(.bodySm)
-                } else {
-                    Text("\(cantidad)")
-                        .font(.bodySm)
-                }
-            }
-            .foregroundStyle(activo ? color : Color.onSurfaceVariant)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                Capsule().fill(activo ? color.opacity(0.10) : Color.surfaceContainerLow)
-            )
-            .overlay(
-                Capsule().stroke(activo ? color.opacity(0.35) : Color.clear, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(esUtil ? L.t("Me es útil", "Helpful") : L.t("No me es útil", "Not helpful"))
-        .accessibilityValue(L.t("\(cantidad) votos", "\(cantidad) votes"))
-        .accessibilityAddTraits(activo ? .isSelected : [])
-    }
-}
-
-// MARK: - Reporte Detail Sheet
-private struct ReporteDetailSheet: View {
-    let reporte: ReporteComunidad
-    @ObservedObject var reacciones: ComunidadReacciones
-    @Environment(\.dismiss) private var dismiss
-
-    /// Comentarios de muestra, deterministas por reporte (misma semilla →
-    /// mismos comentarios mientras la sesión esté viva).
-    private var comentariosMuestra: [(nombre: String, iniciales: String, texto: String)] {
-        let semilla = reporte.id.uuidString.unicodeScalars.reduce(0) { $0 + Int($1.value) }
-        let autores = [("Luisa P.", "LP"), ("Marco T.", "MT"), ("Diana R.", "DR"),
-                       ("Sergio V.", "SV"), ("Pilar A.", "PA"), ("César H.", "CH")]
-        let textos = [
-            L.t("Totalmente de acuerdo.", "Totally agree."),
-            L.t("Gracias por avisar a tiempo.", "Thanks for the heads-up."),
-            L.t("Me pasó igual ayer por la mañana.", "Same thing happened to me yesterday morning."),
-            L.t("Justo venía de ahí, horrible.", "I was just there, it was awful."),
-            L.t("Buen dato, no lo sabía.", "Good to know, I had no idea."),
-            L.t("Hay que tener cuidado ahí siempre.", "We always have to be careful there."),
-            L.t("Confirmo, sigue igual.", "Confirmed, still the same.")
-        ]
-        return (0..<reporte.comentarios).map { k in
-            let autor = autores[(semilla + k) % autores.count]
-            let texto = textos[(semilla + k * 2) % textos.count]
-            return (autor.0, autor.1, texto)
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Autor
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
-                            Text(reporte.iniciales)
-                                .font(.headlineSm)
-                                .foregroundStyle(reporte.avatarForeground)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(reporte.nombre)
-                                .font(.headlineSm)
-                            Text(reporte.tiempoLocalizado)
-                                .font(.labelCapsSm)
-                                .foregroundStyle(.onSurfaceVariant)
-                                .appTracking(AppTracking.wideLabel)
-                        }
-                        Spacer()
-                        Text(reporte.tipo.titulo.uppercased())
-                            .font(.labelCapsMd)
-                            .foregroundStyle(reporte.tipo.foreground)
-                            .appTracking(AppTracking.wideLabel)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
-                    }
-
-                    Text(reporte.cuerpoLocalizado)
-                        .font(.bodyLg)
-                        .foregroundStyle(.onSurface)
-
-                    if let foto = reporte.foto {
-                        FotoReporteView(foto: foto, detalle: true)
-                    }
-
-                    // Votos interactivos
-                    HStack(spacing: 10) {
-                        votoButton(.util)
-                        votoButton(.noUtil)
-                        Spacer()
-                    }
-
-                    Divider()
-
-                    // Comentarios
-                    Text(L.t("COMENTARIOS (\(reporte.comentarios))", "COMMENTS (\(reporte.comentarios))"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-
-                    if reporte.comentarios == 0 {
-                        HStack(spacing: 10) {
-                            Image(systemName: "bubble.left")
-                                .font(.system(size: 18))
-                                .foregroundStyle(.onSurfaceVariant.opacity(0.5))
-                            Text(L.t("Aún no hay comentarios. Sé el primero en comentar.",
-                                     "No comments yet. Be the first to comment."))
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurfaceVariant)
-                        }
-                        .padding(.vertical, 8)
-                    } else {
-                        VStack(spacing: 10) {
-                            ForEach(Array(comentariosMuestra.enumerated()), id: \.offset) { _, c in
-                                HStack(alignment: .top, spacing: 10) {
-                                    ZStack {
-                                        Circle().fill(Color.surfaceContainerHigh).frame(width: 30, height: 30)
-                                        Text(c.iniciales)
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.onSurfaceVariant)
-                                    }
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(c.nombre)
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundStyle(.onSurface)
-                                        Text(c.texto)
-                                            .font(.bodySm)
-                                            .foregroundStyle(.onSurfaceVariant)
-                                    }
-                                    Spacer()
-                                }
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(Color.surfaceContainerLow)
-                                )
-                            }
-                        }
-                    }
-                }
-                .padding(20)
-            }
-
-            Button { dismiss() } label: {
-                Text(L.t("Cerrar", "Close"))
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                    .foregroundStyle(.white)
-                    .font(.bodyMdMedium)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
-        }
-    }
-
-    @ViewBuilder
-    private func votoButton(_ tipo: ComunidadReacciones.Voto) -> some View {
-        let esUtil = tipo == .util
-        let activo = reacciones.voto(para: reporte) == tipo
-        let cantidad = esUtil ? reacciones.utiles(reporte) : reacciones.noUtiles(reporte)
-        let color: Color = esUtil ? .appPrimary : .appError
-
-        Button {
-            reacciones.votar(reporte, a: tipo)
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: esUtil
-                      ? (activo ? "hand.thumbsup.fill" : "hand.thumbsup")
-                      : (activo ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
-                    .font(.system(size: 14, weight: .semibold))
-                Text(esUtil
-                     ? L.t("Útil", "Useful") + " (\(cantidad))"
-                     : L.t("No útil", "Not helpful") + " (\(cantidad))")
-                    .font(.bodySmMedium)
-            }
-            .foregroundStyle(activo ? color : Color.onSurfaceVariant)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(
-                Capsule().fill(activo ? color.opacity(0.10) : Color.surfaceContainerLow)
-            )
-            .overlay(
-                Capsule().stroke(activo ? color.opacity(0.35) : Color.outlineVariant.opacity(0.30), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(activo ? .isSelected : [])
+        let patron = L.esIngles ? "EEEE, MMMM d" : "EEEE d 'de' MMMM"
+        return FormatoFecha.formateador(patron: patron, locale: FormatoFecha.localeActivo)
+            .string(from: Date())
+            .capitalized
     }
 }
 
@@ -1189,379 +843,3 @@ private struct ReporteDetailSheet: View {
 // ReportarSheet vive en Design/Components/ReportarSheet.swift (compartido
 // con el Mapa). Ver ahí el diseño completo.
 
-// MARK: - Elegir Lugares sheet (tiles de Seguridad)
-private struct ElegirLugaresSheet: View {
-    let lugares: [LugarGuardado]          // sin incluir UTP (fijo, siempre está)
-    let seleccion: Set<UUID>
-    var irAGuardado: () -> Void
-    var onGuardar: (Set<UUID>) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var elegidos: Set<UUID> = []
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 14) {
-                Text(L.t("Elige los lugares que verás aquí", "Choose which places appear here"))
-                    .font(.headlineMd)
-                Text(L.t("Tus lugares guardados de la pestaña Guardado. UTP siempre aparece.", "Your saved places. UTP always appears."))
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-
-                if lugares.isEmpty {
-                    VStack(spacing: 14) {
-                        Image(systemName: "bookmark.slash")
-                            .font(.system(size: 40, weight: .light))
-                            .foregroundStyle(.onSurfaceVariant)
-                        Text(L.t("Aún no tienes lugares guardados", "No saved places yet"))
-                            .font(.bodyMdMedium)
-                            .foregroundStyle(.onSurface)
-                        Button {
-                            irAGuardado()
-                        } label: {
-                            Label(L.t("Ir a Guardado", "Go to Saved"), systemImage: "plus.circle.fill")
-                                .font(.headlineSm)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity, minHeight: 48)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    Spacer()
-                } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 8) {
-                            ForEach(lugares) { lugar in
-                                filaLugar(lugar)
-                            }
-                        }
-                    }
-                    botonListo
-                }
-            }
-            .padding(20)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
-                }
-            }
-            .onAppear { elegidos = seleccion }
-        }
-    }
-
-    private func filaLugar(_ lugar: LugarGuardado) -> some View {
-        Button {
-            AppHaptics.selection()
-            if elegidos.contains(lugar.id) {
-                elegidos.remove(lugar.id)
-            } else {
-                elegidos.insert(lugar.id)
-            }
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(Color.primaryContainer.opacity(0.12)).frame(width: 40, height: 40)
-                    Image(systemName: lugar.categoria.icono)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.appPrimary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(lugar.nombre)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
-                    Text(lugar.direccion)
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: elegidos.contains(lugar.id)
-                      ? "checkmark.circle.fill"
-                      : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(elegidos.contains(lugar.id) ? Color.appPrimary : Color.outlineVariant)
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(elegidos.contains(lugar.id)
-                          ? Color.primaryContainer.opacity(0.25)
-                          : Color.surfaceContainerLowest)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var botonListo: some View {
-        Button {
-            AppHaptics.success()
-            onGuardar(elegidos)
-            dismiss()
-        } label: {
-            Text(L.t("Guardar selección", "Save selection"))
-                .font(.headlineSm)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Efecto jiggle (estilo pantalla de inicio del iPhone)
-/// Rotación oscilante con desfase por tile para que se muevan "en ola".
-struct JiggleEffect: ViewModifier {
-    let active: Bool
-    var fase: Double = 0
-
-    func body(content: Content) -> some View {
-        content
-            .rotationEffect(.degrees(active ? jiggleAngle : 0))
-            .animation(
-                active
-                ? Animation.easeInOut(duration: 0.12)
-                    .repeatForever(autoreverses: true)
-                    .delay(fase * 0.0)
-                : .default,
-                value: active
-            )
-    }
-
-    /// Para el efecto "ola" real usamos una fase fija por tile en el ángulo.
-    private var jiggleAngle: Double {
-        1.6 * (fase.truncatingRemainder(dividingBy: 2) == 0 ? 1 : -1)
-    }
-}
-
-// MARK: - Drop delegate para reordenar tiles
-private struct TileDropDelegate: DropDelegate {
-    let destino: LugarGuardado
-    @Binding var tiles: [LugarGuardado]
-    @Binding var arrastrando: LugarGuardado?
-    var onPersistir: () -> Void
-
-    func dropEntered(info: DropInfo) {
-        guard let arrastrando,
-              arrastrando.id != destino.id,
-              !destino.esFijo, !arrastrando.esFijo,
-              let desde = tiles.firstIndex(where: { $0.id == arrastrando.id }),
-              let hasta = tiles.firstIndex(where: { $0.id == destino.id })
-        else { return }
-
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-            let movido = tiles.remove(at: desde)
-            // Tras remover, el índice destino puede correrse: recalculamos.
-            if let nuevoHasta = tiles.firstIndex(where: { $0.id == destino.id }) {
-                tiles.insert(movido, at: nuevoHasta)
-            } else {
-                tiles.insert(movido, at: hasta)
-            }
-        }
-        onPersistir()
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        DispatchQueue.main.async { arrastrando = nil }
-        return true
-    }
-}
-
-// MARK: - Preview nocturno del banner de paraderos (mini-mapa con focos)
-/// Ilustración animada: calles oscuras + focos azules pulsando en las
-/// posiciones de los paraderos iluminados (si ya cargaron; si no, layout fijo).
-private struct BannerParaderosPreview: View {
-    let cantidad: Int
-
-    // Calles del mini-mapa (proporciones del contenedor)
-    private static let calles: [(from: CGPoint, to: CGPoint)] = {
-        let puntos = [(0.04, 0.78), (0.22, 0.62), (0.42, 0.70), (0.60, 0.46),
-                      (0.78, 0.38), (0.97, 0.22), (0.12, 0.30), (0.35, 0.16),
-                      (0.58, 0.10), (0.88, 0.72), (0.30, 0.90), (0.65, 0.82)]
-        return [
-            (p(0), p(1)), (p(1), p(2)), (p(2), p(3)), (p(3), p(4)), (p(4), p(5)),
-            (p(6), p(7)), (p(7), p(8)), (p(2), p(7)), (p(3), p(8)),
-            (p(1), p(6)), (p(4), p(9)), (p(10), p(2)), (p(11), p(9))
-        ]
-        func p(_ i: Int) -> CGPoint { CGPoint(x: puntos[i].0, y: puntos[i].1) }
-    }()
-
-    /// Focos en fracciones del contenedor: reales si hay paraderos cargados.
-    private var focos: [CGPoint] {
-        if let rutas = SeguridadView.paraderosCache, !rutas.isEmpty {
-            let lats = rutas.map(\.lat)
-            let lons = rutas.map(\.lon)
-            let minLat = lats.min()!, maxLat = lats.max()!
-            let minLon = lons.min()!, maxLon = lons.max()!
-            let rangoLat = max(maxLat - minLat, 0.0001)
-            let rangoLon = max(maxLon - minLon, 0.0001)
-            return rutas.map { p in
-                CGPoint(x: 0.08 + (p.lon - minLon) / rangoLon * 0.84,
-                        y: 0.85 - (p.lat - minLat) / rangoLat * 0.72)
-            }
-        }
-        // Fallback decorativo mientras carga el feed
-        return [(0.14, 0.62), (0.30, 0.48), (0.47, 0.58), (0.63, 0.32),
-                (0.80, 0.26), (0.22, 0.24), (0.55, 0.78), (0.88, 0.55)].map {
-            CGPoint(x: $0.0, y: $0.1)
-        }
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            TimelineView(.animation(minimumInterval: 0.5, paused: false)) { timeline in
-                let t = timeline.date.timeIntervalSinceReferenceDate
-                ZStack {
-                    // Noche
-                    LinearGradient(colors: [Color(hex: "#0d1b3d"), Color(hex: "#123061")],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-
-                    // Calles
-                    Path { p in
-                        for calle in Self.calles {
-                            p.move(to: CGPoint(x: calle.from.x * geo.size.width, y: calle.from.y * geo.size.height))
-                            p.addLine(to: CGPoint(x: calle.to.x * geo.size.width, y: calle.to.y * geo.size.height))
-                        }
-                    }
-                    .stroke(Color.white.opacity(0.16), style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                    .padding(.horizontal, 8)
-
-                    Path { p in
-                        for calle in Self.calles {
-                            p.move(to: CGPoint(x: calle.from.x * geo.size.width, y: calle.from.y * geo.size.height))
-                            p.addLine(to: CGPoint(x: calle.to.x * geo.size.width, y: calle.to.y * geo.size.height))
-                        }
-                    }
-                    .stroke(Color(hex: "#5cc8ff").opacity(0.35), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [3, 5]))
-                    .padding(.horizontal, 8)
-
-                    // Focos con pulso desfasado
-                    ForEach(Array(focos.enumerated()), id: \.offset) { i, foco in
-                        let fase = Double(i) * 0.9
-                        let brillo = 0.55 + 0.45 * sin(t * 2.2 + fase)
-                        ZStack {
-                            Circle()
-                                .fill(Color(hex: "#7fd4ff").opacity(0.22 * brillo))
-                                .frame(width: 34, height: 34)
-                            Circle()
-                                .fill(Color(hex: "#8fd8ff"))
-                                .frame(width: 12, height: 12)
-                                .shadow(color: Color(hex: "#7fd4ff").opacity(brillo), radius: 6)
-                            Image(systemName: "lightbulb.fill")
-                                .font(.system(size: 7, weight: .bold))
-                                .foregroundStyle(.white)
-                                .opacity(0.95)
-                        }
-                        .position(x: foco.x * geo.size.width, y: foco.y * geo.size.height)
-                    }
-                }
-                .clipped()
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            VStack(alignment: .leading, spacing: 5) {
-                Label(L.t("EXPLORA TU CIUDAD", "EXPLORE YOUR CITY"), systemImage: "map.fill")
-                    .font(.system(size: 10, weight: .bold)).tracking(1.2)
-                    .foregroundStyle(Color(hex: "#8FD8FF"))
-                Text(L.t("Encuentra tu próxima parada", "Find your next stop"))
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white).lineLimit(2)
-            }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(LinearGradient(colors: [Color.black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom))
-        }
-        .overlay(alignment: .bottom) {
-            // Cápsula de info
-            HStack(spacing: 6) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color(hex: "#8fd8ff"))
-                Text(L.t("\(cantidad) paraderos por explorar", "\(cantidad) stops to explore"))
-                    .font(.bodySm)
-                    .foregroundStyle(.white)
-                Spacer()
-                Image(systemName: "map.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.9))
-                Text(L.t("VER MAPA", "OPEN MAP"))
-                    .font(.labelCapsSm)
-                    .foregroundStyle(.white)
-                    .appTracking(AppTracking.wideLabel)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(Color.black.opacity(0.55)))
-            .padding(12)
-        }
-        .frame(height: 212)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
-    }
-}
-
-// MARK: - FAB style
-private struct FABStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: configuration.isPressed)
-    }
-}
-
-#Preview {
-    SeguridadView().environmentObject(AppRouter())
-}
-
-
-// MARK: - Foto de referencia compartida entre publicación y detalle
-private struct FotoReporteView: View {
-    let foto: FotoComunidad
-    var detalle = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Group {
-                if detalle {
-                    Image(foto.asset).resizable().scaledToFit()
-                } else {
-                    GeometryReader { geo in
-                        Image(foto.asset).resizable().scaledToFill()
-                            .frame(width: geo.size.width, height: 180)
-                            .clipped()
-                    }
-                    .frame(height: 180)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .accessibilityLabel(L.t("Foto de archivo: ", "Archive photo: ") + foto.lugar)
-            Label(foto.lugar, systemImage: "mappin.and.ellipse")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.onSurface)
-            Text(L.t("PUBLICACIÓN DEMO · FOTO DE REFERENCIA", "DEMO POST · REFERENCE PHOTO"))
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Color.onSurfaceVariant)
-            Text("© " + foto.autor + " · " + foto.fecha + " · CC BY-SA " + foto.licencia)
-                .font(.system(size: 10))
-                .foregroundStyle(Color.onSurfaceVariant)
-            if detalle {
-                Text(L.t("Autor del post ficticio. La foto es de archivo y no documenta un incidente actual. Vista previa recortada; imagen completa arriba.",
-                         "Fictional post author. This archive photo does not document a current incident. Cropped preview; full image above."))
-                    .font(.caption)
-                    .foregroundStyle(Color.onSurfaceVariant)
-                HStack(spacing: 16) {
-                    if let url = URL(string: foto.fuente) { Link(L.t("Ver fuente", "View source"), destination: url) }
-                    if let url = URL(string: foto.licenciaURL) { Link(L.t("Licencia", "License"), destination: url) }
-                }
-                .font(.caption.weight(.medium))
-            }
-        }
-    }
-}

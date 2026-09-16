@@ -165,10 +165,20 @@ struct ExploradorRutaView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var ajustarTrigger: Int = 0
 
+    /// Trazado para DIBUJAR, decimado.
+    ///
+    /// Esta pantalla permite pan y zoom libres, así que MapKit re-renderiza el
+    /// overlay en cada gesto: con 500 puntos el resultado se ve igual que con
+    /// 300 y cuesta menos. `ruta.shape` conserva el trazado completo para el
+    /// matching y las medidas.
+    private var trazado: [CLLocationCoordinate2D] {
+        PolylineMatching.decimate(ruta.shape, maxPoints: 300)
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             MapaExploradorRepresentable(
-                coordenadas: ruta.shape,
+                coordenadas: trazado,
                 colorLinea: UIColor(ruta.colorLinea),
                 paraderos: ruta.paraderos,
                 ajustarTrigger: ajustarTrigger
@@ -187,14 +197,14 @@ struct ExploradorRutaView: View {
                         .background(Circle().fill(Color.appSurface))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Cerrar")
+                .accessibilityLabel(L.t("Cerrar", "Close"))
 
                 HStack(spacing: 8) {
                     RoundedRectangle(cornerRadius: 3)
                         .fill(ruta.colorLinea)
                         .frame(width: 4, height: 22)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Línea \(ruta.linea)")
+                        Text(L.t("Línea ", "Line ") + ruta.linea)
                             .font(.system(size: 14, weight: .heavy))
                             .foregroundStyle(.onSurface)
                         Text(ruta.empresa)
@@ -221,7 +231,7 @@ struct ExploradorRutaView: View {
                         .background(Circle().fill(Color.appSurface))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Encuadrar recorrido")
+                .accessibilityLabel(L.t("Encuadrar recorrido", "Fit route"))
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -263,14 +273,14 @@ struct ExploradorRutaView: View {
             }
 
             HStack(spacing: 0) {
-                datoLeyenda(icono: "clock.fill", valor: ruta.tiempoTexto, etiqueta: "Viaje")
+                datoLeyenda(icono: "clock.fill", valor: ruta.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
                 divisor
-                datoLeyenda(icono: "creditcard.fill", valor: ruta.costo, etiqueta: "Tarifa")
+                datoLeyenda(icono: "creditcard.fill", valor: ruta.costo, etiqueta: L.t("Tarifa", "Fare"))
                 divisor
-                datoLeyenda(icono: "mappin.and.ellipse", valor: "\(ruta.numParaderos)", etiqueta: "Paraderos")
+                datoLeyenda(icono: "mappin.and.ellipse", valor: "\(ruta.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
                 divisor
                 datoLeyenda(icono: "point.topleft.down.curvedto.point.bottomright.up",
-                            valor: String(format: "%.1f km", ruta.distanciaKm), etiqueta: "Longitud")
+                            valor: String(format: "%.1f km", ruta.distanciaKm), etiqueta: L.t("Longitud", "Length"))
             }
         }
         .padding(16)

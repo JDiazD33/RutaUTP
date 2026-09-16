@@ -68,7 +68,11 @@ struct BusAnimado: Identifiable, Equatable {
 
         lat = a.latitude + (b.latitude - a.latitude) * f
         lon = a.longitude + (b.longitude - a.longitude) * f
-        heading = atan2(b.longitude - a.longitude, b.latitude - a.latitude) * 180 / .pi
+        // El rumbo necesita la corrección por longitud: los meridianos se
+        // juntan hacia los polos y sin el cos(lat) el ángulo no coincide con
+        // el que calcula `SimulatedTrackingProvider` para la misma geometría.
+        heading = atan2((b.longitude - a.longitude) * cos(a.latitude * .pi / 180),
+                        b.latitude - a.latitude) * 180 / .pi
         tramoActual = i
     }
 
@@ -171,11 +175,23 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var distanciaKm: Double? = nil
 
     // Buses Animados en Tiempo Real
+    /// Estado VIVO de la simulación: avanza en cada tick (20 Hz) y NO se
+    /// publica. Mantenerlo separado es lo que evita redibujar el mapa entero
+    /// 20 veces por segundo.
+    private var flotaBuses: [BusAnimado] = []
+    /// Instantánea publicada para la UI. Se refresca solo cuando algún bus se
+    /// ha movido lo suficiente para que se note.
     @Published var busesAnimados: [BusAnimado] = []
     @Published var busSeleccionado: BusAnimado? = nil
+    /// Movimiento mínimo (m) para publicar una nueva instantánea. A 20 Hz cada
+    /// tick avanza unos centímetros, así que casi todas las publicaciones no
+    /// cambiaban nada visible pero rehacían el cuerpo de `MapaView` completo
+    /// —mapa, anotaciones, buscador y panel de tarjetas—. Con este umbral se
+    /// publica ~7 veces por segundo a velocidad urbana.
+    private static let metrosMinimosParaPublicar: Double = 1.5
     /// True mientras se consulta el feed por las líneas del punto actual.
     @Published private(set) var cargandoLineas: Bool = false
-    private var busSimulationTimer: Timer?
+    private var busSimulationTask: Task<Void, Never>?
     /// Último tick del timer: para mover los buses por tiempo transcurrido
     /// real (metros = velocidad × dt) y no por pasos fijos de segmento.
     private var ultimoTickBuses: Date?
@@ -219,25 +235,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     /// aquí sin reiniciar la app. LugaresStore es la misma fuente que
     /// GuardadoView, así ambos siempre ven lo mismo.
     func refrescarDestinos() {
-        let nombresFijos = Set(destinosFijos.map { $0.label.lowercased() })
-
-        let guardados = LugaresStore.cargar()
-            .filter { lugar in
-                // Solo lugares con coordenadas y que no dupliquen un chip fijo.
-                guard lugar.coordinate != nil else { return false }
-                return !nombresFijos.contains(lugar.nombre.lowercased())
-            }
-            .prefix(Self.maxDestinos - destinosFijos.count)
-            .enumerated()
-            .map { indice, lugar in
-                DestinoChip(id: 100 + indice,
-                            label: lugar.nombre,
-                            icon: lugar.categoria.icono,
-                            lat: lugar.lat ?? 0,
-                            lon: lugar.lon ?? 0)
-            }
-
-        destinos = destinosFijos + guardados
+        lugaresParaChips = LugaresStore.cargar()
 
         // Si el destino seleccionado era un chip guardado que ya no existe,
         // limpiarlo para no mostrar una ruta hacia un lugar eliminado.
@@ -297,11 +295,15 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         // original del panel "Transportes cercanos").
         recargarLineas(cercaDe: nil)
 
-        guard busSimulationTimer == nil else { return }
+        guard busSimulationTask == nil else { return }
         ultimoTickBuses = nil
-        busSimulationTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
+        // Bucle de simulación aislado al hilo principal. Antes era un `Timer`
+        // que despachaba un bloque a la cola principal en cada tick — veinte
+        // por segundo — sin aislamiento verificable ni cancelación estructurada.
+        busSimulationTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                guard !Task.isCancelled, let self else { return }
                 self.actualizarPosicionBuses()
             }
         }
@@ -332,7 +334,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             guard let self, self.anclaLineas?.lat == clave.lat,
                   self.anclaLineas?.lon == clave.lon else { return }
 
-            self.busesAnimados = Self.busesDesde(feed, ancla: punto)
+            self.flotaBuses = Self.busesDesde(feed, ancla: punto)
+            self.busesAnimados = self.flotaBuses
             self.busSeleccionado = nil
             self.cargandoLineas = false
         }
@@ -342,9 +345,12 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     private static func busesDesde(_ feed: [RutaGTFS],
                                    ancla: CLLocationCoordinate2D) -> [BusAnimado] {
         let n = max(feed.count, 1)
-        return feed.enumerated().map { index, ruta in
-            var waypoints = decimarCoordenadas(ruta.shape, maximoPuntos: 240)
-            if waypoints.count < 2 { waypoints = RutaCoordenadas.linea10 }
+        return feed.enumerated().compactMap { index, ruta in
+            // Sin geometría suficiente no hay nada que animar. Antes se caía a
+            // un trazado de demostración, así que el mapa mostraba un bus
+            // recorriendo una línea que no era la suya.
+            let waypoints = decimarCoordenadas(ruta.shape, maximoPuntos: 240)
+            guard waypoints.count >= 2 else { return nil }
             let acumulados = distanciasAcumuladas(waypoints)
 
             var bus = BusAnimado(
@@ -434,8 +440,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     }
 
     func detenerSimulacionBuses() {
-        busSimulationTimer?.invalidate()
-        busSimulationTimer = nil
+        busSimulationTask?.cancel()
+        busSimulationTask = nil
         ultimoTickBuses = nil
     }
 
@@ -446,8 +452,10 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         let dt: Double = ultimoTickBuses.map { min(ahora.timeIntervalSince($0), 1.0) } ?? 0
         ultimoTickBuses = ahora
 
-        for i in busesAnimados.indices {
-            var bus = busesAnimados[i]
+        var huboCambioVisible = false
+
+        for i in flotaBuses.indices {
+            var bus = flotaBuses[i]
             let totalM = bus.longitudRutaM
             guard totalM > 10 else { continue }
 
@@ -464,10 +472,18 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 d = 0
                 bus.isMovingForward = true
             }
+            if abs(d - bus.distanciaM) >= Self.metrosMinimosParaPublicar {
+                huboCambioVisible = true
+            }
             bus.distanciaM = d
             bus.actualizarPosicion()
-            busesAnimados[i] = bus
+            flotaBuses[i] = bus
         }
+
+        // La simulación avanza siempre; el estado publicado —y con él el
+        // redibujado del mapa— solo cuando el movimiento acumulado se nota.
+        guard huboCambioVisible else { return }
+        busesAnimados = flotaBuses
     }
 
     func recenterOnUser() {
@@ -490,21 +506,68 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // Máximo de chips visibles en el panel del mapa (fijos + guardados).
     static let maxDestinos = 6
 
+    /// Nombres de los chips fijos tal como se escriben en ESPAÑOL.
+    ///
+    /// Se usan solo para no duplicar un lugar guardado que ya es un chip fijo.
+    /// Van aparte a propósito: la etiqueta de `destinosFijos` sí cambia con el
+    /// idioma, y la deduplicación no debe depender del idioma activo — un
+    /// lugar guardado llamado «Centro» debe seguir filtrándose aunque la app
+    /// esté en inglés.
+    private static let nombresFijosEstables: Set<String> = ["utp", "centro", "huanchaco"]
+
     /// Chips FIJOS de la app: puntos de referencia conocidos de Trujillo.
     /// Casa/Trabajo ya no son fijos: si el usuario los guarda, aparecen solos.
-    private let destinosFijos: [DestinoChip] = [
+    ///
+    /// Calculada y no almacenada: el `label` sale en el idioma activo en cada
+    /// lectura. Con el texto congelado en un `let`, cambiar de idioma dejaría
+    /// los chips en el idioma anterior (son tres elementos: coste nulo).
+    private var destinosFijos: [DestinoChip] {
+        [
         DestinoChip(id: 1, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill", lat: -8.098247879173792, lon: -79.03818104755645, claveSenia: "mapa.destino.utp"),
         DestinoChip(id: 2, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill", lat: -8.1090, lon: -79.0270, claveSenia: "mapa.destino.centro"),
         DestinoChip(id: 3, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves", lat: -8.0825, lon: -79.1197, claveSenia: "mapa.destino.huanchaco")
-    ]
+        ]
+    }
+
+    /// Lugares guardados leídos de disco. Se cachean aquí para que `destinos`
+    /// pueda ser calculada sin tocar `UserDefaults` en cada render.
+    /// Es `@Published` para que refrescar la lista repinte los chips.
+    @Published private var lugaresParaChips: [LugarGuardado] = []
 
     /// Chips visibles: fijos primero, luego los lugares que el usuario guardó
     /// en la pestaña Guardado (vía LugaresStore), hasta un total de 6.
-    @Published private(set) var destinos: [DestinoChip] = []
+    ///
+    /// CALCULADA, no almacenada: la etiqueta de los chips fijos se resuelve en
+    /// el idioma activo en cada lectura. Antes era un `@Published` que se
+    /// construía una sola vez, así que al cambiar de idioma los chips se
+    /// quedaban en el idioma anterior («Centro» en vez de «Downtown»).
+    var destinos: [DestinoChip] {
+        let guardados = lugaresParaChips
+            .filter { lugar in
+                // Solo lugares con coordenadas y que no dupliquen un chip fijo.
+                guard lugar.coordinate != nil else { return false }
+                return !Self.nombresFijosEstables.contains(lugar.nombre.lowercased())
+            }
+            .prefix(Self.maxDestinos - destinosFijos.count)
+            .enumerated()
+            .map { indice, lugar in
+                DestinoChip(id: 100 + indice,
+                            label: lugar.nombre,
+                            icon: lugar.categoria.icono,
+                            lat: lugar.lat ?? 0,
+                            lon: lugar.lon ?? 0)
+            }
+        return destinosFijos + guardados
+    }
 
     // MARK: - Búsqueda en tiempo real
+    //
+    // NO vuelve a asignar `textoBusqueda`: el TextField ya está enlazado a esa
+    // propiedad. Reasignarla desde aquí creaba un doble camino sobre el mismo
+    // estado y lanzaba consultas de autocompletado incluso cuando el texto lo
+    // había puesto el propio código (al elegir un chip o un resultado). El
+    // filtro por foco lo aplica la vista, que es quien lo conoce.
     func actualizarTextoBusqueda(_ nuevoTexto: String) {
-        textoBusqueda = nuevoTexto
         let t = nuevoTexto.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty {
             sugerenciasBusqueda = []

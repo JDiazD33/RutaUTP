@@ -10,6 +10,10 @@ import SwiftUI
 // MARK: - User marker (pulso azul con icono de caminante)
 struct PulsingUserMarker: View {
     @State private var pulsando = false
+    /// Con «reducir movimiento» activado el halo no late. El pulso es
+    /// decorativo —llama la atención sobre el marcador, no informa de nada—,
+    /// así que es lo primero que debe apagarse.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -17,7 +21,9 @@ struct PulsingUserMarker: View {
                 .fill(Color.secondaryContainer.opacity(0.35))
                 .frame(width: pulsando ? 32 : 20, height: pulsando ? 32 : 20)
                 .animation(
-                    .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
+                    reduceMotion
+                    ? nil
+                    : .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
                     value: pulsando
                 )
             Circle()
@@ -29,7 +35,7 @@ struct PulsingUserMarker: View {
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.white)
         }
-        .onAppear { pulsando = true }
+        .onAppear { pulsando = !reduceMotion }
     }
 }
 

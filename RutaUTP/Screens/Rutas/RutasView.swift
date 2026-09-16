@@ -47,6 +47,11 @@ struct RutaOpcion: Identifiable, Equatable {
 final class RutasViewModel: ObservableObject {
     @Published private(set) var rutas: [RutaOpcion] = []
     @Published private(set) var cargando: Bool = true
+    /// true si el feed se intentó cargar y llegó vacío. No es lo mismo que
+    /// "no hay resultados para tu búsqueda": antes ambos casos mostraban el
+    /// mismo mensaje, así que un fallo del feed se leía como una búsqueda sin
+    /// coincidencias.
+    @Published private(set) var feedVacio: Bool = false
     @Published var textoBusqueda: String = ""
 
     /// Filtro "rutas que pasan cerca de X" (activado desde Guardado).
@@ -82,6 +87,7 @@ final class RutasViewModel: ObservableObject {
         guard cargando else { return }
         let feed = await GTFSRepository.shared.rutas()
         rutas = Self.convertir(feed)
+        feedVacio = rutas.isEmpty
         cargando = false
         if let destino = filtroCerca { activarFiltroCerca(destino: destino) }
     }
@@ -177,10 +183,10 @@ struct RutasView: View {
             consumirLugarCercano()
             consumirRutaPendiente()
         }
-        .onChange(of: router.lugarCercanoPendiente) { _ in
+        .onChange(of: router.lugarCercanoPendiente) { _, _ in
             consumirLugarCercano()
         }
-        .onChange(of: router.rutaPendiente) { _ in
+        .onChange(of: router.rutaPendiente) { _, _ in
             consumirRutaPendiente()
         }
         #if DEBUG
@@ -270,16 +276,35 @@ struct RutasView: View {
                         if viewModel.cargando {
                             HStack(spacing: 12) {
                                 ProgressView()
-                                Text("Parseando feed GTFS…")
+                                Text(L.t("Parseando feed GTFS…", "Parsing GTFS feed…"))
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 32)
+                        } else if viewModel.feedVacio {
+                            // El feed no llegó: mensaje propio, no el de
+                            // "ninguna ruta coincide con tu búsqueda".
+                            VStack(spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .font(.system(size: 26))
+                                    .foregroundStyle(.onSurfaceVariant)
+                                Text(L.t("No se pudieron cargar las rutas del feed",
+                                         "Couldn't load routes from the feed"))
+                                    .font(.bodySm)
+                                    .foregroundStyle(.onSurfaceVariant)
+                                Text(L.t("Vuelve a abrir la pestaña Rutas para reintentar.",
+                                         "Reopen the Routes tab to try again."))
+                                    .font(.bodyXs)
+                                    .foregroundStyle(.onSurfaceVariant.opacity(0.8))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 32)
+                            .multilineTextAlignment(.center)
                         } else if viewModel.rutasFiltradas.isEmpty {
                             Text(viewModel.filtroCerca != nil
                                  ? L.t("Ninguna línea tiene paradero a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar", "No route has a stop within \(Int(RutasViewModel.radioCercaMetros)) m of this place")
-                                 : "No hay rutas que coincidan con “\(viewModel.textoBusqueda)”")
+                                 : L.t("No hay rutas que coincidan con ", "No routes match ") + "“\(viewModel.textoBusqueda)”")
                                 .font(.bodySm)
                                 .foregroundStyle(.onSurfaceVariant)
                                 .frame(maxWidth: .infinity)
@@ -330,7 +355,7 @@ struct RutasView: View {
                             .foregroundStyle(.onPrimaryContainer.opacity(0.7))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Quitar filtro")
+                    .accessibilityLabel(L.t("Quitar filtro", "Clear filter"))
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
@@ -484,21 +509,36 @@ private struct RutaOpcionCard: View {
 
 // MARK: - Mapa no interactivo para RutasView
 private struct RutasMapView: View {
-    @State private var region = MKCoordinateRegion(
+    /// Región fija: este mapa es decorativo (`.disabled(true)`), así que no
+    /// necesita un `@State` que nadie llega a cambiar.
+    private static let regionUTP = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
         span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
     )
+
     private let marcadores: [MapaAnotacion] = [
         MapaAnotacion(id: 1, lat: -8.098247879173792, lon: -79.03818104755645, tipo: .utp),
         MapaAnotacion(id: 2, lat: -8.1180, lon: -79.0350, tipo: .usuario)
     ]
 
+    private func titulo(_ tipo: TipoAnotacion) -> String {
+        switch tipo {
+        case .utp:     return "UTP Trujillo"
+        case .usuario: return L.t("Mi Ubicación", "My Location")
+        }
+    }
+
     var body: some View {
-            Map(coordinateRegion: $region, annotationItems: marcadores) { m in
-            MapAnnotation(coordinate: m.coordinate) {
-                switch m.tipo {
-                case .utp:     MarcadorUTP()
-                case .usuario: PulsingUserMarker()
+        // Inicializadores de `MapContentBuilder` (iOS 17): sustituyen a
+        // `Map(coordinateRegion:annotationItems:)` y a `MapAnnotation`, que
+        // quedaron obsoletos.
+        Map(initialPosition: .region(Self.regionUTP)) {
+            ForEach(marcadores) { m in
+                Annotation(titulo(m.tipo), coordinate: m.coordinate) {
+                    switch m.tipo {
+                    case .utp:     MarcadorUTP()
+                    case .usuario: PulsingUserMarker()
+                    }
                 }
             }
         }
@@ -671,12 +711,12 @@ private struct DetalleRutaView: View {
                     .background(Circle().fill(Color.surfaceContainerLow))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Volver")
+            .accessibilityLabel(L.t("Volver", "Back"))
 
             Image(systemName: "bus.fill")
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(.appPrimary)
-            Text("Ruta \(ruta.linea)")
+            Text(L.t("Ruta ", "Route ") + ruta.linea)
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
             Spacer()
@@ -714,7 +754,7 @@ private struct DetalleRutaView: View {
             .contentShape(Rectangle()) // ✅ CORREGIDO V3
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Iniciar navegación")
+        .accessibilityLabel(L.t("Iniciar navegación", "Start navigation"))
         .seniable("nav.iniciar", conGesto: false)
     }
 
