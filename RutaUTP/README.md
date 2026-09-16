@@ -61,29 +61,32 @@ RutaUTP/
   Navigation/                   AppRouter y RootView
   Screens/
     Bienvenida/                 Presentación
-    Mapa/                       Mapa, búsqueda y menú lateral
+    Mapa/                       Mapa, búsqueda, menú lateral y las hojas del menú
     Rutas/                      Catálogo y detalle de líneas
     DetalleRuta/                Explorador y navegación sobre GTFS
     Tracking/                   Planificación y seguimiento de viajes
     Guardado/                   Lugares y líneas favoritas
     Seguridad/                  Comunidad y paraderos iluminados
     Perfil/                     Preferencias, carné y formularios
-    Navigation/                 Vista de navegación tipo CarPlay de demo
   Services/
     GTFS/                       Parser CSV, modelos y repositorio con caché
     Location/                   CoreLocation y protocolo de ubicación
     Routing/                    Cálculo con MKDirections
     Tracking/                   Modelos y proveedores real/simulado
     Negocios/                   Catálogo JSON y cupones
+    Persistencia/               Versión de esquema y migraciones locales
+    Imagenes/                   Persistencia de la foto de perfil
     SeniasService.swift         Resolución y presentación de señas
   Models/                       Modelos de dominio y almacenamiento de lugares
-  Design/                       Colores, tipografía, espaciados y componentes
+  Design/                       Colores, tipografía, espaciados, hápticos y componentes
   Utils/                        Idioma y proyección sobre recorridos
   Assets.xcassets/               Iconos y recursos visuales
   Info.plist                    Configuración adicional del bundle
   README.md
  gtfs/                          Feed estático empaquetado con la aplicación
  senias/                        Manifiesto y clips por idioma
+ ThirdPartyNotices/             Procedencia y licencias de datos y recursos de terceros
+ RutaUTPTests/                  Pruebas unitarias del núcleo puro
 ```
 
 La navegación principal usa `AppRouter`, un `ObservableObject` con un enum de pantallas. `RootView` selecciona la pantalla y las vistas presentan detalles mediante sheets y full-screen covers; algunos formularios usan `NavigationStack`. La barra inferior es un componente propio.
@@ -94,7 +97,7 @@ Los módulos de mapa, rutas y seguimiento tienen ViewModels. Parte de la lógica
 
 El feed incluido contiene **102 rutas, 102 viajes, 4067 paraderos y 53 616 puntos de recorrido**. El repositorio relaciona agencias, rutas, viajes, shapes, paraderos, horarios, frecuencias y tarifas. El parser actual selecciona un viaje por ruta, de acuerdo con este feed.
 
-- La geometría se encuentra en el área de Trujillo. Los metadatos de `feed_info.txt` aún identifican al publicador como «Arequipa Bus» y requieren revisión de procedencia y actualización; estos datos no acreditan operación en vivo.
+- La geometría se encuentra en el área de Trujillo. Los metadatos de `feed_info.txt` aún identifican al publicador como «Arequipa Bus» y requieren revisión de procedencia y actualización; estos datos no acreditan operación en vivo. Procedencia, archivos que la aplicación lee realmente y comprobaciones pendientes están en `ThirdPartyNotices/GTFS/`.
 - `MapaViewModel` calcula desde el GPS del usuario un itinerario de transporte GTFS con paraderos hasta 800 m de ambos extremos. Muestra caminatas punteadas, recorrido del bus continuo y marcadores de subida/bajada; si falta ubicación o no hay línea directa, muestra un aviso. Las caminatas usan Apple Directions y se identifican como aproximadas cuando ese servicio no responde.
 - `TransitPlanner` busca una **línea directa** con paraderos próximos a ambos extremos y respeta el orden del recorrido. No calcula transbordos. Los tramos a pie se consultan con Apple Directions y tienen un respaldo aproximado.
 - `PolylineMatching` proyecta el GPS sobre el recorrido para calcular avance y distancia a la ruta.
@@ -104,21 +107,41 @@ Los mapas base, las búsquedas y Apple Directions dependen de los servicios de A
 
 ### Persistencia
 
-Se usa `UserDefaults` para lugares, referencias de líneas, cupones, idioma, tema, modo de señas y algunos datos personales. La foto de perfil se guarda en Documents mediante `ProfileImageStore`.
+Se usa `UserDefaults` para lugares, referencias de líneas, cupones, idioma, tema, modo de señas, preferencias de Perfil (notificaciones y compartir ubicación) y algunos datos personales. La foto de perfil se guarda en Documents mediante `ProfileImageStore`.
 
-No todo lo visible se persiste: varias preferencias y estados del perfil usan `@State`; las reacciones comunitarias y sesiones de seguimiento permanecen en memoria. No hay autenticación ni sincronización entre dispositivos.
+Los lugares guardados marcan el campus UTP con un campo `esFijo` persistido, no derivado del nombre: así la invariante «no se puede eliminar» sobrevive a cambios de texto. `LugaresStore` migra al cargar los datos guardados por versiones anteriores, que no traían ese campo.
+
+El esquema de datos locales está versionado en `Services/Persistencia/Persistencia.swift`: una versión única y explícita, una lista ordenada de migraciones idempotentes y el inventario de llaves que la app considera suyas. `Persistencia.migrarSiHaceFalta()` se ejecuta una sola vez al arrancar, antes de que ninguna vista lea datos persistidos. Las llaves existentes **no** se renombran: renombrarlas perdería los datos ya guardados, así que el versionado se añade por encima.
+
+No todo lo visible se persiste: parte del estado del perfil y de las pantallas sigue en `@State`; las reacciones comunitarias y sesiones de seguimiento permanecen en memoria. No hay autenticación ni sincronización entre dispositivos.
 
 ### Diseño, idiomas y señas
 
-Los tokens visuales están en `Design/Colors.swift`, `Typography.swift` y `Spacing.swift`. Se utilizan SF Symbols. `Info.plist` declara Hanken Grotesk, Be Vietnam Pro y JetBrains Mono, pero sus archivos de fuente no están incluidos en el repositorio actual.
+Los tokens visuales están en `Design/Colors.swift`, `Typography.swift` y `Spacing.swift`. Se utilizan SF Symbols.
 
-`IdiomaManager` persiste el idioma y `L.t` resuelve los textos español/inglés. Cambiar el idioma reconstruye `RootView` y puede reiniciar estado temporal de las pantallas.
+La aplicación usa la **fuente del sistema**. Antes `Info.plist` declaraba Hanken Grotesk, Be Vietnam Pro y JetBrains Mono bajo `UIAppFonts`, pero sus `.ttf` nunca estuvieron en el repositorio: no había un solo archivo de fuente en el bundle compilado, así que la interfaz ya se veía con la fuente del sistema. Esa declaración se eliminó y los tokens de `Typography.swift` ahora usan `.system(size:weight:)` con los mismos tamaños y pesos, de modo que el aspecto no cambia. Los tokens son de tamaño fijo: recuperar el escalado de Dynamic Type requiere migrarlos a `@ScaledMetric`.
+
+`IdiomaManager` persiste el idioma y `L.t` resuelve los textos español/inglés. El gestor es `@Observable`: cualquier vista que llame a `L.t()` en su `body` registra la dependencia y se actualiza sola, así que cambiar de idioma **no** reconstruye el árbol de vistas ni reinicia la pantalla en la que está el usuario. Las etiquetas que se guardan en propiedades almacenadas se resuelven al renderizar (o son propiedades calculadas) precisamente para no quedarse congeladas en el idioma de arranque.
 
 El modo de señas relaciona claves estables con `senias/manifest.json` y busca vídeos en `senias/clips/es/` o `senias/clips/en/`. El reproductor vive en una ventana superpuesta para mostrarse también sobre formularios. Cuando falta un clip, muestra el estado pendiente. El manifiesto tiene 29 entradas; todavía faltan archivos para varias claves en ambos idiomas. Los botones señables muestran primero la tarjeta durante 3 segundos y luego ejecutan su acción una sola vez. Cerrar la tarjeta adelanta la acción; elegir otra acción o salir a otra pantalla cancela la anterior.
 
 ## Verificación y desarrollo
 
-La compilación Debug para simulador se verificó durante la revisión del proyecto. Hay advertencias de APIs obsoletas, concurrencia en el proveedor simulado e iconos de iPad faltantes. El proyecto no incluye un target de pruebas automatizadas.
+La compilación Debug para simulador se verificó durante la revisión del proyecto. Quedan advertencias de APIs obsoletas; no hay ninguna de concurrencia (`SWIFT_STRICT_CONCURRENCY = targeted`).
+
+**Sobre iPad**: el proyecto declara `TARGETED_DEVICE_FAMILY = "1"` (solo iPhone). La interfaz está pensada para teléfono y el catálogo de iconos no incluía los tamaños que iPad exige (152 y 167 px); declarar soporte de iPad sin lo uno ni lo otro prometía una experiencia que no existe. Para dar soporte real hay que añadir esos iconos **y** maquetación de iPad.
+
+El proyecto incluye el target de pruebas unitarias **RutaUTPTests**, que cubre el núcleo puro: `GTFSCSV`, `GTFSNombreParser`, `PolylineMatching`, `TransitItinerary.candidates`, la vigencia de cupones y `ParaderosIluminados.seleccionar`. Para ejecutarlo:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild test -project RutaUTP.xcodeproj -scheme RutaUTP \
+  -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5' \
+  CODE_SIGNING_ALLOWED=NO \
+  OTHER_SWIFT_FLAGS='$(inherited) -disable-sandbox'
+```
+
+No se prueban los ViewModels que leen `UserDefaults` directamente (`GuardadoViewModel`): hacerlo exigiría inyectar el almacén, y eso es un cambio de diseño, no una prueba.
 
 En Debug se puede usar el argumento de lanzamiento `--pantalla` con `mapa`, `rutas`, `guardado`, `seguridad`, `perfil` o `tracking`. También existen argumentos específicos de algunas pantallas para abrir formularios y detalles; están documentados junto a sus hooks de depuración.
 

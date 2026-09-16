@@ -6,21 +6,11 @@
 	<array>
 		<string>es</string>
 		<string>es-MX</string>
+		<string>en</string>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>tel</string>
-	</array>
-	<key>UIAppFonts</key>
-	<array>
-		<string>HankenGrotesk-Regular.ttf</string>
-		<string>HankenGrotesk-Bold.ttf</string>
-		<string>HankenGrotesk-ExtraBold.ttf</string>
-		<string>BeVietnamPro-Regular.ttf</string>
-		<string>BeVietnamPro-Medium.ttf</string>
-		<string>BeVietnamPro-SemiBold.ttf</string>
-		<string>JetBrainsMono-Regular.ttf</string>
-		<string>JetBrainsMono-SemiBold.ttf</string>
 	</array>
 </dict>
 </plist>
