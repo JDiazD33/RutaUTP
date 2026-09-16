@@ -67,12 +67,15 @@ struct CuponNegocio: Codable {
     let vence: String?
 
     /// Fecha límite parseada, si existe y es válida.
+    ///
+    /// Formateador cacheado: esto se evalúa en el render de cada burbuja del
+    /// mapa (a través de `vigente`) y antes construía un `DateFormatter` nuevo
+    /// cada vez.
     var fechaVencimiento: Date? {
         guard let vence else { return nil }
-        let formato = DateFormatter()
-        formato.dateFormat = "yyyy-MM-dd"
-        formato.locale = Locale(identifier: "en_US_POSIX")
-        return formato.date(from: vence)
+        return FormatoFecha.formateador(patron: "yyyy-MM-dd",
+                                        locale: Locale(identifier: "en_US_POSIX"))
+            .date(from: vence)
     }
 
     /// false si el cupón ya venció (no se ofrece, pero se sigue mostrando

@@ -81,7 +81,7 @@ enum PolylineMatching {
         }
 
         guard let result = best else { return nil }
-        let totalLength = accumulatedLength // al finalit del bucle = longitud total
+        let totalLength = accumulatedLength // al final del bucle = longitud total
 
         var progressFraction: Double
         if totalLength > 0 {
@@ -116,7 +116,7 @@ enum PolylineMatching {
                                   consecutiveOffRouteCount: Int,
                                   thresholdCount: Int = 3) -> Bool {
         // Disparar recálculo si tuvimos `thresholdCount` muestras seguidas
-        // fuera de ruta (smoothing: una sola muestra fueraNO recalc).
+        // fuera de ruta (smoothing: una sola muestra fuera NO recalcula).
         if lastMatch == nil { return true }
         return consecutiveOffRouteCount >= thresholdCount
     }
@@ -164,7 +164,7 @@ enum PolylineMatching {
 
     // MARK: - Distancias (haversine) y proyecciones
 
-    /// Distancia en metros entre dos coords (haversine). Sin depender de CLLocation涨幅.
+    /// Distancia en metros entre dos coords (haversine, vía `CLLocation.distance`).
     static func distanceMeters(_ a: CLLocationCoordinate2D,
                                _ b: CLLocationCoordinate2D) -> Double {
         // Usamos CLLocation.distance(from:) — internamente usa haversine.

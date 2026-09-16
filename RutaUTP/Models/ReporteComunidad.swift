@@ -6,9 +6,14 @@
 import Foundation
 import SwiftUI
 
+/// Tipo de un reporte comunitario.
+///
+/// El `rawValue` es un IDENTIFICADOR, no texto para mostrar: ni se persiste
+/// (ni este enum ni `ReporteComunidad` son `Codable`) ni se dibuja — el texto
+/// visible sale de `titulo`, que sí está localizado. Por eso va sin tilde.
 enum TipoReporte: String, CaseIterable, Identifiable {
     case alerta    = "ALERTA"
-    case trafico   = "TRÁFICO"
+    case trafico   = "TRAFICO"
     case sugerencia = "SUGERENCIA"
     case otro      = "OTRO"
 

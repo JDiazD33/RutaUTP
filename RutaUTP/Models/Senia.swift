@@ -68,10 +68,27 @@ struct ManifestoSenias: Codable {
     let version: Int
     let señas: [Senia]
 
-    private var indice: [String: Senia] {
-        var d: [String: Senia] = [:]
-        for s in señas { d[s.clave] = s }
-        return d
+    /// Índice clave → seña, construido UNA vez al decodificar.
+    ///
+    /// Antes era una propiedad calculada que reconstruía el diccionario en
+    /// cada consulta, y `SeniasService.estado(para:)` la llama cada vez que se
+    /// dibuja un texto señable: con el modo activo, eso es por cada palabra
+    /// marcada y en cada render.
+    private let indice: [String: Senia]
+
+    private enum CodingKeys: String, CodingKey {
+        case version, señas
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decode(Int.self, forKey: .version)
+        let lista = try c.decode([Senia].self, forKey: .señas)
+        señas = lista
+
+        var porClave: [String: Senia] = [:]
+        for s in lista { porClave[s.clave] = s }
+        indice = porClave
     }
 
     func senia(para clave: String) -> Senia? {

@@ -8,12 +8,21 @@
 //
 
 import Foundation
-import Combine
+import Observation
 
-final class IdiomaManager: ObservableObject {
+/// Gestor del idioma activo (ES/EN).
+///
+/// Es `@Observable` y NO `ObservableObject` a propósito. Con el framework
+/// Observation, leer `codigo` o `esIngles` mientras se evalúa el `body` de una
+/// vista registra la dependencia automáticamente — aunque el acceso venga de
+/// `L.t()`, que es una función estática, o de este singleton. Esa es la pieza
+/// que permite que el texto se actualice solo al cambiar de idioma, sin
+/// reconstruir el árbol de vistas con `.id()`.
+@Observable
+final class IdiomaManager {
     static let shared = IdiomaManager()
 
-    @Published var codigo: String {
+    var codigo: String {
         didSet { UserDefaults.standard.set(codigo, forKey: "idioma.app") }
     }
 
@@ -35,7 +44,6 @@ final class IdiomaManager: ObservableObject {
     var etiqueta: String { esIngles ? "EN" : "ES" }
 
     func alternar() {
-        objectWillChange.send()
         codigo = esIngles ? "es" : "en"
     }
 }
@@ -58,5 +66,38 @@ enum L {
     static func signable(_ clave: String, _ es: String, _ en: String) -> String {
         CatalogoSenias.shared.registrar(clave: clave, es: es, en: en)
         return esIngles ? en : es
+    }
+}
+
+// MARK: - Formateadores de fecha compartidos
+//
+// Antes cada sitio que mostraba o interpretaba una fecha construía su propio
+// `DateFormatter`, y varios lo hacían dentro de un cuerpo de vista: uno por
+// render. Crear un `DateFormatter` es caro (resuelve patrón, locale y
+// calendario), y estos sitios están en rutas de dibujo.
+//
+// `DateFormatter` es thread-safe desde iOS 7, así que se pueden compartir. Los
+// de esta caché no se mutan después de crearse.
+enum FormatoFecha {
+
+    private static let candado = NSLock()
+    private static var cache: [String: DateFormatter] = [:]
+
+    /// Locale del idioma activo de la app.
+    static var localeActivo: Locale {
+        Locale(identifier: IdiomaManager.shared.esIngles ? "en_US" : "es_PE")
+    }
+
+    /// Formateador cacheado para un patrón y un locale concretos.
+    static func formateador(patron: String, locale: Locale) -> DateFormatter {
+        let clave = "\(patron)|\(locale.identifier)"
+        candado.lock()
+        defer { candado.unlock() }
+        if let existente = cache[clave] { return existente }
+        let nuevo = DateFormatter()
+        nuevo.dateFormat = patron
+        nuevo.locale = locale
+        cache[clave] = nuevo
+        return nuevo
     }
 }
