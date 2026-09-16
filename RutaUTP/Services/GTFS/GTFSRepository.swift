@@ -55,10 +55,14 @@ actor GTFSRepository {
     /// ordenadas por cercanía: la consulta "¿qué líneas pasan por aquí?".
     /// Es lo que alimenta el panel del mapa cuando el usuario elige o
     /// escribe un destino (chips, Guardado, búsqueda).
+    ///
+    /// Las rutas sin geometría se descartan explícitamente: `distanciaMinima`
+    /// devuelve `.infinity` cuando no hay puntos, y una comparación contra
+    /// infinito como única defensa es frágil.
     func rutasQuePasanPor(_ punto: CLLocationCoordinate2D,
                           radioMetros: Double = 400) async -> [RutaGTFS] {
-        let todas = await rutas()
-        return todas
+        await rutas()
+            .filter { $0.shape.count >= 2 }
             .map { ($0, Self.distanciaMinima($0.shape, a: punto)) }
             .filter { $0.1 <= radioMetros }
             .sorted { $0.1 < $1.1 }
@@ -130,14 +134,20 @@ extension GTFSRepository {
         }
 
         // 6. Stop times: paradas ordenadas + duración por trip
+        //
+        // Las columnas se resuelven UNA vez, fuera del bucle. Antes cada fila
+        // hacía cuatro búsquedas en el diccionario de columnas — con 20 171
+        // filas en este feed son unas 80 000 búsquedas evitables.
         let stopTimes = try GTFSCSV.tabla("stop_times")
+        let stTripId = stopTimes.columna("trip_id")
+        let stSeq = stopTimes.columna("stop_sequence")
+        let stStopId = stopTimes.columna("stop_id")
+        let stDeparture = stopTimes.columna("departure_time")
         var paradasPorTrip: [String: [(seq: Int, stopId: String, departure: Int)]] = [:]
         for i in 0..<stopTimes.rowCount {
-            let tripId = stopTimes.columna("trip_id")[i]
-            guard let seq = Int(stopTimes.columna("stop_sequence")[i]) else { continue }
-            let stopId = stopTimes.columna("stop_id")[i]
-            let dep = segundos(stopTimes.columna("departure_time")[i])
-            paradasPorTrip[tripId, default: []].append((seq, stopId, dep))
+            guard let seq = Int(stSeq[i]) else { continue }
+            paradasPorTrip[stTripId[i], default: []]
+                .append((seq, stStopId[i], segundos(stDeparture[i])))
         }
 
         // 7. Frecuencias (headway)
@@ -151,16 +161,17 @@ extension GTFSRepository {
         }
 
         // 8. Tarifas: route_id → fare_id → precio
+        // Columnas resueltas fuera del bucle, igual que en stop_times.
         let fareRules = try GTFSCSV.tabla("fare_rules")
         let fareAttr  = try GTFSCSV.tabla("fare_attributes")
         let precioPorFare = diccionario(fareAttr.columna("fare_id"),
                                         fareAttr.columna("price"))
+        let frRouteId = fareRules.columna("route_id")
+        let frFareId = fareRules.columna("fare_id")
         var precioPorRuta: [String: Double] = [:]
         for i in 0..<fareRules.rowCount {
-            let ruta = fareRules.columna("route_id")[i]
-            let fare = fareRules.columna("fare_id")[i]
-            if let precio = Double(precioPorFare[fare] ?? "") {
-                precioPorRuta[ruta] = precio
+            if let precio = Double(precioPorFare[frFareId[i]] ?? "") {
+                precioPorRuta[frRouteId[i]] = precio
             }
         }
 
@@ -251,14 +262,21 @@ private extension GTFSRepository {
         return 2 * radioTierra * asin(min(1, sqrt(h)))
     }
 
+    /// Distancia mínima del recorrido a un punto.
+    ///
+    /// Devuelve `.infinity` si la ruta no trae geometría. Antes devolvía 0 en
+    /// ese caso, y ese 0 tenía dos consecuencias silenciosas: una ruta sin
+    /// shape pasaba SIEMPRE el filtro de radio de `rutasQuePasanPor` (se
+    /// ofrecía como "línea que pasa por aquí") y quedaba la PRIMERA en el
+    /// catálogo, que se ordena por cercanía al campus.
     static func distanciaMinima(_ puntos: [CLLocationCoordinate2D],
                                 a destino: CLLocationCoordinate2D) -> Double {
-        var minima = Double.greatestFiniteMagnitude
+        var minima = Double.infinity
         for p in puntos {
             let d = distanciaMetros(p, destino)
             if d < minima { minima = d }
         }
-        return minima == .greatestFiniteMagnitude ? 0 : minima
+        return minima
     }
 
     static func longitudTotalKm(_ puntos: [CLLocationCoordinate2D]) -> Double {

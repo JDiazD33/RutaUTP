@@ -10,14 +10,13 @@
 //
 //  Importante:
 //   - MKDirections requiere transporte .automobile por defecto. Pedimos
-//     .transit cuando esté disponible (iOS.getServer-side), y dejamos
-//     .automobile como fallback. MKDirections no soporta un modo
-//     específicamente "bus urbano"机电 → usaremos .transit y dejaremos que
-//     el servidor de Apple devuelva pasos de transporte público.
+//     .transit y dejamos .automobile como fallback. MKDirections no soporta
+//     un modo específicamente "bus urbano": usamos .transit y dejamos que el
+//     servidor de Apple devuelva pasos de transporte público.
 //   - Si Apple no tiene datos de tránsito en Trujillo, MKDirections devuelve
-//     error (o rutas vacías). En producción se needs fallback manual;
-//     por ahora el consumidor debe manejar `RouteResult.failure`.
-//   -今回はusamos MKDirections con un único MKDirections.Request.
+//     error (o rutas vacías). En producción se necesita un respaldo manual;
+//     por ahora el consumidor debe manejar `RouteCalculationError`.
+//   - Usamos MKDirections con un único MKDirections.Request.
 //
 
 import Foundation

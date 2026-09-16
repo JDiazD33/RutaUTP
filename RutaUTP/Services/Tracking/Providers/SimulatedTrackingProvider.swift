@@ -7,7 +7,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
     private(set) var currentPositions: [VehiclePosition] = []
     private var continuation: AsyncStream<[VehiclePosition]>.Continuation?
     private var stream: AsyncStream<[VehiclePosition]>?
-    private var timer: Timer?
+    private var tickTask: Task<Void, Never>?
     private var loading: Task<Void, Never>?
     private var rebuildTask: Task<Void, Never>?
     private var rebuildWorker: Task<[Motion], Never>?
@@ -24,11 +24,14 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         let speed: Double
         var distance: Double
         var segment: Int = 0
+        /// Sentido de avance sobre el recorrido. Al llegar a un extremo el
+        /// vehículo regresa por el mismo corredor en vez de quedarse parado.
+        var haciaAdelante: Bool = true
     }
     private var fleet: [Motion] = []
 
     func start() {
-        guard timer == nil, loading == nil else { return }
+        guard tickTask == nil, loading == nil else { return }
         let token = UUID()
         generation = token
         loading = Task { @MainActor [weak self] in
@@ -37,10 +40,25 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
             self.routes = feed.filter { $0.shape.count >= 2 }
             self.rebuild()
             self.previousTick = Date()
-            self.timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-                self?.tick()
-            }
+            self.iniciarTicks()
             self.loading = nil
+        }
+    }
+
+    /// Bucle de simulación.
+    ///
+    /// Antes era un `Timer` cuya closure no estaba aislada al hilo principal:
+    /// el compilador no podía verificar que `tick()` tocara estado de UI. Ahora
+    /// es una única `Task` con `Task.sleep` entre ticks: aislada a
+    /// `@MainActor`, cancelable de verdad y sin crear una tarea nueva por tick.
+    private func iniciarTicks() {
+        tickTask?.cancel()
+        tickTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                guard !Task.isCancelled, let self else { return }
+                self.tick()
+            }
         }
     }
 
@@ -53,8 +71,8 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         rebuildTask = nil
         rebuildWorker?.cancel()
         rebuildWorker = nil
-        timer?.invalidate()
-        timer = nil
+        tickTask?.cancel()
+        tickTask = nil
         previousTick = nil
         continuation?.finish()
         continuation = nil
@@ -142,7 +160,19 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         previousTick = now
         for i in fleet.indices {
             let end = fleet[i].cumulative.last ?? 0
-            fleet[i].distance = min(end, fleet[i].distance + fleet[i].speed * dt)
+            guard end > 0 else { continue }
+            let avance = fleet[i].speed * dt
+            var d = fleet[i].distance + (fleet[i].haciaAdelante ? avance : -avance)
+            // Extremo del recorrido: regresa por el mismo corredor, sin saltos.
+            // Antes el vehículo se quedaba clavado en el extremo (ver publish).
+            if d >= end {
+                d = end
+                fleet[i].haciaAdelante = false
+            } else if d <= 0 {
+                d = 0
+                fleet[i].haciaAdelante = true
+            }
+            fleet[i].distance = d
         }
         publish()
     }
@@ -152,20 +182,39 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         for i in fleet.indices {
             var motion = fleet[i]
             let points = motion.route.shape
-            while motion.segment < points.count - 2 && motion.distance > motion.cumulative[motion.segment + 1] {
-                motion.segment += 1
+            guard points.count >= 2 else { continue }
+
+            // El tramo se ajusta incrementalmente en los dos sentidos: al
+            // volver, el índice tiene que retroceder, no solo avanzar.
+            if motion.haciaAdelante {
+                while motion.segment < points.count - 2
+                        && motion.distance > motion.cumulative[motion.segment + 1] {
+                    motion.segment += 1
+                }
+            } else {
+                while motion.segment > 0
+                        && motion.distance < motion.cumulative[motion.segment] {
+                    motion.segment -= 1
+                }
             }
+
             let j = motion.segment
             let a = points[j], b = points[j + 1]
             let length = motion.cumulative[j + 1] - motion.cumulative[j]
             let fraction = length > 0 ? min(1, max(0, (motion.distance - motion.cumulative[j]) / length)) : 0
-            let heading = atan2((b.longitude - a.longitude) * cos(a.latitude * .pi / 180),
+
+            var heading = atan2((b.longitude - a.longitude) * cos(a.latitude * .pi / 180),
                                 b.latitude - a.latitude) * 180 / .pi
+            if !motion.haciaAdelante { heading += 180 }   // de vuelta, mira al revés
+
             positions.append(VehiclePosition(id: "SIM-\(motion.route.id)", linea: motion.route.linea,
                 lat: a.latitude + (b.latitude - a.latitude) * fraction,
                 lon: a.longitude + (b.longitude - a.longitude) * fraction,
                 heading: (heading + 360).truncatingRemainder(dividingBy: 360),
-                speed: motion.distance >= (motion.cumulative.last ?? 0) ? 0 : motion.speed))
+                // La velocidad es la crucero del vehículo. Antes se ponía a 0
+                // al alcanzar el final y el vehículo no volvía a moverse: con
+                // los minutos la flota entera se quedaba congelada.
+                speed: motion.speed))
             fleet[i] = motion
         }
         currentPositions = positions
