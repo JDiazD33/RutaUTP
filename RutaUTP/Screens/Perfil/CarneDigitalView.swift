@@ -19,7 +19,6 @@ import CoreImage.CIFilterBuiltins
 struct CarneDigitalView: View {
     var nombre: String
 
-    @Environment(\.dismiss) private var dismiss
 
     // Datos institucionales (mismos que en Datos Personales)
     private let codigoUTP = "1234567"
@@ -27,6 +26,9 @@ struct CarneDigitalView: View {
     // Foto de perfil: ProfileImageStore es la fuente única (drawer, perfil y carné)
     @State private var fotoPerfil: UIImage? = nil
     @State private var showPicker: Bool = false
+    @State private var showGaleria = false
+    @State private var showFuente = false
+    @State private var ajustarFoto = false
 
     // Código de barras generado una sola vez al aparecer
     @State private var codigoBarras: UIImage? = nil
@@ -44,17 +46,15 @@ struct CarneDigitalView: View {
 
                 avisoReglamento
 
-                Button {
-                    AppHaptics.impact(.light)
-                    dismiss()
-                } label: {
-                    Text(L.t("Cerrar", "Close"))
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Cerrar carné digital", "Close digital ID"))
+                Image("UTPLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 150, height: 34)
+                    .foregroundStyle(.black)
+                    .padding(12)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityLabel("Universidad Tecnológica del Perú")
+
             }
             .padding(20)
         }
@@ -66,12 +66,19 @@ struct CarneDigitalView: View {
                 codigoBarras = generarCodigoBarras(desde: codigoUTP)
             }
         }
-        .fullScreenCover(isPresented: $showPicker) {
-            ImagePicker(sourceType: UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary) { img in
-                ProfileImageStore.save(img)
-                fotoPerfil = img
+        .confirmationDialog(L.t("Foto de perfil", "Profile photo"), isPresented: $showFuente, titleVisibility: .visible) {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button(L.t("Tomar foto", "Take photo")) { showPicker = true }
             }
+            Button(L.t("Elegir de la galería", "Choose from photo library")) { showGaleria = true }
+            if fotoPerfil != nil {
+                Button(L.t("Ajustar foto actual", "Adjust current photo")) { ajustarFoto = true }
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
         }
+        .modifier(EditorFotoPerfilModifier(camara: $showPicker, galeria: $showGaleria, ajustar: $ajustarFoto) { img in
+            fotoPerfil = img
+        })
     }
 
     // MARK: - Encabezado
@@ -157,15 +164,14 @@ struct CarneDigitalView: View {
                     Image(uiImage: codigoBarras)
                         .resizable()
                         .interpolation(.none)
-                        .scaledToFit()
-                        .frame(height: 66)
+                        .frame(height: 104)
                         .frame(maxWidth: .infinity)
                         .padding(10)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white))
                         .accessibilityLabel("Código de barras del código \(codigoUTP)")
                 }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 16)
             .padding(.top, 14)
             .accessibilityElement(children: .contain)
 
@@ -218,7 +224,7 @@ struct CarneDigitalView: View {
         .overlay(alignment: .bottomTrailing) {
             Button {
                 AppHaptics.impact(.light)
-                showPicker = true
+                showFuente = true
             } label: {
                 ZStack {
                     Circle()

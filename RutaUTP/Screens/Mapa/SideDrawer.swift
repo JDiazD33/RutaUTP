@@ -98,7 +98,7 @@ struct SideDrawer: View {
                 // El sheet vive en su propia UIWindow: se le fuerza el tema
                 // elegido en Ajustes (no hereda el de la ventana principal).
                 .seguirTemaForzado()
-                .presentationDetents([.medium, .large])
+                .presentationDetents(item == .ciudad ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         // La foto pudo cambiar en Datos Personales: recargar al abrir el
@@ -435,35 +435,40 @@ private struct CiudadSheet: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            SheetHeader(icon: "building.2.fill", iconColor: .secondary,
-                        title: L.t("Ciudad", "City"))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                SheetHeader(icon: "building.2.fill", iconColor: .secondary,
+                            title: L.t("Ciudad", "City"))
 
-            Text(L.t("RutaUTP opera con datos de transporte de Trujillo. Estamos trabajando para llegar a más ciudades.",
-                     "RutaUTP runs on Trujillo transit data. We're working on more cities."))
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
+                Text(L.t("RutaUTP opera con datos de transporte de Trujillo. Estamos trabajando para llegar a más ciudades.",
+                         "RutaUTP runs on Trujillo transit data. We're working on more cities."))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
 
-            VStack(spacing: 8) {
-                ForEach(ciudades) { ciudad in
-                    ciudadRow(ciudad)
+                VStack(spacing: 8) {
+                    ForEach(ciudades) { ciudad in
+                        ciudadRow(ciudad)
+                    }
                 }
-            }
 
-            HStack {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.onSurfaceVariant)
-                Text(L.t("Trujillo es nuestra primera ciudad. ¿Quieres la tuya? Escríbenos desde Soporte.",
-                         "Trujillo is our first city. Want yours? Reach us via Support."))
-                    .font(.bodyXs)
-                    .foregroundStyle(.onSurfaceVariant)
-                Spacer()
-            }
-            .padding(.top, 8)
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.onSurfaceVariant)
+                    Text(L.t("Trujillo es nuestra primera ciudad. ¿Quieres la tuya? Escríbenos desde Soporte.",
+                             "Trujillo is our first city. Want yours? Reach us via Support."))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .font(.bodyXs)
+                        .foregroundStyle(.onSurfaceVariant)
+                    Spacer()
+                }
+                .padding(.top, 8)
 
-            Spacer()
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(20)
+        .background(Color.appSurface)
     }
 
     @ViewBuilder
@@ -828,13 +833,14 @@ private struct CerrarSesionSheet: View {
 // MARK: - Image Picker (cámara) wrapper
 struct ImagePicker: UIViewControllerRepresentable {
     let sourceType: UIImagePickerController.SourceType
+    var allowsEditing = true
     let onImagePicked: (UIImage) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.sourceType = sourceType
-        picker.allowsEditing = true
+        picker.allowsEditing = allowsEditing
         picker.delegate = context.coordinator
         return picker
     }
@@ -867,9 +873,15 @@ enum ProfileImageStore {
         return dir.appendingPathComponent("perfil_foto.jpg")
     }
 
-    static func save(_ image: UIImage) {
-        guard let data = image.jpegData(compressionQuality: 0.8) else { return }
-        try? data.write(to: url, options: .atomic)
+    @discardableResult
+    static func save(_ image: UIImage) -> Bool {
+        guard let data = image.jpegData(compressionQuality: 0.8) else { return false }
+        do {
+            try data.write(to: url, options: .atomic)
+            return true
+        } catch {
+            return false
+        }
     }
 
     static func load() -> UIImage? {
@@ -985,6 +997,7 @@ struct DatosPersonalesSheet: View {
     @State private var perfilImage: UIImage? = nil
     @State private var showFuenteFoto = false
     @State private var showGaleria = false
+    @State private var ajustarFoto = false
     @State private var showCamera: Bool = false
 
     // Edición contacto de emergencia
@@ -1437,22 +1450,14 @@ struct DatosPersonalesSheet: View {
             Button(L.t("Elegir de la galería / biblioteca de fotos", "Choose from photo library")) {
                 showGaleria = true
             }
+            if perfilImage != nil {
+                Button(L.t("Ajustar foto actual", "Adjust current photo")) { ajustarFoto = true }
+            }
             Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
         }
-        .sheet(isPresented: $showGaleria) {
-            GaleriaPicker { img in
-                perfilImage = img
-                ProfileImageStore.save(img)
-            }
-            .seguirTemaForzado()
-        }
-        .sheet(isPresented: $showCamera) {
-            ImagePicker(sourceType: .camera) { img in
-                perfilImage = img
-                ProfileImageStore.save(img)
-            }
-            .seguirTemaForzado()
-        }
+        .modifier(EditorFotoPerfilModifier(camara: $showCamera, galeria: $showGaleria, ajustar: $ajustarFoto) { img in
+            perfilImage = img
+        })
         .sheet(isPresented: $showParentescoPicker) {
             ParentescoPickerSheet(seleccion: $emergenciaParentescoInput)
                 .seguirTemaForzado()

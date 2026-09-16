@@ -39,7 +39,7 @@ El prefijo `DEVELOPER_DIR` permite usar Xcode aunque `xcode-select` apunte a Com
 | Negocios | Catálogo local de 100 comercios ficticios para probar el mapa; cupones guardados localmente. |
 | Accesibilidad | Ayuda de VoiceOver y modo de señas con clips locales. El catálogo de clips todavía está incompleto. |
 | Idioma y apariencia | Español/inglés y tema claro/oscuro con preferencias persistidas. |
-| Modo offline | Los datos GTFS, negocios y clips existentes vienen en el bundle. La descarga de mapas del perfil es simulada; no implementa mapas base offline. |
+| Modo offline | Los datos GTFS, negocios y clips existentes vienen en el bundle. El perfil comprueba las rutas locales y explica los límites sin conexión; no implementa descarga de mapas base. |
 
 ### Añadir una foto en Seguridad
 
@@ -135,3 +135,15 @@ La compilación por sí sola no verifica GPS, cámara, biblioteca de fotos ni co
 Los iconos de categorías de negocios y cupones usan **Uicons Regular Rounded de Flaticon**, incluidos como SVG locales. La atribución está en «Sobre nosotros» y la licencia y procedencia en `ThirdPartyNotices/Flaticon/`.
 
 Comunidad incluye 24 publicaciones demo (6 con fotografías de referencia de Trujillo). Cada ventana muestra una publicación con foto y tres de texto. Créditos, fechas y enlaces a las licencias están en el detalle y en `ThirdPartyNotices/Comunidad/`. Las imágenes se incluyen en el bundle y se ven sin conexión.
+
+La UTP Card del Perfil permite tomar una foto del carné o elegirla de la galería. Se guarda localmente en Documents (`utp-card.jpg`), separada de la foto de perfil, y se puede volver a abrir, ampliar o reemplazar. El estado «Carné guardado» confirma el almacenamiento, no una verificación universitaria.
+
+Modo offline comprueba las rutas del feed incluido y muestra su cantidad real. No simula descargas ni cambia la conectividad del dispositivo. Los mapas base, búsquedas e indicaciones de Apple Maps no se garantizan sin internet.
+
+Mis tarjetas permite añadir referencias, consultar su detalle, elegir una principal y eliminarlas con confirmación. Se guardan nombre, red y últimos cuatro dígitos en el llavero del dispositivo; no se almacenan números completos ni CVV y no se realizan cobros.
+
+Antes de guardar la foto del carné, el editor permite moverla y ajustar el zoom dentro de un marco rectangular. «Guardar encuadre» conserva el recorte mostrado; cancelar mantiene la foto anterior. «Ajustar encuadre» permite volver a recortar la imagen guardada.
+
+La foto de perfil usa el mismo editor con vista previa circular desde Datos Personales (Perfil y menú) y Carné Digital. Permite ajustar una foto nueva de cámara/galería o volver a encuadrar la actual; solo se reemplaza al confirmar el guardado.
+
+El Carné Digital muestra un código de barras ampliado y el logo institucional UTP en monocromo al pie. La tarjeta de foto se identifica como «Carnet Universitario». Fuente del logo en `ThirdPartyNotices/UTP/`.
