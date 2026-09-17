@@ -228,7 +228,7 @@ struct MapaView: View {
             }
             #endif
         }
-        .onDisappear { vm.detenerSimulacionBuses() }
+        .onDisappear { vm.detener() }
         .onChange(of: router.destinoPendiente) { _, _ in
             consumirDestinoPendiente()
         }
@@ -958,4 +958,3 @@ private struct BusDetailPopup: View {
 #Preview {
     MapaView().environmentObject(AppRouter())
 }
-

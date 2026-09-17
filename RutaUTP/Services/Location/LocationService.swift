@@ -32,6 +32,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
     // MARK: - Internos
     private let manager: CLLocationManager
+    private let continuationsLock = NSLock()
     private var continuations: [UUID: AsyncStream<CLLocation>.Continuation] = [:]
     private(set) var lastKnownLocation: CLLocation?
 
@@ -41,6 +42,8 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
     // Avoid duplicate start
     private var isUpdating: Bool = false
+    /// Un cambio de permiso no debe reactivar un servicio que ya se detuvo.
+    private var updatesRequested = false
 
     override init() {
         self.manager = CLLocationManager()
@@ -82,7 +85,9 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     func currentLocation() -> AsyncStream<CLLocation> {
         let id = UUID()
         return AsyncStream { continuation in
+            self.continuationsLock.lock()
             self.continuations[id] = continuation
+            self.continuationsLock.unlock()
 
             // Emitir la última ubicación conocida o la actual del manager de inmediato
             if let loc = self.lastKnownLocation ?? self.manager.location {
@@ -91,18 +96,22 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
             }
 
             continuation.onTermination = { [weak self] _ in
-                self?.continuations.removeValue(forKey: id)
+                guard let self else { return }
+                self.continuationsLock.lock()
+                self.continuations.removeValue(forKey: id)
+                self.continuationsLock.unlock()
             }
         }
     }
 
     func startUpdating() {
+        updatesRequested = true
         guard authorizationStatus.isAuthorized else { return }
         
         // Emitir ubicación previa a los continuations existentes si la tenemos
         if let loc = manager.location ?? lastKnownLocation {
             lastKnownLocation = loc
-            for continuation in continuations.values {
+            for continuation in activeContinuations {
                 continuation.yield(loc)
             }
         }
@@ -113,12 +122,22 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     }
 
     func stopUpdating() {
+        updatesRequested = false
         manager.stopUpdatingLocation()
         isUpdating = false
-        for continuation in continuations.values {
-            continuation.finish()
-        }
+        // finish() puede ejecutar onTermination: vaciar bajo el candado y
+        // finalizar fuera de él evita mutaciones durante la iteración.
+        continuationsLock.lock()
+        let pendientes = Array(continuations.values)
         continuations.removeAll()
+        continuationsLock.unlock()
+        pendientes.forEach { $0.finish() }
+    }
+
+    private var activeContinuations: [AsyncStream<CLLocation>.Continuation] {
+        continuationsLock.lock()
+        defer { continuationsLock.unlock() }
+        return Array(continuations.values)
     }
 
     // MARK: - CLLocationManagerDelegate
@@ -127,7 +146,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         authorizationStatus = manager.authorizationStatus
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
-            if !isUpdating { startUpdating() }
+            if updatesRequested && !isUpdating { startUpdating() }
         case .denied, .restricted:
             stopUpdating()
         case .notDetermined:
@@ -139,9 +158,9 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
     func locationManager(_ manager: CLLocationManager,
                          didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.last else { return }
+        guard isUpdating, let location = locations.last else { return }
         lastKnownLocation = location
-        for continuation in continuations.values {
+        for continuation in activeContinuations {
             continuation.yield(location)
         }
     }

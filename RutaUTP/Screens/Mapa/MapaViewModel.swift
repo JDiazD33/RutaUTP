@@ -192,6 +192,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     /// True mientras se consulta el feed por las líneas del punto actual.
     @Published private(set) var cargandoLineas: Bool = false
     private var busSimulationTask: Task<Void, Never>?
+    private var lineasTask: Task<Void, Never>?
     /// Último tick del timer: para mover los buses por tiempo transcurrido
     /// real (metros = velocidad × dt) y no por pasos fijos de segmento.
     private var ultimoTickBuses: Date?
@@ -251,18 +252,40 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     deinit {
         locationTask?.cancel()
         routeTask?.cancel()
+        lineasTask?.cancel()
+        activeSearch?.cancel()
         locationService.stopUpdating()
         detenerSimulacionBuses()
+    }
+
+    /// Libera el trabajo de esta pantalla aunque el ViewModel siga en memoria.
+    func detener() {
+        locationTask?.cancel()
+        locationTask = nil
+        locationService.stopUpdating()
+        detenerSimulacionBuses()
+        lineasTask?.cancel()
+        lineasTask = nil
+        anclaLineas = nil
+        cargandoLineas = false
+        invalidarSeleccionAnterior()
+        // Al volver, el primer fix recalcula el destino que siga seleccionado.
+        userRealCoordinate = nil
     }
 
     // MARK: - Ubicación GPS Real
     func iniciarGPS() {
         locationTask?.cancel()
-        locationTask = Task { @MainActor in
+        let locationService = locationService
+        locationTask = Task { @MainActor [weak self] in
             let status = await locationService.requestPermission()
+            guard !Task.isCancelled, self != nil else { return }
             if status.isAuthorized {
                 locationService.startUpdating()
                 for await location in locationService.currentLocation() {
+                    // Retener la pantalla solo mientras se procesa este fix,
+                    // nunca durante la espera del siguiente.
+                    guard !Task.isCancelled, let self else { return }
                     let isInitialFix = (self.userRealCoordinate == nil)
                     self.userRealCoordinate = location.coordinate
                     if isInitialFix {
@@ -291,9 +314,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // corredores, con dirección y velocidad propias (25–43 km/h), que
     // avanzan metros reales sobre el shape según el tiempo transcurrido.
     func iniciarSimulacionBuses() {
-        // Sin destino: líneas que pasan por el campus (comportamiento
-        // original del panel "Transportes cercanos").
-        recargarLineas(cercaDe: nil)
+        // Al volver a la pantalla, conservar el destino elegido si lo hay.
+        recargarLineas(cercaDe: busquedaResultado?.coordenada)
 
         guard busSimulationTask == nil else { return }
         ultimoTickBuses = nil
@@ -321,23 +343,26 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
            abs(previa.lon - clave.lon) < 1e-9 { return }
         anclaLineas = clave
 
+        lineasTask?.cancel()
         cargandoLineas = true
-        Task { @MainActor [weak self] in
+        lineasTask = Task { @MainActor [weak self] in
             // 400 m cubre "pasa por la puerta"; si el punto quedó algo
             // alejado del recorrido se amplía a 800 m antes de declarar
             // que no pasa ninguna línea.
             var feed = await GTFSRepository.shared.rutasQuePasanPor(punto, radioMetros: 400)
+            guard !Task.isCancelled else { return }
             if feed.isEmpty {
                 feed = await GTFSRepository.shared.rutasQuePasanPor(punto, radioMetros: 800)
             }
             // El usuario pudo cambiar de destino mientras consultaba.
-            guard let self, self.anclaLineas?.lat == clave.lat,
+            guard !Task.isCancelled, let self, self.anclaLineas?.lat == clave.lat,
                   self.anclaLineas?.lon == clave.lon else { return }
 
             self.flotaBuses = Self.busesDesde(feed, ancla: punto)
             self.busesAnimados = self.flotaBuses
             self.busSeleccionado = nil
             self.cargandoLineas = false
+            self.lineasTask = nil
         }
     }
 
@@ -472,7 +497,15 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 d = 0
                 bus.isMovingForward = true
             }
-            if abs(d - bus.distanciaM) >= Self.metrosMinimosParaPublicar {
+            // Medir desde la última instantánea visible, no desde el tick
+            // anterior: los pasos menores de 1,5 m también deben acumularse.
+            if busesAnimados.indices.contains(i), busesAnimados[i].rutaId == bus.rutaId {
+                let publicado = busesAnimados[i]
+                if abs(d - publicado.distanciaM) >= Self.metrosMinimosParaPublicar
+                    || bus.isMovingForward != publicado.isMovingForward {
+                    huboCambioVisible = true
+                }
+            } else {
                 huboCambioVisible = true
             }
             bus.distanciaM = d
@@ -755,6 +788,5 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
     }
 }
-
 
 
