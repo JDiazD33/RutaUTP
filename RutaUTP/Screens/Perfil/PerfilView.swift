@@ -17,8 +17,8 @@ struct PerfilView: View {
     /// Preferencias del usuario. En @AppStorage para que sobrevivan al cambio
     /// de pestaña: RootView reconstruye cada pantalla al navegar, así que con
     /// @State se perdían en cada visita.
-    @AppStorage("perfil_notificaciones") private var notifOn: Bool = true
-    @AppStorage("perfil_compartirUbicacion") private var ubicacionOn: Bool = true
+    @AppStorage(PreferenciasApp.notificaciones) private var notifOn: Bool = true
+    @AppStorage(PreferenciasApp.compartirUbicacion) private var ubicacionOn: Bool = true
     /// Modo Señas. Se lee desde varias pantallas, por eso va en AppStorage
     /// y no en @State: cualquier vista reacciona al cambio al instante.
     @AppStorage(SeniasService.llaveModo) private var modoSenias: Bool = false
@@ -30,10 +30,14 @@ struct PerfilView: View {
     @State private var showVoiceOverHelp: Bool = false
     //  CORREGIDO V3: estado para Wallet
     @State private var showTarjetaSheet: Bool = false
+    @State private var showRecargarSaldo: Bool = false
+    @State private var showQRPasaje: Bool = false
     @State private var showCarneDigital: Bool = false
     @State private var showCarnetScanner: Bool = false
     @State private var carnetGuardado: Bool = false
     @StateObject private var tarjetasStore = TarjetasStore()
+    /// Monedero de pasajes: el contenido real de la billetera.
+    @StateObject private var monederoStore = MonederoStore()
     /// Misma foto que en el drawer: ProfileImageStore es la fuente única.
     @State private var fotoPerfil: UIImage? = nil
 
@@ -70,6 +74,9 @@ struct PerfilView: View {
             // xcrun simctl launch ... apolito.RutaUTP --pantalla perfil --carne
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--carne") { showCarneDigital = true }
+            // Monedero: permite mirar sus hojas sin navegar hasta ellas.
+            if ProcessInfo.processInfo.arguments.contains("--qr") { showQRPasaje = true }
+            if ProcessInfo.processInfo.arguments.contains("--recargar") { showRecargarSaldo = true }
             #endif
         }
         .onChange(of: showDatosPersonales) { _, abierto in
@@ -81,11 +88,11 @@ struct PerfilView: View {
         }
         .onChange(of: ubicacionOn) { _, activo in
             if activo {
-                ubicacionPopupMensaje = "Ubicación compartida"
-                ubicacionPopupSubtitulo = "Tu ubicación en tiempo real se compartirá para el seguimiento de rutas UTP."
+                ubicacionPopupMensaje = L.t("Preferencia activada", "Preference enabled")
+                ubicacionPopupSubtitulo = L.t("Se guardó tu preferencia. Esta versión no comparte tu ubicación con otros usuarios ni modifica los permisos de GPS de iOS.", "Your preference was saved. This version does not share your location with other users or change iOS GPS permissions.")
             } else {
-                ubicacionPopupMensaje = "Sin ubicación compartida"
-                ubicacionPopupSubtitulo = "Tu ubicación en tiempo real no se compartirá con otros usuarios."
+                ubicacionPopupMensaje = L.t("Preferencia desactivada", "Preference disabled")
+                ubicacionPopupSubtitulo = L.t("Se guardó tu preferencia. El GPS del mapa se controla por separado; este ajuste no cambia los permisos de iOS.", "Your preference was saved. Map GPS is controlled separately; this setting does not change iOS permissions.")
             }
             showUbicacionPopup = true
         }
@@ -98,6 +105,17 @@ struct PerfilView: View {
         .sheet(isPresented: $showTarjetaSheet) {
             MetodosPagoSheet(store: tarjetasStore)
             .presentationDetents([.large])
+        }
+        // Monedero: saldo propio de la app. Recarga y cobro simulados.
+        .sheet(isPresented: $showRecargarSaldo) {
+            RecargarSaldoSheet(store: monederoStore)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showQRPasaje) {
+            QRPasajeSheet(store: monederoStore)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         // Sheet del Carné Digital (identificación con código de barras)
         .sheet(isPresented: $showCarneDigital) {
@@ -137,13 +155,6 @@ struct PerfilView: View {
     // MARK: - Hero
     private var hero: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [Color.appPrimary, Color.primaryContainer, Color.tertiary],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            .frame(height: 420)
-            .accessibilityHidden(true)
-
             Circle()
                 .fill(Color.white.opacity(0.10))
                 .frame(width: 220, height: 220)
@@ -226,114 +237,137 @@ struct PerfilView: View {
                         .padding(.horizontal, 4)
                         .accessibilityAddTraits(.isHeader)
 
-                    HStack(spacing: 12) {
-                        // Tarjeta de pago translúcida
-                        Button {
-                            AppHaptics.impact(.light)
-                            showTarjetaSheet = true
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "creditcard.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.white)
-                                    .accessibilityHidden(true)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(L.t("Método Pago", "Payment"))
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(.white)
-                                    Text(tarjetasStore.principal?.etiqueta ?? L.t("Agregar tarjeta", "Add card"))
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.white.opacity(0.8))
-                                        .lineLimit(1)
-                                }
-                            }
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.18)))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(.white.opacity(0.25), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(L.t("Método de pago", "Payment method"))
-                        .accessibilityValue(tarjetasStore.principal?.etiqueta ?? "Sin tarjeta, agregar")
-                        .accessibilityHint(L.t("Doble toque para administrar tu tarjeta", "Double tap to manage your card"))
+                    // Monedero a lo ancho: es el contenido real de la
+                    // billetera, y así sus dos botones no se recortan.
+                    MonederoCard(store: monederoStore,
+                                 onRecargar: { showRecargarSaldo = true },
+                                 onMostrarQR: { showQRPasaje = true })
 
-                        // Carnet UTP translúcido
-                        Button {
-                            AppHaptics.impact(.light)
+                    HStack(alignment: .top, spacing: 12) {
+                        // Carnet UTP: la foto del carné físico.
+                        tarjetaBilletera(icono: "person.text.rectangle.fill",
+                                         titulo: L.t("Carnet Universitario", "University Card"),
+                                         detalle: carnetGuardado
+                                             ? L.t("Ver foto guardada", "View saved photo")
+                                             : L.t("Añadir foto", "Add photo"),
+                                         conChevron: false) {
                             showCarnetScanner = true
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "person.text.rectangle.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.white)
-                                    .accessibilityHidden(true)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(L.t("Carnet Universitario", "University Card"))
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(.white)
-                                    Text(carnetGuardado ? L.t("Ver foto guardada", "View saved photo") : L.t("Añadir foto", "Add photo"))
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.white.opacity(0.8))
-                                        .lineLimit(1)
-                                }
-                            }
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.18)))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(.white.opacity(0.25), lineWidth: 1)
-                            )
                         }
-                        .buttonStyle(.plain)
+
+                        // Carné Digital de muestra: no es una credencial validada.
+                        tarjetaBilletera(icono: "person.crop.rectangle.fill",
+                                         titulo: L.t("Carné Digital", "Digital ID"),
+                                         detalle: L.t("Muestra · sin validez",
+                                                      "Sample · not valid"),
+                                         conChevron: true) {
+                            showCarneDigital = true
+                        }
                     }
 
-                    // Carné Digital: debajo del método de pago
+                    // Organizador local de referencias de tarjetas, sin pagos.
                     Button {
                         AppHaptics.impact(.light)
-                        showCarneDigital = true
+                        showTarjetaSheet = true
                     } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: "person.crop.rectangle.fill")
+                            Image(systemName: "creditcard.fill")
                                 .font(.system(size: 18))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.white.opacity(0.85))
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(L.t("Carné Digital", "Digital ID"))
+                                Text(L.t("Mis tarjetas", "My cards"))
                                     .font(.system(size: 13, weight: .bold))
                                     .foregroundStyle(.white)
-                                Text(L.t("Tu identificación para ingresar al campus", "Your ID to enter the campus"))
+                                Text(L.t("Referencias locales · sin pagos",
+                                         "Local references · no payments"))
                                     .font(.system(size: 10))
-                                    .foregroundStyle(.white.opacity(0.8))
+                                    .foregroundStyle(.white.opacity(0.75))
                                     .lineLimit(1)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white.opacity(0.7))
-                                .accessibilityHidden(true)
+                            Text(L.t("LOCAL", "LOCAL"))
+                                .font(.labelCapsSm)
+                                .foregroundStyle(.white)
+                                .appTracking(AppTracking.wideLabel)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(.white.opacity(0.22)))
                         }
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.18)))
+                        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.10)))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(.white.opacity(0.25), lineWidth: 1)
+                                .strokeBorder(.white.opacity(0.22),
+                                              style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                         )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(L.t("Carné Digital", "Digital ID"))
-                    .accessibilityHint(L.t("Doble toque para mostrar tu identificación con código de barras", "Double tap to show your ID with barcode"))
+                    .accessibilityLabel(L.t("Mis tarjetas, referencias locales", "My cards, local references"))
+                    .accessibilityHint(L.t("Organiza referencias guardadas en este dispositivo. No permite pagar",
+                                           "Organize references saved on this device. Payments are not supported"))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 22)
 
-                Spacer()
+                Spacer(minLength: 24)
             }
         }
+        .frame(minHeight: 470)
+        .background {
+            LinearGradient(
+                colors: [Color.appPrimary, Color.primaryContainer, Color.tertiary],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    /// Tarjeta translúcida de la billetera (carnet y carné digital).
+    ///
+    /// Estaba copiada dos veces, con el mismo fondo, el mismo borde y el mismo
+    /// gesto; solo cambiaban el icono y los textos.
+    private func tarjetaBilletera(icono: String,
+                                  titulo: String,
+                                  detalle: String,
+                                  conChevron: Bool,
+                                  accion: @escaping () -> Void) -> some View {
+        Button {
+            AppHaptics.impact(.light)
+            accion()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icono)
+                    .font(.system(size: 18))
+                    .foregroundStyle(.white)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(titulo)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(detalle)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                if conChevron {
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.18)))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(titulo)
+        .accessibilityValue(detalle)
     }
 
     // MARK: - Configuración
@@ -348,10 +382,10 @@ struct PerfilView: View {
 
             VStack(spacing: 0) {
                 toggleRow(icon: "bell.fill", iconColor: .appPrimary,
-                          label: L.t("Notificaciones", "Notifications"), isOn: $notifOn)
+                          label: L.t("Preferencia de notificaciones", "Notification preference"), isOn: $notifOn)
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "mappin.circle.fill", iconColor: .secondary,
-                          label: L.t("Compartir ubicación", "Share location"), isOn: $ubicacionOn)
+                          label: L.t("Preferencia de compartir ubicación", "Location sharing preference"), isOn: $ubicacionOn)
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 offlineToggleRow
                 Divider().padding(.leading, 56).accessibilityHidden(true)
@@ -373,6 +407,12 @@ struct PerfilView: View {
                             .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
                     )
             )
+
+            Text(L.t("Las preferencias de notificaciones y de compartir ubicación se guardan solo en este dispositivo. Esta versión no envía alertas ni comparte tu ubicación con otros usuarios. No cambian los permisos de iOS ni desactivan el GPS del mapa.",
+                     "Notification and location sharing preferences are saved only on this device. This version does not send alerts or share your location with other users. They do not change iOS permissions or turn off map GPS."))
+                .font(.bodySm)
+                .foregroundStyle(.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
 
             // ── Accesibilidad (VoiceOver) ──
             VStack(alignment: .leading, spacing: 12) {
@@ -460,21 +500,17 @@ struct PerfilView: View {
                     .foregroundStyle(iconColor)
             }
             .accessibilityHidden(true)
-            Text(label)
-                .font(.bodyMdMedium)
-                .foregroundStyle(.onSurface)
-            Spacer()
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-                .tint(.appPrimary)
+            Toggle(isOn: isOn) {
+                Text(label)
+                    .font(.bodyMdMedium)
+                    .foregroundStyle(.onSurface)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .tint(.appPrimary)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(label)
-        .accessibilityValue(isOn.wrappedValue ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
-        .accessibilityHint(L.t("Doble toque para cambiar", "Double tap to change"))
-        .accessibilityAddTraits(.isButton)
+
     }
 
     // MARK: - Disponibilidad sin conexión

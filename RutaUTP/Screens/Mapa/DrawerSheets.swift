@@ -16,107 +16,30 @@ import UIKit
 
 // MARK: - 1. NOTIFICACIONES SHEET
 struct NotificacionesSheet: View {
-    @State private var notificacionesOn: Bool = true
-    @State private var pausaSeleccionada: PausaNotificaciones? = nil
-
-    enum PausaNotificaciones: String, CaseIterable, Identifiable {
-        case treintaMin = "30 minutos"
-        case unaHora    = "1 hora"
-        case tresHoras  = "3 horas"
-        case indefinido = "Indefinido"
-        var id: String { rawValue }
-
-        /// Texto visible. El `rawValue` se mantiene como clave estable.
-        var label: String {
-            switch self {
-            case .treintaMin: return L.t("30 minutos", "30 minutes")
-            case .unaHora:    return L.t("1 hora", "1 hour")
-            case .tresHoras:  return L.t("3 horas", "3 hours")
-            case .indefinido: return L.t("Indefinido", "Indefinite")
-            }
-        }
-
-        // Orden: menor a mayor duracion
-        var orden: Int {
-            switch self {
-            case .treintaMin: return 0
-            case .unaHora:    return 1
-            case .tresHoras:  return 2
-            case .indefinido: return 3
-            }
-        }
-    }
+    @AppStorage(PreferenciasApp.notificaciones) private var notificacionesOn = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            SheetHeader(icon: "bell.fill", iconColor: .tertiary, title: L.t("Notificaciones", "Notifications"))
-
-            // Toggle principal
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L.t("Activar notificaciones", "Turn on notifications"))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                SheetHeader(icon: "bell.fill", iconColor: .tertiary,
+                            title: L.t("Notificaciones", "Notifications"))
+                Toggle(isOn: $notificacionesOn) {
+                    Text(L.t("Preferencia de notificaciones", "Notification preference"))
                         .font(.bodyMdMedium)
-                    Text(L.t("Recibe alertas de rutas y reportes", "Get alerts about routes and reports"))
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer()
-                Toggle("", isOn: $notificacionesOn)
-                    .labelsHidden()
-                    .tint(.appPrimary)
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.surfaceContainerLow)
-            )
+                .tint(.appPrimary)
+                .padding(16)
+                .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
 
-            // Pausa de notificaciones (solo si el toggle esta activo)
-            if notificacionesOn {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(L.t("PAUSAR NOTIFICACIONES", "PAUSE NOTIFICATIONS"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    VStack(spacing: 8) {
-                        ForEach(PausaNotificaciones.allCases.sorted { $0.orden < $1.orden }) { opcion in
-                            pausaRow(opcion)
-                        }
-                    }
-                }
+                Text(L.t("Esta preferencia se guarda en este dispositivo y es la misma que aparece en Perfil. Esta versión no envía notificaciones ni programa pausas. El ajuste no cambia los permisos de iOS.",
+                         "This preference is saved on this device and is shared with Profile. This version does not send notifications or schedule pauses. The setting does not change iOS permissions."))
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer()
+            .padding(20)
         }
-        .padding(20)
-    }
-
-    private func pausaRow(_ opcion: PausaNotificaciones) -> some View {
-        let isSelected = (pausaSeleccionada == opcion)
-        return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                pausaSeleccionada = isSelected ? nil : opcion
-            }
-        } label: {
-            HStack {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.appPrimary : Color.onSurfaceVariant)
-                Text(opcion.label)
-                    .font(.bodyMd)
-                    .foregroundStyle(.onSurface)
-                Spacer()
-                if opcion == .indefinido {
-                    Image(systemName: "moon.zzz.fill")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.primaryContainer.opacity(0.30) : Color.surfaceContainerLow)
-            )
-        }
-        .buttonStyle(.plain)
     }
 }
 

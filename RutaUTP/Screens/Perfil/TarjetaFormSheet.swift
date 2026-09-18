@@ -83,8 +83,17 @@ struct MetodosPagoSheet: View {
         NavigationStack {
             List {
                 Section {
+                    Label(L.t("Referencias de tarjetas", "Card references"),
+                          systemImage: "creditcard")
+                        .font(.headline)
+                    Text(L.t("Organiza tus tarjetas con un nombre, su red y los últimos cuatro dígitos. Estas referencias se guardan en el llavero de este dispositivo. No permiten pagar, recargar el monedero ni usar NFC.",
+                             "Organize your cards using a name, their network and the last four digits. These references are saved in this device's Keychain. They cannot be used to pay, top up the wallet or use NFC."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Section {
                     if store.tarjetas.isEmpty {
-                        ContentUnavailableView(L.t("Sin tarjetas guardadas", "No saved cards"), systemImage: "creditcard", description: Text(L.t("Añade una referencia para identificar tus tarjetas aquí.", "Add a reference to identify your cards here.")))
+                        ContentUnavailableView(L.t("Sin referencias guardadas", "No saved references"), systemImage: "creditcard", description: Text(L.t("Añade una referencia para identificar tus tarjetas aquí.", "Add a reference to identify your cards here.")))
                     }
                     ForEach(store.tarjetas) { tarjeta in
                         NavigationLink {
@@ -102,7 +111,7 @@ struct MetodosPagoSheet: View {
                         }
                     }
                     Button { agregar = true } label: {
-                        Label(L.t("Añadir tarjeta", "Add card"), systemImage: "plus.circle.fill")
+                        Label(L.t("Añadir referencia", "Add reference"), systemImage: "plus.circle.fill")
                     }
                 } footer: {
                     Text(L.t("Son referencias guardadas en este dispositivo. No habilitan pagos ni verifican la tarjeta con el banco.", "These are references saved on this device. They don't enable payments or verify cards with the bank."))
@@ -129,24 +138,24 @@ private struct TarjetaDetalleView: View {
             Section {
                 LabeledContent(L.t("Nombre", "Name"), value: tarjeta.nombre)
                 LabeledContent(L.t("Red", "Network"), value: tarjeta.red)
-                LabeledContent(L.t("Número", "Number"), value: "•••• \(tarjeta.ultimos4)")
+                LabeledContent(L.t("Últimos 4 dígitos", "Last 4 digits"), value: "•••• \(tarjeta.ultimos4)")
             }
             Section {
                 if store.principal?.id == tarjeta.id {
-                    Label(L.t("Tarjeta principal", "Default card"), systemImage: "checkmark.circle.fill")
+                    Label(L.t("Referencia principal", "Primary reference"), systemImage: "checkmark.circle.fill")
                 } else {
                     Button(L.t("Elegir como principal", "Set as default")) { store.hacerPrincipal(tarjeta) }
                 }
-                Button(L.t("Eliminar tarjeta", "Delete card"), role: .destructive) { confirmar = true }
+                Button(L.t("Eliminar referencia", "Delete reference"), role: .destructive) { confirmar = true }
             }
         }
         .navigationTitle(tarjeta.etiqueta)
-        .confirmationDialog(L.t("¿Eliminar esta tarjeta?", "Delete this card?"), isPresented: $confirmar, titleVisibility: .visible) {
+        .confirmationDialog(L.t("¿Eliminar esta referencia?", "Delete this reference?"), isPresented: $confirmar, titleVisibility: .visible) {
             Button(L.t("Eliminar", "Delete"), role: .destructive) {
                 if store.eliminar(tarjeta) { dismiss() }
             }
             Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
-        } message: { Text(L.t("Se quitará de este dispositivo.", "It will be removed from this device.")) }
+        } message: { Text(L.t("Solo se eliminará la referencia local; tu tarjeta bancaria no se modifica.", "Only the local reference will be removed; your bank card will not change.")) }
     }
 }
 
@@ -176,15 +185,15 @@ struct TarjetaFormSheet: View {
                             ultimos4 = String(value.filter { $0.isASCII && $0.isNumber }.prefix(4))
                         }
                 } footer: {
-                    Text(L.t("Solo necesitamos un nombre y los últimos cuatro dígitos para reconocerla. No introduzcas el número completo ni el CVV.", "We only need a name and the last four digits to identify it. Don't enter the full card number or CVV."))
+                    Text(L.t("Se guardarán el nombre, la red y los últimos cuatro dígitos en este dispositivo. No introduzcas el número completo ni el CVV. No vincula la tarjeta con el banco ni habilita pagos.", "The name, network and last four digits will be saved on this device. Don't enter the full card number or CVV. This does not link the card to the bank or enable payments."))
                 }
-                Button(L.t("Guardar tarjeta", "Save card")) {
+                Button(L.t("Guardar referencia", "Save reference")) {
                     let tarjeta = TarjetaGuardada(nombre: nombre.trimmingCharacters(in: .whitespacesAndNewlines), red: red, ultimos4: ultimos4)
                     if store.agregar(tarjeta) { dismiss() }
                 }
                 .disabled(!valido)
             }
-            .navigationTitle(L.t("Añadir tarjeta", "Add card"))
+            .navigationTitle(L.t("Añadir referencia", "Add reference"))
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(L.t("Cancelar", "Cancel")) { dismiss() } } }
             .alert(L.t("No se pudo guardar", "Couldn't save"), isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
                 Button(L.t("Aceptar", "OK"), role: .cancel) { store.error = nil }

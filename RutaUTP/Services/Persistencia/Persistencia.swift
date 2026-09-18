@@ -106,12 +106,20 @@ enum Persistencia {
         "isDarkMode",
         "ciudadSeleccionada",
         "senias.modo.activado",
-        "perfil_notificaciones",
-        "perfil_compartirUbicacion",
+        PreferenciasApp.notificaciones,
+        PreferenciasApp.compartirUbicacion,
         "perfil_telefono",
         "perfil_correoPersonal",
         "emergencia_nombre",
         "emergencia_parentesco",
-        "emergencia_numero"
+        "emergencia_numero",
+        "monedero.saldo.v1",
+        "monedero.movimientos.v1"
     ]
+}
+
+/// Claves compartidas por Perfil y el menú. Conservan los valores ya guardados.
+enum PreferenciasApp {
+    static let notificaciones = "perfil_notificaciones"
+    static let compartirUbicacion = "perfil_compartirUbicacion"
 }
