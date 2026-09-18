@@ -1,16 +1,5 @@
-//
-//  CarneDigitalView.swift
-//  RutaUTP
-//
-//  Carné Digital: identificación estudiantil para ingresar al campus.
-//  - Foto circular (misma de perfil) con insignia de cámara morada para cambiarla
-//  - Nombre completo, línea divisoria, Código UTP, código de barras (Code 128)
-//  - Barra negra "ÚLTIMO CICLO MATRICULADO" como decoración
-//  - Tarjeta mostaza con el aviso del Reglamento de Disciplina
-//
-//  El código de barras se genera localmente con CoreImage (CICode128BarcodeGenerator),
-//  sin dependencias externas.
-//
+// Carné digital de muestra. No acredita identidad, matrícula ni acceso al campus.
+// Código de barras generado localmente con CoreImage, sin validación institucional.
 
 import SwiftUI
 import CoreImage
@@ -20,7 +9,7 @@ struct CarneDigitalView: View {
     var nombre: String
 
 
-    // Datos institucionales (mismos que en Datos Personales)
+    // Identificador ficticio del prototipo (no proviene de la universidad).
     private let codigoUTP = "1234567"
 
     // Foto de perfil: ProfileImageStore es la fuente única (drawer, perfil y carné)
@@ -44,7 +33,7 @@ struct CarneDigitalView: View {
 
                 carnet
 
-                avisoReglamento
+                avisoDemostracion
 
                 Image("UTPLogo")
                     .resizable()
@@ -93,7 +82,7 @@ struct CarneDigitalView: View {
                     .foregroundStyle(.appPrimary)
             }
             .accessibilityHidden(true)
-            Text(L.t("Carné Digital", "Digital ID"))
+            Text(L.t("Carné Digital · muestra", "Digital ID · sample"))
                 .font(.headlineMd)
                 .foregroundStyle(.onSurface)
             Spacer()
@@ -112,7 +101,7 @@ struct CarneDigitalView: View {
                     Text(nombre)
                         .font(.headlineSm)
                         .foregroundStyle(.onSurface)
-                    Text(L.t("Estudiante UTP", "UTP Student"))
+                    Text(L.t("Identidad no verificada", "Unverified identity"))
                         .font(.bodyXsMedium)
                         .foregroundStyle(.onSurfaceVariant)
                 }
@@ -133,7 +122,7 @@ struct CarneDigitalView: View {
 
             // Código UTP
             VStack(alignment: .leading, spacing: 6) {
-                Text(L.t("CÓDIGO UTP", "UTP CODE"))
+                Text(L.t("CÓDIGO DE MUESTRA", "SAMPLE CODE"))
                     .font(.labelCapsMd)
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabelMd)
@@ -155,7 +144,7 @@ struct CarneDigitalView: View {
 
             // Indicación + código de barras
             VStack(spacing: 12) {
-                Text(L.t("Ingresa al campus mostrando este código", "Enter the campus showing this code"))
+                Text(L.t("Código de demostración. No permite ingresar al campus.", "Demo code. It does not grant campus access."))
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .multilineTextAlignment(.center)
@@ -168,15 +157,15 @@ struct CarneDigitalView: View {
                         .frame(maxWidth: .infinity)
                         .padding(10)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white))
-                        .accessibilityLabel(L.t("Código de barras del código ", "Barcode for code ") + codigoUTP)
+                        .accessibilityLabel(L.t("Código de barras de muestra, sin validez: ", "Sample barcode, not valid: ") + codigoUTP)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.top, 14)
             .accessibilityElement(children: .contain)
 
-            // Decoración: último ciclo matriculado
-            Text(L.t("ÚLTIMO CICLO MATRICULADO", "LAST ENROLLED TERM"))
+            // Aviso integrado en la tarjeta, también visible en una captura.
+            Text(L.t("MUESTRA · SIN VALIDEZ UNIVERSITARIA", "SAMPLE · NOT A VALID UNIVERSITY ID"))
                 .font(.labelCapsSm)
                 .foregroundStyle(.white)
                 .appTracking(AppTracking.wideLabelMd)
@@ -184,7 +173,6 @@ struct CarneDigitalView: View {
                 .padding(.vertical, 11)
                 .background(Color.black)
                 .padding(.top, 16)
-                .accessibilityHidden(true)
         }
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -196,7 +184,7 @@ struct CarneDigitalView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L.t("Carné digital de ", "Digital ID of ") + "\(nombre)" + L.t(", código UTP ", ", UTP code ") + codigoUTP)
+        .accessibilityLabel(L.t("Carné digital de muestra de ", "Sample digital ID of ") + "\(nombre)" + L.t(", código ficticio ", ", sample code ") + codigoUTP)
     }
 
     // MARK: - Foto circular con insignia de cámara morada
@@ -245,15 +233,15 @@ struct CarneDigitalView: View {
         }
     }
 
-    // MARK: - Tarjeta mostaza: aviso del reglamento
-    private var avisoReglamento: some View {
+    // MARK: - Aviso de demostración
+    private var avisoDemostracion: some View {
         HStack(alignment: .top, spacing: 12) {
             Text("⚠️")
                 .font(.system(size: 24))
                 .accessibilityHidden(true)
             Text(L.t(
-                "Recuerda que compartir tus credenciales de identificación es una infracción muy grave que conlleva la máxima sanción bajo el Reglamento de Disciplina.",
-                "Remember that sharing your identification credentials is a very serious offense that carries the maximum penalty under the Disciplinary Regulations."
+                "Este carné es una muestra con un código ficticio. El nombre y la foto no verifican tu identidad ni tu matrícula. No es una credencial emitida por la universidad y no permite ingresar al campus.",
+                "This ID is a sample with a fictional code. The name and photo do not verify your identity or enrollment. It is not a university-issued credential and does not grant campus access."
             ))
             .font(.bodyXsMedium)
             .foregroundStyle(onMostaza)
@@ -267,8 +255,8 @@ struct CarneDigitalView: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(L.t(
-            "Aviso: compartir tus credenciales de identificación es una infracción muy grave",
-            "Warning: sharing your identification credentials is a very serious offense"
+            "Carné de muestra con código ficticio. No verifica identidad ni matrícula, no está emitido por la universidad y no permite ingresar al campus.",
+            "Sample ID with a fictional code. It does not verify identity or enrollment, is not university-issued and does not grant campus access."
         ))
     }
 
