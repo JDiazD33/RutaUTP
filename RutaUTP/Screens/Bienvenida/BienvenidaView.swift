@@ -297,8 +297,14 @@ private struct LegalSheet: View {
                     .font(.bodyMd)
                 Text(L.t("Privacidad", "Privacy"))
                     .font(.headlineSm)
-                Text(L.t("Los datos de ubicación y reportes comunitarios son simulados para efectos de demostración. No se comparte información con terceros.",
-                         "Location data and community reports are simulated for demonstration purposes. No information is shared with third parties."))
+                Text(L.t("Si autorizas el acceso, la app utiliza tu ubicación real para mostrar dónde estás, buscar paraderos cercanos y seguir tu avance durante un viaje. Las posiciones de los buses que aparecen en el mapa son simuladas.",
+                         "If you grant permission, the app uses your real location to show where you are, find nearby stops and track your progress during a trip. Bus positions shown on the map are simulated."))
+                    .font(.bodyMd)
+                Text(L.t("La búsqueda de lugares y el cálculo de indicaciones utilizan servicios de Apple Maps. Para resolver esas consultas se envían a Apple los textos de búsqueda, direcciones o coordenadas necesarios, que pueden incluir tu ubicación como punto de partida.",
+                         "Place searches and directions use Apple Maps services. These requests send Apple the necessary search text, addresses or coordinates, which may include your location as the starting point."))
+                    .font(.bodyMd)
+                Text(L.t("Los datos personales que introduces, tus lugares y líneas guardados, las fotos de perfil y carné y las referencias de tarjetas se guardan localmente. El monedero usa saldo de demostración y no procesa pagos reales. Los reportes y publicaciones comunitarias de esta versión no se envían a un servidor ni se comparten con otros usuarios.",
+                         "The personal details you enter, saved places and routes, profile and student card photos, and card references are stored locally. The wallet uses a demo balance and does not process real payments. Reports and community posts in this version are not sent to a server or shared with other users."))
                     .font(.bodyMd)
                 Spacer(minLength: 20)
             }

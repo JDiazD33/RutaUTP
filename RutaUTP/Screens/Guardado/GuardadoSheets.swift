@@ -168,6 +168,9 @@ struct AddLugarSheet: View {
     @State private var direccionNoEncontrada = false
     @State private var recentrarTrigger = 0
     @State private var geocodeTask: Task<Void, Never>?
+    @State private var geocoderActivo: CLGeocoder?
+    @State private var revisionUbicacion = UUID()
+    @State private var direccionValidada: String?
     @State private var ajusteManual = false
     @State private var mapaExpandido = false
 
@@ -195,12 +198,13 @@ struct AddLugarSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.t("Cancelar", "Cancel")) {
-                        geocodeTask?.cancel()
+                        cancelarGeocodificacion()
                         dismiss()
                     }
                 }
             }
         }
+        .onDisappear { cancelarGeocodificacion() }
     }
 
     // MARK: Campos
@@ -247,6 +251,10 @@ struct AddLugarSheet: View {
             Label(L.t("Ubicación ajustada en el mapa", "Location adjusted on the map"), systemImage: "hand.tap.fill")
                 .font(.bodySm)
                 .foregroundStyle(.appPrimary)
+        } else if buscandoUbicacion {
+            Label(L.t("Buscando la dirección…", "Looking up the address…"), systemImage: "magnifyingglass")
+                .font(.bodySm)
+                .foregroundStyle(.onSurfaceVariant)
         } else if direccionNoEncontrada {
             Label(L.t("No encontramos esa dirección — toca el mapa para ubicarla tú", "We could not find that address — tap the map to place it yourself"), systemImage: "exclamationmark.circle.fill")
                 .font(.bodySm)
@@ -269,9 +277,7 @@ struct AddLugarSheet: View {
                 coordenada: coordElegida,
                 onTocar: { coord in
                     AppHaptics.impact(.light)
-                    geocodeTask?.cancel()
-                    buscandoUbicacion = false
-                    ajusteManual = true
+                    confirmarSeleccionManual()
                     withAnimation(.spring(response: 0.3)) {
                         coordElegida = coord
                     }
@@ -303,9 +309,7 @@ struct AddLugarSheet: View {
                 coordenada: $coordElegida,
                 onTocar: {
                     AppHaptics.impact(.light)
-                    geocodeTask?.cancel()
-                    buscandoUbicacion = false
-                    ajusteManual = true
+                    confirmarSeleccionManual()
                 },
                 onCerrar: { mapaExpandido = false }
             )
@@ -351,13 +355,17 @@ struct AddLugarSheet: View {
 
     // MARK: Guardar
     private var puedeGuardar: Bool {
-        !nombre.trimmingCharacters(in: .whitespaces).isEmpty && coordElegida != nil
+        !nombre.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && coordElegida != nil && direccionValidada == direccion && !buscandoUbicacion
     }
 
     private var botonGuardar: some View {
         Button {
-            guard let coord = coordElegida else { return }
+            let revision = revisionUbicacion
             SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "guardado.guardar_lugar") {
+                // La seña retrasa el guardado: comprobar de nuevo que el
+                // punto pertenece a la dirección actual y la hoja sigue activa.
+                guard revision == revisionUbicacion, puedeGuardar, let coord = coordElegida else { return }
                 AppHaptics.success()
                 onSave(LugarGuardado(
                     nombre: nombre.trimmingCharacters(in: .whitespaces),
@@ -402,41 +410,65 @@ struct AddLugarSheet: View {
     // MARK: Geocodificación con debounce
     /// Espera 0.7 s a que el usuario deje de escribir y geocodifica.
     private func programarGeocodificacion() {
-        geocodeTask?.cancel()
+        cancelarGeocodificacion()
         ajusteManual = false
         direccionNoEncontrada = false
+        coordElegida = nil
+        direccionValidada = nil
 
-        let texto = direccion.trimmingCharacters(in: .whitespaces)
-        guard texto.count >= 5 else {
-            if texto.isEmpty { coordElegida = nil }
-            return
-        }
+        let direccionSolicitada = direccion
+        let texto = direccionSolicitada.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard texto.count >= 5 else { return }
 
+        let revision = revisionUbicacion
+        buscandoUbicacion = true
         geocodeTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 700_000_000)
-            guard !Task.isCancelled else { return }
-            await geocodificar(texto)
+            guard !Task.isCancelled, revision == revisionUbicacion else { return }
+            await geocodificar(texto, direccionSolicitada: direccionSolicitada, revision: revision)
         }
     }
 
-    private func geocodificar(_ texto: String) async {
-        buscandoUbicacion = true
+    private func cancelarGeocodificacion() {
+        revisionUbicacion = UUID()
+        geocodeTask?.cancel()
+        geocodeTask = nil
+        geocoderActivo?.cancelGeocode()
+        geocoderActivo = nil
+        buscandoUbicacion = false
+    }
+
+    private func confirmarSeleccionManual() {
+        cancelarGeocodificacion()
+        ajusteManual = true
+        direccionNoEncontrada = false
+        direccionValidada = direccion
+    }
+
+    private func geocodificar(_ texto: String, direccionSolicitada: String, revision: UUID) async {
         let geocoder = CLGeocoder()
+        geocoderActivo = geocoder
         let resultados: [CLPlacemark]? = await withCheckedContinuation { continuidad in
             geocoder.geocodeAddressString("\(texto), Trujillo, Perú") { placemarks, _ in
                 continuidad.resume(returning: placemarks)
             }
         }
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, revision == revisionUbicacion,
+              direccionSolicitada == direccion else { return }
+        geocoderActivo = nil
+        geocodeTask = nil
         buscandoUbicacion = false
 
         if let coord = resultados?.first?.location?.coordinate {
             direccionNoEncontrada = false
             withAnimation(.spring(response: 0.35)) {
                 coordElegida = coord
+                direccionValidada = direccionSolicitada
                 recentrarTrigger += 1
             }
         } else {
+            coordElegida = nil
+            direccionValidada = nil
             direccionNoEncontrada = true
         }
     }
