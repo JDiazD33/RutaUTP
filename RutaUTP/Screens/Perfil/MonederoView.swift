@@ -7,6 +7,7 @@ import CoreImage.CIFilterBuiltins
 // MARK: - Tarjeta del monedero (va en la billetera del Perfil)
 
 struct MonederoCard: View {
+    @Environment(\.dynamicTypeSize) private var textSize
 
     @ObservedObject var store: MonederoStore
     let onRecargar: () -> Void
@@ -19,22 +20,25 @@ struct MonederoCard: View {
                     .font(.system(size: 14))
                     .accessibilityHidden(true)
                 Text(L.t("Saldo de demostración", "Demo balance"))
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.footnote.bold())
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.white)
 
             Text(store.saldoTexto)
-                .font(.system(size: 26, weight: .heavy))
+                .font(.system(.title, weight: .heavy))
                 .monospacedDigit()
                 .foregroundStyle(.white)
 
             Text(L.t("≈ \(store.pasajesDisponibles) pasajes a \(store.tarifaTexto)",
                      "≈ \(store.pasajesDisponibles) fares at \(store.tarifaTexto)"))
-                .font(.system(size: 10))
+                .font(.caption2)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.white.opacity(0.8))
 
-            HStack(spacing: 8) {
+            (textSize >= .xxxLarge ? AnyLayout(VStackLayout(spacing: 8))
+                                    : AnyLayout(HStackLayout(spacing: 8))) {
                 boton(L.t("Recargar", "Top up"), icono: "plus.circle.fill", accion: onRecargar)
                 boton(L.t("QR demo", "Demo QR"), icono: "qrcode", accion: onMostrarQR)
             }
@@ -61,14 +65,13 @@ struct MonederoCard: View {
                 Image(systemName: icono)
                     .font(.system(size: 11, weight: .bold))
                 Text(titulo)
-                    .font(.system(size: 11, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .font(.caption2.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .background(Capsule().fill(.white.opacity(0.22)))
             .overlay(Capsule().stroke(.white.opacity(0.3), lineWidth: 0.8))
         }
@@ -79,6 +82,9 @@ struct MonederoCard: View {
 // MARK: - Recarga (simulada)
 
 struct RecargarSaldoSheet: View {
+    @Environment(\.dynamicTypeSize) private var textSize
+
+    private var apilarContenido: Bool { textSize >= .xxxLarge }
 
     @ObservedObject var store: MonederoStore
     @Environment(\.dismiss) private var dismiss
@@ -162,8 +168,8 @@ struct RecargarSaldoSheet: View {
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
 
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
-                                GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
+                                     count: apilarContenido ? 1 : 2), spacing: 12) {
                 ForEach(importes, id: \.self) { importe in
                     let seleccionado = elegido == importe
                     Button {
@@ -171,7 +177,9 @@ struct RecargarSaldoSheet: View {
                         withAnimation(.easeInOut(duration: 0.18)) { elegido = importe }
                     } label: {
                         Text(String(format: "S/ %.0f", importe))
-                            .font(.system(size: 18, weight: .heavy))
+                            .font(.system(.headline, weight: .heavy))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 10)
                             .monospacedDigit()
                             .foregroundStyle(seleccionado ? Color.onPrimaryContainer : Color.onSurface)
                             .frame(maxWidth: .infinity, minHeight: 56)
@@ -201,7 +209,8 @@ struct RecargarSaldoSheet: View {
 
             VStack(spacing: 0) {
                 ForEach(store.movimientos.prefix(5)) { movimiento in
-                    HStack(spacing: 10) {
+                    (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                                      : AnyLayout(HStackLayout(spacing: 10))) {
                         Image(systemName: movimiento.esRecarga ? "arrow.down.circle.fill" : "bus.fill")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(movimiento.esRecarga ? Color.appPrimary : Color.onSurfaceVariant)
@@ -217,7 +226,7 @@ struct RecargarSaldoSheet: View {
                                 .font(.bodyXs)
                                 .foregroundStyle(.onSurfaceVariant)
                         }
-                        Spacer()
+                        if !apilarContenido { Spacer() }
                         Text(String(format: "%@S/ %.2f",
                                     movimiento.importe > 0 ? "+" : "−",
                                     abs(movimiento.importe)))
@@ -255,6 +264,7 @@ struct RecargarSaldoSheet: View {
                 Text(L.t("Recargar \(String(format: "S/ %.0f", elegido))",
                          "Top up \(String(format: "S/ %.0f", elegido))"))
                     .font(.headlineSm)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 54)
@@ -395,6 +405,7 @@ struct QRPasajeSheet: View {
                     Text(L.t("Simular pasaje · \(store.tarifaTexto)",
                              "Simulate fare · \(store.tarifaTexto)"))
                         .font(.bodySmMedium)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .foregroundStyle(.onSurface)
                 .frame(maxWidth: .infinity, minHeight: 48)
