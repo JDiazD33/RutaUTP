@@ -9,7 +9,6 @@
 //  para que el archivo del drawer contenga el drawer.
 
 import SwiftUI
-import UIKit
 // Estos sheets eran `private` cuando vivían junto al drawer. Ahora cruzan de
 // archivo (el drawer los instancia desde SideDrawer.swift y DatosPersonalesSheet
 // usa SheetHeader), así que son internos al módulo. Siguen sin salir del target.
@@ -49,7 +48,6 @@ struct NotificacionesSheet: View {
 // del producto sin prometer algo que aún no existe.
 struct CiudadSheet: View {
     @AppStorage("ciudadSeleccionada") private var ciudadSeleccionada: String = "Trujillo"
-    @Environment(\.dismiss) private var dismiss
 
     private struct Ciudad: Identifiable {
         let nombre: String
@@ -175,7 +173,6 @@ struct CiudadSheet: View {
 // MARK: - 3. AJUSTES SHEET
 struct AjustesSheet: View {
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -324,8 +321,6 @@ struct SoporteSheet: View {
 
 // MARK: - 5. SOBRE NOSOTROS SHEET
 struct SobreNosotrosSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 20) {

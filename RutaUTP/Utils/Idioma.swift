@@ -3,8 +3,11 @@
 //  RutaUTP
 //
 //  Soporte ES/EN sin String Catalogs: gestor persistido + helper L.t().
-//  El cambio de idioma reconstruye el árbol de vistas (RootView usa
-//  .id(codigo)), así que todas las pantallas re-renderizan al instante.
+//  No hace falta reconstruir el árbol al cambiar de idioma: leer el idioma
+//  durante el `body` registra la dependencia (ver la nota de `IdiomaManager`)
+//  y la vista se vuelve a evaluar sola. Aquí hubo un `.id(codigo)` en
+//  RootView; se quitó justamente porque era innecesario y además recreaba el
+//  AppRouter, devolviendo al usuario a Bienvenida al cambiar de idioma.
 //
 
 import Foundation

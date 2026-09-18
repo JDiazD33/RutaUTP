@@ -25,11 +25,16 @@ final class MonederoStore: ObservableObject {
     /// Referencia de la demo, no una tarifa consultada para una ruta concreta.
     private static let tarifaCentimos = 250
     static var tarifaReferencia: Double { Double(tarifaCentimos) / 100 }
-    static let saldoInicial: Double = 10.00
+    /// Saldo con el que arranca la demo, en céntimos.
+    ///
+    /// Fuente única del valor: el estado inicial de `saldoCentimos` sale de
+    /// aquí. Antes había además un `saldoInicial: Double = 10.00` que no leía
+    /// nadie, así que editar el saldo "obvio" no hacía nada.
+    private static let saldoInicialCentimos = 1_000
     /// Límite de la demo; mantiene los cálculos y las conversiones acotados.
     private static let maximoCentimos = 100_000_000
 
-    @Published private var saldoCentimos = 1_000
+    @Published private var saldoCentimos = MonederoStore.saldoInicialCentimos
     @Published private(set) var movimientos: [MovimientoMonedero] = []
     @Published private(set) var datosLocalesInvalidos = false
 
