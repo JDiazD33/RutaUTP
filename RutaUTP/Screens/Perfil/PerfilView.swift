@@ -10,6 +10,10 @@ import UIKit
 
 struct PerfilView: View {
     @EnvironmentObject private var router: AppRouter
+    @Environment(\.dynamicTypeSize) private var textSize
+    @ScaledMetric(relativeTo: .title2) private var avatarSize = 72.0
+
+    private var apilarContenido: Bool { textSize >= .xxxLarge }
 
     // Dato institucional del prototipo. DatosPersonalesSheet lo presenta como
     // "solo lectura" (viene de la universidad), así que aquí no se edita.
@@ -170,17 +174,18 @@ struct PerfilView: View {
                 Spacer().frame(height: 56)
 
                 // Avatar + Nombre + Rol
-                HStack(alignment: .center, spacing: 14) {
+                (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+                                  : AnyLayout(HStackLayout(alignment: .center, spacing: 14))) {
                     ZStack {
                         Circle()
                             .fill(Color.inversePrimary)
-                            .frame(width: 72, height: 72)
+                            .frame(width: avatarSize, height: avatarSize)
                             .overlay(Circle().stroke(Color.white, lineWidth: 3))
                         if let fotoPerfil {
                             Image(uiImage: fotoPerfil)
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 72, height: 72)
+                                .frame(width: avatarSize, height: avatarSize)
                                 .clipShape(Circle())
                                 .overlay(Circle().stroke(Color.white, lineWidth: 3))
                                 .accessibilityHidden(true)
@@ -196,7 +201,8 @@ struct PerfilView: View {
                         Text(nombre)
                             .font(.headlineLgMobile)
                             .foregroundStyle(.white)
-                        HStack(spacing: 6) {
+                        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                                          : AnyLayout(HStackLayout(spacing: 6))) {
                             Text(L.t("ESTUDIANTE UTP", "UTP STUDENT"))
                                 .font(.labelCapsSm)
                                 .foregroundStyle(.white.opacity(0.95))
@@ -220,7 +226,7 @@ struct PerfilView: View {
                             }
                         }
                     }
-                    Spacer()
+                    if !apilarContenido { Spacer() }
                 }
                 .padding(.horizontal, 20)
                 .accessibilityElement(children: .combine)
@@ -243,7 +249,8 @@ struct PerfilView: View {
                                  onRecargar: { showRecargarSaldo = true },
                                  onMostrarQR: { showQRPasaje = true })
 
-                    HStack(alignment: .top, spacing: 12) {
+                    (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                                      : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
                         // Carnet UTP: la foto del carné físico.
                         tarjetaBilletera(icono: "person.text.rectangle.fill",
                                          titulo: L.t("Carnet Universitario", "University Card"),
@@ -269,22 +276,23 @@ struct PerfilView: View {
                         AppHaptics.impact(.light)
                         showTarjetaSheet = true
                     } label: {
-                        HStack(spacing: 10) {
+                        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+                                          : AnyLayout(HStackLayout(spacing: 10))) {
                             Image(systemName: "creditcard.fill")
                                 .font(.system(size: 18))
                                 .foregroundStyle(.white.opacity(0.85))
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(L.t("Mis tarjetas", "My cards"))
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.footnote.bold())
                                     .foregroundStyle(.white)
                                 Text(L.t("Referencias locales · sin pagos",
                                          "Local references · no payments"))
-                                    .font(.system(size: 10))
+                                    .font(.caption2)
                                     .foregroundStyle(.white.opacity(0.75))
-                                    .lineLimit(1)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            Spacer()
+                            if !apilarContenido { Spacer() }
                             Text(L.t("LOCAL", "LOCAL"))
                                 .font(.labelCapsSm)
                                 .foregroundStyle(.white)
@@ -342,13 +350,12 @@ struct PerfilView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(titulo)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.footnote.bold())
                         .foregroundStyle(.white)
                     Text(detalle)
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundStyle(.white.opacity(0.8))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 if conChevron {
                     Spacer(minLength: 0)
