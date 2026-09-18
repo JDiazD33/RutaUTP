@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043E300AD9FE004E1676 /* MonederoStore.swift */; };
+		0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800440300AD9FE004E1676 /* MonederoView.swift */; };
 		0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */; };
 		0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */; };
 		0A800438300AD9FE004E1676 /* RejillaEspacial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800437300AD9FE004E1676 /* RejillaEspacial.swift */; };
@@ -94,6 +96,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0A80043E300AD9FE004E1676 /* MonederoStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoStore.swift; sourceTree = "<group>"; };
+		0A800440300AD9FE004E1676 /* MonederoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoView.swift; sourceTree = "<group>"; };
 		0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvisoRutaAproximada.swift; sourceTree = "<group>"; };
 		0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OfflineMapSheet.swift; sourceTree = "<group>"; };
 		0A800437300AD9FE004E1676 /* RejillaEspacial.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RejillaEspacial.swift; sourceTree = "<group>"; };
@@ -191,6 +195,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0A80043D300AD9FE004E1676 /* Monedero */ = {
+			isa = PBXGroup;
+			children = (
+				0A80043E300AD9FE004E1676 /* MonederoStore.swift */,
+			);
+			path = Monedero;
+			sourceTree = "<group>";
+		};
 		0A800422300AD9FE004E1676 /* Imagenes */ = {
 			isa = PBXGroup;
 			children = (
@@ -331,6 +343,7 @@
 				0AC4E0A220260907004E1676 /* CarneDigitalView.swift */,
 				0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */,
 				0A8004D6300AD9FE004E1676 /* PerfilView.swift */,
+				0A800440300AD9FE004E1676 /* MonederoView.swift */,
 				0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */,
 			);
 			path = Perfil;
@@ -448,6 +461,7 @@
 				AA6600000000000000000E03 /* SeniasService.swift */,
 				0A800422300AD9FE004E1676 /* Imagenes */,
 				0A800414300AD9FE004E1676 /* Persistencia */,
+				0A80043D300AD9FE004E1676 /* Monedero */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -660,6 +674,8 @@
 				0A8004FF300AD9FE004E1676 /* Ruta.swift in Sources */,
 				0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */,
 				0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */,
+				0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */,
+				0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */,
 				0A800516300AD9FE004E1676 /* TrackingPoint.swift in Sources */,
 				0A800411300AD9FE004E1676 /* AppHaptics.swift in Sources */,
 				0A800413300AD9FE004E1676 /* Persistencia.swift in Sources */,
