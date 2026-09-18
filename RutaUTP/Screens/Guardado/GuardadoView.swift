@@ -86,7 +86,8 @@ struct GuardadoView: View {
                                  rutaParaExplorar = linea
                              },
                              onQuitar: { vm.eliminarLinea(linea) })
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .fullScreenCover(item: $rutaParaExplorar) { linea in
             ExploradorRutaView(ruta: linea)

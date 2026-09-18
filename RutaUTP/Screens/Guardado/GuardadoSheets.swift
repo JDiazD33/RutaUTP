@@ -25,110 +25,119 @@ struct LineaDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            // Header
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle().fill(linea.colorLinea.opacity(0.15)).frame(width: 64, height: 64)
-                    Text(linea.linea)
-                        .font(.system(size: 18, weight: .heavy))
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                // Header
+                HStack(alignment: .top, spacing: 16) {
+                    ZStack {
+                        Circle().fill(linea.colorLinea.opacity(0.15)).frame(width: 64, height: 64)
+                        Text(linea.linea)
+                            .font(.system(size: 18, weight: .heavy))
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                            .foregroundStyle(linea.colorLinea)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(linea.empresa)
+                            .font(.headlineSm)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 12))
+                            Text(linea.frecuenciaTexto)
+                                .font(.labelCapsMd)
+                                .appTracking(AppTracking.wideLabel)
+                        }
                         .foregroundStyle(linea.colorLinea)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(linea.colorLinea.opacity(0.12)))
+                    }
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(linea.empresa)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L.t("RECORRIDO", "ROUTE"))
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    Text(linea.recorrido)
+                        .font(.bodyMd)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(.onSurface)
+                }
+
+                // Datos del feed GTFS
+                HStack(spacing: 0) {
+                    dato(icono: "clock.fill", valor: linea.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
+                    divisor
+                    dato(icono: "creditcard.fill", valor: linea.costo, etiqueta: L.t("Tarifa", "Fare"))
+                    divisor
+                    dato(icono: "mappin.and.ellipse", valor: "\(linea.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
+                    divisor
+                    dato(icono: "point.topleft.down.curvedto.point.bottomright.up",
+                         valor: String(format: "%.1f km", linea.distanciaKm), etiqueta: L.t("Longitud", "Length"))
+                }
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.t("EXTREMOS", "END POINTS"))
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "play.fill").font(.system(size: 10)).foregroundStyle(linea.colorLinea)
+                        Text(linea.paradaInicio)
+                            .font(.bodySm)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "flag.fill").font(.system(size: 10)).foregroundStyle(.red)
+                        Text(linea.paradaFin)
+                            .font(.bodySm)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                VStack(spacing: 10) {
+                    Button {
+                        onExplorar()
+                    } label: {
+                        HStack {
+                            Image(systemName: "map.fill")
+                            Text(L.t("Ver recorrido en el mapa", "View route on map"))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                        .foregroundStyle(.white)
                         .font(.headlineSm)
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 12))
-                        Text(linea.frecuenciaTexto)
-                            .font(.labelCapsMd)
-                            .appTracking(AppTracking.wideLabel)
                     }
-                    .foregroundStyle(linea.colorLinea)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(linea.colorLinea.opacity(0.12)))
-                }
-                Spacer()
-            }
+                    .buttonStyle(.plain)
 
-            Divider()
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L.t("RECORRIDO", "ROUTE"))
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                Text(linea.recorrido)
-                    .font(.bodyMd)
-                    .foregroundStyle(.onSurface)
-            }
-
-            // Datos del feed GTFS
-            HStack(spacing: 0) {
-                dato(icono: "clock.fill", valor: linea.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
-                divisor
-                dato(icono: "creditcard.fill", valor: linea.costo, etiqueta: L.t("Tarifa", "Fare"))
-                divisor
-                dato(icono: "mappin.and.ellipse", valor: "\(linea.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
-                divisor
-                dato(icono: "point.topleft.down.curvedto.point.bottomright.up",
-                     valor: String(format: "%.1f km", linea.distanciaKm), etiqueta: L.t("Longitud", "Length"))
-            }
-            .padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L.t("EXTREMOS", "END POINTS"))
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                HStack(spacing: 10) {
-                    Image(systemName: "play.fill").font(.system(size: 10)).foregroundStyle(linea.colorLinea)
-                    Text(linea.paradaInicio).font(.bodySm).lineLimit(1)
-                    Spacer()
-                    Image(systemName: "flag.fill").font(.system(size: 10)).foregroundStyle(.red)
-                    Text(linea.paradaFin).font(.bodySm).lineLimit(1)
-                }
-            }
-
-            Spacer()
-
-            VStack(spacing: 10) {
-                Button {
-                    onExplorar()
-                } label: {
-                    HStack {
-                        Image(systemName: "map.fill")
-                        Text(L.t("Ver recorrido en el mapa", "View route on map"))
+                    Button {
+                        onQuitar()
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                            Text(L.t("Quitar de guardados", "Remove from saved"))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
+                        .foregroundStyle(.onErrorContainer)
+                        .font(.bodyMdMedium)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                    .foregroundStyle(.white)
-                    .font(.headlineSm)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-
-                Button {
-                    onQuitar()
-                    dismiss()
-                } label: {
-                    HStack {
-                        Image(systemName: "trash.fill")
-                        Text(L.t("Quitar de guardados", "Remove from saved"))
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
-                    .foregroundStyle(.onErrorContainer)
-                    .font(.bodyMdMedium)
-                }
-                .buttonStyle(.plain)
             }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(20)
     }
+
 
     private var divisor: some View {
         Rectangle()
