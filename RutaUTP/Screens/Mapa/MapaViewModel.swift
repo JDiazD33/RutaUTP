@@ -6,26 +6,15 @@
 //   - region (zoom al destino)
 //   - textoBusqueda (binding del TextField)
 //   - destinoSeleccionado (chip activo)
-//   - busSimulados (6 puntos rojos animados alrededor del destino)
+//   - busesAnimados (posiciones de vehículos sobre shapes reales del feed GTFS)
 //
-//  El timer se inicia al seleccionar destino y se detiene al limpiar
-//  o al desaparecer la vista.
+//  El proveedor de posiciones se inicia al aparecer la vista y se detiene
+//  al desaparecer.
 //
 
 import SwiftUI
 import MapKit
 import Combine
-
-// MARK: - Bus simulado
-struct BusSimulado: Identifiable, Equatable {
-    let id: Int
-    var lat: Double
-    var lon: Double
-    let linea: String
-    let colorBus: Color
-    var angulo: Double
-    let velocidad: Double
-}
 
 // MARK: - Representación visual de un vehículo
 struct BusAnimado: Identifiable, Equatable {

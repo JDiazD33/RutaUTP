@@ -21,7 +21,17 @@ import Foundation
 import CoreLocation
 import Combine
 
-final class LocationService: NSObject, LocationServiceProtocol, ObservableObject, CLLocationManagerDelegate {
+/// Servicio de ubicación compartido por toda la aplicación.
+///
+/// `@unchecked Sendable`: todo el estado mutable (`continuations`,
+/// `lastKnownLocation`, `isUpdating`) se toca únicamente desde la cola
+/// principal —los métodos públicos se llaman desde `MainActor` y los
+/// callbacks de `CLLocationManager` y `onTermination` saltan a main antes
+/// de modificar nada—. El compilador no puede comprobarlo, así que se
+/// declara aquí de forma explícita. Si en el futuro se toca este estado
+/// fuera de main, hay que revisar esta promesa.
+final class LocationService: NSObject, LocationServiceProtocol, ObservableObject,
+                             CLLocationManagerDelegate, @unchecked Sendable {
 
     // MARK: - Estado observable (para que la UI reaccione)
     @Published private(set) var authorizationStatus: CLAuthorizationStatus

@@ -13,7 +13,7 @@ final class ObservationPublishThrottleTests: XCTestCase {
 
     /// La primera publicación de la sesión siempre pasa.
     func testPrimeraPublicacionPermitida() {
-        var throttle = ObservationPublishThrottle(
+        let throttle = ObservationPublishThrottle(
             minimumInterval: 5
         )
 
