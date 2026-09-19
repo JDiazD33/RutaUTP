@@ -237,6 +237,10 @@ struct MapaView: View {
         }
         .onDisappear {
             vm.detenerProveedorTracking()
+            // Se libera también el consumo de ubicación: el servicio compartido
+            // solo apaga el GPS si ya no queda ningún consumidor, así que una
+            // contribución pasiva activa sigue recibiendo ubicaciones.
+            vm.detenerGPS()
         }
         .onChange(of: router.destinoPendiente) {
             consumirDestinoPendiente()
@@ -280,11 +284,17 @@ struct MapaView: View {
 
             Button("Cancelar", role: .cancel) {}
         } message: {
+            // El alcance se declara antes de pedir el consentimiento, no
+            // después: la baliza solo transmite con la app abierta, y prometer
+            // continuidad en segundo plano sería anunciar algo que el sistema
+            // no hace.
             Text(
                 "RutaUTP analizará tu ubicación y actividad física para " +
                 "detectar si viajas en una ruta de transporte. Solo después " +
                 "de confirmar un viaje enviará observaciones anónimas y " +
-                "temporales al servidor MQTT local de prueba."
+                "temporales al servidor MQTT de prueba.\n\n" +
+                "La contribución se pausa mientras la app está en segundo " +
+                "plano o con la pantalla bloqueada."
             )
         }
     }
@@ -597,6 +607,37 @@ struct MapaView: View {
 
     // MARK: - Bottom panel
     // CORREGIDO V3: frame explicito de 168pt para que las cards no se corten
+
+    /// Distintivo de la fuente de las posiciones.
+    ///
+    /// Sin configuración de broker la factoría devuelve el proveedor simulado;
+    /// presentar esa flota como si fuera seguimiento real sería mentir al
+    /// usuario sobre lo que está viendo.
+    private var badgeFuente: some View {
+        let esReal = vm.fuenteVehiculos == .real
+
+        return Text(esReal ? L.t("EN VIVO", "LIVE") : L.t("DEMO", "DEMO"))
+            .font(.labelCapsSm)
+            .foregroundStyle(
+                esReal ? Color.onPrimaryContainer : Color.onSurfaceVariant
+            )
+            .appTracking(AppTracking.wideLabel)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                Capsule().fill(
+                    esReal
+                        ? Color.primaryContainer
+                        : Color.surfaceContainerHighest
+                )
+            )
+            .accessibilityLabel(
+                esReal
+                    ? "Posiciones reales de vehículos"
+                    : "Posiciones simuladas de demostración"
+            )
+    }
+
     private var bottomPanel: some View {
         VStack(spacing: 10) {
             HStack(alignment: .center) {
@@ -645,9 +686,13 @@ struct MapaView: View {
 
                 if !panelColapsado {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(L.t("Transportes cercanos", "Nearby transport"))
-                            .font(.system(size: 15, weight: .heavy))
-                            .foregroundStyle(.onSurface)
+                        HStack(spacing: 6) {
+                            Text(L.t("Transportes cercanos", "Nearby transport"))
+                                .font(.system(size: 15, weight: .heavy))
+                                .foregroundStyle(.onSurface)
+
+                            badgeFuente
+                        }
                         Text(vm.busesAnimados.isEmpty
                              ? L.t("Buscando líneas cerca del campus…", "Finding lines near campus…")
                              : String(format: L.t("%d líneas operando ahora", "%d lines running now"), vm.busesAnimados.count))
@@ -680,10 +725,12 @@ struct MapaView: View {
                             BusCard(
                                 linea: "LÍNEA \(bus.linea)",
                                 empresa: bus.empresa,
-                                minutos: "\(bus.minutosLlegada) MIN",
+                                etiquetaLlegada: bus.etiquetaLlegada,
+                                tieneETA: bus.minutosLlegada != nil,
                                 tipo: bus.tipo,
                                 placa: bus.placa,
-                                colorLinea: bus.color
+                                colorLinea: bus.color,
+                                esDemostracion: bus.esDemostracion
                             )
                             .frame(height: 100)
                             .contentShape(Rectangle())
@@ -718,31 +765,68 @@ struct MapaView: View {
 private struct BusCard: View {
     let linea: String
     let empresa: String
-    let minutos: String
+
+    /// Texto ya resuelto de la llegada (`"7 MIN"` o `"SIN ETA"`).
+    let etiquetaLlegada: String
+
+    /// Si hay estimación real. Sin ella, la etiqueta no debe parecer un dato.
+    let tieneETA: Bool
+
     let tipo: String
     let placa: String
     let colorLinea: Color
+    let esDemostracion: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(linea)
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
+            HStack(spacing: 6) {
+                Text(linea)
+                    .font(.labelCapsMd)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .appTracking(AppTracking.wideLabel)
+
+                if esDemostracion {
+                    Text("DEMO")
+                        .font(.labelCapsSm)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.surfaceContainerHighest)
+                        )
+                        .accessibilityLabel("Posición simulada, no real")
+                }
+            }
             Text(empresa)
                 .font(.headlineSm)
                 .foregroundStyle(.onSurface)
                 .lineLimit(1)
             HStack(spacing: 6) {
-                Text(minutos)
+                // Sin estimación, el distintivo es neutro: un color de acento
+                // haría que "SIN ETA" se leyera como un tiempo de llegada.
+                Text(etiquetaLlegada)
                     .font(.labelCapsMd)
-                    .foregroundStyle(colorLinea == .appPrimary ? Color.onPrimaryContainer : Color.onSecondaryContainer)
+                    .foregroundStyle(
+                        tieneETA
+                            ? (colorLinea == .appPrimary
+                                ? Color.onPrimaryContainer
+                                : Color.onSecondaryContainer)
+                            : Color.onSurfaceVariant
+                    )
                     .appTracking(AppTracking.wideLabel)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(colorLinea == .appPrimary ? Color.primaryContainer : Color.secondaryContainer)
+                            .fill(
+                                tieneETA
+                                    ? (colorLinea == .appPrimary
+                                        ? Color.primaryContainer
+                                        : Color.secondaryContainer)
+                                    : Color.surfaceContainerHighest
+                            )
                     )
                 Text("\(tipo) • \(placa)")
                     .font(.bodySm)
@@ -795,13 +879,39 @@ private struct BusDetailPopup: View {
                         Text(L.t("LÍNEA", "LINE") + " \(bus.linea)")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.onSurface)
-                        Text("\(bus.minutosLlegada) MIN")
+
+                        // Sin ETA el distintivo es neutro: con el color de la
+                        // línea, "SIN ETA" parecería un tiempo de llegada.
+                        Text(bus.etiquetaLlegada)
                             .font(.labelCapsSm)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(
+                                bus.minutosLlegada != nil
+                                    ? Color.white
+                                    : Color.onSurfaceVariant
+                            )
                             .appTracking(AppTracking.wideLabel)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(Capsule().fill(bus.color))
+                            .background(
+                                Capsule().fill(
+                                    bus.minutosLlegada != nil
+                                        ? bus.color
+                                        : Color.surfaceContainerHighest
+                                )
+                            )
+
+                        if bus.esDemostracion {
+                            Text("DEMO")
+                                .font(.labelCapsSm)
+                                .foregroundStyle(.onSurfaceVariant)
+                                .appTracking(AppTracking.wideLabel)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.surfaceContainerHighest)
+                                )
+                        }
                     }
                     Text("\(bus.empresa) • \(bus.tipo) (\(bus.placa))")
                         .font(.bodySm)

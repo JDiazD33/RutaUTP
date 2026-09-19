@@ -23,7 +23,21 @@ struct BusAnimado: Identifiable, Equatable {
     let empresa: String
     let tipo: String
     let placa: String
-    let minutosLlegada: Int
+
+    /// Minutos hasta la llegada, o `nil` si no hay estimación.
+    ///
+    /// Hoy **no existe ETA real**: no se conoce el paradero de destino ni el
+    /// sentido del viaje. Antes se calculaba aquí a partir del índice del bus
+    /// en la lista y de la frecuencia de la línea, y la interfaz lo presentaba
+    /// como una llegada real. Además de falso, era inestable: reordenar la
+    /// lista cambiaba los minutos. Un dato inventado con apariencia de verdad
+    /// es peor que no mostrar nada.
+    let minutosLlegada: Int?
+
+    /// De dónde procede la posición. Permite marcar en la interfaz si lo que
+    /// se dibuja es una demostración o una observación real.
+    let fuente: VehicleTrackingSource
+
     let color: Color
 
     var lat: Double
@@ -35,6 +49,24 @@ struct BusAnimado: Identifiable, Equatable {
             latitude: lat,
             longitude: lon
         )
+    }
+
+    /// Texto de la llegada para la interfaz.
+    ///
+    /// Nunca inventa un valor: si no hay estimación, lo dice. Así una pantalla
+    /// sin datos no puede parecer una pantalla con datos.
+    var etiquetaLlegada: String {
+        guard let minutosLlegada else {
+            return L.t("SIN ETA", "NO ETA")
+        }
+
+        return "\(minutosLlegada) MIN"
+    }
+
+    /// Indica si la posición viene de la simulación y no de observaciones
+    /// reales, para poder marcarlo en la interfaz.
+    var esDemostracion: Bool {
+        fuente == .simulated
     }
 
     static func == (lhs: BusAnimado, rhs: BusAnimado) -> Bool {
@@ -102,14 +134,27 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var distanciaKm: Double? = nil
     @Published var calculandoRuta: Bool = false
 
-    // Buses Animados en Tiempo Real
+    /// Buses Animados en Tiempo Real
     @Published var busesAnimados: [BusAnimado] = []
     @Published var busSeleccionado: BusAnimado? = nil
-    
-    // Posiciones recibidas desde VehicleTrackingProviding.
-    // Durante el Paso 1.2 se reciben en paralelo, pero todavía no reemplazan
-    // los buses GTFS que actualmente dibuja el mapa.
-    @Published private(set) var posicionesProveedor: [VehiclePosition] = []
+
+    /// Fuente de las posiciones que se están mostrando.
+    ///
+    /// La interfaz la usa para no presentar una demostración como si fuera
+    /// seguimiento real: sin configuración de broker, la factoría devuelve el
+    /// proveedor simulado, y eso el usuario tiene que poder verlo.
+    @Published private(set) var fuenteVehiculos: VehicleTrackingSource = .simulated
+
+    /// Catálogo GTFS, indexado por identificador de ruta.
+    ///
+    /// Se indexa por `route_id`, que es único. Antes solo había índice por
+    /// `linea` —el nombre público— y encima con cuatro rutas precargadas: dos
+    /// ramales de la misma línea compartían metadatos, y cualquier línea fuera
+    /// de esas cuatro aparecía sin empresa ni color.
+    private var rutasGTFSPorID: [String: RutaGTFS] = [:]
+
+    /// Índice por nombre de línea, como respaldo para proveedores que no
+    /// informen `routeId`.
     private var rutasGTFSPorLinea: [String: RutaGTFS] = [:]
 
     /// Se incrementa cada vez que el usuario pide recentrar; la vista lo
@@ -184,13 +229,37 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     
     // MARK: - Proveedor de posiciones de vehículos
 
+    /// Detiene el consumo de ubicación del mapa.
+    ///
+    /// `LocationService` es compartido con `PassiveTrackingCoordinator`:
+    /// cancelar esta tarea libera **nuestra** continuación, y el servicio apaga
+    /// el gestor solo si ya no queda ningún otro consumidor. Así salir del mapa
+    /// no corta la ubicación de una contribución activa.
+    ///
+    /// Antes no existía: `onDisappear` detenía el proveedor de vehículos pero
+    /// no la tarea de ubicación, que retiene al modelo y por tanto impedía que
+    /// `deinit` llegara a ejecutarse. El GPS seguía encendido con el mapa
+    /// cerrado, y depender de `deinit` para apagarlo no era una garantía sino
+    /// una esperanza.
+    func detenerGPS() {
+        locationTask?.cancel()
+        locationTask = nil
+    }
+
     func iniciarProveedorTracking() {
         vehicleTrackingTask?.cancel()
 
         vehicleTrackingTask = Task { @MainActor [weak self] in
             guard let self else { return }
 
-            let rutas = await GTFSRepository.shared.rutasCercaDeUTP(n: 4)
+            // Catálogo completo, no solo las rutas cercanas al campus: un
+            // vehículo puede llegar de cualquiera de las 102 líneas del feed.
+            let rutas = await GTFSRepository.shared.rutas()
+
+            self.rutasGTFSPorID = Dictionary(
+                rutas.map { ($0.id, $0) },
+                uniquingKeysWith: { primera, _ in primera }
+            )
 
             self.rutasGTFSPorLinea = Dictionary(
                 rutas.map { ($0.linea, $0) },
@@ -199,12 +268,13 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
             guard !Task.isCancelled else { return }
 
+            self.fuenteVehiculos = self.vehicleTrackingProvider.source
+
             self.vehicleTrackingProvider.start()
 
             for await posiciones in self.vehicleTrackingProvider.positions() {
                 guard !Task.isCancelled else { break }
 
-                self.posicionesProveedor = posiciones
                 self.actualizarBusesDesdeProveedor(posiciones)
 
                 #if DEBUG
@@ -223,7 +293,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
         vehicleTrackingProvider.stop()
 
-        posicionesProveedor = []
         busesAnimados = []
         busSeleccionado = nil
     }
@@ -232,10 +301,13 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     private func actualizarBusesDesdeProveedor(
         _ posiciones: [VehiclePosition]
     ) {
-        let cantidad = max(posiciones.count, 1)
-
-        busesAnimados = posiciones.enumerated().map { index, posicion in
-            let ruta = rutasGTFSPorLinea[posicion.linea]
+        // Sin `enumerated()`: la identidad de cada bus es su `vehicleId`, y
+        // cualquier dato derivado de la posición en la lista sería inestable
+        // ante un reordenamiento. Ver `BusAnimado.minutosLlegada`.
+        busesAnimados = posiciones.map { posicion in
+            // Se resuelve por identificador de ruta y, si no viene, por línea.
+            let ruta = rutasGTFSPorID[posicion.routeId]
+                ?? rutasGTFSPorLinea[posicion.linea]
 
             return BusAnimado(
                 id: posicion.id,
@@ -245,13 +317,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 placa: ruta?.variante.isEmpty == false
                     ? "Ramal \(ruta?.variante ?? "")"
                     : "S/D",
-                minutosLlegada: max(
-                    1,
-                    2 + index * max(
-                        1,
-                        (ruta?.headwayMin ?? 4) / cantidad
-                    )
-                ),
+                minutosLlegada: nil,
+                fuente: vehicleTrackingProvider.source,
                 color: ruta?.color ?? .appPrimary,
                 lat: posicion.lat,
                 lon: posicion.lon,
