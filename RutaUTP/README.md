@@ -1,11 +1,19 @@
 # RutaUTP — Aplicacion Nativa SwiftUI
 
-Esta carpeta contiene el codigo fuente 100% SwiftUI nativo de la app
-**Ruta UTP Trujillo**, lista para reemplazar el prototipo WKWebView + HTML.
+Codigo fuente de la app **Ruta UTP Trujillo**, nativa en SwiftUI.
 
-El prototipo HTML original se mantiene intacto en `../RutaUTP/` para
-referencia visual y comparacion. Cuando compiles el proyecto Xcode,
-apunta los archivos a esta carpeta `aplicacion real/`.
+La app tiene dos roles que comparten el mismo binario:
+
+| Rol | Que hace |
+|---|---|
+| **Baliza** (a bordo) | Detecta con GPS y Core Motion si el usuario viaja en una linea y publica observaciones anonimas por MQTT |
+| **Consumidor** (en el mapa) | Se suscribe a las posiciones vehiculares y dibuja los buses en tiempo real |
+
+El backend que valida esas observaciones y las convierte en posiciones
+vehiculares vive en [`../backend/`](../backend/README.md), y el broker en
+[`../mqtt/`](../mqtt/README.md). Los tres son componentes separados: la app y el
+backend **solo se comunican por el broker**, asi que se pueden desplegar y
+reiniciar por separado.
 
 ---
 
@@ -45,10 +53,16 @@ Funcionalidades principales:
 
 Stack tecnico:
 - Swift 5.9+
-- SwiftUI (iOS 16+)
+- SwiftUI, **target de despliegue iOS 17.5** (la suite de pruebas apunta a 18.2)
 - Navegacion con `ObservableObject` + `enum` propio (sin NavigationStack)
-- Sin dependencias externas (cero paquetes de terceros)
-- Sin conexion a internet: todos los datos son de muestra
+- **Una dependencia externa**: `CocoaMQTT` 2.4.0 (con `MqttCocoaAsyncSocket` y
+  `Starscream`), resuelta por SwiftPM y declarada en `Package.resolved`
+- **Usa red**: MQTT contra el broker para publicar observaciones y consumir
+  posiciones vehiculares. Sin configuracion de broker la app sigue funcionando
+  con deteccion local y una flota simulada, y **lo indica en la interfaz**
+  (distintivo `DEMO` frente a `EN VIVO`)
+- El feed GTFS es estatico (`../gtfs`): describe rutas, recorridos, paraderos,
+  frecuencias y tarifas, pero **no contiene posiciones en vivo**
 
 ---
 
@@ -58,18 +72,22 @@ Para compilar y ejecutar la aplicacion necesitas:
 
 - macOS Ventura (13.0) o superior
 - Xcode 15.0 o superior
-- iOS 16.0+ como target de despliegue
+- **iOS 17.5+** como target de despliegue
 - Una cuenta de Apple ID (gratuita sirve para correr en simulador)
-- Opcional: un dispositivo fisico iOS 16+ para probar animaciones y blur
+- Opcional: un dispositivo fisico iOS 17.5+ para probar animaciones y blur
+- Para el canal MQTT: un broker Mosquitto accesible y las variables
+  `MQTT_HOST`, `MQTT_USERNAME` y `MQTT_PASSWORD` en el Scheme de Xcode
+  (ver [`../mqtt/README.md`](../mqtt/README.md))
 
 ---
 
 ## Estructura del proyecto
 
 ```
-aplicacion real/
+RutaUTP/
 |
 |-- RutaUTPApp.swift              Punto de entrada (@main)
+|-- Info.plist                    UIAppFonts + orientacion + permisos
 |
 |-- Navigation/
 |   |-- AppRouter.swift           Enum AppScreen + clase AppRouter (ObservableObject)
@@ -90,72 +108,56 @@ aplicacion real/
 |   `-- ReporteComunidad.swift    ReporteComunidad + TipoReporte
 |
 |-- Screens/
-|   |-- Bienvenida/
-|   |   `-- BienvenidaView.swift         Pantalla de presentacion
-|   |-- Mapa/
-|   |   |-- MapaView.swift               Pantalla principal
-|   |   `-- SideDrawer.swift             Drawer lateral del mapa
-|   |-- DetalleRuta/
-|   |   `-- DetalleRutaView.swift        Detalle de la ruta seleccionada
-|   |-- Guardado/
-|   |   `-- GuardadoView.swift           Lugares y lineas guardadas
-|   |-- Seguridad/
-|   |   `-- SeguridadView.swift          Resumen, lugares, rutas y comunidad
-|   `-- Perfil/
-|       `-- PerfilView.swift             Perfil y preferencias
+|   |-- Bienvenida/               Presentacion
+|   |-- Mapa/                     Pantalla principal, drawer y ViewModel
+|   |   |-- MapaView.swift
+|   |   |-- MapaViewModel.swift   Buses, GPS, busqueda y rutas
+|   |   |-- MapaMarkers.swift
+|   |   `-- SideDrawer.swift
+|   |-- DetalleRuta/              ExploradorRutaView, NavegacionRutaView, RutaMapKitView
+|   |-- Navigation/               CarPlayNavegacionView
+|   |-- Guardado/                 Lugares y lineas guardadas
+|   |-- Seguridad/                Resumen, lugares, rutas y comunidad
+|   |-- Perfil/                   Perfil, carnet y tarjetas
+|   `-- Tracking/                 Demo de seguimiento de ruta
 |
-|-- Resources/
-|   `-- Info.plist                UIAppFonts + orientacion + launch screen
+|-- Services/
+|   |-- GTFS/                     Lectura del feed estatico (GTFSCSV, GTFSModels, GTFSRepository)
+|   |-- Location/                 LocationService + protocolo
+|   |-- Routing/                  RouteCalculationService (MapKit)
+|   `-- Tracking/                 Modulo IoT: deteccion pasiva y MQTT (ver abajo)
 |
+|-- Utils/                        Idioma, PolylineMatching
 `-- README.md                     Este archivo
 ```
 
-Total: 21 archivos Swift + 1 Info.plist + 1 README.
+El numero de archivos cambia con el trabajo en curso; conviene mirar el
+proyecto en Xcode antes de fiarse de un recuento escrito aqui.
 
 ---
 
 ## Instalacion paso a paso
 
-### Opcion A: Crear un proyecto Xcode desde cero
+El proyecto ya existe y esta completo en la raiz del repositorio. Para
+trabajar con el, basta con abrir `RutaUTP.xcodeproj`. Las dos opciones de abajo
+son para casos concretos.
 
-1. Abre Xcode y selecciona **File > New > Project...**
-2. En la plantilla **iOS** elige **App** y presiona **Next**.
-3. Completa los campos:
-   - Product Name: `RutaUTP`
-   - Interface: **SwiftUI**
-   - Language: **Swift**
-   - Storage: **None**
-   - Presiona **Next** y elige una ubicacion (por ejemplo, junto a esta
-     carpeta `aplicacion real/`).
-4. En el Finder, abre la carpeta del proyecto nuevo y **arrastra toda la
-   carpeta `aplicacion real/`** dentro del grupo raiz del proyecto Xcode.
-5. En el dialogo que aparece, marca:
-   - **Copy items if needed**: activado
-   - **Create groups**: seleccionado
-   - **Add to targets**: `RutaUTP`
-   - Presiona **Finish**.
-6. En el panel izquierdo de Xcode, selecciona el archivo
-   `RutaUTPApp.swift` generado automaticamente por Xcode y **borralo**
-   (clic derecho > Move to Trash). Ya tenemos el nuestro.
-7. Asegurate de que el target `RutaUTP` ahora compila con nuestros
-   archivos. Compilacion rapida: **Cmd + B**.
-8. Ejecuta en un simulador iOS 16+ con **Cmd + R**.
+### Opcion A: Abrir el proyecto del repositorio (lo habitual)
 
-### Opcion B: Reemplazar el proyecto Xcode existente
+```bash
+git clone <repo> && cd RutaUTP
+open RutaUTP.xcodeproj
+```
 
-El proyecto actual (`../RutaUTP.xcodeproj`) usa WKWebView. Para migrarlo:
+Xcode resuelve `CocoaMQTT` desde `Package.resolved` y compila con **Cmd + B**.
+El feed GTFS ya esta en `../gtfs` y se embebe como recurso del bundle.
 
-1. Abre `RutaUTP.xcodeproj` en Xcode.
-2. En el navegador de proyectos, **elimina los archivos antiguos** del
-   target `RutaUTP` (los .swift del WebView y los .html).
-   - NO elimines `Assets.xcassets` ni los iconos.
-3. Arrastra la carpeta `aplicacion real/` al proyecto (mismos checks que
-   en Opcion A).
-4. Ve a **Target > RutaUTP > Info** y verifica que las claves
-   `UIAppFonts` y `UISupportedInterfaceOrientations` coincidan con las de
-   `Resources/Info.plist`. Si tu Info.plist es autogenerado por Xcode,
-   copia las claves manualmente desde nuestro `Info.plist`.
-5. Compila con **Cmd + B** y corre con **Cmd + R**.
+### Opcion B: Reconstruir el proyecto desde cero
+
+Solo si `project.pbxproj` se rompe. Requiere volver a declarar el paquete
+`CocoaMQTT`, los ~54 archivos de `RutaUTP/`, los recursos (`gtfs/*.txt`,
+`Assets.xcassets`, fuentes) y el target de pruebas. Es mas trabajo que
+reparar el archivo, asi que conviene tener copia de seguridad antes de tocarlo.
 
 ### Verificacion post-instalacion
 
@@ -422,7 +424,8 @@ Tocar una card de micro navega a `.detalleRuta`.
 
 ### 3. Detalle de Ruta
 
-Archivo: `Screens/DetalleRuta/DetalleRutaView.swift`
+Archivos: `Screens/DetalleRuta/ExploradorRutaView.swift`,
+`NavegacionRutaView.swift` y `RutaMapKitView.swift`.
 
 Secciones:
 - Header con back, icono de bus y titulo **Rutas**.
@@ -500,7 +503,8 @@ servidor estan documentados aparte, en [`../mqtt/README.md`](../mqtt/README.md).
 Services/Tracking/
 ├── MQTTConfiguration.swift        Variables del Scheme + carga de la CA propia
 ├── Coordination/
-│   └── PassiveTrackingCoordinator.swift   Orquesta GPS, Core Motion y publicacion
+│   ├── PassiveTrackingCoordinator.swift   Orquesta GPS, Core Motion y publicacion
+│   └── StartGuard.swift                   Testigo de arranque (cancelacion)
 ├── Detection/
 │   ├── PassengerDetectionEngine.swift     Maquina de estados (tipos puros, testeables)
 │   ├── PassengerDetectionModels.swift     Estados, umbrales y muestras
@@ -512,8 +516,7 @@ Services/Tracking/
 │   ├── VehicleTrackingProviding.swift     Contrato: de donde vienen las posiciones
 │   ├── TrackingProviderFactory.swift      Elige MQTT o simulacion segun el entorno
 │   ├── MQTTTrackingProvider.swift         Consumidor real (suscripcion)
-│   ├── SimulatedTrackingProvider.swift    Flota demo sobre shapes GTFS
-│   └── RealTrackingProvider.swift         Stub para un futuro backend REST/WebSocket
+│   └── SimulatedTrackingProvider.swift    Flota demo sobre shapes GTFS
 ├── Publishers/
 │   ├── ObservationPublishing.swift        Contrato de publicacion
 │   └── MQTTObservationPublisher.swift     Baliza (throttle 5 s, filtros)
@@ -563,12 +566,29 @@ y simulacion, pero no transmite ni recibe.
 
 - **Funciona**: deteccion, publicacion de observaciones, consumo de posiciones
   vehiculares y saneado de lo que llega por el broker.
-- **Falta**: el backend que valide y agrupe las observaciones antes de
-  publicarlas como posiciones vehiculares. Hoy solo existe
-  [`../mqtt/puente-demo.sh`](../mqtt/puente-demo.sh), un puente de demostracion
-  que republica sin validar.
-- **Limitacion conocida**: sin `UIBackgroundModes: location` la baliza solo
-  transmite con la app en primer plano (ver el comentario en `Info.plist`).
+- **El backend ya existe**: [`../backend/`](../backend/README.md) valida cada
+  observacion contra el recorrido real, agrupa las de una misma unidad y deriva
+  el `vehicleId`. Sustituye a [`../mqtt/puente-demo.sh`](../mqtt/puente-demo.sh),
+  que se conserva solo como prueba de humo y **no debe usarse con usuarios
+  reales**: republica sin validar y permite suplantar vehiculos.
+- **Limitacion declarada, no descuido**: la baliza transmite **solo con la app
+  en primer plano**. Al pasar a segundo plano el coordinador cierra la
+  publicacion de forma limpia, y el dialogo de consentimiento lo dice antes de
+  pedir permiso. Habilitarlo exige `UIBackgroundModes`, `allowsBackgroundLocationUpdates`
+  y el permiso permanente, además de revalidar el viaje al volver y medir el
+  consumo de bateria. Esta documentado en el comentario de `Info.plist`.
+- **ETA**: la interfaz **no muestra minutos de llegada**. No hay estimacion
+  real —no se conoce paradero de destino ni sentido— y antes se inventaba a
+  partir de la posicion del bus en la lista, lo que ademas hacia que reordenar
+  la lista cambiara los minutos. Se muestra `SIN ETA` hasta que exista un
+  calculo de verdad.
+- **Desajuste de versiones entre app y pruebas.** El target de la app declara
+  **iOS 17.5** y el de pruebas **18.2** (`project.pbxproj`). Consecuencia
+  practica: la suite **no se puede ejecutar en el simulador 17.5**, que es la
+  version minima que la app dice soportar. Hay que decidir una de las dos cosas
+  y hacerlas coherentes: subir el minimo de la app a 18.2, o bajar el de las
+  pruebas a 17.5 y comprobar que la suite pasa ahi. Hoy la version minima
+  anunciada **no esta verificada**.
 
 ---
 
@@ -673,11 +693,15 @@ Reglas seguidas durante el desarrollo (verificables en el codigo):
 
 ### La app no compila por errores de tipo `Cannot find 'X' in scope`
 
-Verifica que todos los archivos `.swift` de la carpeta `aplicacion real/`
-esten agregados al **target de compilacion** del proyecto Xcode. En el
-navegador de proyectos, selecciona cada archivo y revisa el panel
-**File Inspector** (icono de hoja) a la derecha. La casilla bajo
-**Target Membership** debe tener `RutaUTP` marcado.
+Verifica que todos los archivos `.swift` de la carpeta `RutaUTP/` esten
+agregados al **target de compilacion** del proyecto Xcode. En el navegador de
+proyectos, selecciona cada archivo y revisa el panel **File Inspector** (icono
+de hoja) a la derecha. La casilla bajo **Target Membership** debe tener
+`RutaUTP` marcado.
+
+Si el error es `no such module 'CocoaMQTT'`, el problema es otro: Xcode no
+resolvio el paquete. Comprueba **File > Packages > Resolve Package Versions** y
+que `Package.resolved` siga declarando `CocoaMQTT` 2.4.0.
 
 ### Las fuentes no se ven diferentes a las del sistema
 
@@ -716,8 +740,9 @@ Seguridad y Perfil.
 
 ### Los `presentationDetents` no funcionan
 
-`presentationDetents` requiere iOS 16+. Si tu target es iOS 15 o
-anterior, actualiza el deployment target en **Target > General >
+`presentationDetents` requiere iOS 16+ y el target de la app es **iOS 17.5**,
+asi que no deberia ocurrir. Si aparece, revisa que el target de pruebas (18.2)
+no se haya fijado por error como target de la app en **Target > General >
 Minimum Deployments**.
 
 ### Quiero anadir una pantalla nueva
