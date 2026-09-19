@@ -1,0 +1,2 @@
+# Cliente MQTT. La 2.x usa CallbackAPIVersion; el código tolera también la 1.x.
+paho-mqtt>=2.0,<3
