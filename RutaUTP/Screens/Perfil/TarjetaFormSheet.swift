@@ -59,7 +59,7 @@ struct TarjetaFormSheet: View {
                             .font(.bodyLg)
                             .padding(14)
                             .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                            .onChange(of: cardNumber) { newValue in
+                            .onChange(of: cardNumber) { _, newValue in
                                 cardNumber = formatCardNumber(newValue)
                             }
                     }
@@ -89,7 +89,7 @@ struct TarjetaFormSheet: View {
                                 .font(.bodyMd)
                                 .padding(14)
                                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                                .onChange(of: expiry) { newValue in
+                                .onChange(of: expiry) { _, newValue in
                                     expiry = formatExpiry(newValue)
                                 }
                         }
@@ -103,7 +103,7 @@ struct TarjetaFormSheet: View {
                                 .font(.bodyMd)
                                 .padding(14)
                                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                                .onChange(of: cvv) { newValue in
+                                .onChange(of: cvv) { _, newValue in
                                     cvv = String(newValue.filter { $0.isNumber }.prefix(4))
                                 }
                         }

@@ -238,20 +238,20 @@ struct MapaView: View {
         .onDisappear {
             vm.detenerProveedorTracking()
         }
-        .onChange(of: router.destinoPendiente) { _ in
+        .onChange(of: router.destinoPendiente) {
             consumirDestinoPendiente()
         }
-        .onChange(of: vm.region.center.latitude) { _ in
+        .onChange(of: vm.region.center.latitude) {
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
         }
-        .onChange(of: vm.region.center.longitude) { _ in
+        .onChange(of: vm.region.center.longitude) {
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
         }
-        .onChange(of: vm.recentrarToken) { _ in
+        .onChange(of: vm.recentrarToken) {
             // Recentrado explícito (botón flecha): siempre mueve la cámara,
             // sin depender de que `region` cambie de valor.
             withAnimation(.spring(response: 0.5)) {
@@ -459,7 +459,7 @@ struct MapaView: View {
                         campoEnfocado = false
                         vm.buscarTexto(vm.textoBusqueda)
                     }
-                    .onChange(of: vm.textoBusqueda) { nuevo in
+                    .onChange(of: vm.textoBusqueda) { _, nuevo in
                         vm.actualizarTextoBusqueda(nuevo)
                     }
                 if vm.buscando {

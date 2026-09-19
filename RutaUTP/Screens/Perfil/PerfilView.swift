@@ -64,12 +64,12 @@ struct PerfilView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .animation(.easeInOut(duration: 0.28), value: modoOffline)
-        .onChange(of: modoOffline) { activo in
+        .onChange(of: modoOffline) { _, activo in
             if activo {
                 showOfflineMapPopup = true
             }
         }
-        .onChange(of: ubicacionOn) { activo in
+        .onChange(of: ubicacionOn) { _, activo in
             if activo {
                 ubicacionPopupMensaje = "Ubicación compartida"
                 ubicacionPopupSubtitulo = "Tu ubicación en tiempo real se compartirá para el seguimiento de rutas UTP."

@@ -977,7 +977,7 @@ private struct AddLugarSheet: View {
                 TextField(L.t("Ej. Av. España 123, Trujillo", "e.g. 123 España Ave, Trujillo"), text: $direccion)
                     .font(.bodySm)
                     .autocorrectionDisabled()
-                    .onChange(of: direccion) { _ in programarGeocodificacion() }
+                    .onChange(of: direccion) { programarGeocodificacion() }
                 if buscandoUbicacion {
                     ProgressView().scaleEffect(0.8)
                 }

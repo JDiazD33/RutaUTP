@@ -164,7 +164,7 @@ struct RutasView: View {
             procesarHookDebug()
             consumirLugarCercano()
         }
-        .onChange(of: router.lugarCercanoPendiente) { _ in
+        .onChange(of: router.lugarCercanoPendiente) {
             consumirLugarCercano()
         }
         #if DEBUG
@@ -447,7 +447,7 @@ private struct RutaOpcionCard: View {
 
 // MARK: - Mapa no interactivo para RutasView
 private struct RutasMapView: View {
-    @State private var region = MKCoordinateRegion(
+    private let region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
         span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
     )
@@ -457,15 +457,20 @@ private struct RutasMapView: View {
     ]
 
     var body: some View {
-            Map(coordinateRegion: $region, annotationItems: marcadores) { m in
-            MapAnnotation(coordinate: m.coordinate) {
-                switch m.tipo {
-                case .utp:          MarcadorUTP()
-                case .usuario:      PulsingUserMarker()
-                case .bus:           EmptyView()
-                case .usuarioReal:   EmptyView()    // No se dibuja en RutasView (pantalla de listado).
-                case .conductor:    EmptyView()    // Idem: solo aplica en vista de tracking real.
-                case .busqueda:     EmptyView()
+        // API de iOS 17. La variante `Map(coordinateRegion:annotationItems:)` con
+        // `MapAnnotation` está deprecada. El título va vacío a propósito: la
+        // anotación solo dibuja su contenido, igual que antes.
+        Map(initialPosition: .region(region)) {
+            ForEach(marcadores) { m in
+                Annotation("", coordinate: m.coordinate) {
+                    switch m.tipo {
+                    case .utp:          MarcadorUTP()
+                    case .usuario:      PulsingUserMarker()
+                    case .bus:           EmptyView()
+                    case .usuarioReal:   EmptyView()    // No se dibuja en RutasView (pantalla de listado).
+                    case .conductor:    EmptyView()    // Idem: solo aplica en vista de tracking real.
+                    case .busqueda:     EmptyView()
+                    }
                 }
             }
         }
