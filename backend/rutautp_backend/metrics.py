@@ -26,6 +26,9 @@ class Metrics:
     received: int = 0
     accepted: int = 0
     published: int = 0
+    publish_attempts: int = 0
+    publish_failures: int = 0
+    internal_errors: int = 0
     vehicles_created: int = 0
     vehicles_expired: int = 0
     rejected: Counter[str] = field(default_factory=Counter)
@@ -39,8 +42,18 @@ class Metrics:
     def record_rejected(self, reason: RejectReason) -> None:
         self.rejected[reason.value] += 1
 
+    def record_publish_attempt(self) -> None:
+        self.publish_attempts += 1
+
+    def record_publish_failed(self) -> None:
+        self.publish_failures += 1
+
     def record_published(self) -> None:
         self.published += 1
+
+    def record_internal_error(self) -> None:
+        """Fallo inesperado del propio servicio, no del mensaje."""
+        self.internal_errors += 1
 
     def record_created(self) -> None:
         self.vehicles_created += 1
@@ -58,7 +71,10 @@ class Metrics:
             "received": self.received,
             "accepted": self.accepted,
             "rejected": self.rejections,
+            "publishAttempts": self.publish_attempts,
             "published": self.published,
+            "publishFailures": self.publish_failures,
+            "internalErrors": self.internal_errors,
             "vehiclesCreated": self.vehicles_created,
             "vehiclesExpired": self.vehicles_expired,
             "reasons": dict(self.rejected.most_common()),
@@ -73,15 +89,6 @@ class Metrics:
         payload["at"] = round(time.time(), 3)
 
         logger.info("resumen %s", json.dumps(payload, ensure_ascii=False))
-
-    def format_reasons(self) -> str:
-        """Motivos en una línea, para la consola."""
-        if not self.rejected:
-            return "sin rechazos"
-
-        return ", ".join(
-            f"{reason}={count}" for reason, count in self.rejected.most_common()
-        )
 
 
 class JsonFormatter(logging.Formatter):

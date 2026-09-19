@@ -30,9 +30,12 @@ class RejectReason(str, Enum):
 
     MALFORMED_JSON = "malformed_json"
     NOT_AN_OBJECT = "not_an_object"
+    MESSAGE_TOO_LARGE = "message_too_large"
+    TOO_DEEPLY_NESTED = "too_deeply_nested"
     UNSUPPORTED_SCHEMA = "unsupported_schema"
     MISSING_FIELD = "missing_field"
     BAD_FIELD_TYPE = "bad_field_type"
+    NON_FINITE_NUMBER = "non_finite_number"
     EMPTY_SESSION = "empty_session"
     UNKNOWN_ROUTE = "unknown_route"
     LINE_MISMATCH = "line_mismatch"
@@ -46,6 +49,22 @@ class RejectReason(str, Enum):
     ACTIVITY_NOT_VEHICULAR = "activity_not_vehicular"
     RATE_LIMITED = "rate_limited"
     DUPLICATE = "duplicate"
+    SESSION_MISMATCH = "session_mismatch"
+
+    #: El servicio, en conjunto, supera su techo de mensajes por minuto. Es
+    #: distinto de `RATE_LIMITED`: aquel acota lo que aporta una sesión, este
+    #: acota el trabajo total. Sin él, rotar `sessionId` —que el cliente elige
+    #: libremente— eludiría el límite por sesión y no habría tope real.
+    GLOBAL_RATE_LIMITED = "global_rate_limited"
+
+    #: La observación es incompatible con la trayectoria previa de su propia
+    #: sesión: implicaría un desplazamiento imposible entre dos instantes.
+    IMPLAUSIBLE_JUMP = "implausible_jump"
+
+    #: Fallo inesperado al procesar el mensaje. No es culpa del cliente: sirve
+    #: para que un error interno descarte ese mensaje sin detener el servicio,
+    #: pero quede registrado en lugar de silenciarse.
+    INTERNAL_ERROR = "internal_error"
 
 
 @dataclass(frozen=True)
@@ -108,6 +127,23 @@ class EstimatedVehicle:
     heading: float
     timestamp: float
     last_seen: float
+
+    #: Fracción del recorrido (0..1) en la que está el vehículo.
+    #:
+    #: No se publica: sirve para agrupar. Dos observaciones de la misma ruta
+    #: pueden estar a pocos metros y pertenecer a unidades distintas (dos
+    #: sentidos, dos buses en paralelo); el avance sobre el recorrido y el
+    #: tiempo transcurrido permiten descartar esas fusiones.
+    progress: float = 0.0
+
+    #: Longitud total del recorrido, en metros. `0` si no se conoce.
+    #:
+    #: Es lo que convierte una diferencia de `progress` en metros, y así en una
+    #: velocidad comparable con el techo permitido. Se guarda en el vehículo
+    #: para no recalcularla: `RouteGeometry.length_m` recorre todos los vértices
+    #: con haversine.
+    route_length_m: float = 0.0
+
     sessions: set[str] = field(default_factory=set)
     sample_count: int = 0
     last_published_at: float = 0.0
@@ -119,9 +155,16 @@ class EstimatedVehicle:
         `VehiclePositionMessage`. `timestamp` es el de la observación, no el de
         publicación: si se refrescara al publicar, un vehículo que dejó de
         transmitir seguiría pareciendo vivo y nunca se podaría del mapa.
+
+        `routeId` viaja explícito (D04). Antes el mapa deducía los metadatos de
+        la ruta a partir de `linea`, que es el nombre público: dos ramales de la
+        misma línea comparten `linea`, así que quedaban indistinguibles, y una
+        línea fuera del pequeño catálogo precargado por la app se quedaba sin
+        empresa ni recorrido. El identificador de ruta sí es único.
         """
         return {
             "vehicleId": self.vehicle_id,
+            "routeId": self.route_id,
             "linea": self.linea,
             "lat": self.lat,
             "lon": self.lon,
