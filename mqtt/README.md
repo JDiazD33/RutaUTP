@@ -44,10 +44,16 @@ y simulación, pero no transmite ni recibe por MQTT.
 - `rutautp/observaciones/{sessionId}/posicion` — baliza del pasajero.
   JSON: `schemaVersion, sessionId, routeId, linea, lat, lon, speed,
   heading, accuracy, motionActivity, timestamp`. QoS 1, no retained.
-- `rutautp/vehiculos/{vehicleId}/posicion` — posiciones vehiculares
-  que consume el mapa. Hoy las produce la simulación o un backend
-  futuro; el consumidor valida cada mensaje con
-  `VehiclePositionSanitizer` (coordenadas, timestamps, obsolescencia).
+- `rutautp/vehiculos/{vehicleId}/posicion` — **posiciones vehiculares
+  estimadas** que consume el mapa. Las produce el backend
+  ([`../backend/`](../backend/README.md)) a partir de las observaciones; el
+  consumidor valida cada mensaje con `VehiclePositionSanitizer` (coordenadas,
+  timestamps, obsolescencia).
+
+  «Estimadas» no es un adorno: el backend comprueba que una posición sea
+  **plausible** (sobre el recorrido, coherente con la trayectoria de su sesión),
+  pero eso **no demuestra que exista un vehículo ahí**. Nada en este canal debe
+  presentarse como autenticidad de unidad.
 
 ## Endurecimiento del broker
 
@@ -78,9 +84,7 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
 chmod 600 server.key
 ```
 
-Luego: `cp config/mosquitto-hardened.conf.example config/mosquitto.conf`
-(ajustando rutas si hace falta), montar `./config/certs` en el
-`compose.yaml` igual que los otros volúmenes, y en la app usar:
+Luego, en la app:
 
 ```
 MQTT_TLS=1
@@ -88,6 +92,19 @@ MQTT_CA_CERT=/ruta/a/mqtt/config/certs/ca.crt
 ```
 
 `MQTT_PORT` no hace falta: activar TLS ya implica el 8883.
+
+Para levantar el broker con TLS y ACL **sin copiar nada a mano**, el perfil de
+despliegue ya monta la plantilla endurecida, la ACL y los certificados:
+
+```bash
+docker compose -f mqtt/compose.prod.yaml up -d
+```
+
+Ese archivo no publica el 1883 y arranca además el backend supervisado con su
+propia comprobación de salud (ver [`../backend/README.md`](../backend/README.md)).
+Antes había que copiar `mosquitto-hardened.conf.example` sobre
+`mosquitto.conf`, lo que machacaba la configuración de desarrollo y hacía
+imposible tener las dos a la vez.
 
 > **`MQTT_CA_CERT` no es opcional cuando la CA es propia.** La CA
 > autofirmada que generan los comandos de arriba no está en el almacén
@@ -103,19 +120,43 @@ MQTT_CA_CERT=/ruta/a/mqtt/config/certs/ca.crt
 
 ```bash
 cp config/acl.example config/acl
-mosquitto_passwd -c config/passwords observer      # app
-mosquitto_passwd -b config/passwords backend <pwd> # puente futuro
+mosquitto_passwd -c config/passwords observer       # app
+mosquitto_passwd -b config/passwords backend <pwd>  # puente
 ```
 
-Y añadir en `mosquitto.conf`:
+Y montar la ACL y añadir en `mosquitto.conf`:
 
 ```
 acl_file /mosquitto/config/acl
 ```
 
-Con esto un teléfono comprometido no puede publicar en
-`vehiculos/#` (no puede suplantar vehículos) ni leer más de lo
-necesario.
+En el perfil de desarrollo (`compose.yaml`) **la ACL no está montada**: el
+broker escucha en red local y no la aplica. Para que rija de verdad hay que
+usar el perfil de despliegue, que sí la monta:
+
+```bash
+docker compose -f mqtt/compose.prod.yaml up -d
+```
+
+Los permisos de `acl.example` no se dan por supuestos: hay una prueba que los
+comprueba contra un broker real, incluida la denegación.
+
+```bash
+./tools/acl_test.sh
+```
+
+| Comprobación | Resultado esperado |
+|---|---|
+| `observer` publica observaciones | permitido |
+| `observer` lee observaciones | **denegado** |
+| `observer` lee posiciones vehiculares | permitido |
+| `observer` publica posiciones vehiculares | **denegado** |
+| `backend` publica observaciones | **denegado** |
+| `backend` lee posiciones vehiculares | **denegado** |
+| `debug` lee todo (cuenta de diagnóstico) | permitido |
+
+Con esto un teléfono comprometido no puede publicar en `vehiculos/#` (no puede
+suplantar vehículos) ni leer la trayectoria de los demás usuarios.
 
 ## Prueba de humo (sin esperar un viaje real)
 
@@ -123,11 +164,14 @@ necesario.
    `MQTT_HOST`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_FORCE_ONBOARD=1`.
 2. Activar "Ayudar con ubicaciones" en el mapa y caminar cerca de una
    ruta GTFS (el bypass exige consentimiento, permiso y ruta próxima).
-3. Observar el broker desde otra máquina:
+3. Observar el broker desde otra máquina. **Con la ACL activa, las
+   credenciales de la app no sirven para esto**: `observer` tiene denegada la
+   lectura de `observaciones/#`. Hay que usar la cuenta de diagnóstico, que no
+   se distribuye con la app (ver `acl.example`):
 
 ```bash
 mosquitto_sub -h <host> -p 1883 \
-  -u observer -P <password> \
+  -u debug -P <password> \
   -t 'rutautp/observaciones/#' -v
 ```
 
@@ -146,10 +190,19 @@ verifica que sale la posición vehicular (`backend/tools/smoke_test.sh`).
 `puente-demo.sh` fue el puente mínimo viable de la primera etapa:
 republica todo lo que entra en `observaciones/#` sin validar nada. **El
 servicio de [`../backend/`](../backend/README.md) lo reemplaza.** Se
-conserva porque es una prueba de humo de 60 líneas que no necesita
-dependencias de Python, pero no debe usarse con usuarios reales: al no
-validar ni agrupar, permite que cualquier cliente autenticado suplante
-vehículos ante los demás.
+conserva porque es una prueba de humo de 60 líneas que solo necesita
+mosquitto y python3, sin dependencias que instalar.
+
+**No debe usarse con usuarios reales.** Al no validar ni agrupar, permite que
+cualquier cliente autenticado suplante vehículos ante los demás: la ACL impide
+que `observer` publique en `vehiculos/#`, pero sí puede escribir en
+`observaciones/#` con cualquier `sessionId`, y el script lo republica tal cual.
+
+Por eso **exige una confirmación explícita** y se niega a arrancar sin ella:
+
+```bash
+PUENTE_DEMO_INSECURE=1 ./puente-demo.sh
+```
 
 ## Archivos sensibles (gitignored)
 
