@@ -63,8 +63,42 @@ def validator(feed: GtfsFeed) -> ObservationValidator:
     return ObservationValidator(feed, config)
 
 
+class TestLimitePorPrincipal:
+    """La identidad autenticada aísla el abuso aunque se roten sesiones."""
+
+    def test_rotar_sesiones_no_elude_el_limite_del_principal(
+        self, feed: GtfsFeed, sample_route
+    ):
+        config = Config(
+            gtfs_dir=feed.source_dir,
+            database_path="",
+            health_file="",
+            max_messages_per_minute=2,
+            max_messages_per_minute_global=100,
+        )
+        validator = ObservationValidator(feed, config)
+
+        assert validator.validate(
+            payload_at(sample_route, 100, session="a"), NOW, principal="device-1"
+        ).ok
+        assert validator.validate(
+            payload_at(sample_route, 101, session="b"), NOW, principal="device-1"
+        ).ok
+
+        blocked = validator.validate(
+            payload_at(sample_route, 102, session="c"), NOW, principal="device-1"
+        )
+
+        assert blocked.reason is RejectReason.RATE_LIMITED
+
+        # La identidad abusiva no consume el cupo de otra instalación.
+        assert validator.validate(
+            payload_at(sample_route, 103, session="d"), NOW, principal="device-2"
+        ).ok
+
+
 class TestTechoGlobal:
-    """Rotar sesiones no debe permitir un crecimiento ilimitado del trabajo."""
+    """El techo total queda como última barrera de capacidad."""
 
     def test_rotar_sesiones_no_elude_el_techo(self, feed: GtfsFeed, sample_route):
         config = Config(
@@ -137,6 +171,31 @@ class TestTechoGlobal:
 
         assert validator.validate(
             payload_at(sample_route, 103, session="d", now=later), later
+        ).ok
+
+    def test_un_mensaje_semanticamente_invalido_no_consume_el_techo_global(
+        self, feed: GtfsFeed, sample_route
+    ):
+        config = Config(
+            gtfs_dir=feed.source_dir,
+            database_path="",
+            health_file="",
+            max_messages_per_minute=1,
+            max_messages_per_minute_global=1,
+        )
+        validator = ObservationValidator(feed, config)
+
+        invalid = json.loads(payload_at(sample_route, 100, session="bad"))
+        invalid["routeId"] = "no-existe"
+
+        assert validator.validate(
+            json.dumps(invalid), NOW, principal="attacker"
+        ).reason is RejectReason.UNKNOWN_ROUTE
+
+        assert validator.validate(
+            payload_at(sample_route, 101, session="legit"),
+            NOW,
+            principal="legitimate-device",
         ).ok
 
 

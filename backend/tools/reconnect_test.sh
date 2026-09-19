@@ -145,7 +145,7 @@ PY
 publicar() {
     local ruta="$1" sesion="$2"
     mosquitto_pub -h 127.0.0.1 -p "$PORT" \
-        -t "rutautp/observaciones/$sesion/posicion" \
+        -t "rutautp/observaciones/reconnect-test-device/$sesion/posicion" \
         -q 1 -m "$(observacion "$ruta" "$sesion")"
 }
 

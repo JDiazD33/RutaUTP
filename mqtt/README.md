@@ -8,7 +8,7 @@ demás usuarios consume las posiciones vehiculares resultantes.
 Baliza (app a bordo)                    App de otros usuarios
         │ MQTT publish                         ▲ MQTT subscribe
         ▼                                      │
-rutautp/observaciones/{session}/posicion       │
+rutautp/observaciones/{principal}/{session}/posicion
         │                                      │
         ▼                                      │
    [ Broker Mosquitto ] ──── vehiculos/{id}/posicion ────► mapa en vivo
@@ -20,7 +20,7 @@ rutautp/observaciones/{session}/posicion       │
 
 El puente que valida y agrupa **ya existe**: es el servicio Python de
 [`../backend/`](../backend/README.md). Suscribe a
-`rutautp/observaciones/+/posicion`, contrasta cada observación contra el
+`rutautp/observaciones/+/+/posicion`, contrasta cada observación contra el
 recorrido real de la ruta, agrupa las de una misma unidad y deriva él mismo el
 `vehicleId`. Necesita el usuario `backend` de la ACL.
 
@@ -29,7 +29,7 @@ recorrido real de la ruta, agrupa las de una misma unidad y deriva él mismo el
 | Variable         | Obligatoria | Por defecto | Descripción                              |
 |------------------|-------------|-------------|------------------------------------------|
 | `MQTT_HOST`      | sí          | —           | Host o dominio del broker                |
-| `MQTT_USERNAME`  | sí          | —           | Usuario (ver ACL)                        |
+| `MQTT_USERNAME`  | sí          | —           | Identidad única de esta instalación; forma parte del tópico y debe existir en `passwords` |
 | `MQTT_PASSWORD`  | sí          | —           | Contraseña                               |
 | `MQTT_PORT`      | no          | `1883`      | Puerto del broker. Con `MQTT_TLS=1` el valor por defecto pasa a `8883` |
 | `MQTT_TLS`       | no          | `0`         | `1` habilita TLS (implica el puerto 8883) |
@@ -41,7 +41,7 @@ y simulación, pero no transmite ni recibe por MQTT.
 
 ## Contratos de tópicos
 
-- `rutautp/observaciones/{sessionId}/posicion` — baliza del pasajero.
+- `rutautp/observaciones/{principal}/{sessionId}/posicion` — baliza del pasajero. La ACL obliga a que `principal` sea el usuario MQTT autenticado.
   JSON: `schemaVersion, sessionId, routeId, linea, lat, lon, speed,
   heading, accuracy, motionActivity, timestamp`. QoS 1, no retained.
 - `rutautp/vehiculos/{vehicleId}/posicion` — **posiciones vehiculares
@@ -116,12 +116,13 @@ imposible tener las dos a la vez.
 > Con TLS 1.2+ activo, las credenciales y las ubicaciones viajan
 > cifradas; sin TLS, cualquiera en el camino puede leerlas.
 
-### 2. Control de acceso por rol (ACL)
+### 2. Control de acceso por identidad (ACL)
 
 ```bash
 cp config/acl.example config/acl
-mosquitto_passwd -c config/passwords observer       # app
-mosquitto_passwd -b config/passwords backend <pwd>  # puente
+mosquitto_passwd -c config/passwords device-001       # primera instalación
+mosquitto_passwd -b config/passwords device-002       # otra instalación
+mosquitto_passwd -b config/passwords backend <pwd>    # puente
 ```
 
 Y montar la ACL y añadir en `mosquitto.conf`:
@@ -147,16 +148,20 @@ comprueba contra un broker real, incluida la denegación.
 
 | Comprobación | Resultado esperado |
 |---|---|
-| `observer` publica observaciones | permitido |
-| `observer` lee observaciones | **denegado** |
-| `observer` lee posiciones vehiculares | permitido |
-| `observer` publica posiciones vehiculares | **denegado** |
-| `backend` publica observaciones | **denegado** |
-| `backend` lee posiciones vehiculares | **denegado** |
+| Una instalación publica bajo su propia identidad | permitido |
+| Una instalación publica bajo otra identidad | **denegado** |
+| Una instalación lee observaciones | **denegado** |
+| Una instalación lee posiciones vehiculares | permitido |
+| Una instalación publica posiciones vehiculares | **denegado** |
 | `debug` lee todo (cuenta de diagnóstico) | permitido |
 
-Con esto un teléfono comprometido no puede publicar en `vehiculos/#` (no puede
-suplantar vehículos) ni leer la trayectoria de los demás usuarios.
+Con esto un teléfono comprometido no puede publicar en `vehiculos/#`, leer la
+trayectoria de los demás ni eludir su límite rotando únicamente `sessionId`.
+No se debe distribuir una cuenta compartida: cada instalación necesita sus
+propias credenciales provisionadas por el operador.
+La ACL bloquea expresamente el antiguo usuario `observer`; conservarlo durante
+la migración produce una denegación visible en lugar de mantener un límite
+compartido vulnerable.
 
 ## Prueba de humo (sin esperar un viaje real)
 
@@ -165,7 +170,7 @@ suplantar vehículos) ni leer la trayectoria de los demás usuarios.
 2. Activar "Ayudar con ubicaciones" en el mapa y caminar cerca de una
    ruta GTFS (el bypass exige consentimiento, permiso y ruta próxima).
 3. Observar el broker desde otra máquina. **Con la ACL activa, las
-   credenciales de la app no sirven para esto**: `observer` tiene denegada la
+   credenciales de la app no sirven para esto**: las identidades de instalación tienen denegada la
    lectura de `observaciones/#`. Hay que usar la cuenta de diagnóstico, que no
    se distribuye con la app (ver `acl.example`):
 
@@ -195,8 +200,8 @@ mosquitto y python3, sin dependencias que instalar.
 
 **No debe usarse con usuarios reales.** Al no validar ni agrupar, permite que
 cualquier cliente autenticado suplante vehículos ante los demás: la ACL impide
-que `observer` publique en `vehiculos/#`, pero sí puede escribir en
-`observaciones/#` con cualquier `sessionId`, y el script lo republica tal cual.
+que una identidad de la app publique en `vehiculos/#`, pero sí puede escribir
+observaciones bajo su propio principal, y el script las republica sin validar.
 
 Por eso **exige una confirmación explícita** y se niega a arrancar sin ella:
 

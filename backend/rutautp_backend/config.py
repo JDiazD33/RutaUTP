@@ -133,10 +133,11 @@ class Config:
 
     # ── Tópicos ───────────────────────────────────────────────────────────
     # El filtro debe tener los MISMOS niveles que el tópico real. El cliente
-    # publica en `rutautp/observaciones/{sessionId}/posicion` (cuatro niveles);
-    # suscribir a `rutautp/observaciones/+` (tres) no recibe nada, porque `+`
+    # publica en `rutautp/observaciones/{principal}/{sessionId}/posicion`;
+    # el principal coincide con el usuario autenticado gracias a la ACL.
+    # Suscribir a un nivel menos no recibe nada, porque `+`
     # casa exactamente un nivel y no cruza separadores.
-    observations_topic: str = "rutautp/observaciones/+/posicion"
+    observations_topic: str = "rutautp/observaciones/+/+/posicion"
     vehicles_topic_prefix: str = "rutautp/vehiculos"
 
     # ── Feed ──────────────────────────────────────────────────────────────
@@ -159,10 +160,9 @@ class Config:
     max_messages_per_minute: int = 20
     #: Techo del servicio entero, independiente de la sesión.
     #:
-    #: El `sessionId` lo elige el cliente, así que el límite por sesión se elude
-    #: rotándolo: sin un tope global, un cliente comprometido puede forzar al
-    #: servidor a validar geometría sin límite real. El valor por defecto (1800)
-    #: da margen a unas 150 balizas legítimas publicando cada 5 s.
+    #: Última barrera ante saturación agregada de muchas identidades. El límite
+    #: por principal autenticado aísla primero a cada instalación. El valor por
+    #: defecto (1800) da margen a unas 150 balizas publicando cada 5 s.
     max_messages_per_minute_global: int = 1800
     #: Margen, en metros, tolerado al comprobar la continuidad de una sesión.
     #:
@@ -348,7 +348,7 @@ class Config:
             client_id=env.get("MQTT_CLIENT_ID", "").strip()
             or f"rutautp-backend-{uuid.uuid4()}",
             observations_topic=env.get(
-                "BACKEND_OBSERVATIONS_TOPIC", "rutautp/observaciones/+/posicion"
+                "BACKEND_OBSERVATIONS_TOPIC", "rutautp/observaciones/+/+/posicion"
             ).strip(),
             vehicles_topic_prefix=env.get(
                 "BACKEND_VEHICLES_TOPIC_PREFIX", "rutautp/vehiculos"

@@ -14,7 +14,8 @@
 #
 # Los crea el operador. Ninguno vive en el repositorio (ver .gitignore):
 #
-#   mqtt/config/passwords   mosquitto_passwd -c config/passwords observer
+#   mqtt/config/passwords   una cuenta distinta por instalación de la app
+#                           mosquitto_passwd -c config/passwords device-001
 #                           mosquitto_passwd -b config/passwords backend
 #   mqtt/config/acl         cp config/acl.example config/acl
 #   mqtt/config/certs/      ca.crt, server.crt, server.key (ver README.md)

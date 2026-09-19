@@ -140,7 +140,7 @@ PY
 
 echo "   $OBSERVATION"
 mosquitto_pub -h 127.0.0.1 -p "$PORT" \
-    -t "rutautp/observaciones/smoke-test-session/posicion" \
+    -t "rutautp/observaciones/smoke-test-device/smoke-test-session/posicion" \
     -q 1 -m "$OBSERVATION"
 
 echo "== 5. esperando la posición vehicular =="

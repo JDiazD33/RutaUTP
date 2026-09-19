@@ -52,9 +52,8 @@ class RejectReason(str, Enum):
     SESSION_MISMATCH = "session_mismatch"
 
     #: El servicio, en conjunto, supera su techo de mensajes por minuto. Es
-    #: distinto de `RATE_LIMITED`: aquel acota lo que aporta una sesión, este
-    #: acota el trabajo total. Sin él, rotar `sessionId` —que el cliente elige
-    #: libremente— eludiría el límite por sesión y no habría tope real.
+    #: distinto de `RATE_LIMITED`: aquel aísla un principal MQTT autenticado;
+    #: este acota el trabajo agregado de todas las identidades.
     GLOBAL_RATE_LIMITED = "global_rate_limited"
 
     #: La observación es incompatible con la trayectoria previa de su propia

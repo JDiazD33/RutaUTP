@@ -2,9 +2,9 @@
 
 Existen por un bug real: el backend se suscribía a `rutautp/observaciones/+`
 (tres niveles) mientras el cliente publica en
-`rutautp/observaciones/{sessionId}/posicion` (cuatro). El comodín `+` casa
-exactamente un nivel y no cruza separadores, así que **no llegaba ni un
-mensaje**.
+`rutautp/observaciones/{principal}/{sessionId}/posicion` (cinco). El comodín
+`+` casa exactamente un nivel y no cruza separadores, así que **no llegaba ni
+un mensaje**.
 
 Ninguna prueba unitaria podía detectarlo, porque todas inyectan el publicador y
 nunca abren un socket. Lo encontró la prueba de humo con un broker real
@@ -58,13 +58,13 @@ def filter_matches(topic_filter: str, topic: str) -> bool:
 class TestFiltroDeSuscripcion:
     def test_el_filtro_por_defecto_recibe_la_observacion_del_cliente(self):
         """El caso que falló: el filtro debe tener los mismos niveles."""
-        topic = "rutautp/observaciones/3f2a1b/posicion"
+        topic = "rutautp/observaciones/device-001/3f2a1b/posicion"
 
         assert filter_matches(Config().observations_topic, topic) is True
 
     def test_el_filtro_viejo_no_habria_casado(self):
         """Deja constancia del bug para que no se reintroduzca."""
-        topic = "rutautp/observaciones/3f2a1b/posicion"
+        topic = "rutautp/observaciones/device-001/3f2a1b/posicion"
 
         assert filter_matches("rutautp/observaciones/+", topic) is False
 
@@ -75,13 +75,20 @@ class TestFiltroDeSuscripcion:
     def test_el_filtro_por_defecto_no_recibe_otros_topicos(self):
         config = Config()
 
-        assert filter_matches(config.observations_topic, "rutautp/observaciones/x") is False
-        assert filter_matches(config.observations_topic, "rutautp/vehiculos/x/posicion") is False
+        assert (
+            filter_matches(config.observations_topic, "rutautp/observaciones/x")
+            is False
+        )
+        assert (
+            filter_matches(config.observations_topic, "rutautp/vehiculos/x/posicion")
+            is False
+        )
 
     def test_el_filtro_por_defecto_solo_acepta_el_sufijo_posicion(self):
         assert (
             filter_matches(
-                Config().observations_topic, "rutautp/observaciones/x/otra-cosa"
+                Config().observations_topic,
+                "rutautp/observaciones/device-001/x/otra-cosa",
             )
             is False
         )
@@ -90,7 +97,7 @@ class TestFiltroDeSuscripcion:
 class TestContraElClienteSwift:
     """Comprueba que el formato asumido es el que publica de verdad el cliente."""
 
-    def test_el_cliente_publica_en_cuatro_niveles(self):
+    def test_el_cliente_publica_en_cinco_niveles(self):
         # Falla, no se salta: si el archivo del contrato desaparece, esta prueba
         # dejaría de comprobar justo lo que existe para comprobar.
         if not MQTT_OBSERVATION_PUBLISHER.is_file():
@@ -99,15 +106,15 @@ class TestContraElClienteSwift:
         source = MQTT_OBSERVATION_PUBLISHER.read_text(encoding="utf-8")
 
         # El tópico se arma en Swift como:
-        #   "rutautp/observaciones/" + "\(sessionID)/posicion"
+        #   "rutautp/observaciones/" + "\(principal)/\(sessionID)/posicion"
         # así que el prefijo y el sufijo aparecen como literales separados.
         assert '"rutautp/observaciones/"' in source
         assert '/posicion"' in source
 
-        # Reconstruido, tiene cuatro niveles: `+` casaría solo tres.
-        client_topic = "rutautp/observaciones/session-abc/posicion"
+        # Reconstruido, tiene cinco niveles.
+        client_topic = "rutautp/observaciones/device-001/session-abc/posicion"
 
-        assert len(client_topic.split("/")) == 4
+        assert len(client_topic.split("/")) == 5
         assert filter_matches("rutautp/observaciones/+", client_topic) is False
         assert filter_matches(Config().observations_topic, client_topic) is True
 
@@ -119,7 +126,9 @@ class TestContraElClienteSwift:
 
         match = re.search(r'topic\s*=\s*"([^"]+)"', source)
 
-        assert match is not None, "no se encontró el tópico de suscripción del cliente"
+        assert match is not None, (
+            "no se encontró el tópico de suscripción del cliente"
+        )
 
         client_filter = match.group(1)
 

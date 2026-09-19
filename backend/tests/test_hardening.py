@@ -186,7 +186,7 @@ class TestBarreraDelPuente:
 
     def test_un_fallo_inesperado_no_detiene_el_servicio(self, feed: GtfsFeed):
         class ValidadorQueExplota:
-            def validate(self, raw, now):
+            def validate(self, raw, now, principal=None):
                 raise RuntimeError("fallo simulado del validador")
 
             def prune(self, now):
@@ -195,7 +195,9 @@ class TestBarreraDelPuente:
         config = Config(gtfs_dir=feed.source_dir, database_path="", health_file="")
         bridge = Bridge(config=config, feed=feed, validator=ValidadorQueExplota())
 
-        resultado = bridge.handle_message("rutautp/observaciones/x/posicion", "{}", NOW)
+        resultado = bridge.handle_message(
+            "rutautp/observaciones/device-001/x/posicion", "{}", NOW
+        )
 
         assert resultado.accepted is False
         assert resultado.reason is RejectReason.INTERNAL_ERROR
@@ -208,7 +210,9 @@ class TestBarreraDelPuente:
         config = Config(gtfs_dir=feed.source_dir, database_path="", health_file="")
         bridge = Bridge(config=config, feed=feed)
 
-        bridge.handle_message("t", "{no es json", NOW)
+        bridge.handle_message(
+            "rutautp/observaciones/device-001/x/posicion", "{no es json", NOW
+        )
 
         snapshot = bridge.metrics.snapshot()
 

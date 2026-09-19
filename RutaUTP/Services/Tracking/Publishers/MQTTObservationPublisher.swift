@@ -42,6 +42,9 @@ final class MQTTObservationPublisher:
     /// Cliente MQTT proporcionado por CocoaMQTT.
     private let mqtt: CocoaMQTT
 
+    /// Identidad autenticada que la ACL obliga a incluir en el tópico.
+    private let principal: String
+
     /// Tiempo mínimo entre publicaciones consecutivas, en segundos.
     ///
     /// Cinco segundos permite observar el movimiento del vehículo
@@ -82,6 +85,8 @@ final class MQTTObservationPublisher:
     /// La dirección y las credenciales proceden de variables
     /// configuradas en el Scheme de Xcode, no del repositorio.
     init(configuration: MQTTConfiguration) {
+        principal = configuration.username
+
         let clientID =
             "rutautp-observer-" + UUID().uuidString
 
@@ -375,7 +380,7 @@ final class MQTTObservationPublisher:
 
             let topic =
                 "rutautp/observaciones/" +
-                "\(sessionID)/posicion"
+                "\(principal)/\(sessionID)/posicion"
 
             mqtt.publish(
                 topic,

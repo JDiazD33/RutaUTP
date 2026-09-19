@@ -9,13 +9,13 @@
 #
 # Qué se comprueba
 # ----------------
-#   1. `observer` PUEDE publicar observaciones.
-#   2. `observer` NO PUEDE leer observaciones (ni las suyas): esa rama contiene
+#   1. `device-001` PUEDE publicar bajo su propia identidad.
+#   2. `device-001` NO PUEDE publicar bajo otra identidad.
+#   3. La identidad compartida histórica `observer` queda bloqueada.
+#   4. `device-001` NO PUEDE leer observaciones (ni las suyas): esa rama contiene
 #      la trayectoria individual de cada persona a bordo.
-#   3. `observer` PUEDE leer posiciones vehiculares.
-#   4. `observer` NO PUEDE publicar posiciones vehiculares (suplantación).
-#   5. `backend` NO PUEDE publicar observaciones (solo las consume).
-#   6. `backend` NO PUEDE leer posiciones vehiculares (solo las escribe).
+#   5. `device-001` PUEDE leer posiciones vehiculares.
+#   6. `device-001` NO PUEDE publicar posiciones vehiculares (suplantación).
 #   7. La cuenta `debug` PUEDE leer todo, y solo se habilita a propósito.
 #
 # Cómo se mide
@@ -68,7 +68,8 @@ user debug
 topic read rutautp/#
 EOF
 
-mosquitto_passwd -c -b "$WORK_DIR/passwords" observer "$PASSWORD" >/dev/null 2>&1
+mosquitto_passwd -c -b "$WORK_DIR/passwords" device-001 "$PASSWORD" >/dev/null 2>&1
+mosquitto_passwd -b "$WORK_DIR/passwords" observer "$PASSWORD" >/dev/null 2>&1
 mosquitto_passwd -b "$WORK_DIR/passwords" backend "$PASSWORD" >/dev/null 2>&1
 mosquitto_passwd -b "$WORK_DIR/passwords" debug "$PASSWORD" >/dev/null 2>&1
 
@@ -86,7 +87,8 @@ MOSQUITTO_PID=$!
 
 for _ in $(seq 1 40); do
     mosquitto_pub -h 127.0.0.1 -p "$PORT" \
-        -u observer -P "$PASSWORD" -t rutautp/observaciones/ping/posicion \
+        -u device-001 -P "$PASSWORD" \
+        -t rutautp/observaciones/device-001/ping/posicion \
         -m ok >/dev/null 2>&1 && break
     sleep 0.25
 done
@@ -130,39 +132,39 @@ check() {
 echo "== ACL de RutaUTP contra un broker real (puerto $PORT) =="
 echo ""
 
-check "observer PUEDE publicar observaciones" \
-    backend "rutautp/observaciones/probe/posicion" \
-    observer "rutautp/observaciones/probe/posicion" \
+check "device-001 PUEDE publicar bajo su identidad" \
+    backend "rutautp/observaciones/device-001/probe/posicion" \
+    device-001 "rutautp/observaciones/device-001/probe/posicion" \
     si
 
-check "observer NO PUEDE leer observaciones" \
-    observer "rutautp/observaciones/probe/posicion" \
-    observer "rutautp/observaciones/probe/posicion" \
+check "device-001 NO PUEDE publicar bajo otra identidad" \
+    backend "rutautp/observaciones/device-002/probe/posicion" \
+    device-001 "rutautp/observaciones/device-002/probe/posicion" \
     no
 
-check "observer PUEDE leer posiciones vehiculares" \
-    observer "rutautp/vehiculos/probe/posicion" \
+check "observer compartido queda bloqueado" \
+    backend "rutautp/observaciones/observer/probe/posicion" \
+    observer "rutautp/observaciones/observer/probe/posicion" \
+    no
+
+check "device-001 NO PUEDE leer observaciones" \
+    device-001 "rutautp/observaciones/device-001/probe/posicion" \
+    device-001 "rutautp/observaciones/device-001/probe/posicion" \
+    no
+
+check "device-001 PUEDE leer posiciones vehiculares" \
+    device-001 "rutautp/vehiculos/probe/posicion" \
     backend "rutautp/vehiculos/probe/posicion" \
     si
 
-check "observer NO PUEDE publicar posiciones vehiculares" \
-    observer "rutautp/vehiculos/probe/posicion" \
-    observer "rutautp/vehiculos/probe/posicion" \
-    no
-
-check "backend NO PUEDE publicar observaciones" \
-    backend "rutautp/observaciones/probe/posicion" \
-    backend "rutautp/observaciones/probe/posicion" \
-    no
-
-check "backend NO PUEDE leer posiciones vehiculares" \
-    backend "rutautp/vehiculos/probe/posicion" \
-    backend "rutautp/vehiculos/probe/posicion" \
+check "device-001 NO PUEDE publicar posiciones vehiculares" \
+    device-001 "rutautp/vehiculos/probe/posicion" \
+    device-001 "rutautp/vehiculos/probe/posicion" \
     no
 
 check "debug PUEDE leer observaciones (cuenta de diagnóstico)" \
-    debug "rutautp/observaciones/probe/posicion" \
-    observer "rutautp/observaciones/probe/posicion" \
+    debug "rutautp/observaciones/device-001/probe/posicion" \
+    device-001 "rutautp/observaciones/device-001/probe/posicion" \
     si
 
 echo ""

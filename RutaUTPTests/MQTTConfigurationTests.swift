@@ -66,6 +66,15 @@ final class MQTTConfigurationTests: XCTestCase {
         XCTAssertTrue(configuration.trustedCACertificates.isEmpty)
     }
 
+    func testUsuarioNoPuedeAlterarLosNivelesDelTopico() {
+        for username in ["device/otra", "device+", "device#"] {
+            var environment = baseEnvironment()
+            environment["MQTT_USERNAME"] = username
+
+            XCTAssertNil(MQTTConfiguration.from(environment: environment))
+        }
+    }
+
     // MARK: - Puerto por defecto
 
     /// Sin TLS y sin puerto explícito se usa el 1883.

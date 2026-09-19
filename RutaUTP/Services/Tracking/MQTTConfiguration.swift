@@ -102,6 +102,17 @@ struct MQTTConfiguration {
             return nil
         }
 
+        // El usuario forma un nivel del tópico y la ACL lo compara con `%u`.
+        // Separadores o comodines alterarían el contrato del tópico.
+        let topicReserved = CharacterSet(charactersIn: "/+#\0")
+
+        guard
+            username.count <= 128,
+            username.rangeOfCharacter(from: topicReserved) == nil
+        else {
+            return nil
+        }
+
         let tlsFlags = ["1", "true", "yes"]
 
         let useTLS = tlsFlags.contains(

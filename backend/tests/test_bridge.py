@@ -21,6 +21,11 @@ from rutautp_backend.models import RejectReason
 from .conftest import SAMPLE_ROUTE_ID, offset_meters, vehicle_id
 
 NOW = 1_700_000_000.0
+TOPIC = "rutautp/observaciones/device-001/session-0001/posicion"
+
+
+def topic_for(session: str = "session-0001", principal: str = "device-001") -> str:
+    return f"rutautp/observaciones/{principal}/{session}/posicion"
 
 
 class TestEsperaDeReconexion:
@@ -126,7 +131,7 @@ def bridge(config: Config, feed: GtfsFeed, publisher: CapturingPublisher) -> Bri
 class TestCaminoFeliz:
     def test_acepta_y_publica(self, bridge, publisher, sample_route):
         outcome = bridge.handle_message(
-            f"rutautp/observaciones/session-0001/posicion",
+            TOPIC,
             payload_for(sample_route),
             NOW,
         )
@@ -139,7 +144,7 @@ class TestCaminoFeliz:
     def test_el_topico_de_salida_tiene_el_formato_esperado(
         self, bridge, publisher, sample_route
     ):
-        bridge.handle_message("t", payload_for(sample_route), NOW)
+        bridge.handle_message(TOPIC, payload_for(sample_route), NOW)
 
         topic, _ = publisher.messages[0]
 
@@ -148,7 +153,7 @@ class TestCaminoFeliz:
     def test_lo_publicado_encaja_con_el_contrato(
         self, bridge, publisher, sample_route
     ):
-        bridge.handle_message("t", payload_for(sample_route), NOW)
+        bridge.handle_message(TOPIC, payload_for(sample_route), NOW)
 
         body = publisher.last()
 
@@ -175,7 +180,7 @@ class TestCaminoFeliz:
         seguiría pareciendo vivo y nunca se podaría del mapa.
         """
         bridge.handle_message(
-            "t", payload_for(sample_route, now=NOW - 3), NOW
+            TOPIC, payload_for(sample_route, now=NOW - 3), NOW
         )
 
         assert publisher.last()["timestamp"] == NOW - 3
@@ -196,7 +201,7 @@ class TestRechazos:
         payload = b"{" + b"x" * int(bridge.config.max_message_bytes)
 
         outcome = bridge.handle_message(
-            "rutautp/observaciones/sesion/posicion",
+            "rutautp/observaciones/device-001/sesion/posicion",
             payload,
             NOW,
         )
@@ -206,16 +211,16 @@ class TestRechazos:
         assert bridge.metrics.snapshot()["internalErrors"] == 0
 
     def test_un_mensaje_invalido_no_publica(self, bridge, publisher):
-        outcome = bridge.handle_message("t", "{no es json", NOW)
+        outcome = bridge.handle_message(TOPIC, "{no es json", NOW)
 
         assert outcome.accepted is False
         assert outcome.reason is RejectReason.MALFORMED_JSON
         assert publisher.count == 0
 
     def test_se_contabiliza_el_motivo(self, bridge, sample_route):
-        bridge.handle_message("t", "{no es json", NOW)
+        bridge.handle_message(TOPIC, "{no es json", NOW)
         bridge.handle_message(
-            "t", payload_for(sample_route, routeId="no-existe"), NOW
+            TOPIC, payload_for(sample_route, routeId="no-existe"), NOW
         )
 
         snapshot = bridge.metrics.snapshot()
@@ -234,7 +239,7 @@ class TestRechazos:
         lejos_lat, lejos_lon = offset_meters(latitude, longitude, north_m=3000)
 
         outcome = bridge.handle_message(
-            "t",
+            TOPIC,
             payload_for(sample_route, lat=lejos_lat, lon=lejos_lon),
             NOW,
         )
@@ -250,7 +255,7 @@ class TestSinPublicador:
         """Es el modo `--dry-run` contra un broker real."""
         bridge = Bridge(config=config, feed=feed, publisher=None)
 
-        outcome = bridge.handle_message("t", payload_for(sample_route), NOW)
+        outcome = bridge.handle_message(TOPIC, payload_for(sample_route), NOW)
 
         assert outcome.accepted is True
         assert outcome.published is False
@@ -263,8 +268,12 @@ class TestRitmoDePublicacion:
     ):
         for index in range(3):
             bridge.handle_message(
-                "t",
-                payload_for(sample_route, session=f"s-{index}", offset_north_m=index * 5),
+                topic_for(session=f"s-{index}"),
+                payload_for(
+                    sample_route,
+                    session=f"s-{index}",
+                    offset_north_m=index * 5,
+                ),
                 NOW + index * 0.1,
             )
 
@@ -274,10 +283,10 @@ class TestRitmoDePublicacion:
     def test_publica_de_nuevo_pasado_el_intervalo(
         self, bridge, publisher, sample_route, config
     ):
-        bridge.handle_message("t", payload_for(sample_route), NOW)
+        bridge.handle_message(TOPIC, payload_for(sample_route), NOW)
 
         bridge.handle_message(
-            "t",
+            TOPIC,
             payload_for(sample_route, now=NOW + config.publish_interval_s),
             NOW + config.publish_interval_s,
         )
@@ -297,10 +306,10 @@ class TestRitmoDePublicacion:
         # marca de tiempo serían un duplicado de QoS 1 y el segundo se
         # descartaría, que es justo lo que debe pasar.
         bridge.handle_message(
-            "t", payload_for(sample_route, session="sesion-a"), NOW
+            topic_for("sesion-a"), payload_for(sample_route, session="sesion-a"), NOW
         )
         bridge.handle_message(
-            "t", payload_for(otra, session="sesion-b"), NOW + 1
+            topic_for("sesion-b"), payload_for(otra, session="sesion-b"), NOW + 1
         )
 
         assert publisher.count == 2
@@ -311,7 +320,7 @@ class TestRitmoDePublicacion:
         """Es el caso que justifica que exista el backend."""
         for index in range(10):
             bridge.handle_message(
-                "t",
+                topic_for(session=f"pasajero-{index:02d}"),
                 payload_for(
                     sample_route,
                     session=f"pasajero-{index:02d}",
@@ -329,7 +338,7 @@ class TestRitmoDePublicacion:
 
 class TestMantenimiento:
     def test_tick_caduca_los_vehiculos(self, bridge, sample_route, config):
-        bridge.handle_message("t", payload_for(sample_route), NOW)
+        bridge.handle_message(TOPIC, payload_for(sample_route), NOW)
 
         assert bridge.tick(NOW + 1) == 0
         assert bridge.aggregator.vehicle_count == 1
@@ -341,7 +350,7 @@ class TestMantenimiento:
         assert bridge.metrics.snapshot()["vehiclesExpired"] == 1
 
     def test_tick_libera_el_estado_de_sesiones(self, bridge, sample_route):
-        bridge.handle_message("t", payload_for(sample_route), NOW)
+        bridge.handle_message(TOPIC, payload_for(sample_route), NOW)
 
         bridge.tick(NOW + 10_000)
 
@@ -360,7 +369,7 @@ class TestSesionDelTopico:
         self, bridge, publisher, sample_route
     ):
         outcome = bridge.handle_message(
-            "rutautp/observaciones/otra-sesion/posicion",
+            "rutautp/observaciones/device-001/otra-sesion/posicion",
             payload_for(sample_route, session="session-0001"),
             NOW,
         )
@@ -371,7 +380,7 @@ class TestSesionDelTopico:
 
     def test_se_contabiliza_el_motivo(self, bridge, sample_route):
         bridge.handle_message(
-            "rutautp/observaciones/otra-sesion/posicion",
+            "rutautp/observaciones/device-001/otra-sesion/posicion",
             payload_for(sample_route, session="session-0001"),
             NOW,
         )
@@ -383,7 +392,7 @@ class TestSesionDelTopico:
 
     def test_acepta_cuando_concuerdan(self, bridge, publisher, sample_route):
         outcome = bridge.handle_message(
-            "rutautp/observaciones/session-0001/posicion",
+            TOPIC,
             payload_for(sample_route, session="session-0001"),
             NOW,
         )
@@ -391,19 +400,16 @@ class TestSesionDelTopico:
         assert outcome.accepted is True
         assert publisher.count == 1
 
-    def test_un_topico_con_otra_forma_no_se_rechaza(self, bridge, sample_route):
-        """La comprobación es de consistencia interna, no de formato.
-
-        Un cliente con otro esquema de tópicos no debe perder datos porque aquí
-        no haya nada con lo que comparar.
-        """
+    def test_un_topico_con_otra_forma_se_rechaza(self, bridge, sample_route):
+        """Sin tópico canónico no existe una identidad autenticada que limitar."""
         outcome = bridge.handle_message(
             "otro/topico",
             payload_for(sample_route, session="session-0001"),
             NOW,
         )
 
-        assert outcome.accepted is True
+        assert outcome.accepted is False
+        assert outcome.reason is RejectReason.SESSION_MISMATCH
 
 
 class TestIdentidadDelVehiculo:
@@ -419,7 +425,7 @@ class TestIdentidadDelVehiculo:
         mensaje = json.loads(payload_for(sample_route))
         mensaje["vehicleId"] = "yo-soy-el-bus-1"
 
-        bridge.handle_message("t", json.dumps(mensaje), NOW)
+        bridge.handle_message(TOPIC, json.dumps(mensaje), NOW)
 
         publicado = publisher.last()["vehicleId"]
 

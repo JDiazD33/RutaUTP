@@ -14,24 +14,26 @@ mapa.
 >
 > La consecuencia práctica: **el producto y la documentación no deben prometer
 > autenticidad de unidad**, porque el sistema no puede verificarla. Para eso
-> haría falta identidad real de la empresa (placa o código de unidad) o
-> credenciales por dispositivo, y hoy no existe ninguna de las dos.
+> haría falta identidad real de la empresa (placa o código de unidad). Las
+> credenciales por instalación aíslan abuso, pero no demuestran que el teléfono
+> viaje realmente dentro de un bus.
 
 ```
 App a bordo                  Backend (este servicio)                App de otros
      │                                │                                  │
      │ MQTT publish                   │ valida contra GTFS                │ MQTT subscribe
      ▼                                │ agrupa por unidad                 ▲
-rutautp/observaciones/{sesión}/posicion│ deriva el vehicleId              │
+rutautp/observaciones/{principal}/{sesión}/posicion
+     │                                │ deriva el vehicleId              │
      │                                ▼                                  │
      └──────────► [ Mosquitto ] ──► (consume) ──► (publica) ──► [ Mosquitto ]
                                                           rutautp/vehiculos/{id}/posicion
 ```
 
 El cliente ya filtra antes de publicar, pero **el servidor no puede confiar en
-él**: el broker es un canal compartido y cualquiera con credenciales válidas
-puede publicar en `rutautp/observaciones/#`. Este servicio es la frontera de
-confianza.
+él**: el broker es un canal compartido y cada instalación autenticada puede
+publicar observaciones bajo su propio principal. Este servicio es la frontera
+de confianza del contenido.
 
 ## Qué resuelve
 
@@ -39,8 +41,8 @@ confianza.
 |---|---|
 | Un cliente puede mentir | Cada observación se contrasta contra el recorrido real de la ruta que dice usar |
 | Un cliente puede suplantar un vehículo | El `vehicleId` **lo deriva el servidor**; se ignora cualquier identificador del mensaje |
-| Un cliente puede inundar el canal | Límite de mensajes por sesión, **más un techo global** del servicio |
-| Un cliente puede declarar una sesión y publicar en el tópico de otra | El tópico y el cuerpo deben coincidir, o el mensaje se rechaza |
+| Un cliente puede inundar el canal | La ACL vincula el tópico al usuario autenticado; límite por principal y techo global de emergencia |
+| Un cliente intenta publicar bajo otra identidad | La ACL vincula `{principal}` con el usuario MQTT autenticado mediante `%u` |
 | Un cliente puede inventar una trayectoria imposible | Continuidad por sesión: un salto que ningún vehículo podría dar se rechaza |
 | QoS 1 entrega duplicados | Deduplicación por `(sessionId, timestamp)` |
 | Varios pasajeros, un solo bus | Agrupación por ruta, proximidad, ventana temporal, avance y rumbo |
@@ -98,7 +100,7 @@ Los ajustes propios del servicio llevan el prefijo `BACKEND_`.
 |---|---|---|
 | `MQTT_HOST` | `127.0.0.1` | Host o dominio del broker |
 | `MQTT_PORT` | `1883`, o `8883` si `MQTT_TLS=1` | Puerto |
-| `MQTT_USERNAME` | — | Usuario. Debe ser el `backend` de la ACL, no el `observer` |
+| `MQTT_USERNAME` | — | Usuario. Para este servicio debe ser `backend`, no una identidad de la app |
 | `MQTT_PASSWORD` | — | Contraseña |
 | `MQTT_TLS` | `0` | `1` habilita TLS e implica el puerto 8883 |
 | `MQTT_CA_CERT` | — | Ruta a la CA propia (PEM). Obligatoria si el certificado es autofirmado |
@@ -116,8 +118,8 @@ Los ajustes propios del servicio llevan el prefijo `BACKEND_`.
 | `BACKEND_MAX_DISTANCE_TO_ROUTE_M` | `50` | Distancia máxima al recorrido |
 | `BACKEND_MAX_HEADING_DIFF_DEG` | `60` | Desvío máximo respecto al sentido del recorrido |
 | `BACKEND_MAX_SPEED_MS` | `30` | Techo de velocidad (108 km/h) |
-| `BACKEND_MAX_MSGS_PER_MINUTE` | `20` | Límite por sesión. La baliza legítima envía 12 |
-| `BACKEND_MAX_MSGS_PER_MINUTE_GLOBAL` | `1800` | **Techo del servicio entero.** El `sessionId` lo elige el cliente, así que el límite por sesión se elude rotándolo; sin este no hay cota real. Debe ser ≥ el de sesión, o una sola baliza agotaría el global |
+| `BACKEND_MAX_MSGS_PER_MINUTE` | `20` | Límite por principal MQTT autenticado. La baliza legítima envía 12 |
+| `BACKEND_MAX_MSGS_PER_MINUTE_GLOBAL` | `1800` | Techo de emergencia del servicio entero, aplicado únicamente después de validar la observación. Debe ser ≥ el límite por principal |
 | `BACKEND_MAX_DISPLACEMENT_MARGIN_M` | `250` | Margen tolerado al comprobar la continuidad de una sesión, para absorber el ruido del GPS |
 | `BACKEND_DEDUPE_WINDOW_S` | `120` | Ventana de deduplicación |
 
@@ -140,7 +142,7 @@ acotada a estos dos.
 
 | Variable | Por defecto |
 |---|---|
-| `BACKEND_OBSERVATIONS_TOPIC` | `rutautp/observaciones/+/posicion` |
+| `BACKEND_OBSERVATIONS_TOPIC` | `rutautp/observaciones/+/+/posicion` |
 | `BACKEND_VEHICLES_TOPIC_PREFIX` | `rutautp/vehiculos` |
 
 ### Persistencia
@@ -183,7 +185,9 @@ delata de inmediato en lugar de parecer vivo hasta que venza el margen.
 Ambos extremos están copiados de los tipos Swift que ya existen, y hay pruebas
 que lo verifican leyendo el código del proyecto de Xcode (ver `tests/test_contract.py`).
 
-**Entrada** — `rutautp/observaciones/{sessionId}/posicion`, QoS 1, sin retención.
+**Entrada** — `rutautp/observaciones/{principal}/{sessionId}/posicion`, QoS 1,
+sin retención. En producción, `mqtt/config/acl.example` obliga a que
+`principal` coincida con el usuario MQTT autenticado.
 Corresponde a `PassengerObservationPayload`:
 
 ```

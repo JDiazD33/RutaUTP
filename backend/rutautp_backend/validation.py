@@ -1,9 +1,8 @@
 """Validación de observaciones entrantes.
 
 El cliente ya filtra antes de publicar, pero el servidor no puede confiar en
-él: el broker es un canal compartido y cualquiera con credenciales válidas
-puede publicar en `rutautp/observaciones/#`. Este módulo es la frontera de
-confianza.
+él: el broker es un canal compartido. La ACL vincula el tópico al usuario MQTT
+autenticado y este módulo valida el contenido que llega desde esa identidad.
 
 Dos decisiones que no son obvias y conviene entender antes de tocar los
 umbrales:
@@ -57,9 +56,9 @@ MAX_SESSION_ID_LENGTH = 128
 
 #: Clave del contador global. No puede coincidir con un `sessionId` real porque
 #: `sessionId` se valida como cadena no vacía sin restringir su contenido: una
-#: sesión llamada igual compartiría contador con el servicio entero. El prefijo
-#: con carácter nulo lo hace imposible en la práctica, y el límite por sesión
-#: seguiría aplicándose por separado en cualquier caso.
+#: principal llamado igual compartiría contador con el servicio entero. El
+#: prefijo con carácter nulo lo hace imposible en un usuario MQTT normal, y el
+#: límite por principal seguiría aplicándose por separado en cualquier caso.
 GLOBAL_RATE_KEY = "\x00global"
 
 
@@ -95,7 +94,7 @@ class ValidationResult:
 
 
 class RateLimiter:
-    """Límite de mensajes por sesión en una ventana deslizante.
+    """Límite de mensajes por clave en una ventana deslizante.
 
     Sin esto, un cliente comprometido puede inundar el broker y forzar al
     servidor a validar geometría millones de veces por minuto.
@@ -155,12 +154,14 @@ class Deduplicator:
     def is_duplicate(self, key: tuple[str, float], now: float) -> bool:
         previous = self._seen.get(key)
 
-        self._seen[key] = now
-
         if previous is None:
             return False
 
         return (now - previous) <= self.window_s
+
+    def remember(self, key: tuple[str, float], now: float) -> None:
+        """Registra una observación solo después de que sea aceptada."""
+        self._seen[key] = now
 
     def prune(self, now: float) -> None:
         cutoff = now - self.window_s
@@ -183,9 +184,9 @@ class ObservationValidator:
         self.config = config
         self.rate_limiter = RateLimiter(config.max_messages_per_minute)
 
-        # Techo del servicio entero. `RateLimiter` se reutiliza con una única
-        # clave: el límite por sesión no basta porque el `sessionId` lo elige
-        # el cliente y se puede rotar.
+        # Techo de emergencia del servicio entero. El límite primario usa la
+        # identidad MQTT autenticada; este segundo techo acota una saturación
+        # agregada de muchas identidades.
         self.global_limiter = RateLimiter(config.max_messages_per_minute_global)
 
         self.deduplicator = Deduplicator(config.dedupe_window_s)
@@ -194,7 +195,12 @@ class ObservationValidator:
         #: siguiente es compatible con la trayectoria.
         self._last_seen: dict[str, tuple[float, float, float]] = {}
 
-    def validate(self, raw: bytes | str, now: float) -> ValidationResult:
+    def validate(
+        self,
+        raw: bytes | str,
+        now: float,
+        principal: str | None = None,
+    ) -> ValidationResult:
         """Valida un mensaje. `now` se inyecta para poder probar sin reloj real."""
         payload = self._decode(raw)
 
@@ -210,20 +216,17 @@ class ObservationValidator:
         # aplica antes de cualquier geometría: es la defensa más barata.
         session_id = str(payload["sessionId"]).strip()
 
-        if not self.rate_limiter.allow(session_id, now):
+        # En producción `principal` procede del segmento de tópico que la ACL
+        # obliga a coincidir con el usuario MQTT autenticado. Por eso rotar un
+        # `sessionId` ya no crea un contador nuevo. El fallback conserva la API
+        # de validación pura para herramientas y pruebas sin broker.
+        rate_key = principal or session_id
+
+        if not self.rate_limiter.allow(rate_key, now):
             return ValidationResult.reject(
                 RejectReason.RATE_LIMITED,
-                f"sesión {session_id[:8]} supera "
+                f"principal {rate_key[:32]} supera "
                 f"{self.config.max_messages_per_minute} msg/min",
-            )
-
-        # El techo global se comprueba después del de sesión: así el motivo
-        # registrado es el más específico cuando ambos aplican.
-        if not self.global_limiter.allow(GLOBAL_RATE_KEY, now):
-            return ValidationResult.reject(
-                RejectReason.GLOBAL_RATE_LIMITED,
-                f"el servicio supera "
-                f"{self.config.max_messages_per_minute_global} msg/min",
             )
 
         semantic = self._check_semantics(payload, now)
@@ -233,7 +236,9 @@ class ObservationValidator:
 
         timestamp = float(payload["timestamp"])
 
-        if self.deduplicator.is_duplicate((session_id, timestamp), now):
+        dedupe_key = (session_id, timestamp)
+
+        if self.deduplicator.is_duplicate(dedupe_key, now):
             return ValidationResult.reject(
                 RejectReason.DUPLICATE, f"({session_id[:8]}, {timestamp})"
             )
@@ -243,6 +248,17 @@ class ObservationValidator:
         if isinstance(continuity, ValidationResult):
             return continuity
 
+        # El techo global es la última barrera de capacidad: los mensajes
+        # inválidos no consumen el cupo de las observaciones legítimas y el
+        # límite por principal ya aisló antes a un publicador abusivo.
+        if not self.global_limiter.allow(GLOBAL_RATE_KEY, now):
+            return ValidationResult.reject(
+                RejectReason.GLOBAL_RATE_LIMITED,
+                f"el servicio supera "
+                f"{self.config.max_messages_per_minute_global} msg/min",
+            )
+
+        self.deduplicator.remember(dedupe_key, now)
         self._remember(session_id, payload)
 
         return ValidationResult.accept(Observation.from_payload(payload))

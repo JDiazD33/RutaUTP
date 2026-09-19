@@ -176,7 +176,16 @@ class Bridge:
                 detail=detail,
             )
 
-        mismatch = self._session_mismatch(topic, payload)
+        topic_identity = self._topic_identity(topic)
+
+        if topic_identity is None:
+            mismatch = (
+                "el tópico debe tener la forma "
+                "rutautp/observaciones/{principal}/{sessionId}/posicion"
+            )
+        else:
+            _, topic_session = topic_identity
+            mismatch = self._session_mismatch(topic_session, payload)
 
         if mismatch is not None:
             self.metrics.record_rejected(RejectReason.SESSION_MISMATCH)
@@ -192,7 +201,9 @@ class Bridge:
                 detail=mismatch,
             )
 
-        result = self.validator.validate(payload, now)
+        assert topic_identity is not None
+        principal, _ = topic_identity
+        result = self.validator.validate(payload, now, principal=principal)
 
         if not result.ok:
             reason = result.reason or RejectReason.MALFORMED_JSON
@@ -284,11 +295,29 @@ class Bridge:
 
         return True
 
-    def _session_mismatch(self, topic: str, payload: bytes | str) -> str | None:
+    @staticmethod
+    def _topic_identity(topic: str) -> tuple[str, str] | None:
+        """Extrae el principal autenticado y la sesión del tópico canónico."""
+        parts = topic.split("/")
+
+        if len(parts) != 5:
+            return None
+
+        if parts[0:2] != ["rutautp", "observaciones"]:
+            return None
+
+        if parts[4] != "posicion" or not parts[2] or not parts[3]:
+            return None
+
+        return parts[2], parts[3]
+
+    def _session_mismatch(
+        self, topic_session: str, payload: bytes | str
+    ) -> str | None:
         """Comprueba que el tópico y el cuerpo declaren la misma sesión.
 
         Devuelve el motivo si no concuerdan, o `None` si concuerdan o si el
-        tópico no tiene la forma esperada.
+        cuerpo no puede decodificarse todavía.
 
         **Antes esto solo generaba una advertencia.** La consecuencia era que un
         cliente podía publicar en el tópico de una sesión y declarar otra en el
@@ -296,12 +325,9 @@ class Bridge:
         tópico —lo que un operador ve al diagnosticar— decía otra cosa. Rechazar
         hace que ambos coincidan siempre.
 
-        No se rechaza cuando el tópico no es `rutautp/observaciones/{id}/posicion`:
-        en ese caso no hay nada que comparar, y un cliente con otro formato no
-        debe perder datos por ello. La comprobación es de consistencia interna,
-        no de autenticidad: no demuestra que la sesión sea de quien publica
-        (ver `mqtt/config/acl.example`, donde está documentado por qué hoy no se
-        puede afirmar eso).
+        La autenticidad del principal no se deduce del JSON: la garantiza la
+        regla `%u` de Mosquitto, que solo permite publicar bajo el nombre del
+        usuario autenticado. Aquí se comprueba la consistencia de la sesión.
         """
         try:
             body = json.loads(payload)
@@ -316,21 +342,9 @@ class Bridge:
         if not session_id:
             return None
 
-        parts = topic.split("/")
-
-        # `rutautp/observaciones/{sessionId}/posicion`
-        if len(parts) != 4:
-            return None
-
-        if parts[0] != "rutautp" or parts[1] != "observaciones":
-            return None
-
-        if parts[3] != "posicion":
-            return None
-
-        if parts[2] != session_id:
+        if topic_session != session_id:
             return (
-                f"el tópico declara {parts[2]!r} y el cuerpo {session_id!r}"
+                f"el tópico declara {topic_session!r} y el cuerpo {session_id!r}"
             )
 
         return None
