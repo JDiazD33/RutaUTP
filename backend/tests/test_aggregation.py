@@ -11,9 +11,10 @@ import pytest
 from rutautp_backend.aggregation import VehicleAggregator
 from rutautp_backend.config import Config
 from rutautp_backend.geo import segment_bearing_deg
+from rutautp_backend.gtfs import GtfsFeed
 from rutautp_backend.models import Observation
 
-from .conftest import SAMPLE_ROUTE_ID, offset_meters
+from .conftest import SAMPLE_ROUTE_ID, offset_meters, vehicle_id
 
 NOW = 1_700_000_000.0
 
@@ -54,8 +55,13 @@ def make_observation(
 
 
 @pytest.fixture
-def aggregator(config: Config) -> VehicleAggregator:
-    return VehicleAggregator(config)
+def aggregator(config: Config, feed: GtfsFeed) -> VehicleAggregator:
+    """Agregador con el feed real.
+
+    El feed es lo que le permite conocer la longitud de cada recorrido, y por
+    tanto comprobar el avance sobre el trazado.
+    """
+    return VehicleAggregator(config, feed)
 
 
 class TestCreacion:
@@ -74,7 +80,7 @@ class TestCreacion:
         """
         vehicle, _ = aggregator.ingest(make_observation(sample_route), NOW)
 
-        assert vehicle.vehicle_id == f"{SAMPLE_ROUTE_ID}-01"
+        assert vehicle.vehicle_id == vehicle_id(SAMPLE_ROUTE_ID, 1)
         assert "session-0001" not in vehicle.vehicle_id
 
     def test_dos_sesiones_lejanas_son_dos_vehiculos(self, aggregator, sample_route):
@@ -87,7 +93,7 @@ class TestCreacion:
         )
 
         assert created is True
-        assert vehicle.vehicle_id == f"{SAMPLE_ROUTE_ID}-02"
+        assert vehicle.vehicle_id == vehicle_id(SAMPLE_ROUTE_ID, 2)
         assert aggregator.vehicle_count == 2
 
 
@@ -125,10 +131,20 @@ class TestFusion:
         assert vehicle.sample_count == 4
 
     def test_mas_alla_del_radio_no_se_fusiona(self, aggregator, sample_route):
+        """Dos sesiones a 1,5 km son dos vehículos.
+
+        La segunda usa una sesión distinta a propósito: con la misma, el vínculo
+        sesión–vehículo (D01) las uniría igualmente, y lo correcto es que lo
+        haga —un pasajero no cambia de bus—, pero entonces la prueba no estaría
+        midiendo el radio de fusión.
+        """
         aggregator.ingest(make_observation(sample_route), NOW)
 
         _, created = aggregator.ingest(
-            make_observation(sample_route, offset_north_m=1500), NOW + 5
+            make_observation(
+                sample_route, session="session-0002", offset_north_m=1500
+            ),
+            NOW + 5,
         )
 
         assert created is True
@@ -223,7 +239,7 @@ class TestCaducidad:
 
         expired = aggregator.expire(NOW + config.vehicle_ttl_s + 1)
 
-        assert expired == [f"{SAMPLE_ROUTE_ID}-01"]
+        assert expired == [vehicle_id(SAMPLE_ROUTE_ID, 1)]
         assert aggregator.vehicle_count == 0
 
     def test_una_rafaga_de_mensajes_viejos_no_mantiene_vivo_el_vehiculo(
@@ -251,7 +267,7 @@ class TestCaducidad:
             make_observation(sample_route), NOW + config.vehicle_ttl_s + 2
         )
 
-        assert vehicle.vehicle_id == f"{SAMPLE_ROUTE_ID}-02"
+        assert vehicle.vehicle_id == vehicle_id(SAMPLE_ROUTE_ID, 2)
 
 
 class TestRitmoDePublicacion:
