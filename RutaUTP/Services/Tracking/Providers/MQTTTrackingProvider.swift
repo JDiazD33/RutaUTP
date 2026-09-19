@@ -17,6 +17,14 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
 
     private(set) var currentPositions: [VehiclePosition] = []
 
+    /// Cada cuánto se revisa si algún vehículo dejó de transmitir.
+    ///
+    /// El límite de obsolescencia es 45 s; barrer cada 10 s acota el
+    /// retraso máximo con el que un vehículo desaparece del mapa.
+    private static let stalenessSweepInterval: TimeInterval = 10
+
+    private var stalenessTimer: Timer?
+
     /// Reconstruye el snapshot descartando vehículos cuya última
     /// señal supera el límite de obsolescencia: una baliza apagada
     /// no debe quedarse dibujada en el mapa indefinidamente.
@@ -32,6 +40,54 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             .sorted {
                 $0.id < $1.id
             }
+    }
+
+    /// Arranca el barrido periódico de posiciones obsoletas.
+    ///
+    /// Sin este temporizador la poda dependía de que llegara un mensaje
+    /// cualquiera: si todas las balizas callaban a la vez, las últimas
+    /// posiciones conocidas se quedaban dibujadas indefinidamente.
+    private func startStalenessSweep() {
+        guard stalenessTimer == nil else {
+            return
+        }
+
+        stalenessTimer = Timer.scheduledTimer(
+            withTimeInterval: Self.stalenessSweepInterval,
+            repeats: true
+        ) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.sweepStalePositions()
+            }
+        }
+    }
+
+    private func stopStalenessSweep() {
+        stalenessTimer?.invalidate()
+        stalenessTimer = nil
+    }
+
+    /// Retira del mapa los vehículos que dejaron de transmitir.
+    ///
+    /// Solo emite cuando el snapshot cambia, para no despertar al
+    /// consumidor en cada tick sin motivo.
+    private func sweepStalePositions() {
+        let previous = currentPositions
+
+        refreshCurrentPositions()
+
+        guard currentPositions != previous else {
+            return
+        }
+
+        #if DEBUG
+        print(
+            "[MQTT] Barrido: \(previous.count) → " +
+            "\(currentPositions.count) vehículos"
+        )
+        #endif
+
+        continuation?.yield(currentPositions)
     }
 
     init(configuration: MQTTConfiguration) {
@@ -50,6 +106,14 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         mqtt.autoReconnect = true
         mqtt.enableSSL = configuration.useTLS
 
+        // Con una CA propia (Mosquitto con certificado autofirmado) el
+        // certificado no está en el almacén del sistema y el handshake
+        // falla. Se declara la CA en lugar de desactivar la validación.
+        if !configuration.trustedCACertificates.isEmpty {
+            mqtt.trustedServerCertificates =
+                configuration.trustedCACertificates
+        }
+
         configureCallbacks()
     }
 
@@ -59,6 +123,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         }
 
         prepareStreamIfNeeded()
+        startStalenessSweep()
 
         #if DEBUG
         print("[MQTT] Intentando conectar con el broker...")
@@ -69,6 +134,8 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
 
     func stop() {
         mqtt.disconnect()
+
+        stopStalenessSweep()
 
         continuation?.finish()
         continuation = nil

@@ -45,9 +45,11 @@ final class MQTTObservationPublisher:
     /// Tiempo mínimo entre publicaciones consecutivas, en segundos.
     ///
     /// Cinco segundos permite observar el movimiento del vehículo
-    /// sin transmitir cada lectura producida por el GPS.
-    private let minimumPublishInterval:
-        TimeInterval = 5
+    /// sin transmitir cada lectura producida por el GPS. La constante
+    /// vive en `ObservationPublishThrottle` para que el temporizador de
+    /// reenvío y el propio limitador no puedan desincronizarse.
+    private let minimumPublishInterval =
+        ObservationPublishThrottle.defaultMinimumInterval
 
     /// Identificador temporal del viaje actual.
     private var sessionID: String?
@@ -59,9 +61,7 @@ final class MQTTObservationPublisher:
     private var isActive = false
 
     /// Decide el ritmo de publicación (testeable sin red ni reloj real).
-    private var throttle = ObservationPublishThrottle(
-        minimumInterval: 5
-    )
+    private var throttle = ObservationPublishThrottle()
 
     /// Conserva temporalmente la muestra más reciente.
     ///
@@ -97,6 +97,14 @@ final class MQTTObservationPublisher:
         mqtt.cleanSession = true
         mqtt.autoReconnect = true
         mqtt.enableSSL = configuration.useTLS
+
+        // Con una CA propia (Mosquitto con certificado autofirmado) el
+        // certificado no está en el almacén del sistema y el handshake
+        // falla. Se declara la CA en lugar de desactivar la validación.
+        if !configuration.trustedCACertificates.isEmpty {
+            mqtt.trustedServerCertificates =
+                configuration.trustedCACertificates
+        }
 
         configureCallbacks()
     }
@@ -526,11 +534,21 @@ struct PassengerObservationPayload: Codable, Equatable {
 struct ObservationPublishThrottle: Equatable {
 
     /// Segundos que deben pasar entre dos publicaciones.
+    ///
+    /// Es la única fuente de verdad del ritmo de la baliza: tanto el
+    /// limitador como el temporizador de reenvío del publicador la leen
+    /// de aquí.
+    static let defaultMinimumInterval: TimeInterval = 5
+
+    /// Segundos que deben pasar entre dos publicaciones.
     let minimumInterval: TimeInterval
 
     private(set) var lastPublishedAt: TimeInterval?
 
-    init(minimumInterval: TimeInterval = 5) {
+    init(
+        minimumInterval: TimeInterval =
+            ObservationPublishThrottle.defaultMinimumInterval
+    ) {
         self.minimumInterval = minimumInterval
     }
 
