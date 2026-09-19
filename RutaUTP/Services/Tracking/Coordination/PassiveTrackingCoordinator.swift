@@ -148,10 +148,11 @@ private let isForcedOnboardForMQTTTest =
 
         // El estado del canal se propaga en el momento en que cambia,
         // no cuando la siguiente muestra lo consulta.
-        observationPublisher?.onStateChange =
+        self.observationPublisher?.onStateChange =
             { [weak self] newState in
                 self?.observationPublisherState = newState
             }
+        refreshObservationPublisherState()
     }
     
     
