@@ -6,22 +6,66 @@
 #
 # Regla general: quien no aparece aquí, no puede hacer NADA
 # (Mosquitto deniega por defecto a los usuarios autenticados no listados).
+#
+# Hay una prueba automática de estos permisos: `tools/acl_test.sh`.
+# Si se cambia este archivo, hay que actualizarla en el mismo cambio.
 
-# La app (pasajero/baliza) usa el usuario "observer".
-#   - Escribe SOLO sus observaciones anónimas.
-#   - Lee las posiciones vehiculares que produce el backend.
-#   - NO puede publicar posiciones vehiculares (eso impide que un
-#     cliente suplante vehículos ante los demás).
+# ── La app (baliza del pasajero y consumidor del mapa) ────────────────────
+#
+#   - Escribe observaciones.
+#   - Lee posiciones vehiculares.
+#
+# Lo que NO puede hacer, y por qué:
+#
+#   - **Leer `rutautp/observaciones/#`.** Esa rama contiene la trayectoria
+#     individual de cada persona a bordo. Con permiso de lectura, cualquiera con
+#     las credenciales de la app podría seguir los movimientos de los demás
+#     usuarios. Antes estaba permitido y era el agujero más grave de la ACL.
+#
+#   - **Publicar en `rutautp/vehiculos/#`.** Eso permitiría a un teléfono
+#     suplantar un vehículo ante el resto de usuarios.
 user observer
 topic write rutautp/observaciones/#
-topic read rutautp/observaciones/#
 topic read rutautp/vehiculos/#
 
-# El puente/backend valida, agrupa y republica a vehiculos/.
+# ── El backend (puente observaciones -> vehiculos) ────────────────────────
+#
+# Acotado a los dos tópicos que necesita, y al nivel exacto: `readwrite
+# rutautp/#` le daba permiso sobre todo el espacio de nombres, y
+# `read rutautp/observaciones/#` le dejaba leer también cualquier rama futura
+# colgada de ahí. El filtro del backend es
+# `rutautp/observaciones/+/posicion`, así que la ACL concede justo eso.
+#
+# Ojo: Mosquitto compara el filtro de la ACL con el tópico del mensaje, no con
+# el filtro de suscripción, así que `rutautp/observaciones/+/posicion` autoriza
+# exactamente los cuatro niveles que el backend consume.
 user backend
-topic readwrite rutautp/#
+topic read rutautp/observaciones/+/posicion
+topic write rutautp/vehiculos/+/posicion
 
-# Cuenta humana para depurar con mosquitto_sub durante desarrollo.
-# Leer TODO incluye observaciones ajenas: no usar en producción.
+# ── Cuenta humana de depuración ───────────────────────────────────────────
+#
+# No se distribuye con la app. Leer todo incluye las observaciones ajenas, así
+# que solo sirve para diagnosticar durante el desarrollo.
+#
+# Para suscribirse a `rutautp/observaciones/#` y ver qué llega, esta es la
+# cuenta que hay que usar, no las credenciales normales de la app.
+#
 #user debug
 #topic read rutautp/#
+
+# ── Pendiente: propiedad de cada sesión ───────────────────────────────────
+#
+# Con una única cuenta compartida no se puede afirmar que cada teléfono escriba
+# solo sus propias observaciones: cualquiera con estas credenciales puede
+# publicar en el tópico de la sesión de otro. Mosquitto sabe acotarlo por
+# usuario o por identificador de cliente:
+#
+#   pattern write rutautp/observaciones/%u/posicion
+#
+# Pero eso exige que el tópico de la sesión coincida con el nombre de usuario, y
+# hoy no coincide: el cliente usa un UUID nuevo por viaje, generado en el
+# teléfono. Es un cambio de diseño (credenciales por dispositivo con un flujo de
+# aprovisionamiento), no un ajuste de configuración. Mientras no exista, el
+# backend no puede tratar la identidad de sesión como prueba de propiedad, y así
+# está documentado en `backend/README.md`.
