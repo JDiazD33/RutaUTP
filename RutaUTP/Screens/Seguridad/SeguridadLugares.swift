@@ -136,7 +136,8 @@ struct ElegirLugaresSheet: View {
 /// Rotación oscilante con desfase por tile para que se muevan "en ola".
 struct JiggleEffect: ViewModifier {
     let active: Bool
-    var fase: Double = 0
+    /// Posición del tile en la cuadrícula. Solo se usa para alternar el signo.
+    var indice: Int = 0
 
     func body(content: Content) -> some View {
         content
@@ -155,8 +156,13 @@ struct JiggleEffect: ViewModifier {
     /// tile— sino de ALTERNAR el signo según la posición: los tiles pares
     /// giran a un lado y los impares al otro. Aquí había un
     /// `.delay(fase * 0.0)` que multiplicaba por cero y no hacía nada.
+    ///
+    /// La paridad se mide sobre el ÍNDICE, no sobre una fase escalada. Cuando
+    /// esto era `fase.truncatingRemainder(dividingBy: 2)` con una fase de
+    /// `índice × 1,7`, el resto solo salía 0 en el primer tile y **los demás
+    /// giraban todos al mismo lado**: la ola no existía.
     private var jiggleAngle: Double {
-        1.6 * (fase.truncatingRemainder(dividingBy: 2) == 0 ? 1 : -1)
+        1.6 * (indice.isMultiple(of: 2) ? 1 : -1)
     }
 }
 

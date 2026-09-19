@@ -157,14 +157,22 @@ struct SeguridadView: View {
              "En las calles del centro se comparte espacio con taxis y vehículos de reparto. Evitemos pedir al micro que se detenga en una esquina.",
              "Downtown streets share space with taxis and delivery vehicles. Avoid asking the bus to stop at a corner.")
         ]
-        // Cada bloque conserva los reportes existentes y añade una publicación con foto.
-        return ilustrados.enumerated().flatMap { index, dato -> [ReporteComunidad] in
+        // Intercala una foto y hasta tres originales, conservando el orden.
+        // Los originales que sobren se añaden al final, incluso sin fotos.
+        var resultado: [ReporteComunidad] = []
+        var restantes = originales[...]
+        for (index, dato) in ilustrados.enumerated() {
             let nuevo = ReporteComunidad(iniciales: dato.1, nombre: dato.0,
                 hace: "HACE 3 MIN", tipo: dato.2, cuerpo: dato.4, cuerpoIngles: dato.5,
                 foto: dato.3, utiles: 8 + index * 3, comentarios: 2,
                 avatarColor: .secondaryContainer, avatarForeground: .onSecondaryContainer)
-            return [nuevo] + Array(originales[(index * 3)..<(index * 3 + 3)])
+            resultado.append(nuevo)
+            let grupo = restantes.prefix(3)
+            resultado.append(contentsOf: grupo)
+            restantes = restantes.dropFirst(grupo.count)
         }
+        resultado.append(contentsOf: restantes)
+        return resultado
     }()
 
     /// Alertas del feed de comunidad, contadas del MISMO array que alimenta
@@ -213,51 +221,61 @@ struct SeguridadView: View {
     private var rutasSeguras: [RutaSegura] {
         [
         RutaSegura(id: 0,
+                   consultaMapa: "Óvalo Papal",
                    titulo: L.t("Zona Segura: Óvalo Papal", "Safe Zone: Óvalo Papal"),
                    descripcion: L.t("Patrullaje activo y alta iluminación hasta las 11:00 PM.", "Active patrol and high lighting until 11:00 PM."),
                    icono: "moon.zzz.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: .tertiary),
         RutaSegura(id: 1,
+                   consultaMapa: "Avenida España 1450",
                    titulo: L.t("Serenazgo más cercano: Av. España 1450", "Nearest city patrol: Av. España 1450"),
                    descripcion: L.t("Punto del serenazgo municipal a 2 cuadras del campus. Atiende 24 h.", "City patrol point 2 blocks from campus. Open 24 h."),
                    icono: "shield.lefthalf.filled", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil),
         RutaSegura(id: 2,
+                   consultaMapa: "Comisaría Víctor Larco",
                    titulo: L.t("Comisaría Víctor Larco", "Víctor Larco Police Station"),
                    descripcion: L.t("A 1.5 km del campus por Mansiche. Emergencias: 105.", "1.5 km from campus via Mansiche. Emergencies: 105."),
                    icono: "lock.shield.fill", iconoBg: .appPrimary, iconoFg: .white,
                    accent: .appPrimary),
         RutaSegura(id: 3,
+                   consultaMapa: "Real Plaza",
                    titulo: L.t("Av. América – Real Plaza", "Av. América – Real Plaza Mall"),
                    descripcion: L.t("Zona comercial vigilada con cámaras, bien iluminada hasta tarde.", "Commercial area with cameras, well lit until late."),
                    icono: "camera.on.rectangle.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: nil),
         RutaSegura(id: 4,
+                   consultaMapa: "Plaza de Armas",
                    titulo: L.t("Plaza de Armas (Centro Histórico)", "Main Square (Historic Downtown)"),
                    descripcion: L.t("Serenazgo 24 h y alta afluencia de personas todo el día.", "24 h city patrol and busy foot traffic all day."),
                    icono: "building.columns.fill", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil),
         RutaSegura(id: 5,
+                   consultaMapa: "Mall Aventura",
                    titulo: L.t("Mall Aventura – Av. América Sur", "Mall Aventura – Av. América Sur"),
                    descripcion: L.t("Seguridad privada y botón de emergencia en estacionamientos.", "Private security and emergency button in parking lots."),
                    icono: "storefront.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: nil),
         RutaSegura(id: 6,
+                   consultaMapa: "Paseo de los Héroes",
                    titulo: L.t("Av. Mansiche – Paseo de los Héroes", "Av. Mansiche – Paseo de los Héroes"),
                    descripcion: L.t("Corredor iluminado y transitado hasta las 11:00 PM.", "Lit, busy corridor until 11:00 PM."),
                    icono: "lightbulb.fill", iconoBg: .secondary, iconoFg: .onSecondary,
                    accent: nil),
         RutaSegura(id: 7,
+                   consultaMapa: "Hospital Belén",
                    titulo: L.t("Hospital Belén – Emergencias 24 h", "Hospital Belén – 24 h ER"),
                    descripcion: L.t("Urgencias a 1.8 km del campus. Referencia segura de noche.", "ER 1.8 km from campus. Safe reference at night."),
                    icono: "cross.case.fill", iconoBg: .errorContainer, iconoFg: .onErrorContainer,
                    accent: nil),
         RutaSegura(id: 8,
+                   consultaMapa: "Estadio Mansiche",
                    titulo: L.t("Estadio Mansiche – Perímetro", "Mansiche Stadium – Perimeter"),
                    descripcion: L.t("Luces perimetrales y guardias durante eventos y entrenamientos.", "Perimeter lights and guards during events and training."),
                    icono: "sportscourt.fill", iconoBg: .tertiary, iconoFg: .onTertiary,
                    accent: nil),
         RutaSegura(id: 9,
+                   consultaMapa: "Cineplanet",
                    titulo: L.t("Frente a CinePlanet Trujillo", "Across from CinePlanet Trujillo"),
                    descripcion: L.t("Área vigilada por cámaras privadas, con movimiento constante.", "Area monitored by private cameras, constant foot traffic."),
                    icono: "video.fill", iconoBg: .secondary, iconoFg: .onSecondary,
@@ -576,7 +594,7 @@ struct SeguridadView: View {
                          fg: lugar.esFijo ? .white : .appPrimary,
                          border: lugar.esFijo,
                          badgeFrecuente: lugar.esFrecuente,
-                         faseJiggle: Double(lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) ?? 0) * 1.7)
+                         indiceTile: lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) ?? 0)
         {
             if lugaresVM.modoEdicion {
                 AppHaptics.impact(.light)
@@ -638,7 +656,7 @@ struct SeguridadView: View {
         }
     }
 
-    private func lugarTile(nombre: String, icon: String, bg: Color, fg: Color, border: Bool, badgeFrecuente: Bool = false, faseJiggle: Double = 0, dashed: Bool = false, action: @escaping () -> Void) -> some View {
+    private func lugarTile(nombre: String, icon: String, bg: Color, fg: Color, border: Bool, badgeFrecuente: Bool = false, indiceTile: Int = 0, dashed: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 10) {
                 ZStack {
@@ -676,7 +694,7 @@ struct SeguridadView: View {
             )
         }
         .buttonStyle(.plain)
-        .modifier(JiggleEffect(active: lugaresVM.modoEdicion && !dashed, fase: faseJiggle))
+        .modifier(JiggleEffect(active: lugaresVM.modoEdicion && !dashed, indice: indiceTile))
     }
 
     // MARK: - Rutas seguras
@@ -744,13 +762,10 @@ struct SeguridadView: View {
     private func buscarZona(_ zona: RutaSegura) {
         guard !buscandoZona else { return }
         buscandoZona = true; errorZona = nil
-        let names = ["Óvalo Papal", "Avenida España 1450", "Comisaría Víctor Larco", "Real Plaza",
-                     "Plaza de Armas", "Mall Aventura", "Paseo de los Héroes", "Hospital Belén",
-                     "Estadio Mansiche", "Cineplanet"]
         Task { @MainActor in
             defer { buscandoZona = false }
             let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = names[zona.id] + ", Trujillo, Perú"
+            request.naturalLanguageQuery = zona.consultaMapa + ", Trujillo, Perú"
             request.region = MKCoordinateRegion(center: GTFSRepository.coordenadaUTP,
                 span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15))
             do {

@@ -12,6 +12,13 @@ import CoreLocation
 // MARK: - Modelo de Ruta Segura
 struct RutaSegura: Identifiable {
     let id: Int
+    /// Nombre con el que se busca la zona en Apple Maps.
+    ///
+    /// Vive aquí, y no en un array paralelo indexado por `id` en la vista, para
+    /// que el compilador obligue a declararlo en CADA zona: antes era
+    /// `names[zona.id]` sobre un array de 10 posiciones, así que una undécima
+    /// zona rompía la búsqueda con un índice fuera de rango.
+    let consultaMapa: String
     let titulo: String
     let descripcion: String
     let icono: String
