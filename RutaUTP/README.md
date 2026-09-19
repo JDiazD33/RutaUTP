@@ -19,11 +19,12 @@ apunta los archivos a esta carpeta `aplicacion real/`.
 6. [Design System](#design-system)
 7. [Arquitectura y navegacion](#arquitectura-y-navegacion)
 8. [Pantallas implementadas](#pantallas-implementadas)
-9. [Modelos de datos](#modelos-de-datos)
-10. [Reglas de implementacion](#reglas-de-implementacion)
-11. [Animaciones](#animaciones)
-12. [Accesibilidad](#accesibilidad)
-13. [Solucion de problemas](#solucion-de-problemas)
+9. [Tracking pasivo y MQTT](#tracking-pasivo-y-mqtt)
+10. [Modelos de datos](#modelos-de-datos)
+11. [Reglas de implementacion](#reglas-de-implementacion)
+12. [Animaciones](#animaciones)
+13. [Accesibilidad](#accesibilidad)
+14. [Solucion de problemas](#solucion-de-problemas)
 
 ---
 
@@ -476,6 +477,98 @@ Elementos:
 - Card de stats (47 viajes, 12 rutas, 3 logros) con divisores.
 - Seccion **Preferencias** con 3 toggles y 2 chevron rows.
 - Sheet **Editar perfil** para cambiar el nombre.
+
+---
+
+## Tracking pasivo y MQTT
+
+Modulo que convierte los telefonos a bordo en una red de balizas anonimas: los
+pasajeros que viajan aportan su ubicacion y el resto de usuarios ven los
+vehiculos moverse en el mapa. El broker, los topicos y el endurecimiento del
+servidor estan documentados aparte, en [`../mqtt/README.md`](../mqtt/README.md).
+
+### Los dos roles de la app
+
+| Rol | Que hace | Componentes |
+|---|---|---|
+| **Baliza** (a bordo) | Detecta que el usuario viaja en una linea y publica observaciones anonimas | `PassiveTrackingCoordinator` → `PassengerDetectionEngine` → `MQTTObservationPublisher` |
+| **Consumidor** (en el mapa) | Se suscribe a las posiciones vehiculares y las dibuja | `MQTTTrackingProvider` → `VehiclePositionSanitizer` → `MapaViewModel` |
+
+### Mapa de archivos
+
+```
+Services/Tracking/
+├── MQTTConfiguration.swift        Variables del Scheme + carga de la CA propia
+├── Coordination/
+│   └── PassiveTrackingCoordinator.swift   Orquesta GPS, Core Motion y publicacion
+├── Detection/
+│   ├── PassengerDetectionEngine.swift     Maquina de estados (tipos puros, testeables)
+│   ├── PassengerDetectionModels.swift     Estados, umbrales y muestras
+│   └── RouteCandidateMatcher.swift        Empareja la ubicacion con el shape GTFS
+├── Motion/
+│   ├── MotionActivityProviding.swift
+│   └── CoreMotionActivityService.swift    Caminando / corriendo / vehiculo
+├── Providers/
+│   ├── VehicleTrackingProviding.swift     Contrato: de donde vienen las posiciones
+│   ├── TrackingProviderFactory.swift      Elige MQTT o simulacion segun el entorno
+│   ├── MQTTTrackingProvider.swift         Consumidor real (suscripcion)
+│   ├── SimulatedTrackingProvider.swift    Flota demo sobre shapes GTFS
+│   └── RealTrackingProvider.swift         Stub para un futuro backend REST/WebSocket
+├── Publishers/
+│   ├── ObservationPublishing.swift        Contrato de publicacion
+│   └── MQTTObservationPublisher.swift     Baliza (throttle 5 s, filtros)
+└── Models/
+    ├── VehiclePosition.swift              Dato crudo + VehiclePositionSanitizer
+    ├── TrackingPoint.swift
+    └── TripSession.swift
+```
+
+### Maquina de estados de la deteccion
+
+```
+idle ──cerca de paradero──► approachingStop
+ │                                │
+ └──evidencia vehicular───────────┴──► boardingCandidate
+                                             │ 3 muestras consecutivas
+                                             ▼
+                                          onboard ──► (unico estado que publica)
+                                             │ caminando/corriendo
+                                             ▼
+                                      alightingCandidate
+                                             │ 4 muestras
+                                             ▼
+                                           idle
+```
+
+"Evidencia vehicular" = cerca del shape GTFS **y** rumbo alineado **y** velocidad
+de 4 a 30 m/s **y** actividad `automotive`. Los umbrales viven juntos en
+`PassengerDetectionThresholds` para poder ajustarlos sin tocar el algoritmo.
+
+### Privacidad
+
+Cada abordaje confirmado genera un `UUID` nuevo y anonimo: no viaja ningun
+identificador permanente del usuario ni del dispositivo, y la sesion muere al
+confirmar el descenso. Hay una prueba que lo verifica
+(`testNoContieneIdentificadoresPersonales`).
+
+### Configuracion
+
+Las credenciales **no estan en el repositorio**: se pasan como variables de
+entorno del Scheme de Xcode. La tabla completa esta en
+[`../mqtt/README.md`](../mqtt/README.md); las obligatorias son `MQTT_HOST`,
+`MQTT_USERNAME` y `MQTT_PASSWORD`. Sin ellas la app funciona con deteccion local
+y simulacion, pero no transmite ni recibe.
+
+### Estado actual
+
+- **Funciona**: deteccion, publicacion de observaciones, consumo de posiciones
+  vehiculares y saneado de lo que llega por el broker.
+- **Falta**: el backend que valide y agrupe las observaciones antes de
+  publicarlas como posiciones vehiculares. Hoy solo existe
+  [`../mqtt/puente-demo.sh`](../mqtt/puente-demo.sh), un puente de demostracion
+  que republica sin validar.
+- **Limitacion conocida**: sin `UIBackgroundModes: location` la baliza solo
+  transmite con la app en primer plano (ver el comentario en `Info.plist`).
 
 ---
 
