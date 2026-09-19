@@ -274,6 +274,69 @@ final class MQTTConfigurationTests: XCTestCase {
         )
     }
 
+    // MARK: - Orden de resolución (I08)
+
+    /// El entorno del proceso gana: es la vía de desarrollo (Scheme de Xcode).
+    func testElEntornoGanaSobreLosDefaults() throws {
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: "rutautp.tests.\(UUID().uuidString)")
+        )
+        defaults.set("desde-defaults", forKey: "MQTT_HOST")
+
+        let configuration = try XCTUnwrap(
+            MQTTConfiguration.from(
+                environment: baseEnvironment(),
+                defaults: defaults
+            )
+        )
+
+        XCTAssertEqual(configuration.host, "mqtt.ejemplo.com")
+    }
+
+    /// Sin entorno, los `UserDefaults` permiten aprovisionar una instalación
+    /// distribuida **sin incrustar credenciales en el binario**, que es la vía
+    /// que no hay que usar: un secreto privilegiado dentro del IPA se extrae.
+    func testLosDefaultsSirvenFueraDeXcode() throws {
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: "rutautp.tests.\(UUID().uuidString)")
+        )
+        defaults.set("mqtt.distribuido.com", forKey: "MQTT_HOST")
+        defaults.set("observer", forKey: "MQTT_USERNAME")
+        defaults.set("secreto", forKey: "MQTT_PASSWORD")
+        defaults.set("1", forKey: "MQTT_TLS")
+
+        let configuration = try XCTUnwrap(
+            MQTTConfiguration.from(environment: [:], defaults: defaults)
+        )
+
+        XCTAssertEqual(configuration.host, "mqtt.distribuido.com")
+        XCTAssertTrue(configuration.useTLS)
+        XCTAssertEqual(configuration.port, MQTTConfiguration.defaultTLSPort)
+    }
+
+    /// Un valor vacío no cuenta como informado y no bloquea al siguiente nivel.
+    func testUnValorVacioNoBloqueaElSiguienteNivel() throws {
+        let defaults = try XCTUnwrap(
+            UserDefaults(suiteName: "rutautp.tests.\(UUID().uuidString)")
+        )
+        defaults.set("desde-defaults", forKey: "MQTT_HOST")
+
+        var environment = baseEnvironment()
+        environment["MQTT_HOST"] = ""
+
+        let configuration = try XCTUnwrap(
+            MQTTConfiguration.from(environment: environment, defaults: defaults)
+        )
+
+        XCTAssertEqual(configuration.host, "desde-defaults")
+    }
+
+    /// Sin ningún nivel informado no hay configuración, y la app cae a
+    /// simulación en lugar de aparentar seguimiento real.
+    func testSinNingunNivelNoHayConfiguracion() {
+        XCTAssertNil(MQTTConfiguration.from(environment: [:]))
+    }
+
     // MARK: - Apoyo
 
     private func baseEnvironment() -> [String: String] {

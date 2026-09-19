@@ -26,13 +26,23 @@
 	<string>RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>RutaUTP puede usar tu ubicación en segundo plano para mantener activo el seguimiento de tu ruta incluso con la pantalla bloqueada (funcionalidad futura para el rol conductor).</string>
-	<!-- TODO (futuro): cuando se defina el rol conductor, habilitar background location:
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>location</string>
-	</array>
+	<!--
+	  Sin `NSLocationAlwaysAndWhenInUseUsageDescription`: la app solo pide
+	  permiso "cuando se usa" (`requestWhenInUseAuthorization`), así que declarar
+	  el permiso permanente anunciaba una capacidad que no se solicitaba.
+
+	  DECISIÓN (I01): la baliza del pasajero funciona SOLO con la app en primer
+	  plano. `PassiveTrackingCoordinator` cierra la publicación al pasar a
+	  segundo plano, y la interfaz lo dice antes de pedir el consentimiento.
+
+	  Para habilitar el segundo plano harían falta las tres cosas juntas, no solo
+	  el modo:
+	    1. `UIBackgroundModes: location`
+	    2. `allowsBackgroundLocationUpdates = true` en `CLLocationManager`
+	    3. `requestAlwaysAuthorization()` y su cadena de uso
+	  Además hay que revalidar el viaje al volver (un `sessionId` de hace horas
+	  no debe retomarse solo) y medir el consumo de batería. Es una decisión de
+	  producto, no un ajuste de configuración.
 	-->
 	<key>UIAppFonts</key>
 	<array>

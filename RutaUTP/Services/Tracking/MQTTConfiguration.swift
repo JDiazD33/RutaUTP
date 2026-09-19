@@ -51,24 +51,53 @@ struct MQTTConfiguration {
     ///   MQTT_PORT (opcional; por defecto 1883, o 8883 si MQTT_TLS=1)
     ///   MQTT_TLS (opcional, "1"/"true"/"yes" habilita TLS)
     ///   MQTT_CA_CERT (opcional, ruta a la CA propia en PEM o DER)
+    ///
+    /// Resuelve en tres niveles, de más específico a menos:
+    ///
+    /// 1. **Entorno del proceso.** El Scheme de Xcode. Es la vía de desarrollo.
+    /// 2. **`UserDefaults`.** Para instalaciones fuera de Xcode: un perfil de
+    ///    gestión (MDM), una pantalla de aprovisionamiento o un `.plist`
+    ///    cargado al arrancar. Es la vía para distribuir la app **sin incrustar
+    ///    credenciales en el binario**, que es lo que no hay que hacer: un
+    ///    secreto privilegiado compartido dentro del IPA se extrae en minutos.
+    /// 3. **`Info.plist`.** Solo para valores no secretos (host y puerto), que
+    ///    pueden diferir entre compilaciones.
+    ///
+    /// La contraseña no debería llegar nunca por el tercer nivel.
     static func fromEnvironment() -> MQTTConfiguration? {
-        from(environment: ProcessInfo.processInfo.environment)
+        from(
+            environment: ProcessInfo.processInfo.environment,
+            defaults: .standard,
+            bundle: .main
+        )
     }
 
     /// Variante que recibe el entorno ya resuelto.
     ///
-    /// Permite probar el análisis de variables y el puerto por defecto sin
-    /// depender de `ProcessInfo`, que es estado global del proceso.
+    /// Permite probar el análisis de variables, el orden de precedencia y el
+    /// puerto por defecto sin depender de `ProcessInfo`, que es estado global
+    /// del proceso.
     static func from(
-        environment: [String: String]
+        environment: [String: String],
+        defaults: UserDefaults? = nil,
+        bundle: Bundle? = nil
     ) -> MQTTConfiguration? {
+        func valor(_ clave: String) -> String? {
+            let candidatos: [String?] = [
+                environment[clave],
+                defaults?.string(forKey: clave),
+                bundle?.object(forInfoDictionaryKey: clave) as? String
+            ]
+
+            return candidatos
+                .compactMap { $0 }
+                .first { !$0.isEmpty }
+        }
+
         guard
-            let host = environment["MQTT_HOST"],
-            !host.isEmpty,
-            let username = environment["MQTT_USERNAME"],
-            !username.isEmpty,
-            let password = environment["MQTT_PASSWORD"],
-            !password.isEmpty
+            let host = valor("MQTT_HOST"),
+            let username = valor("MQTT_USERNAME"),
+            let password = valor("MQTT_PASSWORD")
         else {
             return nil
         }
@@ -76,7 +105,7 @@ struct MQTTConfiguration {
         let tlsFlags = ["1", "true", "yes"]
 
         let useTLS = tlsFlags.contains(
-            (environment["MQTT_TLS"] ?? "").lowercased()
+            (valor("MQTT_TLS") ?? "").lowercased()
         )
 
         // TLS implica 8883. Exigir además MQTT_PORT era una trampa: activar
@@ -85,10 +114,13 @@ struct MQTTConfiguration {
             ? defaultTLSPort
             : defaultPlainPort
 
-        let port = environment["MQTT_PORT"]
+        let port = valor("MQTT_PORT")
             .flatMap { UInt16($0) } ?? fallbackPort
 
-        let caPath = environment["MQTT_CA_CERT"] ?? ""
+        let caPath = resolveCertificatePath(
+            valor("MQTT_CA_CERT") ?? "",
+            bundle: bundle
+        )
 
         let trustedCA = caPath.isEmpty
             ? []
@@ -112,6 +144,33 @@ struct MQTTConfiguration {
             useTLS: useTLS,
             trustedCACertificates: trustedCA
         )
+    }
+
+    /// Resuelve la ruta del certificado de la CA.
+    ///
+    /// Una ruta absoluta se usa tal cual. Una relativa se busca dentro del
+    /// paquete de la app: en una instalación distribuida el certificado viaja
+    /// con el binario y no tiene sentido exigir una ruta absoluta del sistema
+    /// de archivos, que además cambia en cada instalación.
+    private static func resolveCertificatePath(
+        _ value: String,
+        bundle: Bundle?
+    ) -> String {
+        if value.isEmpty || value.hasPrefix("/") {
+            return value
+        }
+
+        guard let bundle else {
+            return value
+        }
+
+        let nombre = (value as NSString).deletingPathExtension
+        let extension_ = (value as NSString).pathExtension
+
+        return bundle.path(
+            forResource: nombre,
+            ofType: extension_.isEmpty ? nil : extension_
+        ) ?? value
     }
 }
 
