@@ -114,7 +114,9 @@ enum Persistencia {
         "emergencia_parentesco",
         "emergencia_numero",
         "monedero.saldo.v1",
-        "monedero.movimientos.v1"
+        "monedero.movimientos.v1",
+        "tracking.radioParadero",
+        "tracking.velocidadDemo"
     ]
 }
 

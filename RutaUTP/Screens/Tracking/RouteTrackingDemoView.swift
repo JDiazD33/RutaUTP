@@ -693,9 +693,9 @@ struct RouteTrackingDemoView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Buscar destino", "Search destination"))
             Picker(L.t("Caminata máxima en cada extremo", "Maximum walk at each end"), selection: $vm.radioParadero) {
-                Text("200 m").tag(200.0)
-                Text("500 m").tag(500.0)
-                Text("800 m").tag(800.0)
+                ForEach(RouteTrackingViewModel.Preferencia.radio.valoresPermitidos, id: \.self) { radio in
+                    Text("\(Int(radio)) m").tag(radio)
+                }
             }
             .pickerStyle(.segmented)
             Text(L.t("Paraderos a menos de \(Int(vm.radioParadero)) m del origen y destino",
@@ -800,7 +800,7 @@ struct RouteTrackingDemoView: View {
             if vm.modoDemo {
                 VStack(spacing: 5) {
                     HStack(spacing: 0) {
-                        ForEach([1.0, 3.0, 10.0], id: \.self) { factor in
+                        ForEach(RouteTrackingViewModel.Preferencia.velocidad.valoresPermitidos, id: \.self) { factor in
                             let activo = vm.velocidadDemo == factor
                             Button {
                                 AppHaptics.selection()

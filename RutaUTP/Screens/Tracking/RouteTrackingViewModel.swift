@@ -26,16 +26,13 @@ final class RouteTrackingViewModel: ObservableObject {
     /// en cada lectura. Antes era un `let` evaluado al crear el VM y dependía
     /// de que RootView reconstruyera el árbol al cambiar de idioma; al quitar
     /// ese `.id()`, un `let` habría quedado congelado en el idioma de arranque.
-    /// Mismas claves señables del Mapa.
+    /// Los tres puntos y sus claves señables viven en `DestinosFijos`,
+    /// compartido con el Mapa: antes estaban escritos literales en los dos.
     var destinos: [DestinoDemo] {
-        [
-        DestinoDemo(id: 1, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill",
-                    coordinate: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645)),
-        DestinoDemo(id: 2, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill",
-                    coordinate: CLLocationCoordinate2D(latitude: -8.1090, longitude: -79.0270)),
-        DestinoDemo(id: 3, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves",
-                    coordinate: CLLocationCoordinate2D(latitude: -8.0825, longitude: -79.1197))
-        ]
+        DestinosFijos.todos.map {
+            DestinoDemo(id: $0.id, label: $0.label, icon: $0.icono,
+                        coordinate: $0.coordinate)
+        }
     }
 
     // MARK: - Estado de navegación (igual a NavegacionRutaView)
@@ -103,8 +100,45 @@ final class RouteTrackingViewModel: ObservableObject {
     @Published private(set) var calculandoRuta: Bool = false
     /// Rumbo actual en grados (-1 desconocido): orienta la cámara y el marcador.
     @Published private(set) var rumbo: Double = -1
-    /// Multiplicador del modo demo (1× / 2× / 4×).
-    @Published var velocidadDemo: Double = 1
+    /// Preferencias del modo demo que sobreviven a salir de la pantalla.
+    ///
+    /// El router propio destruye y recrea esta pantalla al cambiar de pestaña,
+    /// y el ViewModel vive en un `@StateObject`: sin persistir, el radio volvía
+    /// a 500 m y la velocidad a 1× cada vez que el usuario salía y volvía.
+    enum Preferencia: String {
+        case radio = "tracking.radioParadero"
+        case velocidad = "tracking.velocidadDemo"
+
+        /// Opciones compartidas por la validación y los controles de la vista.
+        var valoresPermitidos: [Double] {
+            switch self {
+            case .radio: return [200, 500, 800]
+            case .velocidad: return [1, 3, 10]
+            }
+        }
+
+        var porDefecto: Double {
+            switch self {
+            case .radio: return 500
+            case .velocidad: return 1
+            }
+        }
+    }
+
+    private static func leer(_ preferencia: Preferencia) -> Double {
+        // No reescribe el original si está dañado. Solo admite valores finitos
+        // presentes en el selector, antes de usarlos en cálculos o convertir a Int.
+        guard let valor = UserDefaults.standard.object(forKey: preferencia.rawValue) as? Double,
+              valor.isFinite, preferencia.valoresPermitidos.contains(valor) else {
+            return preferencia.porDefecto
+        }
+        return valor
+    }
+
+    /// Multiplicador del modo demo (1× / 3× / 10×). Persistido.
+    @Published var velocidadDemo: Double = RouteTrackingViewModel.leer(.velocidad) {
+        didSet { UserDefaults.standard.set(velocidadDemo, forKey: Preferencia.velocidad.rawValue) }
+    }
     /// Velocidad estimada por vehículo (m/s), calculada entre snapshots del
     /// provider para el popup en vivo.
     @Published private(set) var velocidadesVehiculos: [String: Double] = [:]
@@ -118,7 +152,10 @@ final class RouteTrackingViewModel: ObservableObject {
     }
     @Published private(set) var resumen: ResumenViaje?
 
-    @Published var radioParadero: Double = 500
+    /// Radio de búsqueda de paraderos, en metros. Persistido (ver `Preferencia`).
+    @Published var radioParadero: Double = RouteTrackingViewModel.leer(.radio) {
+        didSet { UserDefaults.standard.set(radioParadero, forKey: Preferencia.radio.rawValue) }
+    }
     @Published private(set) var itinerary: TransitItinerary?
     @Published private(set) var nearestStop: ParaderoGTFS?
     @Published private(set) var nearestStopMeters: Double?
