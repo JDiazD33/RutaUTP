@@ -114,7 +114,7 @@ private struct MapaParaderosRepresentable: UIViewRepresentable {
             guard annotation is ParaderoIluminadoAnnotation else { return nil }
 
             let id = "paradero-iluminado"
-            let view = (mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKAnnotationView)
+            let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                         ?? MKAnnotationView(annotation: nil, reuseIdentifier: id)
             view.annotation = annotation
             view.image = UIImage.focoBurbuja()

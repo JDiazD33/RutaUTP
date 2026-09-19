@@ -272,7 +272,7 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
                 return view
             }
             let id = "paradero"
-            let view = (mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKAnnotationView)
+            let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                         ?? MKAnnotationView(annotation: nil, reuseIdentifier: id)
             view.annotation = paradero
             let config = UIImage.SymbolConfiguration(pointSize: 8, weight: .bold)

@@ -43,7 +43,9 @@ struct RouteTrackingDemoView: View {
 
             // Mapa iOS 17+ con MapCameraPosition
             Map(position: $cameraPosition) {
-                if let userLoc = vm.userLocation {
+                // Solo se dibuja la ubicación del usuario si ya hay una lectura;
+                // `UserAnnotation()` pinta la del propio mapa, no este valor.
+                if vm.userLocation != nil {
                     UserAnnotation()
                         .foregroundStyle(.secondary)
                 }
