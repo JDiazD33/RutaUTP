@@ -32,9 +32,18 @@ def swift_struct_fields(path: Path, struct_name: str) -> set[str]:
 
     Se descartan los comentarios antes de buscar: si no, un `// let ...` dentro
     de un comentario contaría como campo.
+
+    Si el archivo no existe, la prueba **falla**. Antes hacía `skip`, y eso
+    convertía el caso más peligroso —que alguien mueva o renombre el archivo del
+    contrato— en un resultado verde que no verificaba nada. Una prueba que se
+    salta a sí misma no protege de nada.
     """
     if not path.is_file():
-        pytest.skip(f"no se encontró {path}")
+        pytest.fail(
+            f"no se encontró {path}: la comprobación del contrato no puede "
+            "saltarse, porque un contrato sin verificar es indistinguible de "
+            "uno roto"
+        )
 
     source = path.read_text(encoding="utf-8")
     source = re.sub(r"//[^\n]*", "", source)

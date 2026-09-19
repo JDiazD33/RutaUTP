@@ -32,6 +32,7 @@ from typing import Any
 
 from .config import Config
 from .geo import (
+    haversine_m,
     heading_difference_deg,
     is_valid_coordinate,
     match_point_to_polyline,
@@ -53,6 +54,23 @@ logger = logging.getLogger(__name__)
 # Longitud máxima razonable de un identificador de sesión. El cliente genera un
 # UUID (36 caracteres); se deja margen para no atar el servidor al formato.
 MAX_SESSION_ID_LENGTH = 128
+
+#: Clave del contador global. No puede coincidir con un `sessionId` real porque
+#: `sessionId` se valida como cadena no vacía sin restringir su contenido: una
+#: sesión llamada igual compartiría contador con el servicio entero. El prefijo
+#: con carácter nulo lo hace imposible en la práctica, y el límite por sesión
+#: seguiría aplicándose por separado en cualquier caso.
+GLOBAL_RATE_KEY = "\x00global"
+
+
+def _reject_json_constant(name: str):
+    """Rechaza `NaN`, `Infinity` y `-Infinity` durante la decodificación.
+
+    El estándar JSON no admite esas constantes, pero el decodificador de Python
+    las acepta por defecto. Dejarlas entrar convierte un mensaje en una excepción
+    más adelante, cuando ya se está operando con el valor.
+    """
+    raise ValueError(f"constante no permitida en JSON: {name}")
 
 
 @dataclass(frozen=True)
@@ -164,7 +182,17 @@ class ObservationValidator:
         self.feed = feed
         self.config = config
         self.rate_limiter = RateLimiter(config.max_messages_per_minute)
+
+        # Techo del servicio entero. `RateLimiter` se reutiliza con una única
+        # clave: el límite por sesión no basta porque el `sessionId` lo elige
+        # el cliente y se puede rotar.
+        self.global_limiter = RateLimiter(config.max_messages_per_minute_global)
+
         self.deduplicator = Deduplicator(config.dedupe_window_s)
+
+        #: Última observación aceptada de cada sesión, para comprobar que la
+        #: siguiente es compatible con la trayectoria.
+        self._last_seen: dict[str, tuple[float, float, float]] = {}
 
     def validate(self, raw: bytes | str, now: float) -> ValidationResult:
         """Valida un mensaje. `now` se inyecta para poder probar sin reloj real."""
@@ -189,6 +217,15 @@ class ObservationValidator:
                 f"{self.config.max_messages_per_minute} msg/min",
             )
 
+        # El techo global se comprueba después del de sesión: así el motivo
+        # registrado es el más específico cuando ambos aplican.
+        if not self.global_limiter.allow(GLOBAL_RATE_KEY, now):
+            return ValidationResult.reject(
+                RejectReason.GLOBAL_RATE_LIMITED,
+                f"el servicio supera "
+                f"{self.config.max_messages_per_minute_global} msg/min",
+            )
+
         semantic = self._check_semantics(payload, now)
 
         if isinstance(semantic, ValidationResult):
@@ -201,16 +238,45 @@ class ObservationValidator:
                 RejectReason.DUPLICATE, f"({session_id[:8]}, {timestamp})"
             )
 
+        continuity = self._check_continuity(payload, session_id)
+
+        if isinstance(continuity, ValidationResult):
+            return continuity
+
+        self._remember(session_id, payload)
+
         return ValidationResult.accept(Observation.from_payload(payload))
 
     # ── Etapas ────────────────────────────────────────────────────────────
 
     def _decode(self, raw: bytes | str) -> dict[str, Any] | ValidationResult:
+        """Convierte el mensaje en un objeto, o explica por qué no se puede.
+
+        Todo lo que puede lanzar una excepción se comprueba **antes** de usarlo:
+        un solo mensaje con `schemaVersion: NaN` bastaba para tumbar el servicio.
+        """
+        # Un mensaje legítimo ronda los 300 bytes. El límite se aplica antes de
+        # decodificar para no gastar memoria en algo que se va a descartar.
+        if len(raw) > self.config.max_message_bytes:
+            return ValidationResult.reject(
+                RejectReason.MESSAGE_TOO_LARGE,
+                f"{len(raw)} bytes > {self.config.max_message_bytes}",
+            )
+
         try:
-            payload = json.loads(raw)
+            payload = json.loads(raw, parse_constant=_reject_json_constant)
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
             return ValidationResult.reject(
                 RejectReason.MALFORMED_JSON, str(error)[:120]
+            )
+        except RecursionError:
+            return ValidationResult.reject(
+                RejectReason.TOO_DEEPLY_NESTED, "anidamiento excesivo"
+            )
+        except ValueError as error:
+            # `parse_constant` señala así las constantes no permitidas.
+            return ValidationResult.reject(
+                RejectReason.NON_FINITE_NUMBER, str(error)[:120]
             )
 
         if not isinstance(payload, dict):
@@ -231,17 +297,29 @@ class ObservationValidator:
 
             value = payload[field_name]
 
+            if not is_number(value) and expected_type is not str:
+                return ValidationResult.reject(
+                    RejectReason.BAD_FIELD_TYPE, f"{field_name}={value!r}"
+                )
+
             if expected_type is float:
-                if not is_number(value):
+                # `1e309` se decodifica como infinito: es un número válido para
+                # el decodificador pero no para el contrato.
+                if not math.isfinite(value):
                     return ValidationResult.reject(
-                        RejectReason.BAD_FIELD_TYPE,
-                        f"{field_name}={value!r}",
+                        RejectReason.NON_FINITE_NUMBER, f"{field_name}={value!r}"
                     )
             elif expected_type is int:
-                if not is_number(value) or float(value) != int(value):
+                if not math.isfinite(value):
                     return ValidationResult.reject(
-                        RejectReason.BAD_FIELD_TYPE,
-                        f"{field_name}={value!r}",
+                        RejectReason.NON_FINITE_NUMBER, f"{field_name}={value!r}"
+                    )
+
+                # La comprobación de finitud va antes: `int(NaN)` y
+                # `int(inf)` lanzan excepción en vez de devolver un valor.
+                if float(value) != int(value):
+                    return ValidationResult.reject(
+                        RejectReason.BAD_FIELD_TYPE, f"{field_name}={value!r}"
                     )
             elif not isinstance(value, expected_type):
                 return ValidationResult.reject(
@@ -389,9 +467,93 @@ class ObservationValidator:
 
         return None
 
+    # ── Continuidad de la trayectoria ─────────────────────────────────────
+
+    def _check_continuity(
+        self, payload: dict[str, Any], session_id: str
+    ) -> None | ValidationResult:
+        """Comprueba que la observación sea compatible con la anterior.
+
+        La geometría demuestra que un punto está sobre el recorrido, **no** que
+        exista un vehículo ahí: basta con inventarse una posición sobre la
+        línea. Esta comprobación añade la dimensión que faltaba —el tiempo— y
+        rechaza el salto que no podría haber dado ningún vehículo real.
+
+        Es una defensa parcial y conviene no exagerarla: una sesión nueva no
+        tiene historial, así que la primera observación siempre pasa. Lo que
+        impide es sostener una trayectoria incoherente dentro de una misma
+        sesión, que es lo que hace falta para simular un recorrido creíble.
+        """
+        previous = self._last_seen.get(session_id)
+
+        if previous is None:
+            return None
+
+        previous_timestamp, previous_latitude, previous_longitude = previous
+
+        timestamp = float(payload["timestamp"])
+
+        # Un mensaje desordenado no dice nada sobre la trayectoria: el
+        # agregador ya ignora las lecturas más viejas.
+        if timestamp <= previous_timestamp:
+            return None
+
+        elapsed = timestamp - previous_timestamp
+
+        travelled = haversine_m(
+            previous_latitude,
+            previous_longitude,
+            float(payload["lat"]),
+            float(payload["lon"]),
+        )
+
+        # Lo que recorrería un vehículo al techo de velocidad, más margen para
+        # el ruido del GPS de la medida anterior.
+        allowed = (
+            self.config.max_speed_ms * elapsed
+            + self.config.max_accuracy_m
+            + self.config.max_displacement_margin_m
+        )
+
+        if travelled > allowed:
+            return ValidationResult.reject(
+                RejectReason.IMPLAUSIBLE_JUMP,
+                f"{travelled:.0f} m en {elapsed:.1f} s "
+                f"(máximo {allowed:.0f} m)",
+            )
+
+        return None
+
+    def _remember(self, session_id: str, payload: dict[str, Any]) -> None:
+        """Guarda la observación aceptada como referencia de continuidad."""
+        self._last_seen[session_id] = (
+            float(payload["timestamp"]),
+            float(payload["lat"]),
+            float(payload["lon"]),
+        )
+
     # ── Mantenimiento ─────────────────────────────────────────────────────
 
     def prune(self, now: float) -> None:
         """Libera el estado de sesiones y mensajes ya caducados."""
         self.rate_limiter.prune(now)
+        self.global_limiter.prune(now)
         self.deduplicator.prune(now)
+
+        # Una sesión que lleva sin publicar más de la ventana de deduplicación
+        # ya no puede aportar continuidad útil: su próxima observación se
+        # tratará como la primera, que es el comportamiento correcto tras un
+        # viaje nuevo.
+        cutoff = now - self.config.dedupe_window_s
+
+        stale = [
+            key for key, seen in self._last_seen.items() if seen[0] < cutoff
+        ]
+
+        for key in stale:
+            del self._last_seen[key]
+
+    @property
+    def tracked_continuity_sessions(self) -> int:
+        """Sesiones con historial de trayectoria. Para diagnóstico."""
+        return len(self._last_seen)

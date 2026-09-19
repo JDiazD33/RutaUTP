@@ -179,11 +179,17 @@ class TestRangos:
         assert result.reason is RejectReason.INVALID_COORDINATE
 
     def test_coordenada_no_finita(self, validator, sample_route):
+        """Se rechaza al decodificar, antes de llegar a comprobar el rango.
+
+        El motivo es más preciso que `INVALID_COORDINATE`: el problema no es que
+        la coordenada esté fuera de rango, sino que `NaN` ni siquiera es un
+        número válido para el contrato JSON.
+        """
         result = validate(
             validator, on_route_payload(sample_route, lon=float("nan"))
         )
 
-        assert result.reason is RejectReason.INVALID_COORDINATE
+        assert result.reason is RejectReason.NON_FINITE_NUMBER
 
     def test_precision_negativa(self, validator, sample_route):
         result = validate(validator, on_route_payload(sample_route, accuracy=-1))

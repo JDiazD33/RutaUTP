@@ -91,8 +91,10 @@ class TestContraElClienteSwift:
     """Comprueba que el formato asumido es el que publica de verdad el cliente."""
 
     def test_el_cliente_publica_en_cuatro_niveles(self):
+        # Falla, no se salta: si el archivo del contrato desaparece, esta prueba
+        # dejaría de comprobar justo lo que existe para comprobar.
         if not MQTT_OBSERVATION_PUBLISHER.is_file():
-            pytest.skip("no se encontró el cliente Swift")
+            pytest.fail(f"no se encontró {MQTT_OBSERVATION_PUBLISHER}")
 
         source = MQTT_OBSERVATION_PUBLISHER.read_text(encoding="utf-8")
 
@@ -111,7 +113,7 @@ class TestContraElClienteSwift:
 
     def test_el_cliente_consume_el_topico_que_publicamos(self):
         if not MQTT_TRACKING_PROVIDER.is_file():
-            pytest.skip("no se encontró el cliente Swift")
+            pytest.fail(f"no se encontró {MQTT_TRACKING_PROVIDER}")
 
         source = MQTT_TRACKING_PROVIDER.read_text(encoding="utf-8")
 
@@ -124,6 +126,6 @@ class TestContraElClienteSwift:
         assert client_filter == "rutautp/vehiculos/+/posicion"
 
         # Lo que publicamos debe casar con lo que el cliente escucha.
-        topic = Config().vehicles_topic("17350695-01")
+        topic = Config().vehicle_topic("17350695-01")
 
         assert filter_matches(client_filter, topic) is True
