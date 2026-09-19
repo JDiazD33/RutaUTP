@@ -32,10 +32,24 @@ BACKEND_PID=""
 SUB_PID=""
 
 cleanup() {
-    [ -n "$SUB_PID" ] && kill "$SUB_PID" 2>/dev/null || true
-    [ -n "$BACKEND_PID" ] && kill "$BACKEND_PID" 2>/dev/null || true
-    [ -n "$MOSQUITTO_PID" ] && kill "$MOSQUITTO_PID" 2>/dev/null || true
+    for pid in "$SUB_PID" "$BACKEND_PID" "$MOSQUITTO_PID"; do
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+    done
+
     wait 2>/dev/null || true
+
+    # Red de seguridad: si algo sobreviviera, se avisa y se fuerza.
+    #
+    # Dejar un proceso vivo no es hipotético: el backend se quedaba huérfano
+    # ciclando contra un broker ya apagado, y no había forma de enterarse desde
+    # el resultado de la prueba, que salía en verde.
+    for pid in "$SUB_PID" "$BACKEND_PID" "$MOSQUITTO_PID"; do
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            echo "AVISO: el proceso $pid sobrevivió al cierre; se fuerza" >&2
+            kill -9 "$pid" 2>/dev/null || true
+        fi
+    done
+
     rm -rf "$WORK_DIR"
 }
 trap cleanup EXIT
@@ -68,11 +82,17 @@ done
 echo "== 2. backend suscrito =="
 (
     cd "$BACKEND_DIR"
-    MQTT_HOST=127.0.0.1 \
-    MQTT_PORT="$PORT" \
-    MQTT_USERNAME="" \
-    MQTT_PASSWORD="" \
-    BACKEND_LOG_LEVEL=INFO \
+
+    # `exec` sustituye la subshell por el proceso de Python, así que `$!` pasa a
+    # ser el PID real del backend y el cierre de la prueba lo alcanza. Sin esto
+    # se mataba la subshell y el hijo sobrevivía ciclando contra un broker ya
+    # apagado, sin que el resultado de la prueba lo delatara.
+    exec env \
+        MQTT_HOST=127.0.0.1 \
+        MQTT_PORT="$PORT" \
+        MQTT_USERNAME="" \
+        MQTT_PASSWORD="" \
+        BACKEND_LOG_LEVEL=INFO \
         "$PYTHON" -m rutautp_backend --plain-logs > "$WORK_DIR/backend.log" 2>&1
 ) &
 BACKEND_PID=$!
