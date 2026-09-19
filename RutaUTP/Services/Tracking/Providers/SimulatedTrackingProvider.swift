@@ -16,7 +16,16 @@
 import Foundation
 import CoreLocation
 
-final class SimulatedTrackingProvider: VehicleTrackingProviding {
+/// Flota simulada sobre los recorridos GTFS.
+///
+/// `@unchecked Sendable`: el estado mutable (`routeStates`,
+/// `currentPositions`, `tickTimer`) se toca únicamente desde la cola
+/// principal —`start()` y `stop()` se llaman desde `MainActor`,
+/// `configureVehicles` está aislado en `MainActor` y el `Timer` se programa
+/// en el run loop principal—. Se declara de forma explícita porque el
+/// compilador no puede comprobarlo.
+final class SimulatedTrackingProvider: VehicleTrackingProviding,
+                                       @unchecked Sendable {
 
     let source: VehicleTrackingSource = .simulated
 
@@ -149,15 +158,18 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         let routeCount = routes.count
 
         routeStates = routes.enumerated().compactMap { index, route in
-            var coordinates = PolylineMatching.decimate(
+            let coordinates = PolylineMatching.decimate(
                 route.shape,
                 maxPoints: 240
             )
 
-            if coordinates.count < 2 {
-                coordinates = RutaCoordenadas.linea10
-            }
-
+            // Una ruta sin geometría utilizable se descarta.
+            //
+            // Antes se sustituía por `RutaCoordenadas.linea10`, un juego de
+            // coordenadas fijas declarado en un archivo de pantalla
+            // (`Screens/DetalleRuta/RutaMapKitView.swift`). Eso hacía que la
+            // capa de servicios dependiera de la de interfaz, y la constante
+            // desaparece en cuanto se reorganizan las pantallas.
             guard coordinates.count >= 2 else {
                 return nil
             }
