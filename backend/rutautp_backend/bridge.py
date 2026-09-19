@@ -20,17 +20,48 @@ from typing import Any, Callable
 from .aggregation import VehicleAggregator
 from .config import Config
 from .gtfs import GtfsFeed
+from .health import remove_heartbeat, write_heartbeat
 from .metrics import Metrics
 from .models import RejectReason
+from .persistence import ObservationStore, open_store
 from .validation import ObservationValidator
 
 logger = logging.getLogger(__name__)
 
-# `(topico, carga_util)` -> nada. Se inyecta para poder capturar publicaciones.
-Publisher = Callable[[str, str], None]
+# `(topico, carga_util)` -> `True` si el broker aceptó el mensaje.
+#
+# Devolver un booleano importa: antes el publicador no comunicaba el fallo, así
+# que el puente contaba como publicada una posición que el broker había
+# rechazado, y no volvía a intentarlo.
+Publisher = Callable[[str, str], bool]
 
 # Cada cuántos segundos se vuelca el resumen de contadores.
 SUMMARY_INTERVAL_S = 60.0
+
+# Espera progresiva entre reintentos de conexión. Empieza en un segundo para
+# recuperarse rápido de un corte breve y se dobla hasta el máximo, para no
+# martillear un broker caído ni consumir CPU reintentando sin parar.
+RECONNECT_INITIAL_S = 1.0
+RECONNECT_MAX_S = 30.0
+
+
+def _sleep_until_reconnect(
+    now: float,
+    next_attempt_at: float,
+    max_sleep_s: float,
+) -> None:
+    """Cede CPU mientras todavía no corresponde reconectar.
+
+    `paho.Client.loop()` retorna inmediatamente cuando no existe un socket. Sin
+    esta pausa, el bucle exterior gira a máxima velocidad durante todo el
+    backoff aunque los intentos de conexión sí estén espaciados correctamente.
+    La espera se divide en tramos de `max_sleep_s` para volver pronto al bucle,
+    actualizar el latido y atender una señal de cierre.
+    """
+    remaining = next_attempt_at - now
+
+    if remaining > 0:
+        time.sleep(min(remaining, max_sleep_s))
 
 
 @dataclass(frozen=True)
@@ -56,15 +87,26 @@ class Bridge:
         validator: ObservationValidator | None = None,
         aggregator: VehicleAggregator | None = None,
         metrics: Metrics | None = None,
+        store: ObservationStore | None = None,
     ) -> None:
         self.config = config
         self.feed = feed
         self.publisher = publisher
         self.validator = validator or ObservationValidator(feed, config)
-        self.aggregator = aggregator or VehicleAggregator(config)
+        # El feed se pasa al agregador para que conozca la longitud de cada
+        # recorrido: es lo que convierte una diferencia de `progress` en metros.
+        self.aggregator = aggregator or VehicleAggregator(config, feed)
         self.metrics = metrics or Metrics()
+        self.store = store or open_store(
+            config.database_path, config.retention_days
+        )
 
         self._last_summary_at = 0.0
+
+        #: Momento de la última publicación aceptada por el broker. Es lo que
+        #: permite distinguir "no hay pasajeros contribuyendo" de "el servicio
+        #: dejó de publicar".
+        self._last_publish_at = 0.0
 
     # ── Un mensaje ────────────────────────────────────────────────────────
 
@@ -74,12 +116,81 @@ class Bridge:
         payload: bytes | str,
         now: float | None = None,
     ) -> HandleOutcome:
-        """Procesa un mensaje entrante del broker."""
+        """Procesa un mensaje entrante del broker.
+
+        Es la única entrada del sistema y **nunca propaga una excepción**: un
+        mensaje manipulado no puede detener el servicio. Los fallos esperables se
+        convierten en un motivo de rechazo; los inesperados se registran con su
+        traza y se cuentan aparte, para que no se confundan con datos inválidos
+        del cliente.
+        """
         now = time.time() if now is None else now
 
         self.metrics.record_received()
 
-        self._warn_on_topic_mismatch(topic, payload)
+        try:
+            return self._handle(topic, payload, now)
+        except Exception:  # noqa: BLE001 - barrera deliberada de último recurso
+            self.metrics.record_rejected(RejectReason.INTERNAL_ERROR)
+            self.metrics.record_internal_error()
+
+            logger.exception(
+                "fallo inesperado procesando un mensaje de %s; se descarta y "
+                "el servicio continúa",
+                topic,
+            )
+
+            return HandleOutcome(
+                accepted=False,
+                reason=RejectReason.INTERNAL_ERROR,
+                detail="error interno",
+            )
+
+    def _handle(
+        self,
+        topic: str,
+        payload: bytes | str,
+        now: float,
+    ) -> HandleOutcome:
+        # Esta barrera debe estar antes de `_session_mismatch`: ese método
+        # decodifica el JSON para comparar la sesión del cuerpo con la del
+        # tópico. Si se confiara únicamente en el límite del validador, un
+        # mensaje enorme ya se habría parseado una vez antes de ser rechazado,
+        # anulando la protección de memoria y CPU.
+        if len(payload) > self.config.max_message_bytes:
+            detail = (
+                f"{len(payload)} bytes > "
+                f"{self.config.max_message_bytes}"
+            )
+
+            self.metrics.record_rejected(RejectReason.MESSAGE_TOO_LARGE)
+            self.store.record_rejection(
+                RejectReason.MESSAGE_TOO_LARGE,
+                detail,
+                now,
+            )
+
+            return HandleOutcome(
+                accepted=False,
+                reason=RejectReason.MESSAGE_TOO_LARGE,
+                detail=detail,
+            )
+
+        mismatch = self._session_mismatch(topic, payload)
+
+        if mismatch is not None:
+            self.metrics.record_rejected(RejectReason.SESSION_MISMATCH)
+            self.store.record_rejection(
+                RejectReason.SESSION_MISMATCH, mismatch, now
+            )
+
+            logger.warning("descartada (session_mismatch): %s", mismatch)
+
+            return HandleOutcome(
+                accepted=False,
+                reason=RejectReason.SESSION_MISMATCH,
+                detail=mismatch,
+            )
 
         result = self.validator.validate(payload, now)
 
@@ -87,6 +198,7 @@ class Bridge:
             reason = result.reason or RejectReason.MALFORMED_JSON
 
             self.metrics.record_rejected(reason)
+            self.store.record_rejection(reason, result.detail, now)
 
             logger.debug(
                 "descartada (%s): %s", reason.value, result.detail or "sin detalle"
@@ -113,7 +225,9 @@ class Bridge:
                 vehicle.route_id,
             )
 
-        published = self._publish_if_due(vehicle, now)
+        self.store.record_observation(observation, vehicle.vehicle_id, now)
+
+        published = self._publish_if_due(vehicle, now, now)
 
         return HandleOutcome(
             accepted=True,
@@ -122,21 +236,47 @@ class Bridge:
             published=published,
         )
 
-    def _publish_if_due(self, vehicle: Any, now: float) -> bool:
-        """Publica el vehículo si le toca por ritmo."""
+    def _publish_if_due(
+        self, vehicle: Any, now: float, wall_clock: float
+    ) -> bool:
+        """Publica el vehículo si le toca por ritmo.
+
+        Solo se marca como publicado cuando el broker acepta el mensaje. Si no,
+        no se actualiza `last_published_at`, así que la siguiente observación
+        vuelve a intentarlo sin esperar al intervalo completo. El reintento está
+        limitado por la llegada de observaciones, no por un bucle propio.
+        """
         if self.publisher is None:
             return False
 
         if not self.aggregator.should_publish(vehicle, now):
             return False
 
-        self.publisher(
-            self.config.vehicles_topic(vehicle.vehicle_id),
-            vehicle.encode(),
-        )
+        self.metrics.record_publish_attempt()
+
+        topic = self.config.vehicle_topic(vehicle.vehicle_id)
+
+        try:
+            accepted = self.publisher(topic, vehicle.encode())
+        except Exception:  # noqa: BLE001 - un publicador roto no debe tumbar el puente
+            self.metrics.record_publish_failed()
+            logger.exception("el publicador lanzó una excepción para %s", topic)
+            return False
+
+        if not accepted:
+            self.metrics.record_publish_failed()
+            logger.warning(
+                "el broker no aceptó la posición de %s; se reintentará con la "
+                "próxima observación",
+                vehicle.vehicle_id,
+            )
+            return False
 
         self.aggregator.mark_published(vehicle, now)
         self.metrics.record_published()
+        self.store.record_vehicle(vehicle, wall_clock)
+
+        self._last_publish_at = wall_clock
 
         logger.debug(
             "publicado %s: %s", vehicle.vehicle_id, vehicle.to_vehicle_position()
@@ -144,36 +284,66 @@ class Bridge:
 
         return True
 
-    def _warn_on_topic_mismatch(self, topic: str, payload: bytes | str) -> None:
-        """Avisa si el tópico y el `sessionId` no concuerdan.
+    def _session_mismatch(self, topic: str, payload: bytes | str) -> str | None:
+        """Comprueba que el tópico y el cuerpo declaren la misma sesión.
 
-        No se rechaza: el `sessionId` del cuerpo es el que manda, y un cliente
-        con un error de formato no debería perder datos por esto. Pero la
-        discrepancia se registra porque suele indicar un cliente mal escrito.
+        Devuelve el motivo si no concuerdan, o `None` si concuerdan o si el
+        tópico no tiene la forma esperada.
+
+        **Antes esto solo generaba una advertencia.** La consecuencia era que un
+        cliente podía publicar en el tópico de una sesión y declarar otra en el
+        cuerpo: el límite de tasa se aplicaba a la del cuerpo, mientras que el
+        tópico —lo que un operador ve al diagnosticar— decía otra cosa. Rechazar
+        hace que ambos coincidan siempre.
+
+        No se rechaza cuando el tópico no es `rutautp/observaciones/{id}/posicion`:
+        en ese caso no hay nada que comparar, y un cliente con otro formato no
+        debe perder datos por ello. La comprobación es de consistencia interna,
+        no de autenticidad: no demuestra que la sesión sea de quien publica
+        (ver `mqtt/config/acl.example`, donde está documentado por qué hoy no se
+        puede afirmar eso).
         """
         try:
             body = json.loads(payload)
-            session_id = str(body.get("sessionId", "")).strip()
-        except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
-            return
+        except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+            return None
+
+        if not isinstance(body, dict):
+            return None
+
+        session_id = str(body.get("sessionId", "")).strip()
 
         if not session_id:
-            return
+            return None
 
         parts = topic.split("/")
 
         # `rutautp/observaciones/{sessionId}/posicion`
-        if len(parts) >= 3 and parts[2] != session_id:
-            logger.warning(
-                "el tópico declara la sesión %r y el cuerpo %r",
-                parts[2],
-                session_id,
+        if len(parts) != 4:
+            return None
+
+        if parts[0] != "rutautp" or parts[1] != "observaciones":
+            return None
+
+        if parts[3] != "posicion":
+            return None
+
+        if parts[2] != session_id:
+            return (
+                f"el tópico declara {parts[2]!r} y el cuerpo {session_id!r}"
             )
+
+        return None
 
     # ── Mantenimiento periódico ───────────────────────────────────────────
 
-    def tick(self, now: float | None = None) -> int:
-        """Caduca vehículos, libera estado y vuelca el resumen si toca."""
+    def tick(self, now: float | None = None, connected: bool | None = None) -> int:
+        """Caduca vehículos, libera estado, late y vuelca el resumen si toca.
+
+        `connected` es el estado real del cliente MQTT. Se inyecta en lugar de
+        consultarlo aquí porque `Bridge` no conoce paho: así el latido se puede
+        probar sin abrir un socket.
+        """
         now = time.time() if now is None else now
 
         expired = self.aggregator.expire(now)
@@ -187,6 +357,13 @@ class Bridge:
 
         self.validator.prune(now)
 
+        # Una transacción por segundo en lugar de una por mensaje: cada `commit`
+        # fuerza un `fsync` y hacerlo por mensaje limitaría el caudal.
+        self.store.flush()
+        self.store.prune(now)
+
+        self._write_heartbeat(now, connected)
+
         if now - self._last_summary_at >= SUMMARY_INTERVAL_S:
             self._last_summary_at = now
 
@@ -194,10 +371,38 @@ class Bridge:
                 {
                     "vehicles": self.aggregator.vehicle_count,
                     "routes": self.aggregator.route_count,
+                    **self.store.counts.as_dict(),
                 }
             )
 
         return len(expired)
+
+    def _write_heartbeat(self, now: float, connected: bool | None) -> None:
+        """Deja constancia de que el servicio sigue ciclando.
+
+        El estado de conexión solo se incluye cuando se conoce: escribirlo como
+        `False` por omisión haría que una llamada desde una prueba —que no tiene
+        broker— pareciera una caída real.
+        """
+        snapshot = self.metrics.snapshot()
+
+        payload: dict[str, Any] = {
+            "at": now,
+            "received": snapshot["received"],
+            "accepted": snapshot["accepted"],
+            "rejected": snapshot["rejected"],
+            "published": snapshot["published"],
+            "publishFailures": snapshot["publishFailures"],
+            "internalErrors": snapshot["internalErrors"],
+            "vehicles": self.aggregator.vehicle_count,
+            "routes": self.aggregator.route_count,
+            "lastPublishAt": self._last_publish_at or None,
+        }
+
+        if connected is not None:
+            payload["connected"] = connected
+
+        write_heartbeat(self.config.health_file, payload)
 
     # ── Red ───────────────────────────────────────────────────────────────
 
@@ -210,8 +415,16 @@ class Bridge:
 
         Con `publish=False` no se publica nada, aunque el publicador estuviera
         inyectado: es el modo de prueba contra un broker real.
+
+        **La conexión se mantiene sola.** El bucle comprueba el estado real del
+        cliente y reconecta con espera progresiva, en lugar de dar por hecho que
+        `loop()` la restablece. Antes, un corte del broker dejaba el servicio
+        desconectado para siempre y sin decir nada.
         """
         import paho.mqtt.client as mqtt
+
+        if tick_interval_s <= 0:
+            raise ValueError("tick_interval_s debe ser mayor que cero")
 
         client = self._build_client(mqtt)
 
@@ -229,8 +442,6 @@ class Bridge:
             self.config.client_id,
         )
 
-        client.connect(self.config.host, self.config.port, keepalive=30)
-
         running = True
 
         def stop(signum: int, _frame: Any) -> None:
@@ -243,25 +454,84 @@ class Bridge:
         for signum in (signal.SIGINT, signal.SIGTERM):
             previous_handlers[signum] = signal.signal(signum, stop)
 
+        # El broker puede no estar disponible al arrancar. No es un error fatal:
+        # el bucle reintenta igual que tras un corte.
+        try:
+            client.connect(self.config.host, self.config.port, keepalive=30)
+        except OSError as error:
+            logger.warning(
+                "el broker no respondió al arrancar (%s); se reintentará", error
+            )
+
+        delay = RECONNECT_INITIAL_S
+        next_attempt_at = 0.0
+
         try:
             while running:
                 client.loop(timeout=tick_interval_s)
-                self.tick()
+                self.tick(connected=client.is_connected())
+
+                if client.is_connected():
+                    if delay != RECONNECT_INITIAL_S:
+                        logger.info("conexión con el broker restablecida")
+
+                    delay = RECONNECT_INITIAL_S
+                    next_attempt_at = 0.0
+                    continue
+
+                now = time.monotonic()
+
+                if now < next_attempt_at:
+                    # Sin conexión, `client.loop()` no bloquea porque no hay
+                    # socket. Hay que ceder CPU explícitamente durante el
+                    # backoff; de lo contrario este `continue` ocupa un núcleo
+                    # completo hasta el próximo intento.
+                    _sleep_until_reconnect(
+                        now,
+                        next_attempt_at,
+                        tick_interval_s,
+                    )
+                    continue
+
+                logger.warning(
+                    "sin conexión con el broker; reintentando en %.0f s", delay
+                )
+
+                try:
+                    client.reconnect()
+                except OSError as error:
+                    logger.warning("reconexión fallida: %s", error)
+
+                # Espera progresiva: no tiene sentido martillear un broker caído.
+                next_attempt_at = now + delay
+                delay = min(delay * 2, RECONNECT_MAX_S)
         finally:
             for signum, handler in previous_handlers.items():
                 signal.signal(signum, handler)
 
             client.disconnect()
+            self.store.close()
+
+            # El latido se retira al salir: si se dejara, un supervisor lo vería
+            # fresco hasta que venciera el margen y creería que el servicio
+            # sigue en pie. Sin archivo, la comprobación dice la verdad de
+            # inmediato.
+            remove_heartbeat(self.config.health_file)
 
             self.metrics.log_summary(
                 {
                     "vehicles": self.aggregator.vehicle_count,
                     "routes": self.aggregator.route_count,
+                    **self.store.counts.as_dict(),
                 }
             )
 
     def _client_publisher(self, client: Any) -> Publisher:
         """Publicador que entrega al broker con QoS 1 y sin retención.
+
+        Devuelve `True` solo si el broker aceptó el mensaje. `publish()` devuelve
+        un código distinto de cero cuando la cola está llena o el cliente no
+        está conectado, y ese caso no debe contarse como publicado.
 
         Sin retención, a propósito: una posición vehicular es un dato perecedero
         y el cliente ya descarta lo que supera 45 s. Dejar el último mensaje
@@ -269,13 +539,10 @@ class Bridge:
         fantasma hasta que el saneador lo descartara.
         """
 
-        def publish(topic: str, payload: str) -> None:
+        def publish(topic: str, payload: str) -> bool:
             info = client.publish(topic, payload, qos=1, retain=False)
 
-            if info.rc != 0:
-                logger.warning(
-                    "no se pudo publicar en %s (rc=%s)", topic, info.rc
-                )
+            return info.rc == 0
 
         return publish
 

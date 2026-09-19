@@ -12,25 +12,59 @@ import logging
 
 import pytest
 
-from rutautp_backend.bridge import Bridge
+from rutautp_backend.bridge import Bridge, _sleep_until_reconnect
 from rutautp_backend.config import Config
 from rutautp_backend.geo import segment_bearing_deg
 from rutautp_backend.gtfs import GtfsFeed
 from rutautp_backend.models import RejectReason
 
-from .conftest import SAMPLE_ROUTE_ID, offset_meters
+from .conftest import SAMPLE_ROUTE_ID, offset_meters, vehicle_id
 
 NOW = 1_700_000_000.0
+
+
+class TestEsperaDeReconexion:
+    """B02: el backoff debe ceder CPU cuando no existe un socket MQTT."""
+
+    def test_duerme_hasta_un_tick_mientras_espera(self, monkeypatch):
+        sleeps: list[float] = []
+        monkeypatch.setattr("rutautp_backend.bridge.time.sleep", sleeps.append)
+
+        _sleep_until_reconnect(
+            now=10.0,
+            next_attempt_at=18.0,
+            max_sleep_s=1.0,
+        )
+
+        assert sleeps == [1.0]
+
+    def test_no_duerme_si_ya_corresponde_reconectar(self, monkeypatch):
+        sleeps: list[float] = []
+        monkeypatch.setattr("rutautp_backend.bridge.time.sleep", sleeps.append)
+
+        _sleep_until_reconnect(
+            now=18.0,
+            next_attempt_at=18.0,
+            max_sleep_s=1.0,
+        )
+
+        assert sleeps == []
 
 
 class CapturingPublisher:
     """Publicador de mentira que guarda lo que se habría enviado."""
 
-    def __init__(self) -> None:
+    def __init__(self, accept: bool = True) -> None:
         self.messages: list[tuple[str, str]] = []
+        self.accept = accept
 
-    def __call__(self, topic: str, payload: str) -> None:
+    def __call__(self, topic: str, payload: str) -> bool:
+        """Devuelve si el broker habría aceptado el mensaje."""
+        if not self.accept:
+            return False
+
         self.messages.append((topic, payload))
+        return True
 
     @property
     def count(self) -> int:
@@ -109,7 +143,7 @@ class TestCaminoFeliz:
 
         topic, _ = publisher.messages[0]
 
-        assert topic == f"rutautp/vehiculos/{SAMPLE_ROUTE_ID}-01/posicion"
+        assert topic == f"rutautp/vehiculos/{vehicle_id(SAMPLE_ROUTE_ID, 1)}/posicion"
 
     def test_lo_publicado_encaja_con_el_contrato(
         self, bridge, publisher, sample_route
@@ -120,6 +154,7 @@ class TestCaminoFeliz:
 
         assert set(body.keys()) == {
             "vehicleId",
+            "routeId",
             "linea",
             "lat",
             "lon",
@@ -127,7 +162,8 @@ class TestCaminoFeliz:
             "heading",
             "timestamp",
         }
-        assert body["vehicleId"] == f"{SAMPLE_ROUTE_ID}-01"
+        assert body["vehicleId"] == vehicle_id(SAMPLE_ROUTE_ID, 1)
+        assert body["routeId"] == SAMPLE_ROUTE_ID
         assert body["linea"] == sample_route.linea
 
     def test_la_marca_de_tiempo_publicada_es_la_de_la_observacion(
@@ -146,6 +182,29 @@ class TestCaminoFeliz:
 
 
 class TestRechazos:
+    def test_rechaza_un_mensaje_grande_antes_de_parsear(
+        self, bridge, monkeypatch
+    ):
+        def json_no_debe_ejecutarse(*_args, **_kwargs):
+            raise AssertionError("json.loads no debe ejecutarse")
+
+        monkeypatch.setattr(
+            "rutautp_backend.bridge.json.loads",
+            json_no_debe_ejecutarse,
+        )
+
+        payload = b"{" + b"x" * int(bridge.config.max_message_bytes)
+
+        outcome = bridge.handle_message(
+            "rutautp/observaciones/sesion/posicion",
+            payload,
+            NOW,
+        )
+
+        assert outcome.accepted is False
+        assert outcome.reason is RejectReason.MESSAGE_TOO_LARGE
+        assert bridge.metrics.snapshot()["internalErrors"] == 0
+
     def test_un_mensaje_invalido_no_publica(self, bridge, publisher):
         outcome = bridge.handle_message("t", "{no es json", NOW)
 
@@ -262,7 +321,9 @@ class TestRitmoDePublicacion:
             )
 
         assert bridge.aggregator.vehicle_count == 1
-        assert len(bridge.aggregator.sessions_on(f"{SAMPLE_ROUTE_ID}-01")) == 10
+        assert len(
+            bridge.aggregator.sessions_on(vehicle_id(SAMPLE_ROUTE_ID, 1))
+        ) == 10
         assert publisher.count == 1
 
 
@@ -287,31 +348,62 @@ class TestMantenimiento:
         assert bridge.validator.rate_limiter.tracked_sessions == 0
 
 
-class TestAvisoDeTopico:
-    def test_avisa_si_el_topico_y_el_cuerpo_no_concuerdan(
-        self, bridge, sample_route, caplog
+class TestSesionDelTopico:
+    """B05: el tópico y el cuerpo deben declarar la misma sesión.
+
+    Antes solo se advertía. Eso permitía publicar en el tópico de una sesión y
+    declarar otra en el cuerpo, con lo que el límite de tasa se aplicaba a una
+    identidad distinta de la que ve un operador al diagnosticar.
+    """
+
+    def test_rechaza_si_el_topico_y_el_cuerpo_no_concuerdan(
+        self, bridge, publisher, sample_route
     ):
-        """No se rechaza, pero se registra: suele indicar un cliente mal escrito."""
-        with caplog.at_level(logging.WARNING):
-            outcome = bridge.handle_message(
-                "rutautp/observaciones/otra-sesion/posicion",
-                payload_for(sample_route, session="session-0001"),
-                NOW,
-            )
+        outcome = bridge.handle_message(
+            "rutautp/observaciones/otra-sesion/posicion",
+            payload_for(sample_route, session="session-0001"),
+            NOW,
+        )
+
+        assert outcome.accepted is False
+        assert outcome.reason is RejectReason.SESSION_MISMATCH
+        assert publisher.count == 0
+
+    def test_se_contabiliza_el_motivo(self, bridge, sample_route):
+        bridge.handle_message(
+            "rutautp/observaciones/otra-sesion/posicion",
+            payload_for(sample_route, session="session-0001"),
+            NOW,
+        )
+
+        snapshot = bridge.metrics.snapshot()
+
+        assert snapshot["reasons"]["session_mismatch"] == 1
+        assert snapshot["accepted"] == 0
+
+    def test_acepta_cuando_concuerdan(self, bridge, publisher, sample_route):
+        outcome = bridge.handle_message(
+            "rutautp/observaciones/session-0001/posicion",
+            payload_for(sample_route, session="session-0001"),
+            NOW,
+        )
 
         assert outcome.accepted is True
-        assert any("no concuerdan" in record.message or "declara" in record.message
-                   for record in caplog.records)
+        assert publisher.count == 1
 
-    def test_no_avisa_cuando_concuerdan(self, bridge, sample_route, caplog):
-        with caplog.at_level(logging.WARNING):
-            bridge.handle_message(
-                "rutautp/observaciones/session-0001/posicion",
-                payload_for(sample_route, session="session-0001"),
-                NOW,
-            )
+    def test_un_topico_con_otra_forma_no_se_rechaza(self, bridge, sample_route):
+        """La comprobación es de consistencia interna, no de formato.
 
-        assert not [record for record in caplog.records if record.levelno >= logging.WARNING]
+        Un cliente con otro esquema de tópicos no debe perder datos porque aquí
+        no haya nada con lo que comparar.
+        """
+        outcome = bridge.handle_message(
+            "otro/topico",
+            payload_for(sample_route, session="session-0001"),
+            NOW,
+        )
+
+        assert outcome.accepted is True
 
 
 class TestIdentidadDelVehiculo:
@@ -331,5 +423,5 @@ class TestIdentidadDelVehiculo:
 
         publicado = publisher.last()["vehicleId"]
 
-        assert publicado == f"{SAMPLE_ROUTE_ID}-01"
+        assert publicado == vehicle_id(SAMPLE_ROUTE_ID, 1)
         assert "yo-soy-el-bus-1" not in publicado

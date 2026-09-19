@@ -29,8 +29,34 @@ def feed() -> GtfsFeed:
 
 @pytest.fixture
 def config() -> Config:
-    """Configuración por defecto, independiente del entorno del proceso."""
-    return Config(gtfs_dir=GTFS_DIR)
+    """Configuración por defecto, independiente del entorno del proceso.
+
+    La persistencia y el latido se desactivan salvo en las pruebas que los
+    ejercitan: sin esto, cada prueba que construye un `Bridge` escribiría en el
+    histórico y en el latido reales del repositorio.
+
+    El espacio de nombres de vehículo se fija para que los identificadores sean
+    reproducibles: en producción se genera uno por arranque.
+    """
+    return Config(
+        gtfs_dir=GTFS_DIR,
+        database_path="",
+        health_file="",
+        vehicle_namespace="t0",
+    )
+
+
+#: Sufijo que llevan los identificadores con el espacio de nombres de prueba.
+VEHICLE_NAMESPACE = "t0"
+
+
+def vehicle_id(route_id: str, ordinal: int) -> str:
+    """Identificador esperado de un vehículo con el espacio de nombres de prueba.
+
+    El formato real incluye un espacio de nombres por arranque (D02): sin él, un
+    `{ruta}-01` de un proceso nuevo heredaría la identidad visible del anterior.
+    """
+    return f"{route_id}-{VEHICLE_NAMESPACE}-{ordinal:02d}"
 
 
 @pytest.fixture(scope="session")
