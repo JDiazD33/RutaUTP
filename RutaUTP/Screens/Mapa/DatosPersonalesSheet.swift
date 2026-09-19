@@ -74,7 +74,9 @@ private struct ParentescoPickerSheet: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(op.label)
-                    .accessibilityValue(local == op.rawValue ? "Seleccionado" : "No seleccionado")
+                    .accessibilityValue(local == op.rawValue
+                                        ? L.t("Seleccionado", "Selected")
+                                        : L.t("No seleccionado", "Not selected"))
                     .accessibilityHint(L.t("Doble toque para elegir ", "Double tap to choose ") + op.label)
                     .accessibilityAddTraits(local == op.rawValue ? [.isButton, .isSelected] : .isButton)
                 }
@@ -142,6 +144,27 @@ struct DatosPersonalesSheet: View {
     @State private var showParentescoPicker: Bool = false
 
     private let boxShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+
+    /// Texto del parentesco listo para mostrar. `nil` si aún no hay selección.
+    ///
+    /// Lo guardado es el `rawValue` de `Parentesco`, que es español **a
+    /// propósito**: es una clave estable y traducirlo invalidaría el dato ya
+    /// guardado en `emergencia_parentesco`. Para mostrar hay que pasar por
+    /// `label`, que sí traduce. Sin esto, con la app en inglés se leía
+    /// "Padre/Madre" en lugar de "Parent".
+    private var parentescoTexto: String? {
+        textoParentesco(emergenciaParentescoInput)
+    }
+
+    private var parentescoGuardadoTexto: String? {
+        textoParentesco(emergenciaParentesco)
+    }
+
+    /// Conserva valores antiguos desconocidos y distingue la ausencia de selección.
+    private func textoParentesco(_ valor: String) -> String? {
+        guard !valor.isEmpty else { return nil }
+        return Parentesco(rawValue: valor)?.label ?? valor
+    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -454,9 +477,9 @@ struct DatosPersonalesSheet: View {
                                 showParentescoPicker = true
                             } label: {
                                 HStack {
-                                    Text(emergenciaParentescoInput.isEmpty ? L.t("Seleccionar", "Select") : emergenciaParentescoInput)
+                                    Text(parentescoTexto ?? L.t("Seleccionar", "Select"))
                                         .font(.bodyMd)
-                                        .foregroundStyle(emergenciaParentescoInput.isEmpty ? Color.onSurfaceVariant : Color.onSurface)
+                                        .foregroundStyle(parentescoTexto == nil ? Color.onSurfaceVariant : Color.onSurface)
                                     Spacer()
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 14, weight: .semibold))
@@ -470,7 +493,7 @@ struct DatosPersonalesSheet: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L.t("Parentesco del contacto", "Relationship of the contact"))
-                            .accessibilityValue(emergenciaParentescoInput.isEmpty ? "No seleccionado" : emergenciaParentescoInput)
+                            .accessibilityValue(parentescoTexto ?? L.t("No seleccionado", "Not selected"))
                             .accessibilityHint(L.t("Doble toque para elegir una opción de parentesco", "Double tap to choose a relationship option"))
                             .accessibilityAddTraits(.isButton)
                         }
@@ -533,7 +556,7 @@ struct DatosPersonalesSheet: View {
                     VStack(spacing: 12) {
                         emergenciaFila(icon: "person.fill", titulo: L.t("Nombre", "Name"), valor: emergenciaNombre)
                         Divider().padding(.leading, 48).accessibilityHidden(true)
-                        emergenciaFila(icon: "person.2.fill", titulo: L.t("Parentesco", "Relationship"), valor: emergenciaParentesco)
+                        emergenciaFila(icon: "person.2.fill", titulo: L.t("Parentesco", "Relationship"), valor: parentescoGuardadoTexto ?? "")
                         Divider().padding(.leading, 48).accessibilityHidden(true)
                         emergenciaFila(icon: "phone.fill", titulo: L.t("Número", "Number"), valor: emergenciaNumero)
                     }
@@ -544,7 +567,7 @@ struct DatosPersonalesSheet: View {
                     .accessibilityLabel(L.t("Contacto de emergencia guardado", "Saved emergency contact"))
                     .accessibilityValue(
                         L.t("Nombre ", "Name ") + (emergenciaNombre.isEmpty ? L.t("vacío", "empty") : emergenciaNombre)
-                        + L.t(", parentesco ", ", relationship ") + (emergenciaParentesco.isEmpty ? L.t("vacío", "empty") : emergenciaParentesco)
+                        + L.t(", parentesco ", ", relationship ") + (parentescoGuardadoTexto ?? L.t("vacío", "empty"))
                         + L.t(", número ", ", number ") + (emergenciaNumero.isEmpty ? L.t("vacío", "empty") : emergenciaNumero))
                 }
 
