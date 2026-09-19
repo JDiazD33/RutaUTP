@@ -7,6 +7,10 @@ struct DetectionRouteGeometry {
     let shape: [CLLocationCoordinate2D]
     let stops: [CLLocationCoordinate2D]
 
+    /// Caja envolvente del recorrido, para descartar rutas lejanas sin recorrer
+    /// sus vértices. Ver `RouteCandidateMatcher.closestMatch`.
+    let boundingBox: (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)?
+
     init(
         id: String,
         linea: String,
@@ -17,6 +21,7 @@ struct DetectionRouteGeometry {
         self.linea = linea
         self.shape = shape
         self.stops = stops
+        self.boundingBox = Self.makeBoundingBox(shape)
     }
 
     init(
@@ -34,6 +39,31 @@ struct DetectionRouteGeometry {
         stops = route.paraderos.map {
             $0.coordinate
         }
+
+        boundingBox = Self.makeBoundingBox(shape)
+    }
+
+    /// Caja envolvente en grados. `nil` si no hay geometría.
+    private static func makeBoundingBox(
+        _ shape: [CLLocationCoordinate2D]
+    ) -> (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)? {
+        guard let first = shape.first else {
+            return nil
+        }
+
+        var minLat = first.latitude
+        var maxLat = first.latitude
+        var minLon = first.longitude
+        var maxLon = first.longitude
+
+        for coordinate in shape.dropFirst() {
+            minLat = min(minLat, coordinate.latitude)
+            maxLat = max(maxLat, coordinate.latitude)
+            minLon = min(minLon, coordinate.longitude)
+            maxLon = max(maxLon, coordinate.longitude)
+        }
+
+        return (minLat, maxLat, minLon, maxLon)
     }
 }
 
@@ -49,17 +79,51 @@ struct RouteCandidateMatch: Equatable {
 
 enum RouteCandidateMatcher {
 
+    /// Devuelve la ruta geométricamente más cercana a `location`.
+    ///
+    /// **No filtra por distancia.** Devuelve la más próxima aunque esté a
+    /// kilómetros y deja cuánto se aleja en `distanceToRoute`; quien decide si
+    /// esa distancia es aceptable es `PassengerDetectionEngine`, con
+    /// `PassengerDetectionThresholds.maximumDistanceToRoute`.
+    ///
+    /// Antes se pasaba aquí un `thresholdMeters: 40` que `PolylineMatching.match`
+    /// solo usaba para rellenar su campo `isOnRoute`, que este matcher descarta.
+    /// El umbral no filtraba nada y, al estar también en los umbrales del motor,
+    /// había dos copias del mismo número listas para divergir en silencio.
+    /// Se retiró en lugar de dejar una que pareciera hacer algo.
+    ///
+    /// **Coste.** Recorrer los ~250 vértices de las ~103 rutas del feed son
+    /// ~25 000 proyecciones por muestra de GPS, y todo ocurre en el hilo
+    /// principal. Para evitarlo se descarta primero cada ruta cuya caja
+    /// envolvente ya esté más lejos que la mejor candidata encontrada: la
+    /// distancia a la caja es una **cota inferior** de la distancia al
+    /// recorrido (el recorrido está dentro de su caja), así que saltarla no
+    /// puede cambiar el resultado. La optimización es exacta, no aproximada.
     static func closestMatch(
         for location: CLLocation,
         routes: [DetectionRouteGeometry]
     ) -> RouteCandidateMatch? {
-        var bestCandidate: RouteCandidateMatch?
+        var best: (
+            route: DetectionRouteGeometry,
+            match: PolylineMatching.MatchResult,
+            headingDifference: Double
+        )?
 
         for route in routes {
+            // Descarte barato: si ni siquiera su caja envolvente puede ganar,
+            // no hace falta proyectar punto por punto.
+            if let best,
+               let box = route.boundingBox,
+               distanceToBoundingBox(
+                   from: location.coordinate,
+                   box: box
+               ) >= best.match.distanceToRoute {
+                continue
+            }
+
             guard let match = PolylineMatching.match(
                 point: location.coordinate,
-                on: route.shape,
-                thresholdMeters: 40
+                on: route.shape
             ) else {
                 continue
             }
@@ -69,38 +133,73 @@ enum RouteCandidateMatcher {
                 shape: route.shape
             )
 
-            let headingDifference = difference(
-                between: location.course,
-                and: routeBearing
+            let candidate = (
+                route: route,
+                match: match,
+                headingDifference: difference(
+                    between: location.course,
+                    and: routeBearing
+                )
             )
 
-            let nearestStopDistance = route.stops
-                .map {
-                    distance(
-                        from: location.coordinate,
-                        to: $0
-                    )
-                }
-                .min() ?? .greatestFiniteMagnitude
-
-            let candidate = RouteCandidateMatch(
-                routeID: route.id,
-                linea: route.linea,
-                distanceToRoute: match.distanceToRoute,
-                headingDifference: headingDifference,
-                distanceToNearestStop: nearestStopDistance,
-                segmentIndex: match.segmentIndex,
-                progressFraction: match.progressFraction
-            )
-
-            if bestCandidate == nil ||
-                candidate.distanceToRoute <
-                bestCandidate!.distanceToRoute {
-                bestCandidate = candidate
+            if best == nil ||
+                candidate.match.distanceToRoute <
+                best!.match.distanceToRoute {
+                best = candidate
             }
         }
 
-        return bestCandidate
+        guard let best else {
+            return nil
+        }
+
+        return RouteCandidateMatch(
+            routeID: best.route.id,
+            linea: best.route.linea,
+            distanceToRoute: best.match.distanceToRoute,
+            headingDifference: best.headingDifference,
+            // Solo se calcula para la ganadora. Calcularlo para cada ruta
+            // recorría todos sus paraderos en cada muestra de GPS y el
+            // resultado de las perdedoras se descartaba.
+            distanceToNearestStop: nearestStopDistance(
+                from: location.coordinate,
+                stops: best.route.stops
+            ),
+            segmentIndex: best.match.segmentIndex,
+            progressFraction: best.match.progressFraction
+        )
+    }
+
+    private static func nearestStopDistance(
+        from origin: CLLocationCoordinate2D,
+        stops: [CLLocationCoordinate2D]
+    ) -> Double {
+        stops
+            .map {
+                distance(
+                    from: origin,
+                    to: $0
+                )
+            }
+            .min() ?? .greatestFiniteMagnitude
+    }
+
+    /// Cota inferior de la distancia de `origin` al recorrido, en metros.
+    ///
+    /// Se mide al punto más cercano de la caja envolvente. Como el recorrido
+    /// está contenido en su propia caja, la distancia a la caja nunca supera la
+    /// distancia al recorrido: es una cota inferior válida, así que descartar
+    /// con ella no puede cambiar el resultado.
+    private static func distanceToBoundingBox(
+        from origin: CLLocationCoordinate2D,
+        box: (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)
+    ) -> Double {
+        let nearest = CLLocationCoordinate2D(
+            latitude: min(max(origin.latitude, box.minLat), box.maxLat),
+            longitude: min(max(origin.longitude, box.minLon), box.maxLon)
+        )
+
+        return distance(from: origin, to: nearest)
     }
 
     private static func bearing(

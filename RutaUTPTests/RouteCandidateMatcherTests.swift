@@ -13,6 +13,34 @@ final class RouteCandidateMatcherTests: XCTestCase {
         XCTAssertNil(result)
     }
 
+    /// Devuelve la ruta más cercana aunque esté a kilómetros.
+    ///
+    /// El matcher **no** filtra por umbral: informa de la distancia y deja que
+    /// `PassengerDetectionEngine` decida con su propio
+    /// `maximumDistanceToRoute`. Fijarlo aquí evita que alguien "arregle" el
+    /// matcher para que devuelva `nil` fuera de rango: el motor dejaría de
+    /// recibir muestras y la detección se quedaría congelada sin ningún error.
+    func testDevuelveLaRutaMasCercanaAunqueEsteLejos() throws {
+        let result = try XCTUnwrap(
+            RouteCandidateMatcher.closestMatch(
+                for: location(
+                    latitude: -8.2000,
+                    longitude: -79.0300
+                ),
+                routes: [
+                    route(
+                        id: "route-lejos",
+                        linea: "10",
+                        latitude: -8.1000
+                    )
+                ]
+            )
+        )
+
+        XCTAssertEqual(result.routeID, "route-lejos")
+        XCTAssertGreaterThan(result.distanceToRoute, 5000)
+    }
+
     func testSeleccionaLaRutaMasCercana() throws {
         let nearbyRoute = route(
             id: "near",
@@ -111,6 +139,41 @@ final class RouteCandidateMatcherTests: XCTestCase {
         XCTAssertGreaterThan(
             result.headingDifference,
             170
+        )
+    }
+
+    /// El descarte por caja envolvente no debe cambiar el resultado.
+    ///
+    /// La optimización salta las rutas cuya caja ya está más lejos que la mejor
+    /// candidata encontrada. Si el orden de entrada alterara la elegida, sería
+    /// una aproximación y no un descarte exacto.
+    func testElDescartePorCajaNoCambiaElResultado() throws {
+        let cercana = route(id: "cerca", linea: "C-01", latitude: -8.1000)
+        let media = route(id: "media", linea: "H", latitude: -8.1200)
+        let lejana = route(id: "lejos", linea: "M", latitude: -8.3000)
+
+        let punto = location(latitude: -8.1001, longitude: -79.0300)
+
+        let deFrente = try XCTUnwrap(
+            RouteCandidateMatcher.closestMatch(
+                for: punto,
+                routes: [cercana, media, lejana]
+            )
+        )
+
+        let invertido = try XCTUnwrap(
+            RouteCandidateMatcher.closestMatch(
+                for: punto,
+                routes: [lejana, media, cercana]
+            )
+        )
+
+        XCTAssertEqual(deFrente.routeID, "cerca")
+        XCTAssertEqual(invertido.routeID, deFrente.routeID)
+        XCTAssertEqual(
+            invertido.distanceToRoute,
+            deFrente.distanceToRoute,
+            accuracy: 0.001
         )
     }
 
