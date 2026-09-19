@@ -50,6 +50,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding,
 
     private struct SimulatedRouteState {
         let vehicleId: String
+        let routeId: String
         let linea: String
         let coordinates: [CLLocationCoordinate2D]
 
@@ -183,6 +184,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding,
 
             return SimulatedRouteState(
                 vehicleId: "SIM-\(route.id)",
+                routeId: route.id,
                 linea: route.linea,
                 coordinates: coordinates,
                 currentSegmentIndex: initialSegment,
@@ -315,6 +317,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding,
         return VehiclePosition(
             id: state.vehicleId,
             linea: state.linea,
+            routeId: state.routeId,
             lat: latitude,
             lon: longitude,
             heading: heading,

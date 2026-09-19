@@ -25,18 +25,30 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
 
     private var stalenessTimer: Timer?
 
-    /// Reconstruye el snapshot descartando vehículos cuya última
-    /// señal supera el límite de obsolescencia: una baliza apagada
-    /// no debe quedarse dibujada en el mapa indefinidamente.
-    private func refreshCurrentPositions() {
-        let now = Date().timeIntervalSince1970
+    /// Indica si el proveedor está en marcha.
+    ///
+    /// Los callbacks de CocoaMQTT llegan por su propio hilo y pueden quedar en
+    /// vuelo cuando se llama a `stop()`. Sin esta bandera, un mensaje tardío
+    /// repoblaba el estado justo después de detenerse y la siguiente sesión
+    /// arrancaba con vehículos fantasma.
+    private var isRunning = false
+
+    /// Reconstruye el snapshot descartando vehículos obsoletos.
+    ///
+    /// **Retira además las entradas del diccionario.** Antes solo se filtraba
+    /// la lista visible y `positionsByID` conservaba todo lo visto desde el
+    /// arranque: en una conexión larga, los identificadores caducados se
+    /// acumulaban sin límite, y bastaba con que un mensaje cualquiera llegara
+    /// para que la reconstrucción los volviera a considerar.
+    private func refreshCurrentPositions(now: TimeInterval) {
+        let limite = VehiclePositionSanitizer.stalenessLimit
+
+        positionsByID = positionsByID.filter {
+            now - $0.value.timestamp <= limite
+        }
 
         currentPositions = positionsByID
             .values
-            .filter {
-                now - $0.timestamp <=
-                    VehiclePositionSanitizer.stalenessLimit
-            }
             .sorted {
                 $0.id < $1.id
             }
@@ -74,7 +86,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     private func sweepStalePositions() {
         let previous = currentPositions
 
-        refreshCurrentPositions()
+        refreshCurrentPositions(now: Date().timeIntervalSince1970)
 
         guard currentPositions != previous else {
             return
@@ -125,6 +137,8 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         prepareStreamIfNeeded()
         startStalenessSweep()
 
+        isRunning = true
+
         #if DEBUG
         print("[MQTT] Intentando conectar con el broker...")
         #endif
@@ -133,6 +147,8 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     }
 
     func stop() {
+        isRunning = false
+
         mqtt.disconnect()
 
         stopStalenessSweep()
@@ -254,6 +270,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             let position = VehiclePosition(
                 id: dto.vehicleId,
                 linea: dto.linea,
+                routeId: dto.routeId,
                 lat: dto.lat,
                 lon: dto.lon,
                 heading: dto.heading,
@@ -262,7 +279,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             )
 
             DispatchQueue.main.async { [weak self] in
-                guard let self else {
+                guard let self, self.isRunning else {
                     return
                 }
 
@@ -282,9 +299,27 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                     return
                 }
 
+                // Un mensaje atrasado no debe retroceder un vehículo ya
+                // actualizado. El broker no garantiza el orden entre
+                // publicaciones distintas, así que la comprobación es por
+                // marca de tiempo y no por orden de llegada.
+                if let conocida = self.positionsByID[position.id],
+                   position.timestamp <= conocida.timestamp {
+                    #if DEBUG
+                    print(
+                        "[MQTT] Posición atrasada ignorada: " +
+                        "\(position.id)"
+                    )
+                    #endif
+
+                    return
+                }
+
                 self.positionsByID[position.id] = position
 
-                self.refreshCurrentPositions()
+                self.refreshCurrentPositions(
+                    now: Date().timeIntervalSince1970
+                )
 
                 self.continuation?.yield(
                     self.currentPositions
@@ -311,6 +346,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
 
 private struct VehiclePositionMessage: Decodable {
     let vehicleId: String
+    let routeId: String
     let linea: String
     let lat: Double
     let lon: Double

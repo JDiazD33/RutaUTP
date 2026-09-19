@@ -13,6 +13,18 @@ import CoreLocation
 struct VehiclePosition: Codable, Equatable, Identifiable {
     let id: String           // identificador único del vehículo (placa o backend id)
     let linea: String        // "10", "B", ...
+
+    /// Identificador de la ruta GTFS (`route_id`) a la que pertenece el vehículo.
+    ///
+    /// Se usa para resolver empresa, color y recorrido. Antes se deducía de
+    /// `linea`, que es el nombre público: dos ramales de la misma línea
+    /// comparten `linea` y quedaban indistinguibles, y cualquier línea fuera
+    /// del pequeño catálogo precargado se quedaba sin metadatos.
+    ///
+    /// Vacío significa "no informado" (proveedores antiguos o simulaciones sin
+    /// catálogo): en ese caso se cae a `linea`, como antes.
+    let routeId: String
+
     var lat: Double
     var lon: Double
     var heading: Double      // grados, -1 si desconocido
@@ -21,6 +33,7 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
 
     init(id: String,
          linea: String,
+         routeId: String = "",
          lat: Double,
          lon: Double,
          heading: Double = -1,
@@ -28,6 +41,7 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
          timestamp: TimeInterval = Date().timeIntervalSince1970) {
         self.id = id
         self.linea = linea
+        self.routeId = routeId
         self.lat = lat
         self.lon = lon
         self.heading = heading
@@ -44,7 +58,7 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
 /// la fuente en logs y en la UI (badge "En vivo" real vs "Demo").
 enum VehicleTrackingSource: String, Codable, Equatable {
     case simulated   // SimulatedTrackingProvider (Timer local)
-    case real        // RealTrackingProvider (backend / WS futuro)
+    case real        // MQTTTrackingProvider (posiciones del backend por el broker)
 }
 
 /// Filtro de entrada para posiciones que llegan por el canal MQTT.
