@@ -60,6 +60,18 @@ final class PassiveTrackingCoordinator: ObservableObject {
     private var motionTask:
         Task<Void, Never>?
 
+    /// Arranque en curso, para poder cancelarlo.
+    ///
+    /// Antes, `setContributionEnabled(true)` lanzaba una `Task` sin conservarla:
+    /// si el usuario revocaba el consentimiento mientras se pedía el permiso o
+    /// se cargaba el feed, la continuación seguía adelante y dejaba la
+    /// detección y la publicación activas sin consentimiento.
+    private var startTask:
+        Task<Void, Never>?
+
+    /// Testigo del arranque vigente. Ver `StartGuard`.
+    private var startGuard = StartGuard()
+
     /// Observadores del ciclo de vida de la app.
     ///
     /// iOS suspende el proceso poco después de pasar a segundo plano:
@@ -82,6 +94,16 @@ final class PassiveTrackingCoordinator: ObservableObject {
     /// cambiar entre muestras. Todas las observaciones de una sesión deben
     /// seguir utilizando la ruta con la que se confirmó el viaje.
     private var confirmedRouteID: String?
+
+    /// Ruta con la que se está acumulando evidencia de abordaje.
+    ///
+    /// La confirmación exige tres muestras consecutivas, pero nada obligaba a
+    /// que fueran de la misma ruta: el candidato más cercano puede cambiar
+    /// entre muestras (calles paralelas, líneas superpuestas, un cruce) y el
+    /// viaje terminaba confirmándose con la última, no con la que había
+    /// acumulado la evidencia. Si la ruta cambia, la evidencia anterior deja de
+    /// valer y el motor se reinicia.
+    private var boardingRouteID: String?
     
 #if DEBUG
 /// Permite probar el transporte MQTT sin esperar un viaje real.
@@ -162,7 +184,7 @@ private let isForcedOnboardForMQTTTest =
             return
         }
 
-        await start()
+        await start(token: startGuard.begin())
     }
 
     func setContributionEnabled(
@@ -176,15 +198,38 @@ private let isForcedOnboardForMQTTTest =
         isEnabled = enabled
 
         if enabled {
-            Task {
-                await start()
-            }
+            beginStart()
         } else {
             stop()
         }
     }
 
-    private func start() async {
+    /// Abre un arranque nuevo, cancelando el anterior si seguía pendiente.
+    ///
+    /// Iniciar dos veces no debe dejar dos observadores de ubicación ni dos de
+    /// movimiento: el arranque previo se cancela y su testigo queda invalidado,
+    /// así que aunque reanude no completará el trabajo.
+    private func beginStart() {
+        startTask?.cancel()
+
+        let token = startGuard.begin()
+
+        startTask = Task { @MainActor [weak self] in
+            await self?.start(token: token)
+        }
+    }
+
+    /// Arranca la detección. `token` acredita que este arranque sigue vigente.
+    ///
+    /// El método suspende dos veces (permiso de ubicación y carga del feed), y
+    /// en cada una hay que volver a comprobar el testigo y el consentimiento:
+    /// es justo la ventana en la que el usuario puede desactivar la
+    /// contribución y quedar, sin estas comprobaciones, con la detección viva.
+    private func start(token: Int) async {
+        guard startGuard.isCurrent(token), isEnabled else {
+            return
+        }
+
         guard !isRunning else {
             return
         }
@@ -193,6 +238,10 @@ private let isForcedOnboardForMQTTTest =
 
         let authorization =
             await locationService.requestPermission()
+
+        guard startGuard.isCurrent(token), isEnabled else {
+            return
+        }
 
         guard authorization.isAuthorized else {
             isEnabled = false
@@ -213,12 +262,20 @@ private let isForcedOnboardForMQTTTest =
         if routes.isEmpty {
             let gtfsRoutes = await repository.rutas()
 
+            // La carga del feed también suspende: se vuelve a comprobar.
+            guard startGuard.isCurrent(token), isEnabled else {
+                return
+            }
+
             routes = gtfsRoutes.map {
                 DetectionRouteGeometry(route: $0)
             }
         }
-        
-        
+
+        guard startGuard.isCurrent(token), isEnabled else {
+            return
+        }
+
         guard !routes.isEmpty else {
             statusMessage =
                 "No se pudieron cargar las rutas GTFS"
@@ -360,6 +417,15 @@ if isForcedOnboardForMQTTTest {
                 activity
         )
 
+        // La evidencia de abordaje debe proceder de una sola ruta. Si el
+        // candidato cambió, lo acumulado hasta ahora no acredita este viaje.
+        if detectionEngine.state == .boardingCandidate,
+           let boardingRouteID,
+           boardingRouteID != candidate.routeID {
+            detectionEngine.reset()
+            self.boardingRouteID = nil
+        }
+
         let decision =
             detectionEngine.process(sample)
 
@@ -369,6 +435,7 @@ if isForcedOnboardForMQTTTest {
         if decision.didConfirmBoarding {
             confirmedLine = candidate.linea
             confirmedRouteID = candidate.routeID
+            boardingRouteID = nil
 
             // Cada abordaje confirmado recibe una sesión nueva y anónima.
             // lowercased() solo normaliza el formato enviado al backend.
@@ -392,11 +459,17 @@ if isForcedOnboardForMQTTTest {
             stopObservationSession()
 
             confirmedLine = nil
+            boardingRouteID = nil
 
             statusMessage =
                 "Descenso detectado"
 
         } else {
+            // Se recuerda con qué ruta se está acumulando la evidencia.
+            boardingRouteID = decision.state == .boardingCandidate
+                ? candidate.routeID
+                : nil
+
             statusMessage = message(
                 for: decision.state,
                 candidateLine: candidate.linea
@@ -435,6 +508,13 @@ if isForcedOnboardForMQTTTest {
     }
 
     func stop() {
+        // Invalida cualquier arranque pendiente antes de nada: si se revocó el
+        // consentimiento, la continuación del arranque no debe reanudar nada al
+        // terminar su espera.
+        startTask?.cancel()
+        startTask = nil
+        startGuard.invalidate()
+
         locationTask?.cancel()
         locationTask = nil
 
@@ -457,6 +537,7 @@ if isForcedOnboardForMQTTTest {
         confirmedLine = nil
         distanceToRoute = nil
         shouldPublish = false
+        boardingRouteID = nil
         statusMessage =
             "Contribución desactivada"
 

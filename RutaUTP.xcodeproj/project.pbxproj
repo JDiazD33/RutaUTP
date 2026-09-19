@@ -40,7 +40,6 @@
 		0A800516300AD9FE004E1676 /* TrackingPoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E6300AD9FE004E1676 /* TrackingPoint.swift */; };
 		0A800517300AD9FE004E1676 /* TripSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E7300AD9FE004E1676 /* TripSession.swift */; };
 		0A800518300AD9FE004E1676 /* VehiclePosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E8300AD9FE004E1676 /* VehiclePosition.swift */; };
-		0A800519300AD9FE004E1676 /* RealTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EA300AD9FE004E1676 /* RealTrackingProvider.swift */; };
 		0A80051A300AD9FE004E1676 /* SimulatedTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */; };
 		0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */; };
 		0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */; };
@@ -61,6 +60,7 @@
 		2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */; };
 		2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */; };
 		2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */; };
+		2F87EE28304E0F2000E2F5F2 /* StartGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -114,7 +114,6 @@
 		0A8004E6300AD9FE004E1676 /* TrackingPoint.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TrackingPoint.swift; sourceTree = "<group>"; };
 		0A8004E7300AD9FE004E1676 /* TripSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TripSession.swift; sourceTree = "<group>"; };
 		0A8004E8300AD9FE004E1676 /* VehiclePosition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VehiclePosition.swift; sourceTree = "<group>"; };
-		0A8004EA300AD9FE004E1676 /* RealTrackingProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RealTrackingProvider.swift; sourceTree = "<group>"; };
 		0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimulatedTrackingProvider.swift; sourceTree = "<group>"; };
 		0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VehicleTrackingProviding.swift; sourceTree = "<group>"; };
 		0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PolylineMatching.swift; sourceTree = "<group>"; };
@@ -135,6 +134,7 @@
 		2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMotionActivityService.swift; sourceTree = "<group>"; };
 		2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcher.swift; sourceTree = "<group>"; };
 		2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinator.swift; sourceTree = "<group>"; };
+		2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartGuard.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
@@ -362,7 +362,6 @@
 			children = (
 				2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */,
 				2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */,
-				0A8004EA300AD9FE004E1676 /* RealTrackingProvider.swift */,
 				0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */,
 				0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */,
 			);
@@ -452,6 +451,7 @@
 			isa = PBXGroup;
 			children = (
 				2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */,
+				2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */,
 			);
 			path = Coordination;
 			sourceTree = "<group>";
@@ -584,6 +584,7 @@
 				AA6600000000000000000B04 /* ExploradorRutaView.swift in Sources */,
 				AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */,
 				2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */,
+				2F87EE28304E0F2000E2F5F2 /* StartGuard.swift in Sources */,
 				0A800505300AD9FE004E1676 /* RutaMapKitView.swift in Sources */,
 				0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */,
 				0A800518300AD9FE004E1676 /* VehiclePosition.swift in Sources */,
@@ -629,7 +630,6 @@
 				0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */,
 				0A800510300AD9FE004E1676 /* SeguridadView.swift in Sources */,
 				2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */,
-				0A800519300AD9FE004E1676 /* RealTrackingProvider.swift in Sources */,
 				0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

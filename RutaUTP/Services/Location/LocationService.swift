@@ -209,7 +209,11 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         authorizationStatus = manager.authorizationStatus
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
-            if !isUpdating { startUpdating() }
+            // Solo se reanuda si alguien está consumiendo. Antes bastaba con
+            // que el permiso pasara a concedido, así que otorgarlo desde
+            // Ajustes —con la app abierta y sin ninguna pantalla pidiendo
+            // ubicación— encendía el GPS sin que nadie lo hubiera solicitado.
+            if !isUpdating, !continuations.isEmpty { startUpdating() }
         case .denied, .restricted:
             // La ausencia de autorización prevalece sobre cualquier consumidor.
             forceStopUpdating()
