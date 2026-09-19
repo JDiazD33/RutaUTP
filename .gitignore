@@ -18,3 +18,10 @@ mqtt/data/
 
 # Esquema local con variables MQTT
 RutaUTP.xcodeproj/xcshareddata/
+
+# Backend (Python)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
