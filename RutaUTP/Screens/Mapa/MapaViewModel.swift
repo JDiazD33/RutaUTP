@@ -17,13 +17,23 @@ import MapKit
 import Combine
 
 // MARK: - Bus animado sobre ruta real
+// Se conserva la flota propia del mapa: usa shapes reducidos y publicación
+// por desplazamiento visible. Tracking usa los vértices originales y su
+// protocolo de posiciones. Unificarlos cambiaría esos ciclos; compartimos
+// la geometría del rumbo en PolylineMatching para evitar fórmulas divergentes.
 struct BusAnimado: Identifiable, Equatable {
     let id: Int
     let linea: String        // "10", "4"
     let rutaId: String       // route_id GTFS: enlaza con el detalle de RutasView
     let empresa: String      // "El Cortijo", "Salaverry"
     let tipo: String          // "Micro", "Combi"
-    let placa: String         // "T1B-721"
+    /// Variante original del feed, sin traducir ni confundirla con una matrícula.
+    let variante: String
+
+    /// Se resuelve al mostrar: cambiar ES/EN no requiere reconstruir la flota.
+    var ramalTexto: String {
+        variante.isEmpty ? L.t("S/D", "N/A") : L.t("Ramal \(variante)", "Branch \(variante)")
+    }
     let minutosLlegada: Int   // 4, 12
     let color: Color          // .appPrimary, .secondary
     var lat: Double           // posición actual (animada)
@@ -68,11 +78,8 @@ struct BusAnimado: Identifiable, Equatable {
 
         lat = a.latitude + (b.latitude - a.latitude) * f
         lon = a.longitude + (b.longitude - a.longitude) * f
-        // El rumbo necesita la corrección por longitud: los meridianos se
-        // juntan hacia los polos y sin el cos(lat) el ángulo no coincide con
-        // el que calcula `SimulatedTrackingProvider` para la misma geometría.
-        heading = atan2((b.longitude - a.longitude) * cos(a.latitude * .pi / 180),
-                        b.latitude - a.latitude) * 180 / .pi
+        heading = PolylineMatching.headingDegrees(from: a, to: b,
+                                                   movingForward: isMovingForward)
         tramoActual = i
     }
 
@@ -384,7 +391,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 rutaId: ruta.id,
                 empresa: ruta.empresa,
                 tipo: "Bus",
-                placa: ruta.variante.isEmpty ? "S/D" : "Ramal \(ruta.variante)",
+                variante: ruta.variante,
                 minutosLlegada: max(1, 2 + index * max(1, ruta.headwayMin / n)),
                 color: ruta.color,
                 lat: waypoints[0].latitude,
@@ -539,27 +546,25 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // Máximo de chips visibles en el panel del mapa (fijos + guardados).
     static let maxDestinos = 6
 
-    /// Nombres de los chips fijos tal como se escriben en ESPAÑOL.
-    ///
-    /// Se usan solo para no duplicar un lugar guardado que ya es un chip fijo.
-    /// Van aparte a propósito: la etiqueta de `destinosFijos` sí cambia con el
-    /// idioma, y la deduplicación no debe depender del idioma activo — un
-    /// lugar guardado llamado «Centro» debe seguir filtrándose aunque la app
-    /// esté en inglés.
-    private static let nombresFijosEstables: Set<String> = ["utp", "centro", "huanchaco"]
+    /// Nombres en español de los chips fijos, para no duplicar un lugar
+    /// guardado que ya es un chip. Se derivan de `DestinosFijos` (fuente única).
+    private static let nombresFijosEstables: Set<String> = DestinosFijos.nombresEstables
 
     /// Chips FIJOS de la app: puntos de referencia conocidos de Trujillo.
     /// Casa/Trabajo ya no son fijos: si el usuario los guarda, aparecen solos.
+    ///
+    /// El dato (coordenadas, icono y clave señable) vive en `DestinosFijos`,
+    /// compartido con el módulo de tracking: antes estaba escrito literalmente
+    /// en los dos sitios. Aquí solo se adapta al tipo de esta pantalla.
     ///
     /// Calculada y no almacenada: el `label` sale en el idioma activo en cada
     /// lectura. Con el texto congelado en un `let`, cambiar de idioma dejaría
     /// los chips en el idioma anterior (son tres elementos: coste nulo).
     private var destinosFijos: [DestinoChip] {
-        [
-        DestinoChip(id: 1, label: L.signable("mapa.destino.utp", "UTP", "UTP"), icon: "graduationcap.fill", lat: -8.098247879173792, lon: -79.03818104755645, claveSenia: "mapa.destino.utp"),
-        DestinoChip(id: 2, label: L.signable("mapa.destino.centro", "Centro", "Downtown"), icon: "building.2.fill", lat: -8.1090, lon: -79.0270, claveSenia: "mapa.destino.centro"),
-        DestinoChip(id: 3, label: L.signable("mapa.destino.huanchaco", "Huanchaco", "Huanchaco"), icon: "water.waves", lat: -8.0825, lon: -79.1197, claveSenia: "mapa.destino.huanchaco")
-        ]
+        DestinosFijos.todos.map {
+            DestinoChip(id: $0.id, label: $0.label, icon: $0.icono,
+                        lat: $0.lat, lon: $0.lon, claveSenia: $0.claveSenia)
+        }
     }
 
     /// Lugares guardados leídos de disco. Se cachean aquí para que `destinos`

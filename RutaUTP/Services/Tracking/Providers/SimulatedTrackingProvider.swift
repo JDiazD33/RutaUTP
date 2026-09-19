@@ -1,7 +1,10 @@
 import Foundation
 import CoreLocation
 
-/// Flota demo sobre los vértices originales del GTFS, en el sentido publicado.
+/// Flota demo sobre los vértices originales del GTFS, con recorrido de ida y vuelta.
+/// Conserva su ciclo de publicación mediante VehicleTrackingProviding; Mapa
+/// usa shapes reducidos y otro umbral de publicación. Ambos comparten el
+/// cálculo de rumbo en PolylineMatching.headingDegrees.
 final class SimulatedTrackingProvider: VehicleTrackingProviding {
     let source: VehicleTrackingSource = .simulated
     private(set) var currentPositions: [VehiclePosition] = []
@@ -203,14 +206,11 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
             let length = motion.cumulative[j + 1] - motion.cumulative[j]
             let fraction = length > 0 ? min(1, max(0, (motion.distance - motion.cumulative[j]) / length)) : 0
 
-            var heading = atan2((b.longitude - a.longitude) * cos(a.latitude * .pi / 180),
-                                b.latitude - a.latitude) * 180 / .pi
-            if !motion.haciaAdelante { heading += 180 }   // de vuelta, mira al revés
-
             positions.append(VehiclePosition(id: "SIM-\(motion.route.id)", linea: motion.route.linea,
                 lat: a.latitude + (b.latitude - a.latitude) * fraction,
                 lon: a.longitude + (b.longitude - a.longitude) * fraction,
-                heading: (heading + 360).truncatingRemainder(dividingBy: 360),
+                heading: PolylineMatching.headingDegrees(from: a, to: b,
+                                                        movingForward: motion.haciaAdelante),
                 // La velocidad es la crucero del vehículo. Antes se ponía a 0
                 // al alcanzar el final y el vehículo no volvía a moverse: con
                 // los minutos la flota entera se quedaba congelada.

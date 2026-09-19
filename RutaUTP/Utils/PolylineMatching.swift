@@ -134,6 +134,22 @@ enum PolylineMatching {
         return coords
     }
 
+    // MARK: - Rumbo compartido por las flotas de Mapa y Tracking
+
+    /// Rumbo urbano del segmento en grados [0, 360), invirtiendo la vuelta.
+    /// Devuelve -1 (desconocido) si las coordenadas no son válidas o coinciden.
+    static func headingDegrees(from a: CLLocationCoordinate2D,
+                               to b: CLLocationCoordinate2D,
+                               movingForward: Bool) -> Double {
+        guard CLLocationCoordinate2DIsValid(a), CLLocationCoordinate2DIsValid(b),
+              a.latitude != b.latitude || a.longitude != b.longitude else { return -1 }
+        // Proyección local: corrige la separación de meridianos por latitud.
+        var heading = atan2((b.longitude - a.longitude) * cos(a.latitude * .pi / 180),
+                            b.latitude - a.latitude) * 180 / .pi
+        if !movingForward { heading += 180 }
+        return (heading + 360).truncatingRemainder(dividingBy: 360)
+    }
+
     // MARK: - Decimación y longitudes
 
     /// Reduce la densidad de puntos conservando el orden y el punto final.

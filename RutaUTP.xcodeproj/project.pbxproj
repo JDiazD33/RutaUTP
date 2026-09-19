@@ -12,6 +12,7 @@
 		0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */; };
 		0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */; };
 		0A800438300AD9FE004E1676 /* RejillaEspacial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800437300AD9FE004E1676 /* RejillaEspacial.swift */; };
+		0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800400300AD9FE004E1676 /* DestinosFijos.swift */; };
 		0A800436300AD9FE004E1676 /* FormularioReporte.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800435300AD9FE004E1676 /* FormularioReporte.swift */; };
 		0A800434300AD9FE004E1676 /* SeguridadLugaresModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800433300AD9FE004E1676 /* SeguridadLugaresModel.swift */; };
 		0A800432300AD9FE004E1676 /* LugaresStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800431300AD9FE004E1676 /* LugaresStore.swift */; };
@@ -101,6 +102,7 @@
 		0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvisoRutaAproximada.swift; sourceTree = "<group>"; };
 		0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OfflineMapSheet.swift; sourceTree = "<group>"; };
 		0A800437300AD9FE004E1676 /* RejillaEspacial.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RejillaEspacial.swift; sourceTree = "<group>"; };
+		0A800400300AD9FE004E1676 /* DestinosFijos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DestinosFijos.swift; sourceTree = "<group>"; };
 		0A800435300AD9FE004E1676 /* FormularioReporte.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormularioReporte.swift; sourceTree = "<group>"; };
 		0A800433300AD9FE004E1676 /* SeguridadLugaresModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadLugaresModel.swift; sourceTree = "<group>"; };
 		0A800431300AD9FE004E1676 /* LugaresStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugaresStore.swift; sourceTree = "<group>"; };
@@ -471,6 +473,7 @@
 			children = (
 				0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */,
 				0A800437300AD9FE004E1676 /* RejillaEspacial.swift */,
+				0A800400300AD9FE004E1676 /* DestinosFijos.swift */,
 				AA6600000000000000000F01 /* Idioma.swift */,
 			);
 			path = Utils;
@@ -693,6 +696,7 @@
 				0A800519300AD9FE004E1676 /* RealTrackingProvider.swift in Sources */,
 				0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */,
 				0A800438300AD9FE004E1676 /* RejillaEspacial.swift in Sources */,
+				0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

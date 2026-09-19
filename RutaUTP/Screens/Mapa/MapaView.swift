@@ -625,11 +625,11 @@ struct MapaView: View {
                     } else {
                         ForEach(vm.busesAnimados) { bus in
                             BusCard(
-                                linea: "LÍNEA \(bus.linea)",
+                                linea: L.t("LÍNEA", "LINE") + " \(bus.linea)",
                                 empresa: bus.empresa,
                                 minutos: "\(bus.minutosLlegada) MIN",
                                 tipo: bus.tipo,
-                                placa: bus.placa,
+                                placa: bus.ramalTexto,
                                 colorLinea: bus.color
                             )
                             .frame(height: 100)
@@ -906,7 +906,7 @@ private struct BusDetailPopup: View {
                             .padding(.vertical, 3)
                             .background(Capsule().fill(bus.color))
                     }
-                    Text("\(bus.empresa) • \(bus.tipo) (\(bus.placa))")
+                    Text("\(bus.empresa) • \(bus.tipo) (\(bus.ramalTexto))")
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .lineLimit(1)
