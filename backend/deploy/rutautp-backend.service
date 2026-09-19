@@ -1,0 +1,49 @@
+# Unidad systemd del puente (alternativa a Docker Compose).
+#
+# Instalación:
+#   sudo cp backend/deploy/rutautp-backend.service /etc/systemd/system/
+#   sudo cp backend/deploy/rutautp-backend-health.* /etc/systemd/system/
+#   sudo cp backend/deploy/backend.env.example /etc/rutautp/backend.env
+#   sudo editor /etc/rutautp/backend.env      # credenciales reales
+#   sudo chmod 600 /etc/rutautp/backend.env
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now rutautp-backend rutautp-backend-health.timer
+#
+# Ajustar usuario, rutas y `EnvironmentFile` a la instalación real.
+
+[Unit]
+Description=RutaUTP — puente observaciones -> vehiculos
+Documentation=file:///opt/rutautp/backend/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rutautp
+Group=rutautp
+WorkingDirectory=/opt/rutautp/backend
+
+# Credenciales fuera de la unidad: este archivo no debe contenerlas.
+EnvironmentFile=/etc/rutautp/backend.env
+
+ExecStart=/opt/rutautp/backend/.venv/bin/python -m rutautp_backend
+
+# El puente reconecta solo, así que una salida normal es un fallo: el proceso
+# debe estar siempre arriba.
+Restart=always
+RestartSec=5
+
+# El latido se retira al cerrar de forma ordenada, así que el temporizador de
+# salud no confundirá una parada limpia con una caída.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# Endurecimiento básico: el servicio solo lee el feed y escribe su histórico.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/rutautp/backend/data
+
+[Install]
+WantedBy=multi-user.target

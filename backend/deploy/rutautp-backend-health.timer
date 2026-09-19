@@ -1,0 +1,17 @@
+# Temporizador de la comprobación de salud. Ver rutautp-backend-health.service.
+#
+# Cada minuto, con margen respecto al `BACKEND_HEALTH_MAX_AGE_S` por defecto
+# (30 s): si el puente dejara de ciclar, el fallo se detecta en menos de dos
+# minutos y sin depender de que el proceso haya muerto.
+
+[Unit]
+Description=RutaUTP — temporizador de salud del puente
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=5s
+Unit=rutautp-backend-health.service
+
+[Install]
+WantedBy=timers.target
