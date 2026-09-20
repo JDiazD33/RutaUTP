@@ -552,23 +552,7 @@ struct DatosPersonalesSheet: View {
                         .accessibilityHint(L.t("Doble toque para descartar los cambios", "Double tap to discard the changes"))
                     }
                 } else {
-                    // ── Datos guardados del contacto de emergencia ──
-                    VStack(spacing: 12) {
-                        emergenciaFila(icon: "person.fill", titulo: L.t("Nombre", "Name"), valor: emergenciaNombre)
-                        Divider().padding(.leading, 48).accessibilityHidden(true)
-                        emergenciaFila(icon: "person.2.fill", titulo: L.t("Parentesco", "Relationship"), valor: parentescoGuardadoTexto ?? "")
-                        Divider().padding(.leading, 48).accessibilityHidden(true)
-                        emergenciaFila(icon: "phone.fill", titulo: L.t("Número", "Number"), valor: emergenciaNumero)
-                    }
-                    .padding(14)
-                    .background(boxShape.fill(Color.surfaceContainerLow))
-                    .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.25), lineWidth: 1))
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel(L.t("Contacto de emergencia guardado", "Saved emergency contact"))
-                    .accessibilityValue(
-                        L.t("Nombre ", "Name ") + (emergenciaNombre.isEmpty ? L.t("vacío", "empty") : emergenciaNombre)
-                        + L.t(", parentesco ", ", relationship ") + (parentescoGuardadoTexto ?? L.t("vacío", "empty"))
-                        + L.t(", número ", ", number ") + (emergenciaNumero.isEmpty ? L.t("vacío", "empty") : emergenciaNumero))
+                    tarjetaEmergenciaGuardada
                 }
 
                 Spacer(minLength: 24)
@@ -632,6 +616,32 @@ struct DatosPersonalesSheet: View {
     }
 
     // MARK: - Subvistas
+    private var tarjetaEmergenciaGuardada: some View {
+        VStack(spacing: 12) {
+            emergenciaFila(icon: "person.fill", titulo: L.t("Nombre", "Name"), valor: emergenciaNombre)
+            Divider().padding(.leading, 48).accessibilityHidden(true)
+            emergenciaFila(icon: "person.2.fill", titulo: L.t("Parentesco", "Relationship"), valor: parentescoGuardadoTexto ?? "")
+            Divider().padding(.leading, 48).accessibilityHidden(true)
+            emergenciaFila(icon: "phone.fill", titulo: L.t("Número", "Number"), valor: emergenciaNumero)
+        }
+        .padding(14)
+        .background(boxShape.fill(Color.surfaceContainerLow))
+        .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.25), lineWidth: 1))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L.t("Contacto de emergencia guardado", "Saved emergency contact"))
+        .accessibilityValue(valorAccesibleEmergencia)
+    }
+
+    private var valorAccesibleEmergencia: String {
+        let nombre = emergenciaNombre.isEmpty ? L.t("vacío", "empty") : emergenciaNombre
+        let parentesco = parentescoGuardadoTexto ?? L.t("vacío", "empty")
+        let numero = emergenciaNumero.isEmpty ? L.t("vacío", "empty") : emergenciaNumero
+
+        return L.t("Nombre ", "Name ") + nombre
+            + L.t(", parentesco ", ", relationship ") + parentesco
+            + L.t(", número ", ", number ") + numero
+    }
+
     @ViewBuilder
     private func datoInstitucional(titulo: String, valor: String) -> some View {
         VStack(alignment: .center, spacing: 6) {
@@ -725,4 +735,3 @@ struct DatosPersonalesSheet: View {
         editandoEmergencia = false
     }
 }
-
