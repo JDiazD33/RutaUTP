@@ -124,7 +124,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
                 // distinto. El gestor y el registro de consumidores se
                 // administran en la cola principal para evitar modificaciones
                 // concurrentes, y el diccionario va bajo el candado.
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
                     guard let self else {
                         return
                     }
