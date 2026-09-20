@@ -317,16 +317,23 @@ Mosquitto** (`mosquitto`, `mosquitto_pub`, `mosquitto_sub`). Levantan su propio
 broker en un puerto de prueba y lo borran al terminar: **arrancar el Compose no
 los instala ni los sustituye**. En macOS, `brew install mosquitto`.
 
-Resultado de la última ejecución de esta revisión (19 de septiembre de 2026,
+Resultado de la última ejecución de esta revisión (20 de septiembre de 2026,
 Python 3.13, Xcode 27):
 
 | Comprobación | Resultado |
 |---|---|
-| `python -m pytest` | 262 pruebas, 0 fallos |
+| `python -m pytest` | 280 pruebas, 0 fallos |
 | `./tools/smoke_test.sh` | OK — publica la posición vehicular |
 | `./tools/reconnect_test.sh` | OK — se recupera de arranque sin broker y de cortes |
 | `python -m rutautp_backend --check` | 102 rutas, todas con geometría, 53 616 vértices |
+| `./tools/parity_linea.sh` | OK — 102 rutas, la app y el backend coinciden |
 | `../mqtt/tools/acl_test.sh` | OK — 7 permisos verificados contra un broker real |
+
+Nota sobre las dos pruebas de extremo a extremo: publican **desde dos
+principals distintos**, que es lo que exige `BACKEND_MIN_PUBLISH_PRINCIPALS`
+para exponer una unidad, y que es además el caso real de dos pasajeros en un
+mismo bus. Antes publicaban desde uno solo, así que con el quórum activo el
+vehículo se creaba pero no se publicaba nunca y las dos fallaban siempre.
 
 Los números envejecen: si hace falta una cifra, conviene volver a ejecutar los
 comandos en lugar de citar esta tabla.

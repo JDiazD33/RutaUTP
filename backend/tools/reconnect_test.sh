@@ -144,9 +144,26 @@ PY
 
 publicar() {
     local ruta="$1" sesion="$2"
-    mosquitto_pub -h 127.0.0.1 -p "$PORT" \
-        -t "rutautp/observaciones/reconnect-test-device/$sesion/posicion" \
-        -q 1 -m "$(observacion "$ruta" "$sesion")"
+
+    # Dos principals DISTINTOS, y no uno. `BACKEND_MIN_PUBLISH_PRINCIPALS`
+    # (2 por defecto) exige que dos instalaciones MQTT autenticadas distintas
+    # corroboren una unidad antes de exponerla. Publicar varias sesiones bajo
+    # el mismo principal no cuenta: el cliente puede rotar `sessionId` a
+    # voluntad, y precisamente por eso el quórum se cuenta por principal.
+    #
+    # Antes se publicaba una sola vez desde `reconnect-test-device`. Con el
+    # quórum activo el vehículo se crea pero nunca se publica, así que esta
+    # prueba fallaba siempre: el script no se actualizó cuando entró el
+    # quórum, y el README seguía citando un resultado anterior a ese cambio.
+    #
+    # El `sessionId` del cuerpo tiene que coincidir con el del tópico, o el
+    # puente descarta el mensaje por SESSION_MISMATCH.
+    for sufijo in a b; do
+        local principal="reconnect-test-device-$sufijo"
+        mosquitto_pub -h 127.0.0.1 -p "$PORT" \
+            -t "rutautp/observaciones/$principal/$sesion-$sufijo/posicion" \
+            -q 1 -m "$(observacion "$ruta" "$sesion-$sufijo")"
+    done
 }
 
 # Espera a que llegue una posición vehicular. Devuelve 0 si llegó.

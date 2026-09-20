@@ -105,8 +105,18 @@ SUB_PID=$!
 sleep 2
 
 echo "== 4. observación sintética sobre la ruta $RUTA =="
-OBSERVATION="$(
-    cd "$BACKEND_DIR" && "$PYTHON" - "$REPO_DIR/gtfs" "$RUTA" <<'PY'
+
+# La misma observación se publica desde DOS principals distintos, y eso es
+# deliberado: `BACKEND_MIN_PUBLISH_PRINCIPALS` (2 por defecto) exige que dos
+# instalaciones MQTT autenticadas distintas corroboren una unidad antes de
+# exponerla. Es el caso real de dos pasajeros en un mismo bus.
+#
+# Antes se publicaba una sola vez desde un solo principal. Con el quórum
+# activo eso crea el vehículo pero no lo publica nunca, así que la prueba
+# fallaba siempre: el script no se actualizó cuando entró el quórum, y el
+# resultado que citaba el README era anterior a ese cambio.
+observacion_para() {
+    cd "$BACKEND_DIR" && "$PYTHON" - "$REPO_DIR/gtfs" "$RUTA" "$1" <<'PY'
 import json, sys, time
 from pathlib import Path
 
@@ -124,7 +134,7 @@ lat, lon = route.shape[index]
 
 print(json.dumps({
     "schemaVersion": 1,
-    "sessionId": "smoke-test-session",
+    "sessionId": sys.argv[3],
     "routeId": route.route_id,
     "linea": route.linea,
     "lat": lat,
@@ -136,12 +146,18 @@ print(json.dumps({
     "timestamp": time.time(),
 }, ensure_ascii=False))
 PY
-)"
+}
 
-echo "   $OBSERVATION"
-mosquitto_pub -h 127.0.0.1 -p "$PORT" \
-    -t "rutautp/observaciones/smoke-test-device/smoke-test-session/posicion" \
-    -q 1 -m "$OBSERVATION"
+for sufijo in a b; do
+    principal="smoke-test-device-$sufijo"
+    sesion="smoke-test-session-$sufijo"
+    observacion="$(observacion_para "$sesion")"
+
+    echo "   [$principal] $observacion"
+    mosquitto_pub -h 127.0.0.1 -p "$PORT" \
+        -t "rutautp/observaciones/$principal/$sesion/posicion" \
+        -q 1 -m "$observacion"
+done
 
 echo "== 5. esperando la posición vehicular =="
 wait "$SUB_PID" 2>/dev/null || true
