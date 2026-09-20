@@ -58,7 +58,6 @@
 		0A800516300AD9FE004E1676 /* TrackingPoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E6300AD9FE004E1676 /* TrackingPoint.swift */; };
 		0A800517300AD9FE004E1676 /* TripSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E7300AD9FE004E1676 /* TripSession.swift */; };
 		0A800518300AD9FE004E1676 /* VehiclePosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E8300AD9FE004E1676 /* VehiclePosition.swift */; };
-		0A800519300AD9FE004E1676 /* RealTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EA300AD9FE004E1676 /* RealTrackingProvider.swift */; };
 		0A80051A300AD9FE004E1676 /* SimulatedTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */; };
 		0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */; };
 		0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */; };
@@ -84,6 +83,27 @@
 		AA8800000000000000000B01 /* GuardadoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8800000000000000000A01 /* GuardadoViewModel.swift */; };
 		AA8800000000000000000B02 /* GuardadoSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8800000000000000000A02 /* GuardadoSheets.swift */; };
 		AA7700000000000000000006 /* negocios_promocionados.json in Resources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000005 /* negocios_promocionados.json */; };
+		2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */; };
+		2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */; };
+		2F87EE28304E0F2000E2F5F2 /* StartGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */; };
+		2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */; };
+		2F87EE12304E036B00E2F5F2 /* PassengerDetectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */; };
+		2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */; };
+		2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */; };
+		2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */; };
+		2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */; };
+		2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */; };
+		2F531442304F170200AC2B66 /* MQTTObservationPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */; };
+		2F53143E304F16D500AC2B66 /* ObservationPublishing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */; };
+		0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */; };
+		0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */; };
+		0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800404300AD9FE004E1676 /* PassengerDetectionEngineTests.swift */; };
+		0A80051F300AD9FE004E1676 /* PassengerObservationPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800405300AD9FE004E1676 /* PassengerObservationPayloadTests.swift */; };
+		0A800521300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800406300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift */; };
+		0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */; };
+		0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800408300AD9FE004E1676 /* StartGuardTests.swift */; };
+		0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */; };
+		2F87EE07304DE59800E2F5F2 /* CocoaMQTT in Frameworks */ = {isa = PBXBuildFile; productRef = 2F87EE06304DE59800E2F5F2 /* CocoaMQTT */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -150,7 +170,6 @@
 		0A8004E6300AD9FE004E1676 /* TrackingPoint.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TrackingPoint.swift; sourceTree = "<group>"; };
 		0A8004E7300AD9FE004E1676 /* TripSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TripSession.swift; sourceTree = "<group>"; };
 		0A8004E8300AD9FE004E1676 /* VehiclePosition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VehiclePosition.swift; sourceTree = "<group>"; };
-		0A8004EA300AD9FE004E1676 /* RealTrackingProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RealTrackingProvider.swift; sourceTree = "<group>"; };
 		0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimulatedTrackingProvider.swift; sourceTree = "<group>"; };
 		0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VehicleTrackingProviding.swift; sourceTree = "<group>"; };
 		0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PolylineMatching.swift; sourceTree = "<group>"; };
@@ -177,6 +196,26 @@
 		AA7700000000000000000008 /* NegociosComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NegociosComponents.swift; sourceTree = "<group>"; };
 		AA8800000000000000000A01 /* GuardadoViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoViewModel.swift; sourceTree = "<group>"; };
 		AA8800000000000000000A02 /* GuardadoSheets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoSheets.swift; sourceTree = "<group>"; };
+		2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfiguration.swift; sourceTree = "<group>"; };
+		2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinator.swift; sourceTree = "<group>"; };
+		2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartGuard.swift; sourceTree = "<group>"; };
+		2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngine.swift; sourceTree = "<group>"; };
+		2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionModels.swift; sourceTree = "<group>"; };
+		2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcher.swift; sourceTree = "<group>"; };
+		2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMotionActivityService.swift; sourceTree = "<group>"; };
+		2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityProviding.swift; sourceTree = "<group>"; };
+		2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTTrackingProvider.swift; sourceTree = "<group>"; };
+		2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingProviderFactory.swift; sourceTree = "<group>"; };
+		2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTObservationPublisher.swift; sourceTree = "<group>"; };
+		2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservationPublishing.swift; sourceTree = "<group>"; };
+		0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfigurationTests.swift; sourceTree = "<group>"; };
+		0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservationPublishThrottleTests.swift; sourceTree = "<group>"; };
+		0A800404300AD9FE004E1676 /* PassengerDetectionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngineTests.swift; sourceTree = "<group>"; };
+		0A800405300AD9FE004E1676 /* PassengerObservationPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerObservationPayloadTests.swift; sourceTree = "<group>"; };
+		0A800406300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinatorTest.swift; sourceTree = "<group>"; };
+		0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcherTests.swift; sourceTree = "<group>"; };
+		0A800408300AD9FE004E1676 /* StartGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartGuardTests.swift; sourceTree = "<group>"; };
+		0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclePositionSanitizerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -191,6 +230,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F87EE07304DE59800E2F5F2 /* CocoaMQTT in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,6 +257,14 @@
 			isa = PBXGroup;
 			children = (
 				0A800416300AD9FE004E1676 /* RutaUTPTests.swift */,
+				0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */,
+				0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */,
+				0A800404300AD9FE004E1676 /* PassengerDetectionEngineTests.swift */,
+				0A800405300AD9FE004E1676 /* PassengerObservationPayloadTests.swift */,
+				0A800406300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift */,
+				0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */,
+				0A800408300AD9FE004E1676 /* StartGuardTests.swift */,
+				0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */,
 			);
 			path = RutaUTPTests;
 			sourceTree = "<group>";
@@ -427,8 +475,9 @@
 		0A8004ED300AD9FE004E1676 /* Providers */ = {
 			isa = PBXGroup;
 			children = (
-				0A8004EA300AD9FE004E1676 /* RealTrackingProvider.swift */,
 				0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */,
+				2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */,
+				2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */,
 				0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */,
 			);
 			path = Providers;
@@ -439,6 +488,11 @@
 			children = (
 				0A8004E9300AD9FE004E1676 /* Models */,
 				0A8004ED300AD9FE004E1676 /* Providers */,
+				2F53143C304F16B600AC2B66 /* Publishers */,
+				2F87EE24304E0F0A00E2F5F2 /* Coordination */,
+				2F87EE1A304E093D00E2F5F2 /* Motion */,
+				2F87EE10304E032300E2F5F2 /* Detection */,
+				2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */,
 			);
 			path = Tracking;
 			sourceTree = "<group>";
@@ -515,6 +569,43 @@
 			path = Negocios;
 			sourceTree = "<group>";
 		};
+		2F87EE24304E0F0A00E2F5F2 /* Coordination */ = {
+			isa = PBXGroup;
+			children = (
+				2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */,
+				2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */,
+			);
+			path = Coordination;
+			sourceTree = "<group>";
+		};
+		2F87EE10304E032300E2F5F2 /* Detection */ = {
+			isa = PBXGroup;
+			children = (
+				2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */,
+				2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */,
+				2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */,
+			);
+			path = Detection;
+			sourceTree = "<group>";
+		};
+		2F87EE1A304E093D00E2F5F2 /* Motion */ = {
+			isa = PBXGroup;
+			children = (
+				2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */,
+				2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */,
+			);
+			path = Motion;
+			sourceTree = "<group>";
+		};
+		2F53143C304F16B600AC2B66 /* Publishers */ = {
+			isa = PBXGroup;
+			children = (
+				2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */,
+				2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */,
+			);
+			path = Publishers;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -550,6 +641,9 @@
 			);
 			name = RutaUTP;
 			productName = RutaUTP;
+			packageProductDependencies = (
+				2F87EE06304DE59800E2F5F2 /* CocoaMQTT */,
+			);
 			productReference = 0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -581,6 +675,9 @@
 				Base,
 			);
 			mainGroup = 0A40D90B2FDE5E7D00F79FBC;
+			packageReferences = (
+				2F87EE05304DE59800E2F5F2 /* XCRemoteSwiftPackageReference "CocoaMQTT" */,
+			);
 			productRefGroup = 0A40D9152FDE5E7D00F79FBC /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -618,6 +715,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */,
+				0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */,
+				0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */,
+				0A80051F300AD9FE004E1676 /* PassengerObservationPayloadTests.swift in Sources */,
+				0A800521300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift in Sources */,
+				0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */,
+				0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */,
+				0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */,
 				0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -626,6 +731,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */,
+				2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */,
+				2F87EE28304E0F2000E2F5F2 /* StartGuard.swift in Sources */,
+				2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */,
+				2F87EE12304E036B00E2F5F2 /* PassengerDetectionModels.swift in Sources */,
+				2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */,
+				2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */,
+				2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */,
+				2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */,
+				2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */,
+				2F531442304F170200AC2B66 /* MQTTObservationPublisher.swift in Sources */,
+				2F53143E304F16D500AC2B66 /* ObservationPublishing.swift in Sources */,
 				0A8004F7300AD9FE004E1676 /* BottomNavBar.swift in Sources */,
 				AA6600000000000000000E02 /* Senia.swift in Sources */,
 				AA6600000000000000000E04 /* SeniasService.swift in Sources */,
@@ -693,7 +810,6 @@
 				0A800430300AD9FE004E1676 /* SeguridadLugares.swift in Sources */,
 				0A80042E300AD9FE004E1676 /* SeguridadZonas.swift in Sources */,
 				0A80042C300AD9FE004E1676 /* SeguridadComunidad.swift in Sources */,
-				0A800519300AD9FE004E1676 /* RealTrackingProvider.swift in Sources */,
 				0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */,
 				0A800438300AD9FE004E1676 /* RejillaEspacial.swift in Sources */,
 				0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */,
@@ -882,6 +998,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP usa la actividad física para distinguir cuándo caminas y cuándo viajas en transporte público.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -916,6 +1034,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP usa la actividad física para distinguir cuándo caminas y cuándo viajas en transporte público.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -966,6 +1086,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2F87EE05304DE59800E2F5F2 /* XCRemoteSwiftPackageReference "CocoaMQTT" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/emqx/CocoaMQTT.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2F87EE06304DE59800E2F5F2 /* CocoaMQTT */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2F87EE05304DE59800E2F5F2 /* XCRemoteSwiftPackageReference "CocoaMQTT" */;
+			productName = CocoaMQTT;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0A40D90C2FDE5E7D00F79FBC /* Project object */;
 }
