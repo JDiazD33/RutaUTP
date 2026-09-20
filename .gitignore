@@ -24,8 +24,16 @@ mqtt/data/
 mqtt/config/acl
 mqtt/config/certs/
 
-# Esquema local con variables MQTT
-RutaUTP.xcodeproj/xcshareddata/
+# Los esquemas COMPARTIDOS del proyecto
+# (RutaUTP.xcodeproj/xcshareddata/xcschemes/) SI se versionan: el CI los
+# necesita para `xcodebuild -scheme RutaUTP`, y sin ellos xcodebuild depende
+# de generar uno al vuelo, cuyo Test action puede no incluir el target de
+# pruebas. Lo que se ignora es `xcuserdata/` (mas arriba), que es estado por
+# desarrollador.
+#
+# Al compartir un esquema, NO le pongas credenciales en las variables de
+# entorno: un esquema versionado lo ve todo el mundo. Las del broker van en
+# el entorno de Xcode de cada maquina.
 
 # Backend (Python)
 __pycache__/
