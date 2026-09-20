@@ -39,6 +39,11 @@ from .models import EstimatedVehicle, Observation
 
 logger = logging.getLogger(__name__)
 
+# Una llamada interna que omita el principal no puede convertir cada sessionId
+# en una identidad independiente y saltarse el quorum. Todas esas llamadas
+# comparten deliberadamente una sola identidad de reserva.
+UNKNOWN_PRINCIPAL = "<principal-desconocido>"
+
 
 class VehicleAggregator:
     """Mantiene el estado de los vehículos estimados."""
@@ -79,7 +84,10 @@ class VehicleAggregator:
     # ── Entrada ───────────────────────────────────────────────────────────
 
     def ingest(
-        self, observation: Observation, now: float
+        self,
+        observation: Observation,
+        now: float,
+        principal: str | None = None,
     ) -> tuple[EstimatedVehicle, bool]:
         """Incorpora una observación.
 
@@ -99,7 +107,13 @@ class VehicleAggregator:
                 vehicle.linea,
             )
 
-        self._apply(vehicle, observation)
+        # En producción el principal proviene del tópico protegido por la ACL.
+        # Si un llamador interno lo omite, todas sus sesiones cuentan como una
+        # sola identidad; nunca se usa el `sessionId` como sustituto porque el
+        # cliente puede rotarlo libremente.
+        authenticated_principal = principal or UNKNOWN_PRINCIPAL
+
+        self._apply(vehicle, observation, authenticated_principal)
 
         self._vehicle_by_session[observation.session_id] = vehicle.vehicle_id
 
@@ -268,7 +282,12 @@ class VehicleAggregator:
             route_length_m=self._route_length(observation.route_id),
         )
 
-    def _apply(self, vehicle: EstimatedVehicle, observation: Observation) -> None:
+    def _apply(
+        self,
+        vehicle: EstimatedVehicle,
+        observation: Observation,
+        principal: str,
+    ) -> None:
         """Actualiza el vehículo con la observación.
 
         La posición solo se reemplaza si la observación es más reciente: los
@@ -285,16 +304,30 @@ class VehicleAggregator:
 
         vehicle.last_seen = max(vehicle.last_seen, observation.timestamp)
         vehicle.sessions.add(observation.session_id)
+        vehicle.principals[principal] = max(
+            vehicle.principals.get(principal, float("-inf")),
+            observation.timestamp,
+        )
         vehicle.sample_count += 1
 
     # ── Salida ────────────────────────────────────────────────────────────
 
     def should_publish(self, vehicle: EstimatedVehicle, now: float) -> bool:
-        """Aplica el ritmo de publicación por vehículo.
+        """Exige corroboración activa y aplica el ritmo por vehículo.
 
         Sin esto, diez pasajeros en el mismo bus producirían diez publicaciones
-        por ciclo para una sola unidad.
+        por ciclo para una sola unidad. La corroboración se cuenta por principal
+        MQTT autenticado, no por sesión controlada por el cliente.
         """
+        active_principals = sum(
+            1
+            for seen_at in vehicle.principals.values()
+            if now - seen_at <= self.config.merge_window_s
+        )
+
+        if active_principals < self.config.min_publish_principals:
+            return False
+
         return (now - vehicle.last_published_at) >= self.config.publish_interval_s
 
     def mark_published(self, vehicle: EstimatedVehicle, now: float) -> None:

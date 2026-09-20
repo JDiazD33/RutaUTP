@@ -192,6 +192,11 @@ class Config:
     vehicle_ttl_s: float = 60.0
     publish_interval_s: float = 5.0
 
+    #: Número de instalaciones MQTT distintas que deben corroborar un vehículo
+    #: antes de exponerlo a los consumidores. No se cuentan `sessionId`: una
+    #: instalación comprometida puede rotarlos libremente.
+    min_publish_principals: int = 2
+
     #: Diferencia de rumbo máxima para considerar que dos observaciones pueden
     #: ser del mismo vehículo.
     #:
@@ -269,6 +274,16 @@ class Config:
                 f"{self.max_messages_per_minute_global} es menor que "
                 f"BACKEND_MAX_MSGS_PER_MINUTE={self.max_messages_per_minute}; "
                 "una sola sesión podría agotar el techo global"
+            )
+
+        if (
+            isinstance(self.min_publish_principals, bool)
+            or not isinstance(self.min_publish_principals, int)
+            or self.min_publish_principals < 1
+        ):
+            raise ConfigError(
+                "BACKEND_MIN_PUBLISH_PRINCIPALS="
+                f"{self.min_publish_principals} debe ser un entero mayor o igual a 1"
             )
 
         for name in (
@@ -393,6 +408,9 @@ class Config:
             merge_window_s=_number(env, "BACKEND_MERGE_WINDOW_S", 60.0),
             vehicle_ttl_s=_number(env, "BACKEND_VEHICLE_TTL_S", 60.0),
             publish_interval_s=_number(env, "BACKEND_PUBLISH_INTERVAL_S", 5.0),
+            min_publish_principals=_integer(
+                env, "BACKEND_MIN_PUBLISH_PRINCIPALS", 2, minimum=1
+            ),
             merge_max_heading_diff_deg=_number(
                 env, "BACKEND_MERGE_MAX_HEADING_DIFF_DEG", 90.0
             ),

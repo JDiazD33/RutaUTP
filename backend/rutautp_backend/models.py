@@ -144,6 +144,9 @@ class EstimatedVehicle:
     route_length_m: float = 0.0
 
     sessions: set[str] = field(default_factory=set)
+    #: Principales MQTT autenticados que corroboraron esta estimación. Es una
+    #: identidad más fuerte que `sessionId`, que el cliente puede regenerar.
+    principals: dict[str, float] = field(default_factory=dict)
     sample_count: int = 0
     last_published_at: float = 0.0
 

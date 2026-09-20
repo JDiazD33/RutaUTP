@@ -224,7 +224,9 @@ class Bridge:
 
         self.metrics.record_accepted()
 
-        vehicle, created = self.aggregator.ingest(observation, now)
+        vehicle, created = self.aggregator.ingest(
+            observation, now, principal=principal
+        )
 
         if created:
             self.metrics.record_created()
