@@ -141,6 +141,40 @@ class TestCaminoFeliz:
         assert outcome.published is True
         assert publisher.count == 1
 
+    def test_un_principal_no_publica_rotando_sesiones(
+        self, config, feed, publisher, sample_route
+    ):
+        secure_config = Config(
+            **{**config.__dict__, "min_publish_principals": 2}
+        )
+        bridge = Bridge(config=secure_config, feed=feed, publisher=publisher)
+
+        first = bridge.handle_message(
+            topic_for(session="sesion-a", principal="device-001"),
+            payload_for(sample_route, session="sesion-a"),
+            NOW,
+        )
+        second = bridge.handle_message(
+            topic_for(session="sesion-b", principal="device-001"),
+            payload_for(sample_route, session="sesion-b", now=NOW + 1),
+            NOW + 1,
+        )
+
+        assert first.accepted is True
+        assert second.accepted is True
+        assert first.published is False
+        assert second.published is False
+        assert publisher.count == 0
+
+        corroborated = bridge.handle_message(
+            topic_for(session="sesion-c", principal="device-002"),
+            payload_for(sample_route, session="sesion-c", now=NOW + 2),
+            NOW + 2,
+        )
+
+        assert corroborated.published is True
+        assert publisher.count == 1
+
     def test_el_topico_de_salida_tiene_el_formato_esperado(
         self, bridge, publisher, sample_route
     ):

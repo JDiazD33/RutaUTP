@@ -18,6 +18,7 @@ class TestValoresPorDefecto:
 
         assert config.port == 1883
         assert config.vehicle_ttl_s >= config.merge_window_s
+        assert config.min_publish_principals == 2
 
     def test_entorno_vacio_da_los_valores_por_defecto(self):
         config = Config.from_env({})
@@ -95,6 +96,7 @@ class TestNumerosInvalidos:
             "BACKEND_MAX_MESSAGE_BYTES",
             "BACKEND_MAX_MSGS_PER_MINUTE",
             "BACKEND_MAX_MSGS_PER_MINUTE_GLOBAL",
+            "BACKEND_MIN_PUBLISH_PRINCIPALS",
         ],
     )
     def test_los_limites_enteros_no_truncan_decimales(self, variable):
@@ -111,6 +113,7 @@ class TestNumerosInvalidos:
                 "max_messages_per_minute_global",
                 "BACKEND_MAX_MSGS_PER_MINUTE_GLOBAL",
             ),
+            ("min_publish_principals", "BACKEND_MIN_PUBLISH_PRINCIPALS"),
         ],
     )
     def test_construccion_directa_tambien_exige_enteros(
@@ -118,6 +121,10 @@ class TestNumerosInvalidos:
     ):
         with pytest.raises(ConfigError, match=variable):
             Config(**{field_name: 20.5})
+
+    def test_quorum_menor_que_uno_se_rechaza(self):
+        with pytest.raises(ConfigError, match="BACKEND_MIN_PUBLISH_PRINCIPALS"):
+            Config.from_env({"BACKEND_MIN_PUBLISH_PRINCIPALS": "0"})
 
 
 class TestRelacionesEntreParametros:

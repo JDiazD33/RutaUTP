@@ -294,6 +294,47 @@ class TestRitmoDePublicacion:
 
         assert aggregator.should_publish(vehicle, NOW + config.publish_interval_s) is True
 
+    def test_exige_principales_distintos_y_no_sesiones_rotadas(
+        self, config, feed, sample_route
+    ):
+        secure_config = Config(
+            **{
+                **config.__dict__,
+                "min_publish_principals": 2,
+            }
+        )
+        aggregator = VehicleAggregator(secure_config, feed)
+
+        vehicle, _ = aggregator.ingest(
+            make_observation(sample_route, session="sesion-a"),
+            NOW,
+            principal="device-001",
+        )
+        vehicle, _ = aggregator.ingest(
+            make_observation(sample_route, session="sesion-b", now=NOW + 1),
+            NOW + 1,
+            principal="device-001",
+        )
+
+        assert len(vehicle.sessions) == 2
+        assert len(vehicle.principals) == 1
+        assert aggregator.should_publish(vehicle, NOW + 1) is False
+
+        vehicle, _ = aggregator.ingest(
+            make_observation(sample_route, session="sesion-c", now=NOW + 2),
+            NOW + 2,
+            principal="device-002",
+        )
+
+        assert len(vehicle.principals) == 2
+        assert aggregator.should_publish(vehicle, NOW + 2) is True
+
+        # La corroboración caduca: un principal antiguo no permite que el otro
+        # mantenga para siempre un candidato como vehículo público.
+        assert aggregator.should_publish(
+            vehicle, NOW + secure_config.merge_window_s + 3
+        ) is False
+
 
 class TestInstantanea:
     def test_la_instantanea_esta_ordenada(self, aggregator, feed, sample_route):

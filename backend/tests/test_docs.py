@@ -56,6 +56,7 @@ VARIABLES: dict[str, str] = {
     "merge_max_heading_diff_deg": "BACKEND_MERGE_MAX_HEADING_DIFF_DEG",
     "vehicle_ttl_s": "BACKEND_VEHICLE_TTL_S",
     "publish_interval_s": "BACKEND_PUBLISH_INTERVAL_S",
+    "min_publish_principals": "BACKEND_MIN_PUBLISH_PRINCIPALS",
     "vehicle_namespace": "BACKEND_VEHICLE_NAMESPACE",
     "log_level": "BACKEND_LOG_LEVEL",
     "log_json": "BACKEND_LOG_JSON",

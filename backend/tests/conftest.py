@@ -43,6 +43,9 @@ def config() -> Config:
         database_path="",
         health_file="",
         vehicle_namespace="t0",
+        # Las pruebas generales del comportamiento histórico aíslan el ritmo de
+        # publicación. Las regresiones del quorum construyen su propia config.
+        min_publish_principals=1,
     )
 
 
