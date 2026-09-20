@@ -173,27 +173,93 @@ struct CiudadSheet: View {
 // MARK: - 3. AJUSTES SHEET
 struct AjustesSheet: View {
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
+
+    /// El consentimiento no se aplica al tocar el interruptor: primero se
+    /// explica el alcance. Es un permiso para publicar tu ubicación, y el
+    /// usuario tiene que poder saber qué se envía y cuándo antes de aceptarlo.
+    @State private var mostrarConsentimiento = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            SheetHeader(icon: "gearshape.fill", iconColor: .onSurfaceVariant,
-                        title: L.t("Ajustes", "Settings"))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                SheetHeader(icon: "gearshape.fill", iconColor: .onSurfaceVariant,
+                            title: L.t("Ajustes", "Settings"))
 
-            // Tema
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L.t("APARIENCIA", "APPEARANCE"))
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                HStack(spacing: 12) {
-                    temaButton(.light, icon: "sun.max.fill", label: L.t("Claro", "Light"))
-                    temaButton(.dark, icon: "moon.fill", label: L.t("Oscuro", "Dark"))
+                // Tema
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.t("APARIENCIA", "APPEARANCE"))
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                    HStack(spacing: 12) {
+                        temaButton(.light, icon: "sun.max.fill", label: L.t("Claro", "Light"))
+                        temaButton(.dark, icon: "moon.fill", label: L.t("Oscuro", "Dark"))
+                    }
                 }
+
+                // Contribución anónima (baliza del pasajero)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.t("CONTRIBUCIÓN", "CONTRIBUTION"))
+                        .font(.labelCapsMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+
+                    Toggle(isOn: Binding(
+                        get: { trackingCoordinator.isEnabled },
+                        set: { activar in
+                            if activar {
+                                mostrarConsentimiento = true
+                            } else {
+                                trackingCoordinator.setContributionEnabled(false)
+                            }
+                        }
+                    )) {
+                        Text(L.t("Ayudar con ubicaciones", "Help with locations"))
+                            .font(.bodyMdMedium)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .tint(.appPrimary)
+                    .padding(16)
+                    .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityHint(L.t(
+                        "Envía observaciones anónimas de viaje para que otros usuarios vean los vehículos en el mapa",
+                        "Sends anonymous trip observations so other users see vehicles on the map"))
+
+                    Text(trackingCoordinator.isEnabled
+                         ? L.t("Estás contribuyendo. El estado actual aparece en el mapa, sobre el buscador.",
+                               "You are contributing. The current status appears on the map, above the search box.")
+                         : L.t("Si lo activas, la app analizará tu ubicación y tu actividad física para detectar si viajas en una línea de transporte. Solo tras confirmar un viaje enviará observaciones anónimas y temporales: no viaja ningún dato que te identifique. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
+                               "If you turn this on, the app will analyse your location and motion activity to detect whether you are travelling on a transport line. Only after confirming a trip will it send anonymous, temporary observations: no identifying data is sent. Contribution pauses while the app is in the background or the screen is locked."))
+                        .font(.bodySm)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+            }
+            .padding(20)
+        }
+        .confirmationDialog(
+            L.t("Ayudar con ubicaciones en tiempo real",
+                "Help with real-time locations"),
+            isPresented: $mostrarConsentimiento,
+            titleVisibility: .visible
+        ) {
+            Button(L.t("Aceptar y activar", "Accept and turn on")) {
+                trackingCoordinator.setContributionEnabled(true)
             }
 
-            Spacer()
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        } message: {
+            // El alcance se declara ANTES de pedir el consentimiento, no
+            // después: la baliza solo transmite con la app abierta, y prometer
+            // continuidad en segundo plano sería anunciar algo que el sistema
+            // no hace con la configuración actual.
+            Text(L.t(
+                "Se enviarán observaciones anónimas de tu viaje al servidor de prueba. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
+                "Anonymous observations of your trip will be sent to the test server. Contribution pauses while the app is in the background or the screen is locked."))
         }
-        .padding(20)
     }
 
     private enum TemaOpcion { case light, dark }

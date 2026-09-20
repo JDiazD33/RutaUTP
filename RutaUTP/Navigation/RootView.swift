@@ -14,6 +14,10 @@ struct RootView: View {
     @AppStorage(SeniasService.llaveModo) private var modoSenias = false
     @Environment(\.scenePhase) private var scenePhase
 
+    /// Servicio de ubicación compartido con el rastreo pasivo. Se recibe desde
+    /// `RutaUTPApp`; el valor por defecto solo sirve para las previsualizaciones.
+    private let locationService: LocationServiceProtocol
+
     /// Tema claro/oscuro. Se aplica SOLO con aplicarTemaEnVentanas (abajo):
     /// un único escritor de overrideUserInterfaceStyle. No volver a añadir
     /// .preferredColorScheme aquí ni animar el cambio de isDarkMode —
@@ -35,7 +39,9 @@ struct RootView: View {
         }
     }
 
-    init() {
+    init(locationService: LocationServiceProtocol = LocationService()) {
+        self.locationService = locationService
+
         // Solo DEBUG: permite abrir directo en una pantalla desde consola,
         // p.ej. xcrun simctl launch ... apolito.RutaUTP --pantalla rutas
         #if DEBUG
@@ -58,7 +64,7 @@ struct RootView: View {
         ZStack {
             switch router.currentScreen {
             case .bienvenida:    BienvenidaView()
-            case .mapaPrincipal: MapaView()
+            case .mapaPrincipal: MapaView(locationService: locationService)
             case .rutas:         RutasView()
             case .guardado:      GuardadoView()
             case .seguridad:     SeguridadView()

@@ -15,7 +15,7 @@ import MapKit
 
 struct MapaView: View {
     @EnvironmentObject var router: AppRouter
-    @StateObject private var vm = MapaViewModel()
+    @StateObject private var vm: MapaViewModel
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     /// Selector de destino tocando el mapa (botón del buscador).
@@ -33,6 +33,14 @@ struct MapaView: View {
     )
 
     private let tabBarHeight: CGFloat = 64
+
+    /// El servicio de ubicación se inyecta para compartirlo con el rastreo
+    /// pasivo: una sola instancia para toda la app (ver `RutaUTPApp`).
+    init(locationService: LocationServiceProtocol = LocationService()) {
+        _vm = StateObject(
+            wrappedValue: MapaViewModel(locationService: locationService)
+        )
+    }
 
     private var resumenItinerario: some View {
         VStack(alignment: .leading, spacing: 8) {
