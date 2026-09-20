@@ -19,7 +19,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var confirmedLine: String?
     @Published private(set) var distanceToRoute: Double?
     @Published private(set) var shouldPublish = false
-    
+
     /// Estado actual del canal utilizado para publicar observaciones.
     ///
     /// Esta propiedad permite que SwiftUI muestre si MQTT está conectando,
@@ -38,7 +38,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
 
     private let repository:
         GTFSRepository
-    
+
     /// Componente encargado de transmitir observaciones autorizadas.
     ///
     /// Es opcional para que la detección pasiva pueda funcionar aunque las
@@ -46,8 +46,8 @@ final class PassiveTrackingCoordinator: ObservableObject {
     /// unitarias también podrá sustituirse por un publicador simulado.
     private let observationPublisher:
         ObservationPublishing?
-    
-    
+
+
     private var detectionEngine =
         PassengerDetectionEngine()
 
@@ -104,7 +104,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
     /// acumulado la evidencia. Si la ruta cambia, la evidencia anterior deja de
     /// valer y el motor se reinicia.
     private var boardingRouteID: String?
-    
+
 #if DEBUG
 /// Permite probar el transporte MQTT sin esperar un viaje real.
 ///
@@ -116,7 +116,7 @@ private let isForcedOnboardForMQTTTest =
         "MQTT_FORCE_ONBOARD"
     ] == "1"
 #endif
-    
+
     private let consentStorageKey =
         "rutautp.passive-tracking-consent"
 
@@ -142,7 +142,7 @@ private let isForcedOnboardForMQTTTest =
         self.locationService = locationService
         self.motionService = motionService
         self.repository = repository
-        
+
         // En producción permanece vacío y las rutas se cargan desde GTFS.
         // Las pruebas pueden proporcionar geometrías pequeñas y deterministas.
         self.routes = initialRoutes
@@ -176,8 +176,8 @@ private let isForcedOnboardForMQTTTest =
             }
         refreshObservationPublisherState()
     }
-    
-    
+
+
 
     func startIfConsented() async {
         guard isEnabled else {
@@ -366,7 +366,8 @@ private let isForcedOnboardForMQTTTest =
     func process(
         _ location: CLLocation,
         activity: DetectedMotionActivity
-    ) {        guard let candidate =
+    ) {
+        guard let candidate =
             RouteCandidateMatcher.closestMatch(
                 for: location,
                 routes: routes
@@ -493,8 +494,8 @@ if isForcedOnboardForMQTTTest {
 
         // Copia el estado actualizado del publicador a la propiedad observable.
         refreshObservationPublisherState()
-        
-        
+
+
         #if DEBUG
         print(
             "[PassiveTracking] Estado: " +
@@ -529,7 +530,7 @@ if isForcedOnboardForMQTTTest {
         // Revocar el consentimiento o detener el coordinador también debe
         // finalizar cualquier sesión MQTT que todavía permanezca activa.
         stopObservationSession()
-        
+
         isRunning = false
         detectionState = .idle
         motionActivity = .unknown
@@ -545,8 +546,8 @@ if isForcedOnboardForMQTTTest {
         print("[PassiveTracking] Detenido")
         #endif
     }
-    
-    
+
+
 #if DEBUG
 /// Fuerza temporalmente una sesión `onboard` para una prueba MQTT local.
 ///
@@ -604,8 +605,8 @@ private func processForcedOnboardForMQTTTest(
     )
 }
 #endif
-    
-    
+
+
 
     /// Finaliza el envío del viaje actual y elimina sus identificadores.
     ///
@@ -736,8 +737,8 @@ private func processForcedOnboardForMQTTTest(
         observationPublisherState =
             observationPublisher?.state ?? .inactive
     }
-    
-    
+
+
     private func message(
         for state: PassengerDetectionState,
         candidateLine: String
