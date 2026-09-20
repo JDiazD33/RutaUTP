@@ -19,6 +19,6 @@ jobs:
       with:
         xcode-version: latest-stable
 
-   - name: Build and Test
+    - name: Build and Test
       run: |
         xcodebuild test -project RutaUTP.xcodeproj -scheme RutaUTP -destination 'platform=iOS Simulator,OS=latest'
