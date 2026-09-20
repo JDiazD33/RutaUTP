@@ -627,7 +627,7 @@ struct MapaView: View {
                             BusCard(
                                 linea: L.t("LÍNEA", "LINE") + " \(bus.linea)",
                                 empresa: bus.empresa,
-                                minutos: "\(bus.minutosLlegada) MIN",
+                                minutos: bus.etiquetaLlegada,
                                 tipo: bus.tipo,
                                 placa: bus.ramalTexto,
                                 colorLinea: bus.color
@@ -898,7 +898,7 @@ private struct BusDetailPopup: View {
                         Text(L.t("LÍNEA", "LINE") + " \(bus.linea)")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.onSurface)
-                        Text("\(bus.minutosLlegada) MIN")
+                        Text(bus.etiquetaLlegada)
                             .font(.labelCapsSm)
                             .foregroundStyle(.white)
                             .appTracking(AppTracking.wideLabel)

@@ -34,7 +34,7 @@ struct BusAnimado: Identifiable, Equatable {
     var ramalTexto: String {
         variante.isEmpty ? L.t("S/D", "N/A") : L.t("Ramal \(variante)", "Branch \(variante)")
     }
-    let minutosLlegada: Int   // 4, 12
+    let minutosLlegada: Int?   // 4, 12 — o nil si no hay estimación
     let color: Color          // .appPrimary, .secondary
     var lat: Double           // posición actual (animada)
     var lon: Double
@@ -52,6 +52,32 @@ struct BusAnimado: Identifiable, Equatable {
     var isMovingForward: Bool = true
     /// Tramo [i, i+1] donde cayó la última interpolación (cache).
     var tramoActual: Int = 0
+
+    /// De dónde procede la posición de este vehículo.
+    ///
+    /// `.simulated` es la flota que el mapa anima sobre los shapes del feed,
+    /// que es lo que se ve cuando no hay broker configurado. `.real` es una
+    /// posición publicada por el backend por el canal MQTT a partir de las
+    /// observaciones de los pasajeros a bordo.
+    ///
+    /// Un vehículo real no trae geometría propia: `rutaCoordenadas` y
+    /// `acumulados` van vacíos, así que `actualizarPosicion()` no hace nada y
+    /// la posición la fija cada mensaje del broker, no la animación local.
+    var fuente: VehicleTrackingSource = .simulated
+
+    /// Texto de la llegada para la interfaz.
+    ///
+    /// Nunca inventa un valor. La simulación siempre trae minutos (los deriva
+    /// de la frecuencia del feed); un vehículo real no los tiene, porque no se
+    /// conoce su paradero de destino ni el sentido del viaje, y ahí la interfaz
+    /// dice "SIN ETA" en lugar de un número con apariencia de dato.
+    var etiquetaLlegada: String {
+        guard let minutosLlegada else {
+            return L.t("SIN ETA", "NO ETA")
+        }
+
+        return "\(minutosLlegada) MIN"
+    }
 
     var longitudRutaM: Double { acumulados.last ?? 0 }
 
@@ -200,6 +226,18 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published private(set) var cargandoLineas: Bool = false
     private var busSimulationTask: Task<Void, Never>?
     private var lineasTask: Task<Void, Never>?
+
+    /// Proveedor de posiciones vehiculares reales. Solo se crea cuando hay
+    /// configuración de broker; sin ella el mapa sigue con su propia flota.
+    private var vehicleProvider: VehicleTrackingProviding?
+
+    /// Consumo del stream de posiciones del proveedor.
+    private var vehicleTrackingTask: Task<Void, Never>?
+
+    /// Catálogo GTFS indexado por `route_id`, para resolver empresa, color y
+    /// variante de un vehículo real. `VehiclePosition` viaja con `routeId`,
+    /// que es único; `linea` no lo es (dos ramales la comparten).
+    private var rutasPorId: [String: RutaGTFS] = [:]
     /// Último tick del timer: para mover los buses por tiempo transcurrido
     /// real (metros = velocidad × dt) y no por pasos fijos de segmento.
     private var ultimoTickBuses: Date?
@@ -321,6 +359,16 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     // corredores, con dirección y velocidad propias (25–43 km/h), que
     // avanzan metros reales sobre el shape según el tiempo transcurrido.
     func iniciarSimulacionBuses() {
+        // Con broker configurado, el mapa muestra vehículos OBSERVADOS; sin él,
+        // la flota que el propio mapa anima. Nunca las dos a la vez: cada línea
+        // aparecería duplicada en el mapa.
+        //
+        // Esta comprobación va ANTES de `recargarLineas`, y no después: esa
+        // función lanza una tarea que reescribe `busesAnimados` con la flota
+        // simulada, así que si arrancara también, su resultado podría llegar
+        // después del primer mensaje del broker y pisar los vehículos reales.
+        if iniciarFlotaReal() { return }
+
         // Al volver a la pantalla, conservar el destino elegido si lo hay.
         recargarLineas(cercaDe: busquedaResultado?.coordenada)
 
@@ -475,6 +523,106 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         busSimulationTask?.cancel()
         busSimulationTask = nil
         ultimoTickBuses = nil
+
+        // El canal real se cierra con la pantalla. Sin esto, salir del mapa
+        // dejaría la suscripción MQTT viva consumiendo batería y red.
+        vehicleTrackingTask?.cancel()
+        vehicleTrackingTask = nil
+        vehicleProvider?.stop()
+        vehicleProvider = nil
+    }
+
+    // MARK: - Flota real (canal MQTT)
+
+    /// Arranca el consumo de posiciones observadas si hay broker configurado.
+    ///
+    /// Devuelve `true` si tomó el control de la flota, en cuyo caso el mapa no
+    /// debe animar su propia simulación. Sin `MQTT_HOST`, `MQTT_USERNAME` y
+    /// `MQTT_PASSWORD` no hay canal, y el mapa se comporta exactamente como
+    /// antes: su flota animada sobre los shapes del feed.
+    private func iniciarFlotaReal() -> Bool {
+        guard vehicleProvider == nil else { return true }
+        guard MQTTConfiguration.fromEnvironment() != nil else { return false }
+
+        let provider = TrackingProviderFactory.makeDefault()
+        guard provider.source == .real else { return false }
+
+        vehicleProvider = provider
+        cargandoLineas = true
+
+        vehicleTrackingTask = Task { @MainActor [weak self] in
+            // El catálogo completo, no solo las líneas cercanas al ancla: un
+            // vehículo observado puede venir de cualquiera de las 102 rutas.
+            let feed = await GTFSRepository.shared.rutas()
+            guard !Task.isCancelled, let self else { return }
+
+            self.rutasPorId = Dictionary(
+                feed.map { ($0.id, $0) },
+                uniquingKeysWith: { primera, _ in primera }
+            )
+
+            provider.start()
+
+            for await posiciones in provider.positions() {
+                guard !Task.isCancelled else { break }
+                self.aplicarFlotaReal(posiciones)
+            }
+        }
+
+        return true
+    }
+
+    /// Sustituye la flota del mapa por las posiciones que llegan del broker.
+    ///
+    /// Solo cambia `lat`, `lon` y `heading` respecto a la flota simulada: el
+    /// resto de campos se rellenan para que la tarjeta del mapa se dibuje
+    /// igual, y `fuente` distingue el origen. La geometría va vacía a propósito
+    /// —un vehículo observado no trae shape— y por eso `actualizarPosicion()`
+    /// no lo mueve: su posición la fija cada mensaje.
+    private func aplicarFlotaReal(_ posiciones: [VehiclePosition]) {
+        flotaBuses = posiciones.map { posicion in
+            let ruta = rutasPorId[posicion.routeId]
+
+            return BusAnimado(
+                id: Self.idNumerico(para: posicion.id),
+                linea: posicion.linea,
+                rutaId: posicion.routeId,
+                empresa: ruta?.empresa ?? L.t("Empresa no disponible", "Carrier unavailable"),
+                tipo: "Bus",
+                variante: ruta?.variante ?? "",
+                minutosLlegada: nil,
+                color: ruta?.color ?? .appPrimary,
+                lat: posicion.lat,
+                lon: posicion.lon,
+                heading: posicion.heading >= 0 ? posicion.heading : 0,
+                rutaCoordenadas: [],
+                acumulados: [],
+                fuente: .real
+            )
+        }
+
+        busesAnimados = flotaBuses
+        cargandoLineas = false
+
+        // Si el vehículo abierto en el popup sigue existiendo, refrescarlo.
+        if let seleccionado = busSeleccionado {
+            busSeleccionado = flotaBuses.first { $0.id == seleccionado.id }
+        }
+    }
+
+    /// Id numérico estable y determinista a partir del `vehicleId` del backend.
+    ///
+    /// `BusAnimado.id` es `Int` y `Identifiable` lo usa para el `ForEach`, así
+    /// que no puede cambiar entre mensajes del mismo vehículo. `hashValue` de
+    /// Swift está aleatorizado por proceso y no sirve; FNV-1a sí. El rango alto
+    /// evita chocar con los ids de la simulación (1...n).
+    private static func idNumerico(para vehicleId: String) -> Int {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in vehicleId.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return 100_000 + Int(hash % 1_000_000)
     }
 
     private func actualizarPosicionBuses() {
