@@ -291,7 +291,26 @@ python -m pytest
 
 # Arranque sin broker, corte y restauración: el servicio debe recuperarse solo.
 ./tools/reconnect_test.sh
+
+# La app y el backend deben derivar la MISMA `linea` de cada ruta. Compila el
+# GTFSNombreParser real de la app y lo contrasta ruta a ruta con
+# `parse_short_name`. Necesita Xcode (swiftc).
+./tools/parity_linea.sh
 ```
+
+### Por qué existe `parity_linea.sh`
+
+El backend rechaza una observación con `LINE_MISMATCH` cuando la `linea` que
+declara el cliente no coincide con la que él calcula del feed. La app la obtiene
+con `GTFSNombreParser.lineaYVariante` y el backend con `parse_short_name`, que
+se documenta como su port. Si las dos implementaciones se separan, el fallo no
+es parcial: **todas** las observaciones de esa línea se descartan, el vehículo
+nunca aparece en el mapa y no hay ningún error visible en la app.
+
+Ninguna otra prueba lo cubría: `tests/test_contract.py` compara los dos structs
+de payload y `tests/test_topics.py` los filtros de tópicos, pero nadie ejecutaba
+los dos parsers de nombres sobre el feed real. Esta comprobación sí, y falla en
+lugar de saltarse cuando no encuentra el parser de la app o el toolchain.
 
 `smoke_test.sh` y `reconnect_test.sh` **necesitan los ejecutables locales de
 Mosquitto** (`mosquitto`, `mosquitto_pub`, `mosquitto_sub`). Levantan su propio
