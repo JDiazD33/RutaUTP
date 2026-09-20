@@ -1,0 +1,66 @@
+# Control de acceso por usuario para Mosquitto.
+#
+# Copiar a mqtt/config/acl (archivo ignorado por git, igual que passwords)
+# y habilitar en mosquitto.conf con:
+#   acl_file /mosquitto/config/acl
+#
+# Regla general: quien no aparece aquí, no puede hacer NADA
+# (Mosquitto deniega por defecto a los usuarios autenticados no listados).
+#
+# Hay una prueba automática de estos permisos: `tools/acl_test.sh`.
+# Si se cambia este archivo, hay que actualizarla en el mismo cambio.
+
+# ── La app (una identidad distinta por instalación) ──────────────────────
+#
+#   - Escribe observaciones.
+#   - Lee posiciones vehiculares.
+#
+# Lo que NO puede hacer, y por qué:
+#
+#   - **Leer `rutautp/observaciones/#`.** Esa rama contiene la trayectoria
+#     individual de cada persona a bordo. Con permiso de lectura, cualquiera con
+#     las credenciales de la app podría seguir los movimientos de los demás
+#     usuarios. Antes estaba permitido y era el agujero más grave de la ACL.
+#
+#   - **Publicar en `rutautp/vehiculos/#`.** Eso permitiría a un teléfono
+#     suplantar un vehículo ante el resto de usuarios.
+# `%u` es el usuario MQTT autenticado. Una instalación no puede publicar bajo
+# la identidad de otra ni eludir su límite rotando únicamente `sessionId`.
+pattern write rutautp/observaciones/%u/+/posicion
+pattern read rutautp/vehiculos/+/posicion
+
+# Bloqueo deliberado de la identidad compartida histórica. Los `deny` tienen
+# precedencia sobre los permisos `pattern`; así una migración incompleta falla
+# de forma visible en lugar de conservar el aislamiento roto.
+user observer
+topic deny rutautp/#
+
+# ── El backend (puente observaciones -> vehiculos) ────────────────────────
+#
+# Acotado a los dos tópicos que necesita, y al nivel exacto: `readwrite
+# rutautp/#` le daba permiso sobre todo el espacio de nombres, y
+# `read rutautp/observaciones/#` le dejaba leer también cualquier rama futura
+# colgada de ahí. El filtro del backend es
+# `rutautp/observaciones/+/+/posicion`, así que la ACL concede justo eso.
+#
+# Ojo: Mosquitto compara el filtro de la ACL con el tópico del mensaje, no con
+# el filtro de suscripción, así que `rutautp/observaciones/+/+/posicion`
+# autoriza exactamente los cinco niveles que el backend consume.
+user backend
+topic read rutautp/observaciones/+/+/posicion
+topic write rutautp/vehiculos/+/posicion
+
+# ── Cuenta humana de depuración ───────────────────────────────────────────
+#
+# No se distribuye con la app. Leer todo incluye las observaciones ajenas, así
+# que solo sirve para diagnosticar durante el desarrollo.
+#
+# Para suscribirse a `rutautp/observaciones/#` y ver qué llega, esta es la
+# cuenta que hay que usar, no las credenciales normales de la app.
+#
+#user debug
+#topic read rutautp/#
+
+# No debe volver a crearse una cuenta `observer` compartida. Cada instalación
+# necesita un usuario propio, provisionado fuera del repositorio. La sesión del
+# viaje sigue siendo un UUID independiente en el siguiente nivel del tópico.

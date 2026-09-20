@@ -1,7 +1,7 @@
 # macOS
 .DS_Store
 
-# Xcode (userdata local, no debe ir al repo)
+# Xcode
 xcuserdata/
 *.xcuserstate
 
@@ -11,5 +11,34 @@ DerivedData/
 
 # Swift Package Manager
 .build/
+
+# MQTT local
+mqtt/config/passwords
+mqtt/data/
+
+# MQTT: ACL activa y material criptográfico.
+#
+# La plantilla (`acl.example`) sí se versiona; la ACL en vigor no. Lo mismo con
+# las llaves y certificados de `certs/`: `mqtt/README.md` ya los describía como
+# ignorados, pero la regla no existía y un `git add` los habría subido.
+mqtt/config/acl
+mqtt/config/certs/
+
+# Esquema local con variables MQTT
+RutaUTP.xcodeproj/xcshareddata/
+
+# Backend (Python)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Backend: histórico SQLite. Es la base por defecto de `BACKEND_DB_PATH` y
+# contiene trayectorias observadas; no debe acabar en el repositorio.
+backend/data/
+
+# Backend: entorno real del servicio (credenciales). La plantilla sí se versiona.
+backend/deploy/backend.env
 
 .vscode/

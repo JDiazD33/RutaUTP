@@ -1,0 +1,113 @@
+# Perfil de DESPLIEGUE del broker: TLS + ACL + autenticación.
+#
+# Este archivo NO sustituye a `compose.yaml`. Son dos escenarios distintos y
+# conviene no mezclarlos:
+#
+#   compose.yaml        desarrollo en red local. 1883 plano, sin ACL montada.
+#   compose.prod.yaml   (este) expuesto a internet. 8883 con TLS y ACL.
+#
+# Antes solo existía el primero, y `mosquitto-hardened.conf.example` era una
+# plantilla sin nada que la montara: copiarla a mano era el único camino y no
+# había forma de comprobar que el resultado aplicaba de verdad la ACL.
+#
+# ── Requisitos previos ────────────────────────────────────────────────────
+#
+# Los crea el operador. Ninguno vive en el repositorio (ver .gitignore):
+#
+#   mqtt/config/passwords   una cuenta distinta por instalación de la app
+#                           mosquitto_passwd -c config/passwords device-001
+#                           mosquitto_passwd -b config/passwords backend
+#   mqtt/config/acl         cp config/acl.example config/acl
+#   mqtt/config/certs/      ca.crt, server.crt, server.key (ver README.md)
+#
+# El puerto 1883 NO se publica: sin canal en texto plano, no hay forma de
+# saltarse el cifrado por descuido.
+#
+# ── Uso ───────────────────────────────────────────────────────────────────
+#
+#   docker compose -f mqtt/compose.prod.yaml up -d
+#   docker compose -f mqtt/compose.prod.yaml logs -f mosquitto
+#
+# Comprobación posterior: `mqtt/tools/acl_test.sh` verifica los permisos, y
+# `backend/tools/smoke_test.sh` el circuito completo. Para el perfil de
+# despliegue hay que apuntarlos al puerto 8883 con TLS y credenciales.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.1.2-alpine
+    container_name: rutautp-mosquitto
+    restart: unless-stopped
+
+    ports:
+      - "8883:8883"
+
+    volumes:
+      # La plantilla endurecida se monta TAL CUAL como configuración del
+      # contenedor. Antes el README pedía copiarla sobre `mosquitto.conf`, lo
+      # que machacaba la configuración de desarrollo y hacía imposible tener
+      # las dos a la vez.
+      - ./config/mosquitto-hardened.conf.example:/mosquitto/config/mosquitto.conf:ro
+      - ./config/passwords:/mosquitto/config/passwords:ro
+      - ./config/acl:/mosquitto/config/acl:ro
+      - ./config/certs:/mosquitto/config/certs:ro
+      - ./data:/mosquitto/data
+
+    healthcheck:
+      # Comprueba que el listener TLS acepta conexiones TCP. No valida el
+      # handshake ni la ACL: eso exige credenciales que no deben vivir en este
+      # archivo. La verificación de permisos la hace `mqtt/tools/acl_test.sh`
+      # y la del circuito completo, `backend/tools/smoke_test.sh`.
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8883 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # El puente, supervisado por el mismo Compose. Antes había que arrancarlo a
+  # mano y nada vigilaba si seguía vivo: si el proceso moría, el mapa se
+  # quedaba sin posiciones y no había forma de saberlo desde fuera.
+  backend:
+    build:
+      context: ../backend
+    container_name: rutautp-backend
+    restart: unless-stopped
+
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "8883"
+      MQTT_TLS: "1"
+      MQTT_CA_CERT: /certs/ca.crt
+      MQTT_USERNAME: backend
+      # Sin valor por defecto a propósito: si falta, Compose falla al arrancar
+      # en lugar de conectar con una contraseña vacía.
+      MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:?define MQTT_BACKEND_PASSWORD}
+      GTFS_DIR: /gtfs
+      BACKEND_DB_PATH: /data/rutautp.sqlite
+      BACKEND_HEALTH_FILE: /data/health.json
+      BACKEND_LOG_JSON: "1"
+      # Se fija en el perfil productivo: una sola instalación nunca basta para
+      # crear una posición pública, aunque rote su sessionId.
+      BACKEND_MIN_PUBLISH_PRINCIPALS: "2"
+
+    volumes:
+      - ../gtfs:/gtfs:ro
+      - ./config/certs:/certs:ro
+      - backend-data:/data
+
+    healthcheck:
+      # El propio puente sabe si está sano: `--health-check` lee el latido que
+      # escribe cada segundo y distingue «vivo y conectado» de «vivo pero
+      # desconectado» y de «se detuvo». Un `pgrep` no distinguiría los dos
+      # primeros.
+      test: ["CMD", "python", "-m", "rutautp_backend", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  backend-data:

@@ -1,0 +1,13 @@
+# La imagen solo necesita el paquete y sus dependencias. Sin esto, el contexto
+# de build arrastraría el entorno virtual, la caché de pytest y el histórico
+# SQLite (que contiene trayectorias observadas) hacia la imagen.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest_tmp/
+data/
+tests/
+tools/
+Dockerfile

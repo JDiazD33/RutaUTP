@@ -1,0 +1,46 @@
+# Configuración Mosquitto ENDURECIDA (TLS + ACL).
+#
+# Uso previsto: reemplazar mosquitto.conf SOLO cuando el broker quede
+# accesible desde internet (dominio público). En red local de pruebas
+# puede seguir usándose mosquitto.conf con 1883 plano.
+#
+# Requisitos previos (ver README.md para los comandos completos):
+#   1. Certificados en mqtt/config/certs/  (ca.crt, server.crt, server.key)
+#   2. Archivo de contraseñas en mqtt/config/passwords
+#   3. Archivo de ACL en mqtt/config/acl (copiar desde acl.example)
+#
+# Todo lo que está en mqtt/config/ y mqtt/data/ está ignorado por git:
+# ninguna credencial ni llave privada llega al repositorio.
+
+# ── Listener seguro ────────────────────────────────────────────────
+# TLS obligatorio. Sin 1883 abierto, no hay canal en texto plano.
+listener 8883
+protocol mqtt
+
+cafile   /mosquitto/config/certs/ca.crt
+certfile /mosquitto/config/certs/server.crt
+keyfile  /mosquitto/config/certs/server.key
+
+# TLS 1.2 mínimo (en Mosquitto 2.x lo aplica openssl internamente;
+# se deja documentado porque versiones viejas lo permitían configurable).
+
+# ── Autenticación y autorización ───────────────────────────────────
+allow_anonymous false
+password_file /mosquitto/config/passwords
+acl_file      /mosquitto/config/acl
+
+# ── Persistencia y logs ────────────────────────────────────────────
+persistence true
+persistence_location /mosquitto/data/
+
+log_dest stdout
+log_type error
+log_type warning
+log_type notice
+log_type information
+
+# Dejar constancia de conexiones rechazadas ayuda a detectar
+# intentos de acceso con credenciales robadas.
+log_type subscribe
+log_type unsubscribe
+connection_messages true

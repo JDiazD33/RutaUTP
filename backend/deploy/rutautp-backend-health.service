@@ -1,0 +1,22 @@
+# Comprobación de salud periódica del puente.
+#
+# systemd no tiene una comprobación de salud nativa para `Type=simple`, así que
+# se hace con un temporizador. Lo que aporta sobre un `systemctl status` es que
+# distingue «vivo y conectado» de «vivo pero desconectado del broker» y de
+# «dejó de ciclar»: el puente escribe un latido cada segundo y `--health-check`
+# lo interpreta.
+#
+# Si la comprobación falla, la unidad queda en estado `failed`, lo que se ve en
+# `systemctl --failed` y se puede enganchar con `OnFailure=`.
+
+[Unit]
+Description=RutaUTP — comprobación de salud del puente
+After=rutautp-backend.service
+
+[Service]
+Type=oneshot
+User=rutautp
+Group=rutautp
+WorkingDirectory=/opt/rutautp/backend
+EnvironmentFile=/etc/rutautp/backend.env
+ExecStart=/opt/rutautp/backend/.venv/bin/python -m rutautp_backend --health-check
