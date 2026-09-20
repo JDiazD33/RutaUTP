@@ -132,6 +132,7 @@ Los ajustes propios del servicio llevan el prefijo `BACKEND_`.
 | `BACKEND_MERGE_MAX_HEADING_DIFF_DEG` | `90` | Diferencia de rumbo máxima para fusionar. Una misma línea se recorre en los dos sentidos: sin esto, dos unidades que se cruzan se fusionan |
 | `BACKEND_VEHICLE_TTL_S` | `60` | Sin observaciones durante este tiempo, el vehículo se retira |
 | `BACKEND_PUBLISH_INTERVAL_S` | `5` | Ritmo mínimo de publicación por vehículo |
+| `BACKEND_MIN_PUBLISH_PRINCIPALS` | `2` | Instalaciones MQTT autenticadas distintas requeridas antes de publicar un vehículo. No cuenta sesiones rotadas de un mismo principal |
 | `BACKEND_VEHICLE_NAMESPACE` | aleatorio por arranque | Espacio de nombres del `vehicleId`. Fijarlo da identificadores reproducibles; vacío genera uno nuevo en cada arranque, que es lo que evita heredar la identidad visible de un proceso anterior |
 
 ### Tópicos

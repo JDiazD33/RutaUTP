@@ -89,6 +89,9 @@ services:
       BACKEND_DB_PATH: /data/rutautp.sqlite
       BACKEND_HEALTH_FILE: /data/health.json
       BACKEND_LOG_JSON: "1"
+      # Se fija en el perfil productivo: una sola instalación nunca basta para
+      # crear una posición pública, aunque rote su sessionId.
+      BACKEND_MIN_PUBLISH_PRINCIPALS: "2"
 
     volumes:
       - ../gtfs:/gtfs:ro
