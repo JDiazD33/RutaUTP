@@ -21,4 +21,4 @@ jobs:
 
     - name: Build and Test
       run: |
-        xcodebuild test -project RutaUTP.xcodeproj -scheme RutaUTP -destination 'platform=iOS Simulator,OS=latest'
+        xcodebuild test -project RutaUTP.xcodeproj -scheme RutaUTP -destination 'platform=iOS Simulator,name=iPhone 17'
