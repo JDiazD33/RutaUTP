@@ -220,17 +220,21 @@ struct AjustesSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .tint(.appPrimary)
+                    .disabled(!trackingCoordinator.isPublisherConfigured)
                     .padding(16)
                     .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
                     .accessibilityHint(L.t(
                         "Envía observaciones anónimas de viaje para que otros usuarios vean los vehículos en el mapa",
                         "Sends anonymous trip observations so other users see vehicles on the map"))
 
-                    Text(trackingCoordinator.isEnabled
-                         ? L.t("Estás contribuyendo. El estado actual aparece en el mapa, sobre el buscador.",
-                               "You are contributing. The current status appears on the map, above the search box.")
-                         : L.t("Si lo activas, la app analizará tu ubicación y tu actividad física para detectar si viajas en una línea de transporte. Solo tras confirmar un viaje enviará observaciones anónimas y temporales: no viaja ningún dato que te identifique. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
-                               "If you turn this on, the app will analyse your location and motion activity to detect whether you are travelling on a transport line. Only after confirming a trip will it send anonymous, temporary observations: no identifying data is sent. Contribution pauses while the app is in the background or the screen is locked."))
+                    Text(!trackingCoordinator.isPublisherConfigured
+                         ? L.t("La contribución no está disponible porque esta instalación no tiene configurado el canal MQTT.",
+                               "Contribution is unavailable because MQTT is not configured for this installation.")
+                         : trackingCoordinator.isEnabled
+                             ? L.t("Estás contribuyendo. El estado actual aparece en el mapa, sobre el buscador.",
+                                   "You are contributing. The current status appears on the map, above the search box.")
+                             : L.t("Si lo activas, la app analizará tu ubicación y tu actividad física para detectar si viajas en una línea de transporte. Solo tras confirmar un viaje enviará observaciones anónimas y temporales: no viaja ningún dato que te identifique. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
+                                   "If you turn this on, the app will analyse your location and motion activity to detect whether you are travelling on a transport line. Only after confirming a trip will it send anonymous, temporary observations: no identifying data is sent. Contribution pauses while the app is in the background or the screen is locked."))
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .fixedSize(horizontal: false, vertical: true)
@@ -576,4 +580,3 @@ struct SheetHeader: View {
         .accessibilityAddTraits(.isHeader)
     }
 }
-

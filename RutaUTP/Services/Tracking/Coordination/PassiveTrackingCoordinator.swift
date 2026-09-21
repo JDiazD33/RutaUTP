@@ -30,6 +30,13 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var statusMessage =
         "Contribución desactivada"
 
+    /// Indica si esta instalación tiene un canal MQTT utilizable.
+    /// Sin publicador no se deben encender GPS ni Core Motion, porque ninguna
+    /// observación podría salir del dispositivo.
+    var isPublisherConfigured: Bool {
+        observationPublisher != nil
+    }
+
     private let locationService:
         LocationServiceProtocol
 
@@ -164,9 +171,15 @@ private let isForcedOnboardForMQTTTest =
             self.observationPublisher = nil
         }
 
-        isEnabled = UserDefaults.standard.bool(
+        let storedConsent = UserDefaults.standard.bool(
             forKey: consentStorageKey
         )
+        isEnabled = storedConsent && observationPublisher != nil
+
+        if storedConsent && observationPublisher == nil {
+            UserDefaults.standard.set(false, forKey: consentStorageKey)
+            statusMessage = "Canal MQTT no configurado"
+        }
 
         // El estado del canal se propaga en el momento en que cambia,
         // no cuando la siguiente muestra lo consulta.
@@ -190,6 +203,13 @@ private let isForcedOnboardForMQTTTest =
     func setContributionEnabled(
         _ enabled: Bool
     ) {
+        guard !enabled || observationPublisher != nil else {
+            UserDefaults.standard.set(false, forKey: consentStorageKey)
+            isEnabled = false
+            statusMessage = "Canal MQTT no configurado"
+            return
+        }
+
         UserDefaults.standard.set(
             enabled,
             forKey: consentStorageKey
