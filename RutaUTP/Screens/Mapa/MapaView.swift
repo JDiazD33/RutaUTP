@@ -348,6 +348,25 @@ struct MapaView: View {
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
 
+            Text(vm.fuenteFlota == .real
+                 ? L.t("EN VIVO", "LIVE")
+                 : "DEMO")
+                .font(.system(size: 9, weight: .bold))
+                .appTracking(AppTracking.wideLabel)
+                .foregroundStyle(vm.fuenteFlota == .real ? Color.green : Color.onSurfaceVariant)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule().fill(
+                        vm.fuenteFlota == .real
+                            ? Color.green.opacity(0.14)
+                            : Color.surfaceContainerHigh
+                    )
+                )
+                .accessibilityLabel(vm.fuenteFlota == .real
+                                    ? L.t("Vehículos en vivo", "Live vehicles")
+                                    : L.t("Vehículos de demostración", "Demo vehicles"))
+
             Spacer()
         }
         .padding(.horizontal, 20)

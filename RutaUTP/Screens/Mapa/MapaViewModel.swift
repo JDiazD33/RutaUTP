@@ -216,6 +216,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     /// ha movido lo suficiente para que se note.
     @Published var busesAnimados: [BusAnimado] = []
     @Published var busSeleccionado: BusAnimado? = nil
+    @Published private(set) var fuenteFlota: VehicleTrackingSource = .simulated
     /// Movimiento mínimo (m) para publicar una nueva instantánea. A 20 Hz cada
     /// tick avanza unos centímetros, así que casi todas las publicaciones no
     /// cambiaban nada visible pero rehacían el cuerpo de `MapaView` completo
@@ -368,6 +369,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         // simulada, así que si arrancara también, su resultado podría llegar
         // después del primer mensaje del broker y pisar los vehículos reales.
         if iniciarFlotaReal() { return }
+
+        fuenteFlota = .simulated
 
         // Al volver a la pantalla, conservar el destino elegido si lo hay.
         recargarLineas(cercaDe: busquedaResultado?.coordenada)
@@ -548,6 +551,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         guard provider.source == .real else { return false }
 
         vehicleProvider = provider
+        fuenteFlota = .real
         cargandoLineas = true
 
         vehicleTrackingTask = Task { @MainActor [weak self] in
@@ -941,5 +945,4 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
     }
 }
-
 
