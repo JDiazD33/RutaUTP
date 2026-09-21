@@ -15,6 +15,7 @@ import MapKit
 
 struct MapaView: View {
     @EnvironmentObject var router: AppRouter
+    @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
     @StateObject private var vm: MapaViewModel
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
@@ -162,10 +163,16 @@ struct MapaView: View {
                 header
                     .padding(.top, 0)
 
+                if trackingCoordinator.isEnabled {
+                    estadoContribucion
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                }
+
                 // Panel de búsqueda
                 searchPanel
                     .padding(.horizontal, 16)
-                    .padding(.top, 12)
+                    .padding(.top, trackingCoordinator.isEnabled ? 8 : 12)
 
                 if vm.busquedaResultado != nil {
                     resumenItinerario
@@ -285,6 +292,38 @@ struct MapaView: View {
                 },
                 onCerrar: { showElegirEnMapa = false }
             )
+        }
+    }
+
+    private var estadoContribucion: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(colorEstadoContribucion)
+                .frame(width: 8, height: 8)
+
+            Text(trackingCoordinator.statusMessage)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.onSurfaceVariant)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .frame(minHeight: 30)
+        .background(.ultraThinMaterial, in: Capsule())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var colorEstadoContribucion: Color {
+        switch trackingCoordinator.observationPublisherState {
+        case .inactive:
+            return .secondary
+        case .connecting:
+            return .orange
+        case .connected:
+            return .green
+        case .failed:
+            return .red
         }
     }
 
@@ -964,5 +1003,9 @@ private struct BusDetailPopup: View {
 // con Seguridad). Ver ahí el diseño completo.
 
 #Preview {
-    MapaView().environmentObject(AppRouter())
+    MapaView()
+        .environmentObject(AppRouter())
+        .environmentObject(
+            PassiveTrackingCoordinator(locationService: LocationService())
+        )
 }
