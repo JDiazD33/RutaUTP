@@ -2,12 +2,13 @@
 
 Aplicación nativa para iOS orientada a estudiantes de la UTP en Trujillo. Permite consultar recorridos de transporte público, buscar destinos, guardar lugares y seguir el avance de un viaje.
 
-El proyecto combina mapas y ubicación del dispositivo con un feed GTFS local y funciones de demostración. No hay un backend conectado para posiciones de vehículos, publicaciones comunitarias o pagos.
+El proyecto combina mapas y ubicación del dispositivo con un feed GTFS local. Puede mostrar una flota de demostración o posiciones estimadas por el backend MQTT a partir de observaciones anónimas de pasajeros. Las publicaciones comunitarias y los pagos siguen sin backend.
 
 ## Requisitos y ejecución
 
 - macOS con Xcode y un SDK de iOS compatible con el destino mínimo **iOS 17.5**.
-- SwiftUI, MapKit, CoreLocation, Combine, PhotosUI y AVFoundation; sin paquetes de terceros.
+- SwiftUI, MapKit, CoreLocation, CoreMotion, Combine, PhotosUI y AVFoundation.
+- CocoaMQTT 2.4.0, fijado mediante Swift Package Manager.
 - El proyecto usa el modo de lenguaje Swift 5 (`SWIFT_VERSION = 5.0`).
 
 Abrir `RutaUTP.xcodeproj`, seleccionar el esquema **RutaUTP** y ejecutar en un simulador o iPhone. Para un dispositivo físico, configurar el equipo de firma en **Signing & Capabilities**. La cámara necesita un dispositivo con cámara disponible; en el simulador se puede utilizar la biblioteca de fotos.
@@ -28,7 +29,8 @@ El prefijo `DEVELOPER_DIR` permite usar Xcode aunque `xcode-select` apunte a Com
 | Área | Implementación actual |
 | --- | --- |
 | Bienvenida | Entrada a la aplicación. |
-| Mapa | MapKit, GPS del usuario, búsqueda de direcciones y lugares, destinos guardados y líneas cercanas. Los buses animados y sus llegadas son simulados. |
+| Mapa | MapKit, GPS del usuario, búsqueda de direcciones y lugares, destinos guardados y líneas cercanas. Sin MQTT usa buses simulados; con MQTT muestra posiciones estimadas por el backend y las identifica como **EN VIVO**. |
+| Contribución IoT | Con consentimiento explícito, combina GPS y Core Motion para detectar un viaje y publicar observaciones anónimas mientras la app está en primer plano. |
 | Rutas | Catálogo GTFS, búsqueda por línea/empresa/recorrido, filtro de paraderos cercanos, detalle y exploración del recorrido. |
 | Navegación de una línea | Seguimiento del usuario sobre el recorrido GTFS, progreso, próximo paradero y modo de simulación. |
 | Tracking | Planificación de una línea directa con tramos a pie, seguimiento GPS, detección de desvíos, recálculo y resumen de sesión. Acceso desde el menú lateral. |
@@ -87,6 +89,8 @@ RutaUTP/
  senias/                        Manifiesto y clips por idioma
  ThirdPartyNotices/             Procedencia y licencias de datos y recursos de terceros
  RutaUTPTests/                  Pruebas unitarias del núcleo puro
+ backend/                       Validación, agregación y publicación de vehículos
+ mqtt/                          Broker Mosquitto, ACL y perfiles de despliegue
 ```
 
 La navegación principal usa `AppRouter`, un `ObservableObject` con un enum de pantallas. `RootView` selecciona la pantalla y las vistas presentan detalles mediante sheets y full-screen covers; algunos formularios usan `NavigationStack`. La barra inferior es un componente propio.
@@ -101,9 +105,17 @@ El feed incluido contiene **102 rutas, 102 viajes, 4067 paraderos y 53 616 punto
 - `MapaViewModel` calcula desde el GPS del usuario un itinerario de transporte GTFS con paraderos hasta 800 m de ambos extremos. Muestra caminatas punteadas, recorrido del bus continuo y marcadores de subida/bajada; si falta ubicación o no hay línea directa, muestra un aviso. Las caminatas usan Apple Directions y se identifican como aproximadas cuando ese servicio no responde.
 - `TransitPlanner` busca una **línea directa** con paraderos próximos a ambos extremos y respeta el orden del recorrido. No calcula transbordos. Los tramos a pie se consultan con Apple Directions y tienen un respaldo aproximado.
 - `PolylineMatching` proyecta el GPS sobre el recorrido para calcular avance y distancia a la ruta.
-- El mapa principal tiene su propia simulación de buses; Tracking utiliza `SimulatedTrackingProvider`. `RealTrackingProvider` es un stub sin conexión a un servidor.
+- El mapa principal mantiene su simulación cuando no existe configuración MQTT. Cuando el canal está configurado, `MQTTTrackingProvider` consume las posiciones publicadas por el backend y desactiva la simulación para evitar duplicados.
 
 Los mapas base, las búsquedas y Apple Directions dependen de los servicios de Apple y de su disponibilidad de red y cobertura.
+
+### Canal IoT y contribución
+
+La configuración del broker se resuelve desde las variables `MQTT_HOST`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_PORT`, `MQTT_TLS` y `MQTT_CA_CERT`. Durante el desarrollo pueden definirse en el esquema local de Xcode. Las credenciales no se incluyen en el esquema compartido ni en el repositorio; cada instalación debe recibir un principal MQTT propio para que el quórum del backend distinga dispositivos reales.
+
+El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuando existe una configuración MQTT completa. Al activarlo, la app solicita consentimiento antes de iniciar GPS y Core Motion. El mapa muestra el estado de la contribución sobre el buscador. La publicación se pausa al bloquear la pantalla o enviar la app a segundo plano.
+
+El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición. El perfil productivo conserva las observaciones durante 30 días. La configuración, operación y pruebas del servicio están documentadas en `backend/README.md` y `mqtt/README.md`.
 
 ### Persistencia
 
