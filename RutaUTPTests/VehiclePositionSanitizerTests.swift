@@ -8,6 +8,7 @@
 //
 
 import XCTest
+import CoreLocation
 @testable import RutaUTP
 
 final class VehiclePositionSanitizerTests: XCTestCase {
@@ -219,5 +220,109 @@ final class VehiclePositionSanitizerTests: XCTestCase {
         )
 
         XCTAssertEqual(sanitized.heading, 45)
+    }
+
+    /// Un vehículo que avanza hacia el punto consultado obtiene una ETA
+    /// calculada sobre el shape, no por distancia en línea recta.
+    func testETAVehiculoRealQueSeAcerca() throws {
+        let route = testRoute()
+        let position = VehiclePosition(
+            id: "real-1",
+            linea: "10",
+            routeId: route.id,
+            lat: 0,
+            lon: 0.002,
+            heading: 90,
+            speed: 10,
+            timestamp: now
+        )
+
+        let eta = VehicleETAEstimator.minutes(
+            position: position,
+            route: route,
+            target: coordinate(0, 0.012)
+        )
+
+        XCTAssertEqual(eta, 2)
+    }
+
+    /// No se presenta una llegada engañosa cuando el rumbo indica que la
+    /// unidad se aleja del destino en una ruta no circular.
+    func testETAVehiculoRealQueSeAlejaNoDisponible() {
+        let route = testRoute()
+        let position = VehiclePosition(
+            id: "real-2",
+            linea: "10",
+            routeId: route.id,
+            lat: 0,
+            lon: 0.002,
+            heading: 270,
+            speed: 10,
+            timestamp: now
+        )
+
+        XCTAssertNil(
+            VehicleETAEstimator.minutes(
+                position: position,
+                route: route,
+                target: coordinate(0, 0.012)
+            )
+        )
+    }
+
+    /// Un punto lejano al corredor no debe recibir una ETA de esa línea.
+    func testETADestinoFueraDeRutaNoDisponible() {
+        let route = testRoute()
+        let position = VehiclePosition(
+            id: "real-3",
+            linea: "10",
+            routeId: route.id,
+            lat: 0,
+            lon: 0.002,
+            heading: 90,
+            speed: 10,
+            timestamp: now
+        )
+
+        XCTAssertNil(
+            VehicleETAEstimator.minutes(
+                position: position,
+                route: route,
+                target: coordinate(0.02, 0.012)
+            )
+        )
+    }
+
+    private func testRoute() -> RutaGTFS {
+        RutaGTFS(
+            id: "route-10",
+            linea: "10",
+            variante: "A",
+            recorrido: "Inicio → Fin",
+            empresa: "Prueba",
+            colorHex: "00AA00",
+            color: .green,
+            shape: [
+                coordinate(0, 0),
+                coordinate(0, 0.01),
+                coordinate(0, 0.02)
+            ],
+            paraderos: [],
+            duracionMin: 8,
+            headwayMin: 10,
+            precio: 2,
+            distanciaKm: 2.2,
+            distanciaUTPMetros: 0
+        )
+    }
+
+    private func coordinate(
+        _ latitude: Double,
+        _ longitude: Double
+    ) -> CLLocationCoordinate2D {
+        CLLocationCoordinate2D(
+            latitude: latitude,
+            longitude: longitude
+        )
     }
 }

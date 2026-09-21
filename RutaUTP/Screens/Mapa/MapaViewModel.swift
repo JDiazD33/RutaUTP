@@ -67,16 +67,18 @@ struct BusAnimado: Identifiable, Equatable {
 
     /// Texto de la llegada para la interfaz.
     ///
-    /// Nunca inventa un valor. La simulación siempre trae minutos (los deriva
-    /// de la frecuencia del feed); un vehículo real no los tiene, porque no se
-    /// conoce su paradero de destino ni el sentido del viaje, y ahí la interfaz
-    /// dice "SIN ETA" en lugar de un número con apariencia de dato.
+    /// Las posiciones reales muestran `~` porque su llegada se estima con la
+    /// posición, rumbo y velocidad disponibles sobre el recorrido GTFS. Si el
+    /// vehículo se aleja del punto consultado o faltan datos fiables, se evita
+    /// inventar un valor y se muestra "SIN ETA".
     var etiquetaLlegada: String {
         guard let minutosLlegada else {
             return L.t("SIN ETA", "NO ETA")
         }
 
-        return "\(minutosLlegada) MIN"
+        return fuente == .real
+            ? "~\(minutosLlegada) MIN"
+            : "\(minutosLlegada) MIN"
     }
 
     var longitudRutaM: Double { acumulados.last ?? 0 }
@@ -114,6 +116,104 @@ struct BusAnimado: Identifiable, Equatable {
         lhs.lat == rhs.lat &&
         lhs.lon == rhs.lon &&
         lhs.heading == rhs.heading
+    }
+}
+
+// MARK: - ETA aproximada de vehículos reales
+
+/// Estima la llegada de una posición MQTT al punto consultado en el mapa.
+///
+/// El cálculo sigue el shape GTFS, respeta el sentido indicado por el rumbo y
+/// usa la velocidad observada. Si el vehículo está detenido o la velocidad no
+/// está disponible, cae a la velocidad media programada de la ruta. No devuelve
+/// ETA cuando vehículo/destino están fuera del recorrido o la unidad se aleja.
+enum VehicleETAEstimator {
+
+    static func minutes(
+        position: VehiclePosition,
+        route: RutaGTFS,
+        target: CLLocationCoordinate2D
+    ) -> Int? {
+        guard route.shape.count >= 2 else { return nil }
+
+        guard
+            let vehicleMatch = PolylineMatching.match(
+                point: position.coordinate,
+                on: route.shape,
+                thresholdMeters: 120
+            ),
+            vehicleMatch.isOnRoute,
+            let targetMatch = PolylineMatching.match(
+                point: target,
+                on: route.shape,
+                thresholdMeters: 800
+            ),
+            targetMatch.isOnRoute
+        else {
+            return nil
+        }
+
+        let routeLength = PolylineMatching.totalLengthMeters(route.shape)
+        guard routeLength > 0 else { return nil }
+
+        var progressDelta = targetMatch.progressFraction
+            - vehicleMatch.progressFraction
+
+        let segmentIndex = min(
+            vehicleMatch.segmentIndex,
+            route.shape.count - 2
+        )
+        let forwardHeading = PolylineMatching.headingDegrees(
+            from: route.shape[segmentIndex],
+            to: route.shape[segmentIndex + 1],
+            movingForward: true
+        )
+
+        let movingForward: Bool?
+        if position.heading >= 0, forwardHeading >= 0 {
+            movingForward = angularDifference(
+                position.heading,
+                forwardHeading
+            ) <= 90
+        } else {
+            movingForward = nil
+        }
+
+        let isCircular = PolylineMatching.distanceMeters(
+            route.shape[0],
+            route.shape[route.shape.count - 1]
+        ) <= 200
+
+        if let movingForward {
+            if isCircular {
+                if movingForward, progressDelta < 0 { progressDelta += 1 }
+                if !movingForward, progressDelta > 0 { progressDelta -= 1 }
+            } else {
+                guard movingForward ? progressDelta >= 0 : progressDelta <= 0 else {
+                    return nil
+                }
+            }
+        }
+
+        let remainingMeters = abs(progressDelta) * routeLength
+        guard remainingMeters.isFinite else { return nil }
+
+        let scheduledSpeed: Double = {
+            guard route.duracionMin > 0 else { return 7 }
+            return routeLength / (Double(route.duracionMin) * 60)
+        }()
+        let observedSpeed = position.speed >= 2
+            ? position.speed
+            : scheduledSpeed
+        let effectiveSpeed = min(max(observedSpeed, 3), 15)
+
+        let estimate = Int(ceil(remainingMeters / effectiveSpeed / 60))
+        return min(max(estimate, 1), 120)
+    }
+
+    private static func angularDifference(_ lhs: Double, _ rhs: Double) -> Double {
+        let difference = abs(lhs - rhs).truncatingRemainder(dividingBy: 360)
+        return min(difference, 360 - difference)
     }
 }
 
@@ -584,8 +684,26 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     /// —un vehículo observado no trae shape— y por eso `actualizarPosicion()`
     /// no lo mueve: su posición la fija cada mensaje.
     private func aplicarFlotaReal(_ posiciones: [VehiclePosition]) {
+        let anclaETA: CLLocationCoordinate2D = {
+            if let anclaLineas {
+                return CLLocationCoordinate2D(
+                    latitude: anclaLineas.lat,
+                    longitude: anclaLineas.lon
+                )
+            }
+            return busquedaResultado?.coordenada
+                ?? GTFSRepository.coordenadaUTP
+        }()
+
         flotaBuses = posiciones.map { posicion in
             let ruta = rutasPorId[posicion.routeId]
+            let eta = ruta.flatMap {
+                VehicleETAEstimator.minutes(
+                    position: posicion,
+                    route: $0,
+                    target: anclaETA
+                )
+            }
 
             return BusAnimado(
                 id: "real-\(posicion.id)",
@@ -594,13 +712,14 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 empresa: ruta?.empresa ?? L.t("Empresa no disponible", "Carrier unavailable"),
                 tipo: "Bus",
                 variante: ruta?.variante ?? "",
-                minutosLlegada: nil,
+                minutosLlegada: eta,
                 color: ruta?.color ?? .appPrimary,
                 lat: posicion.lat,
                 lon: posicion.lon,
                 heading: posicion.heading >= 0 ? posicion.heading : 0,
                 rutaCoordenadas: [],
                 acumulados: [],
+                velocidadMS: posicion.speed >= 0 ? posicion.speed : 0,
                 fuente: .real
             )
         }
