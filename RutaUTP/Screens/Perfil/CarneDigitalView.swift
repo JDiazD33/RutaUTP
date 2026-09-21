@@ -35,14 +35,7 @@ struct CarneDigitalView: View {
 
                 avisoDemostracion
 
-                Image("UTPLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 150, height: 34)
-                    .foregroundStyle(.black)
-                    .padding(12)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 10))
-                    .accessibilityLabel(L.t("Universidad Tecnológica del Perú", "Universidad Tecnológica del Perú"))
+                marcaUniversidad
 
             }
             .padding(20)
@@ -258,6 +251,56 @@ struct CarneDigitalView: View {
             "Carné de muestra con código ficticio. No verifica identidad ni matrícula, no está emitido por la universidad y no permite ingresar al campus.",
             "Sample ID with a fictional code. It does not verify identity or enrollment, is not university-issued and does not grant campus access."
         ))
+    }
+
+    // MARK: - Pie: marca de la universidad
+
+    /// Marca de la universidad al pie del carné.
+    ///
+    /// El recurso es la marca de tres cuadros (U · T · P) y **no** lleva
+    /// `template-rendering-intent`: con «template» se dibujaba como una silueta
+    /// plana y las letras blancas desaparecían dentro de una mancha oscura. Por
+    /// eso tampoco se usa ya `foregroundStyle`: el logo trae su propio color.
+    ///
+    /// Va sobre placa blanca porque la marca es oscura sobre claro; así se lee
+    /// igual en tema claro y en oscuro, donde el carné es negro. Como el archivo
+    /// no trae texto, el nombre lo pone la interfaz debajo.
+    private var marcaUniversidad: some View {
+        VStack(spacing: 12) {
+            Image("UTPLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 150)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white)
+                )
+                .accessibilityHidden(true)
+
+            Text(L.t("UNIVERSIDAD TECNOLÓGICA DEL PERÚ",
+                     "UNIVERSIDAD TECNOLÓGICA DEL PERÚ"))
+                .font(.labelCapsSm)
+                .foregroundStyle(.onSurface)
+                .appTracking(AppTracking.wideLabel)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 18)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.surfaceContainerLowest)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
+                )
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L.t("Universidad Tecnológica del Perú",
+                                "Universidad Tecnológica del Perú"))
     }
 
     // MARK: - Helpers
