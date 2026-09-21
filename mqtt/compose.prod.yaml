@@ -87,6 +87,9 @@ services:
       MQTT_PASSWORD: ${MQTT_BACKEND_PASSWORD:?define MQTT_BACKEND_PASSWORD}
       GTFS_DIR: /gtfs
       BACKEND_DB_PATH: /data/rutautp.sqlite
+      # Las observaciones contienen trayectorias; el perfil productivo las
+      # elimina automáticamente después de 30 días.
+      BACKEND_DB_RETENTION_DAYS: "30"
       BACKEND_HEALTH_FILE: /data/health.json
       BACKEND_LOG_JSON: "1"
       # Se fija en el perfil productivo: una sola instalación nunca basta para
