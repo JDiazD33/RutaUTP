@@ -50,3 +50,4 @@ backend/data/
 backend/deploy/backend.env
 
 .vscode/
+.workbuddy-ai/
