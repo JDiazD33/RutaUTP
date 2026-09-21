@@ -1,8 +1,11 @@
 // Monedero y QR de demostración local, sin pagos ni validación de viajes.
+//
+// El QR que se enseña para cobrar y el lector para pagar viven en
+// `Services/Monedero/PagoQR.swift` (carga útil y dibujo) y en
+// `Screens/Perfil/EscanerQRView.swift` (cámara). Aquí solo está la interfaz.
 
 import SwiftUI
-import CoreImage
-import CoreImage.CIFilterBuiltins
+import UIKit
 
 // MARK: - Tarjeta del monedero (va en la billetera del Perfil)
 
@@ -40,7 +43,9 @@ struct MonederoCard: View {
             (textSize >= .xxxLarge ? AnyLayout(VStackLayout(spacing: 8))
                                     : AnyLayout(HStackLayout(spacing: 8))) {
                 boton(L.t("Recargar", "Top up"), icono: "plus.circle.fill", accion: onRecargar)
-                boton(L.t("QR demo", "Demo QR"), icono: "qrcode", accion: onMostrarQR)
+                boton(L.t("Pagar con QR", "Pay with QR"),
+                      icono: "qrcode.viewfinder",
+                      accion: onMostrarQR)
             }
             .padding(.top, 2)
         }
@@ -90,6 +95,12 @@ struct RecargarSaldoSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var elegido: Double = 10
     @State private var errorRecarga = false
+    /// Billetera con la que se pagaría la recarga.
+    ///
+    /// Solo cambia la presentación: la demostración no abre ninguna app de
+    /// pagos ni mueve dinero. Se deja elegida para que la pantalla muestre el
+    /// flujo completo (elegir monto → elegir billetera → confirmar).
+    @State private var billetera: BilleteraPago = .yape
 
     private let importes: [Double] = [5, 10, 20, 50]
 
@@ -106,6 +117,7 @@ struct RecargarSaldoSheet: View {
                             .foregroundStyle(.onSurfaceVariant)
                     }
                     selectorImporte
+                    metodosDePago
                     if !store.movimientos.isEmpty { movimientos }
                 }
                 .padding(20)
@@ -147,8 +159,8 @@ struct RecargarSaldoSheet: View {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color.appPrimary)
-            Text(L.t("Recarga de demostración: no se procesa ningún pago real. El saldo se guarda solo en este dispositivo.",
-                     "Demo top-up: no real payment is processed. The balance is stored only on this device."))
+            Text(L.t("Recarga de demostración: no se procesa ningún pago real ni se abre ninguna app de pagos. El saldo se guarda solo en este dispositivo.",
+                     "Demo top-up: no real payment is processed and no payment app is opened. The balance is stored only on this device."))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)
@@ -198,6 +210,79 @@ struct RecargarSaldoSheet: View {
                 }
             }
         }
+    }
+
+    /// Billeteras con las que se puede pagar la recarga.
+    ///
+    /// Es lo que se hace en Perú: se paga escaneando un QR. En la vida real eso
+    /// es Yape o Plin; aquí se usan marcas propias («Yapo» y «Plun») para no
+    /// apoyarse en marcas registradas ajenas. La demostración no abre ninguna
+    /// app de pagos, así que la selección solo decide el aspecto (borde, fondo
+    /// y el texto del botón).
+    private var metodosDePago: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L.t("PAGA CON", "PAY WITH"))
+                .font(.labelCapsMd)
+                .foregroundStyle(.onSurfaceVariant)
+                .appTracking(AppTracking.wideLabel)
+
+            VStack(spacing: 12) {
+                ForEach(BilleteraPago.allCases) { opcion in
+                    tarjetaBilletera(opcion)
+                }
+            }
+
+            Text(L.t("Demostración: no se abre ninguna app de pagos ni se mueve dinero real.",
+                     "Demo: no payment app is opened and no real money moves."))
+                .font(.bodyXs)
+                .foregroundStyle(.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func tarjetaBilletera(_ opcion: BilleteraPago) -> some View {
+        let seleccionada = billetera == opcion
+
+        return Button {
+            AppHaptics.selection()
+            withAnimation(.easeInOut(duration: 0.18)) { billetera = opcion }
+        } label: {
+            HStack(spacing: 12) {
+                MarcaBilletera(billetera: opcion, altura: 56)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(opcion.nombre)
+                        .font(.headlineSm)
+                        .foregroundStyle(.onSurface)
+                    Text(L.t("Billetera digital", "Digital wallet"))
+                        .font(.bodyXs)
+                        .foregroundStyle(.onSurfaceVariant)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: seleccionada ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(seleccionada ? opcion.colorMarca : Color.outlineVariant)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(12)
+            .frame(minHeight: 84)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(seleccionada
+                          ? opcion.colorMarca.opacity(0.10)
+                          : Color.surfaceContainerLowest)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(seleccionada ? opcion.colorMarca : Color.outlineVariant.opacity(0.35),
+                            lineWidth: seleccionada ? 2 : 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Pagar con \(opcion.nombre)", "Pay with \(opcion.nombre)"))
+        .accessibilityAddTraits(seleccionada ? .isSelected : [])
     }
 
     private var movimientos: some View {
@@ -261,8 +346,8 @@ struct RecargarSaldoSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 16, weight: .bold))
-                Text(L.t("Recargar \(String(format: "S/ %.0f", elegido))",
-                         "Top up \(String(format: "S/ %.0f", elegido))"))
+                Text(L.t("Recargar \(String(format: "S/ %.0f", elegido)) con \(billetera.nombre)",
+                         "Top up \(String(format: "S/ %.0f", elegido)) with \(billetera.nombre)"))
                     .font(.headlineSm)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -280,26 +365,34 @@ struct RecargarSaldoSheet: View {
     }
 }
 
-// MARK: - QR del pasaje
+// MARK: - QR del monedero (cobrar y pagar)
 
+/// La hoja tiene dos mitades y conviene no mezclarlas:
+///
+/// - **Cobrar**: el QR de la cuenta propia, para que quien quiera transferir
+///   solo tenga que escanearlo. Es la mitad que se enseña.
+/// - **Pagar**: el lector, para escanear el QR del cobrador.
 struct QRPasajeSheet: View {
 
     @ObservedObject var store: MonederoStore
     @Environment(\.dismiss) private var dismiss
 
-    /// Código institucional del prototipo. Coincide con el del Carné Digital;
-    /// sigue siendo un dato de demostración (ver A-01 de la auditoría).
-    private let codigoEstudiante = "1234567"
-
+    @State private var billeteraCobro: BilleteraPago = .yape
     @State private var qr: UIImage?
-    @State private var resultadoCobro: String?
+    @State private var escanear = false
+
+    /// Misma cuenta de demostración, presentada con la billetera elegida.
+    private var cuenta: CuentaCobro {
+        var cuenta = PagoQR.cuentaDemo
+        cuenta.billetera = billeteraCobro
+        return cuenta
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    encabezado
-                    codigoQR
+                    tarjetaDeCobro
                     aviso
                     if store.datosLocalesInvalidos {
                         Text(L.t("No se pudieron recuperar los datos del monedero. Las operaciones están bloqueadas y los datos originales se conservan.",
@@ -307,11 +400,11 @@ struct QRPasajeSheet: View {
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                     }
-                    simulacion
+                    seccionPagar
                 }
                 .padding(20)
             }
-            .navigationTitle(L.t("QR de demostración", "Demo QR"))
+            .navigationTitle(L.t("Pagar con QR", "Pay with QR"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -319,52 +412,147 @@ struct QRPasajeSheet: View {
                 }
             }
             .onAppear {
+                // QR estático (sin importe): quien paga escribe cuánto envía,
+                // que es lo que se espera de un QR de cuenta personal.
                 if qr == nil {
-                    qr = Self.generarQR("RUTAUTP-DEMO|\(codigoEstudiante)")
+                    actualizarQR()
                 }
             }
         }
         .seguirTemaForzado()
-    }
-
-    private var encabezado: some View {
-        VStack(spacing: 4) {
-            Text(L.t("Código de muestra · no válido para viajar", "Sample code · not valid for travel"))
-                .font(.headlineSm)
-                .foregroundStyle(.onSurface)
-                .multilineTextAlignment(.center)
-            Text(L.t("Saldo de demostración: \(store.saldoTexto)",
-                     "Demo balance: \(store.saldoTexto)"))
-                .font(.bodySm)
-                .monospacedDigit()
-                .foregroundStyle(.onSurfaceVariant)
+        .fullScreenCover(isPresented: $escanear) {
+            EscanerQRView { importe in store.cobrarPasaje(importe) }
         }
     }
 
-    private var codigoQR: some View {
-        VStack(spacing: 10) {
+    /// Une marca, cuenta y QR en una sola tarjeta. El logo abre la jerarquía
+    /// visual y el código queda deliberadamente más pequeño para no dominar la
+    /// pantalla.
+    private var tarjetaDeCobro: some View {
+        VStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L.t("Mi QR para recibir", "My QR to receive"))
+                    .font(.headlineSm)
+                    .foregroundStyle(.onSurface)
+                Text(L.t("Elige la billetera que quieres mostrar.",
+                         "Choose the wallet you want to show."))
+                    .font(.bodyXs)
+                    .foregroundStyle(.onSurfaceVariant)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 10) {
+                ForEach(BilleteraPago.allCases) { opcion in
+                    selectorBilletera(opcion)
+                }
+            }
+
+            Divider()
+
             if let qr {
                 Image(uiImage: qr)
                     .resizable()
                     .interpolation(.none)
                     .scaledToFit()
-                    .frame(width: 220, height: 220)
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(.white))
-                    .accessibilityLabel(L.t("QR de demostración, no válido para viajar",
-                                            "Demo QR, not valid for travel"))
+                    .frame(width: 168, height: 168)
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(.white)
+                            .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
+                    )
+                    .accessibilityLabel(L.t("QR de cobro de demostración",
+                                            "Demo payment QR"))
             } else {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.surfaceContainerLow)
-                    .frame(width: 244, height: 244)
+                    .frame(width: 188, height: 188)
                     .overlay(ProgressView())
             }
 
-            Text(L.t("Código ficticio \(codigoEstudiante)", "Sample ID \(codigoEstudiante)"))
-                .font(.labelCapsMd)
+            Text(L.t("Muestra este código para recibir una transferencia.",
+                     "Show this code to receive a transfer."))
+                .font(.bodyXs)
                 .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 0) {
+                filaDato(L.t("Titular", "Holder"), cuenta.titular)
+                Divider()
+                filaDato(L.t("Celular", "Phone"), cuenta.celularLegible)
+            }
         }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.surfaceContainerLowest)
+                .shadow(color: .black.opacity(0.06), radius: 16, y: 6)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.outlineVariant.opacity(0.28), lineWidth: 0.5)
+        )
+    }
+
+    private func selectorBilletera(_ opcion: BilleteraPago) -> some View {
+        let seleccionada = billeteraCobro == opcion
+
+        return Button {
+            guard !seleccionada else { return }
+            AppHaptics.selection()
+            withAnimation(.easeInOut(duration: 0.18)) {
+                billeteraCobro = opcion
+            }
+            actualizarQR()
+        } label: {
+            HStack(spacing: 8) {
+                MarcaBilletera(billetera: opcion, altura: 40)
+                Text(opcion.nombre)
+                    .font(.bodySmMedium)
+                    .foregroundStyle(.onSurface)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: seleccionada ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(seleccionada ? opcion.colorMarca : Color.outlineVariant)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(seleccionada
+                          ? opcion.colorMarca.opacity(0.10)
+                          : Color.surfaceContainerLow)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(seleccionada ? opcion.colorMarca : Color.outlineVariant.opacity(0.35),
+                            lineWidth: seleccionada ? 2 : 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Mostrar QR de (opcion.nombre)",
+                                "Show (opcion.nombre) QR"))
+        .accessibilityAddTraits(seleccionada ? .isSelected : [])
+    }
+
+    private func actualizarQR() {
+        qr = PagoQR.imagen(PagoQR.cargaUtil(cuenta: cuenta))
+    }
+
+    private func filaDato(_ etiqueta: String, _ valor: String) -> some View {
+        HStack(spacing: 12) {
+            Text(etiqueta)
+                .font(.bodyXs)
+                .foregroundStyle(.onSurfaceVariant)
+            Spacer(minLength: 8)
+            Text(valor)
+                .font(.bodySmMedium)
+                .foregroundStyle(.onSurface)
+                .lineLimit(1)
+        }
+        .padding(.vertical, 10)
     }
 
     private var aviso: some View {
@@ -372,8 +560,8 @@ struct QRPasajeSheet: View {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color.appPrimary)
-            Text(L.t("Este QR es una muestra fija. El botón solo descuenta saldo de demostración en este dispositivo: no lee el QR, no valida viajes ni mueve dinero real.",
-                     "This QR is a fixed sample. The button only deducts demo balance on this device: it does not read the QR, validate trips or move real money."))
+            Text(L.t("El formato del QR es el de un cobro real, pero la cuenta es de demostración: ninguna billetera lo leerá como un cobro válido y no se mueve dinero.",
+                     "The QR format is that of a real payment, but the account is a demo: no wallet will read it as a valid charge and no money moves."))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)
@@ -386,62 +574,72 @@ struct QRPasajeSheet: View {
         )
     }
 
-    /// Descuento local de demostración; no escanea ni valida el QR.
-    private var simulacion: some View {
+    /// La otra mitad de la hoja: escanear el QR de quien cobra.
+    private var seccionPagar: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Text(L.t("PAGAR", "PAY"))
+                .font(.labelCapsMd)
+                .foregroundStyle(.onSurfaceVariant)
+                .appTracking(AppTracking.wideLabel)
+
             Button {
                 AppHaptics.impact(.medium)
-                let cobrado = store.cobrarPasaje()
-                resultadoCobro = cobrado
-                    ? L.t("Pasaje cobrado (simulado). Saldo: \(store.saldoTexto)",
-                          "Fare charged (simulated). Balance: \(store.saldoTexto)")
-                    : L.t("Saldo insuficiente. Recarga para continuar.",
-                          "Not enough balance. Top up to continue.")
-                if !cobrado { AppHaptics.warning() }
+                escanear = true
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "bus.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(L.t("Simular pasaje · \(store.tarifaTexto)",
-                             "Simulate fare · \(store.tarifaTexto)"))
-                        .font(.bodySmMedium)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: 16, weight: .bold))
+                    Text(L.t("Escanear un QR", "Scan a QR"))
+                        .font(.headlineSm)
                 }
-                .foregroundStyle(.onSurface)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.surfaceContainerLow)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Color.outline.opacity(0.4),
-                                      style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                )
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.primaryContainer))
             }
-            .buttonStyle(.plain)
-            .disabled(store.datosLocalesInvalidos)
+            .buttonStyle(PressableCapsuleStyle())
 
-            if let resultadoCobro {
-                Text(resultadoCobro)
-                    .font(.bodyXs)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            Text(L.t("Escanea el QR del cobrador y se descuenta el pasaje (\(store.tarifaTexto)) del saldo de demostración.",
+                     "Scan the collector's QR and the fare (\(store.tarifaTexto)) is deducted from the demo balance."))
+                .font(.bodyXs)
+                .foregroundStyle(.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
+}
 
-    // MARK: - QR
+// MARK: - Logo de billetera
 
-    /// QR con CoreImage, igual que el código de barras del Carné Digital: sin
-    /// dependencias externas.
-    private static func generarQR(_ texto: String) -> UIImage? {
-        let filtro = CIFilter.qrCodeGenerator()
-        filtro.message = Data(texto.utf8)
-        filtro.correctionLevel = "M"
-        guard let salida = filtro.outputImage else { return nil }
-        let escalada = salida.transformed(by: CGAffineTransform(scaleX: 12, y: 12))
-        guard let cg = CIContext().createCGImage(escalada, from: escalada.extent) else { return nil }
-        return UIImage(cgImage: cg)
+/// Logo de una billetera, con respaldo si el recurso todavía no está en el
+/// catálogo de recursos.
+///
+/// Los recursos (`yape-logo`, `plin-logo`, en `Assets.xcassets/Marcas`) tienen
+/// el lienzo recortado al dibujo. Se muestran siempre en una caja cuadrada para
+/// que no vuelvan a encogerse por el espacio transparente del SVG.
+struct MarcaBilletera: View {
+
+    let billetera: BilleteraPago
+    var altura: CGFloat = 30
+
+    var body: some View {
+        Group {
+            if let logo = UIImage(named: billetera.assetLogo) {
+                Image(uiImage: logo)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                // Sin archivo no se deja un hueco ni se inventa un logo: se
+                // escribe el nombre sobre el color de marca, y el día que se
+                // añada la imagen entra sola.
+                Text(billetera.nombre)
+                    .font(.system(size: max(11, altura * 0.45), weight: .heavy))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.7)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(billetera.colorMarca))
+            }
+        }
+        .frame(width: altura, height: altura)
+        .accessibilityHidden(true)
     }
 }
