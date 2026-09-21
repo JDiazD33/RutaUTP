@@ -21,6 +21,12 @@ set -euo pipefail
 
 PORT="${1:-18830}"
 RUTA="${RUTA:-17350695}"
+MIN_PRINCIPALS="${BACKEND_MIN_PUBLISH_PRINCIPALS:-2}"
+
+if ! [[ "$MIN_PRINCIPALS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "FALLO: BACKEND_MIN_PUBLISH_PRINCIPALS debe ser un entero >= 1" >&2
+    exit 1
+fi
 
 BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_DIR="$(cd "$BACKEND_DIR/.." && pwd)"
@@ -92,6 +98,7 @@ echo "== 2. backend suscrito =="
         MQTT_PORT="$PORT" \
         MQTT_USERNAME="" \
         MQTT_PASSWORD="" \
+        BACKEND_MIN_PUBLISH_PRINCIPALS="$MIN_PRINCIPALS" \
         BACKEND_LOG_LEVEL=INFO \
         "$PYTHON" -m rutautp_backend --plain-logs > "$WORK_DIR/backend.log" 2>&1
 ) &
@@ -106,10 +113,9 @@ sleep 2
 
 echo "== 4. observación sintética sobre la ruta $RUTA =="
 
-# La misma observación se publica desde DOS principals distintos, y eso es
-# deliberado: `BACKEND_MIN_PUBLISH_PRINCIPALS` (2 por defecto) exige que dos
-# instalaciones MQTT autenticadas distintas corroboren una unidad antes de
-# exponerla. Es el caso real de dos pasajeros en un mismo bus.
+# La misma observación se publica desde tantos principals distintos como exige
+# `BACKEND_MIN_PUBLISH_PRINCIPALS` (2 por defecto). Así la prueba sigue siendo
+# válida si cambia el quórum de producción.
 #
 # Antes se publicaba una sola vez desde un solo principal. Con el quórum
 # activo eso crea el vehículo pero no lo publica nunca, así que la prueba
@@ -148,9 +154,9 @@ print(json.dumps({
 PY
 }
 
-for sufijo in a b; do
-    principal="smoke-test-device-$sufijo"
-    sesion="smoke-test-session-$sufijo"
+for indice in $(seq 1 "$MIN_PRINCIPALS"); do
+    principal="smoke-test-device-$indice"
+    sesion="smoke-test-session-$indice"
     observacion="$(observacion_para "$sesion")"
 
     echo "   [$principal] $observacion"

@@ -21,6 +21,7 @@
 set -uo pipefail
 
 PORT="${1:-18840}"
+MIN_PRINCIPALS="${BACKEND_MIN_PUBLISH_PRINCIPALS:-2}"
 BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_DIR="$(cd "$BACKEND_DIR/.." && pwd)"
 PYTHON="${PYTHON:-python3}"
@@ -29,6 +30,11 @@ WORK_DIR="$(mktemp -d)"
 MOSQUITTO_PID=""
 BACKEND_PID=""
 FAILED=0
+
+if ! [[ "$MIN_PRINCIPALS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "FALLO: BACKEND_MIN_PUBLISH_PRINCIPALS debe ser un entero >= 1" >&2
+    exit 1
+fi
 
 cleanup() {
     for pid in "$BACKEND_PID" "$MOSQUITTO_PID"; do
@@ -145,11 +151,9 @@ PY
 publicar() {
     local ruta="$1" sesion="$2"
 
-    # Dos principals DISTINTOS, y no uno. `BACKEND_MIN_PUBLISH_PRINCIPALS`
-    # (2 por defecto) exige que dos instalaciones MQTT autenticadas distintas
-    # corroboren una unidad antes de exponerla. Publicar varias sesiones bajo
-    # el mismo principal no cuenta: el cliente puede rotar `sessionId` a
-    # voluntad, y precisamente por eso el quórum se cuenta por principal.
+    # Publica desde tantos principals distintos como exige
+    # `BACKEND_MIN_PUBLISH_PRINCIPALS`. Publicar varias sesiones bajo el mismo
+    # principal no cuenta: el cliente puede rotar `sessionId` a voluntad.
     #
     # Antes se publicaba una sola vez desde `reconnect-test-device`. Con el
     # quórum activo el vehículo se crea pero nunca se publica, así que esta
@@ -158,11 +162,11 @@ publicar() {
     #
     # El `sessionId` del cuerpo tiene que coincidir con el del tópico, o el
     # puente descarta el mensaje por SESSION_MISMATCH.
-    for sufijo in a b; do
-        local principal="reconnect-test-device-$sufijo"
+    for indice in $(seq 1 "$MIN_PRINCIPALS"); do
+        local principal="reconnect-test-device-$indice"
         mosquitto_pub -h 127.0.0.1 -p "$PORT" \
-            -t "rutautp/observaciones/$principal/$sesion-$sufijo/posicion" \
-            -q 1 -m "$(observacion "$ruta" "$sesion-$sufijo")"
+            -t "rutautp/observaciones/$principal/$sesion-$indice/posicion" \
+            -q 1 -m "$(observacion "$ruta" "$sesion-$indice")"
     done
 }
 
@@ -213,6 +217,7 @@ echo "== 1. backend arrancado SIN broker =="
     exec env \
         MQTT_HOST=127.0.0.1 \
         MQTT_PORT="$PORT" \
+        BACKEND_MIN_PUBLISH_PRINCIPALS="$MIN_PRINCIPALS" \
         BACKEND_DB_PATH= \
         BACKEND_LOG_LEVEL=INFO \
         "$PYTHON" -m rutautp_backend --plain-logs > "$WORK_DIR/backend.log" 2>&1
