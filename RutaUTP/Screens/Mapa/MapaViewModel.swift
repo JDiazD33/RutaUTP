@@ -22,7 +22,7 @@ import Combine
 // protocolo de posiciones. Unificarlos cambiaría esos ciclos; compartimos
 // la geometría del rumbo en PolylineMatching para evitar fórmulas divergentes.
 struct BusAnimado: Identifiable, Equatable {
-    let id: Int
+    let id: String
     let linea: String        // "10", "4"
     let rutaId: String       // route_id GTFS: enlaza con el detalle de RutasView
     let empresa: String      // "El Cortijo", "Salaverry"
@@ -437,7 +437,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             let acumulados = distanciasAcumuladas(waypoints)
 
             var bus = BusAnimado(
-                id: index + 1,
+                id: "simulated-\(ruta.id)",
                 linea: ruta.linea,
                 rutaId: ruta.id,
                 empresa: ruta.empresa,
@@ -588,7 +588,7 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             let ruta = rutasPorId[posicion.routeId]
 
             return BusAnimado(
-                id: Self.idNumerico(para: posicion.id),
+                id: "real-\(posicion.id)",
                 linea: posicion.linea,
                 rutaId: posicion.routeId,
                 empresa: ruta?.empresa ?? L.t("Empresa no disponible", "Carrier unavailable"),
@@ -612,21 +612,6 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         if let seleccionado = busSeleccionado {
             busSeleccionado = flotaBuses.first { $0.id == seleccionado.id }
         }
-    }
-
-    /// Id numérico estable y determinista a partir del `vehicleId` del backend.
-    ///
-    /// `BusAnimado.id` es `Int` y `Identifiable` lo usa para el `ForEach`, así
-    /// que no puede cambiar entre mensajes del mismo vehículo. `hashValue` de
-    /// Swift está aleatorizado por proceso y no sirve; FNV-1a sí. El rango alto
-    /// evita chocar con los ids de la simulación (1...n).
-    private static func idNumerico(para vehicleId: String) -> Int {
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
-        for byte in vehicleId.utf8 {
-            hash ^= UInt64(byte)
-            hash = hash &* 0x0000_0100_0000_01b3
-        }
-        return 100_000 + Int(hash % 1_000_000)
     }
 
     private func actualizarPosicionBuses() {
@@ -945,4 +930,3 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
         }
     }
 }
-
