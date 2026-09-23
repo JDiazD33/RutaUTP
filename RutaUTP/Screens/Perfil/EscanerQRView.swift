@@ -584,9 +584,7 @@ struct EscanerQRView: View {
                     Text(L.t("Código leído", "Code read"))
                         .font(.headlineSm)
                         .foregroundStyle(.onSurface)
-                    Text(resultado.campos.esPago
-                         ? L.t("QR de pago", "Payment QR")
-                         : L.t("Código sin formato de pago", "Code without payment format"))
+                    Text(subtituloResultado(resultado))
                         .font(.bodyXs)
                         .foregroundStyle(.onSurfaceVariant)
                 }
@@ -596,6 +594,9 @@ struct EscanerQRView: View {
 
             if resultado.campos.esPago {
                 VStack(spacing: 0) {
+                    if let billetera = resultado.campos.billetera {
+                        fila(L.t("Billetera", "Wallet"), billetera)
+                    }
                     if let titular = resultado.campos.titular {
                         fila(L.t("Cobra", "Payee"), titular)
                     }
@@ -668,6 +669,19 @@ struct EscanerQRView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
             .fill(Color.appSurface))
+    }
+
+    /// Segunda línea de la tarjeta: de dónde salió el código.
+    private func subtituloResultado(_ resultado: ResultadoQR) -> String {
+        guard resultado.campos.esPago else {
+            return L.t("Código sin formato de pago", "Code without payment format")
+        }
+
+        if let billetera = resultado.campos.billetera {
+            return L.t("QR de pago · \(billetera)", "Payment QR · \(billetera)")
+        }
+
+        return L.t("QR de pago", "Payment QR")
     }
 
     private func fila(_ etiqueta: String, _ valor: String) -> some View {
