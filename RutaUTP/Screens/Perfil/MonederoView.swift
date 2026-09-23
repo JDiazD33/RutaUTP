@@ -532,8 +532,8 @@ struct QRPasajeSheet: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(L.t("Mostrar QR de (opcion.nombre)",
-                                "Show (opcion.nombre) QR"))
+        .accessibilityLabel(L.t("Mostrar el QR de \(opcion.nombre)",
+                                "Show the \(opcion.nombre) QR"))
         .accessibilityAddTraits(seleccionada ? .isSelected : [])
     }
 
@@ -560,8 +560,8 @@ struct QRPasajeSheet: View {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color.appPrimary)
-            Text(L.t("El formato del QR es el de un cobro real, pero la cuenta es de demostración: ninguna billetera lo leerá como un cobro válido y no se mueve dinero.",
-                     "The QR format is that of a real payment, but the account is a demo: no wallet will read it as a valid charge and no money moves."))
+            Text(L.t("Es una demostración: el código lleva los datos de una cuenta inventada y ninguna app de pagos lo leerá como un cobro. No se mueve dinero real.",
+                     "This is a demo: the code carries the details of a made-up account and no payment app will read it as a charge. No real money moves."))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)
