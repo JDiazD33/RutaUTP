@@ -4,19 +4,27 @@
 //
 //  Carga útil y dibujo del QR de cobro del monedero.
 //
-//  La carga útil sigue la estructura TLV del estándar de QR interoperable
-//  (EMVCo, modalidad «presentado por el comercio»), que es el formato que usan
-//  Yape y Plin para cobrar: campos de dos dígitos (identificador + longitud) y
-//  un CRC16-CCITT como último campo.
+//  La carga útil es **texto plano legible**: la primera línea dice a qué
+//  billetera pertenece la cuenta (`DEMO YAPO`, `DEMO PLUN`) y debajo van los
+//  datos como `clave: valor`. Así, quien lo escanee con cualquier lector ve algo
+//  que se entiende.
+//
+//  **No usa el formato TLV del estándar interoperable (EMVCo), y es a
+//  propósito.** Se probó y en la mano daba dos problemas: al escanearlo salía
+//  una ristra de dígitos sin sentido, y el nombre con tilde viajaba como dos
+//  bytes UTF-8 que los lectores que decodifican en otra codificación convertían
+//  en un carácter de otro alfabeto («Joaquín» se veía «Joaqu铆n»). Por eso la
+//  carga útil se genera **en ASCII puro** (`ascii(_:)`) y no lleva tildes.
+//
+//  El lector sí sabe interpretar un TLV de verdad, por si alguien escanea un QR
+//  de pago real.
 //
 //  ─────────────────────────────────────────────────────────────────────────
 //  IMPORTANTE — ESTO ES UNA DEMOSTRACIÓN
 //
-//  El FORMATO es el real; los DATOS no. `cuentaDemo` (titular y celular) y
-//  `guiaCuentaDemo` son inventados, así que ninguna billetera va a interpretar
-//  este QR como un cobro válido. Para que cobre de verdad hay que sustituir los
-//  tres por los que entregue el proveedor y ajustar la carga útil a lo que
-//  documente su API. La interfaz lo dice en pantalla.
+//  Las billeteras son propias («Yapo», «Plun») y `cuentaDemo` (titular y
+//  celular) es inventada, así que ninguna app de pagos va a leer este QR como un
+//  cobro. La interfaz lo dice en pantalla.
 //  ─────────────────────────────────────────────────────────────────────────
 //
 
@@ -103,8 +111,8 @@ enum PagoQR {
 
     // MARK: - Datos de demostración
 
-    /// Cuenta que recibe el dinero. Ver la nota del encabezado del archivo:
-    /// el titular, el celular y la guía son inventados.
+    /// Cuenta que recibe el dinero. Ver la nota del encabezado del archivo: el
+    /// titular y el celular son inventados.
     static let cuentaDemo = CuentaCobro(
         titular: "Joaquín Díaz",
         celular: "999888777",
@@ -112,71 +120,47 @@ enum PagoQR {
         billetera: .yape
     )
 
-    /// Identificador de cuenta del estándar. Inventado: sustituir por el que
-    /// asigne la billetera.
-    private static let guiaCuentaDemo = "PE.RUTAUTP.DEMO"
-
     // MARK: - Carga útil
 
-    /// Carga útil TLV del QR.
+    /// Carga útil del QR: texto legible, en ASCII.
     ///
-    /// - Parameter importe: `nil` genera un QR **estático**, el que se enseña
-    ///   para que quien pague escriba cuánto quiere enviar. Con importe se marca
-    ///   como dinámico y se añade el campo `54` con el monto.
+    /// **Por qué ya no es TLV.** Antes se generaba la estructura del estándar
+    /// interoperable (EMVCo). En la mano tenía dos problemas: al escanearlo con
+    /// cualquier lector salía una ristra de dígitos sin sentido, y el nombre con
+    /// tilde viajaba como dos bytes UTF-8 que los lectores que decodifican en
+    /// otra codificación convertían en un carácter de otro alfabeto
+    /// («Joaquín» se veía como «Joaqu铆n»). Como las billeteras son propias de
+    /// la demo y ninguna app real va a leer este QR, lo que importa es que se
+    /// entienda: la primera línea dice «DEMO YAPO» o «DEMO PLUN» y debajo van
+    /// los datos de la cuenta.
+    ///
+    /// - Parameter importe: si se indica, se añade una línea con el monto.
     static func cargaUtil(
         cuenta: CuentaCobro = cuentaDemo,
         importe: Double? = nil
     ) -> String {
-        // La billetera forma parte del identificador de demostración para que
-        // cambiar entre Yapo y Plun produzca también un QR distinto.
-        let guiaBilletera = guiaCuentaDemo + "." + cuenta.billetera.rawValue.uppercased()
-        var cuerpo = campo("00", "01")                        // versión del formato
-        cuerpo += campo("01", importe == nil ? "11" : "12")   // estático / dinámico
-        cuerpo += campo("26", campo("00", guiaBilletera) + campo("01", cuenta.celular))
-        cuerpo += campo("53", "604")                          // moneda: sol
+        var lineas = ["DEMO \(cuenta.billetera.nombre.uppercased())"]
+        lineas.append("titular: \(ascii(cuenta.titular))")
+        lineas.append("celular: \(cuenta.celular)")
+        lineas.append("ciudad: \(ascii(cuenta.ciudad))")
+        lineas.append("moneda: PEN")
+
         if let importe, importe.isFinite, importe > 0 {
-            cuerpo += campo("54", String(format: "%.2f", importe))
+            lineas.append(String(format: "importe: %.2f", importe))
         }
-        cuerpo += campo("58", "PE")                           // país
-        cuerpo += campo("59", String(cuenta.titular.prefix(25)))
-        cuerpo += campo("60", String(cuenta.ciudad.prefix(15)))
-        cuerpo += "6304"                                      // cabecera del CRC
 
-        return cuerpo + crc16(cuerpo)
+        return lineas.joined(separator: "\n")
     }
 
-    /// Un campo TLV: identificador (2) + longitud (2) + valor.
+    /// Deja el texto en ASCII: quita tildes y descarta lo que no sea ASCII.
     ///
-    /// La longitud son **bytes UTF-8**, que es la unidad en la que después se
-    /// recorre la cadena al leerla. Se expresa en dos dígitos, así que un valor
-    /// de más de 99 bytes no cabe: se recorta en vez de escribir una longitud
-    /// inválida.
-    private static func campo(_ identificador: String, _ valor: String) -> String {
-        let bytes = valor.utf8.count
-
-        guard bytes <= 99 else {
-            return identificador + String(format: "%02d", 0)
-        }
-
-        return identificador + String(format: "%02d", bytes) + valor
-    }
-
-    /// CRC16-CCITT (polinomio 0x1021, valor inicial 0xFFFF), el que exige el
-    /// estándar para el último campo del QR.
-    static func crc16(_ texto: String) -> String {
-        var crc: UInt16 = 0xFFFF
-
-        for byte in texto.utf8 {
-            crc ^= UInt16(byte) << 8
-
-            for _ in 0..<8 {
-                // El desplazamiento descarta el bit alto por sí solo; no hace
-                // falta enmascarar el resultado.
-                crc = (crc & 0x8000) != 0 ? (crc << 1) ^ 0x1021 : (crc << 1)
-            }
-        }
-
-        return String(format: "%04X", crc)
+    /// Es lo que evita el fallo que se veía al escanear: una tilde son dos bytes
+    /// UTF-8, y un lector que decodifique en otra codificación los convierte en
+    /// un carácter de otro alfabeto. «Joaquín Díaz» pasa a «Joaquin Diaz».
+    static func ascii(_ texto: String) -> String {
+        texto
+            .folding(options: [.diacriticInsensitive, .widthInsensitive], locale: nil)
+            .filter { $0.isASCII }
     }
 
     // MARK: - Dibujo
@@ -207,12 +191,16 @@ enum PagoQR {
 
     /// Lo que se pudo entender de un QR leído.
     struct CamposQR: Equatable {
+        /// Billetera que emitió el código, si se pudo identificar («Yapo», «Plun»).
+        var billetera: String?
         var titular: String?
         var ciudad: String?
         var celular: String?
         var importe: Double?
         var moneda: String?
         var pais: String?
+        /// `true` si el código es de los nuestros: lo emite `cargaUtil`.
+        var esDemo: Bool = false
         /// `true` si la carga útil tiene estructura de pago, no texto suelto.
         var esPago: Bool
 
@@ -220,18 +208,75 @@ enum PagoQR {
         var importeTexto: String? {
             guard let importe else { return nil }
 
-            let simbolo = moneda == "604" ? "S/ " : ""
+            let simbolo = moneda == "604" || moneda == "PEN" ? "S/ " : ""
 
             return simbolo + String(format: "%.2f", importe)
         }
     }
 
-    /// Interpreta una carga útil TLV.
+    /// Interpreta la carga útil de un QR.
+    ///
+    /// Entiende dos formas y no lanza nunca: lo que no reconoce queda como
+    /// texto suelto (`esPago == false`).
+    ///
+    /// 1. **La de la demo**, que es la que emite `cargaUtil`: primera línea
+    ///    `DEMO <BILLETERA>` y después líneas `clave: valor`.
+    /// 2. **Un QR de pago real**, con la estructura TLV del estándar
+    ///    interoperable. El lector es una herramienta de la app, así que
+    ///    conviene que sepa leer uno de verdad aunque nosotros no los generemos.
+    static func leer(_ cargaUtil: String) -> CamposQR {
+        let demo = leerDemo(cargaUtil)
+
+        if demo.esPago {
+            return demo
+        }
+
+        return leerTLV(cargaUtil)
+    }
+
+    /// Formato propio: `DEMO YAPO` en la primera línea y `clave: valor` debajo.
+    private static func leerDemo(_ cargaUtil: String) -> CamposQR {
+        var campos = CamposQR(esPago: false)
+
+        let lineas = cargaUtil
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        guard let primera = lineas.first, primera.hasPrefix("DEMO ") else {
+            return campos
+        }
+
+        campos.esPago = true
+        campos.esDemo = true
+        campos.billetera = String(primera.dropFirst("DEMO ".count)).capitalized
+
+        for linea in lineas.dropFirst() {
+            let partes = linea.split(separator: ":", maxSplits: 1)
+
+            guard partes.count == 2 else { continue }
+
+            let clave = partes[0].trimmingCharacters(in: .whitespaces).lowercased()
+            let valor = partes[1].trimmingCharacters(in: .whitespaces)
+
+            switch clave {
+            case "titular": campos.titular = valor
+            case "celular": campos.celular = valor
+            case "ciudad": campos.ciudad = valor
+            case "moneda": campos.moneda = valor
+            case "importe": campos.importe = Double(valor)
+            default: break
+            }
+        }
+
+        return campos
+    }
+
+    /// Interpreta una carga útil TLV (QR de pago real).
     ///
     /// Recorre los campos de primer nivel; el bloque `26` (cuenta) se abre
-    /// aparte porque lleva sus propios subcampos. Un QR que no sea TLV válido
-    /// devuelve `esPago == false` y ningún campo: nunca lanza.
-    static func leer(_ cargaUtil: String) -> CamposQR {
+    /// aparte porque lleva sus propios subcampos.
+    private static func leerTLV(_ cargaUtil: String) -> CamposQR {
         var campos = CamposQR(esPago: false)
 
         let nivel1 = camposTLV(cargaUtil)
