@@ -72,6 +72,7 @@
 		AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A05 /* NavegacionRutaView.swift */; };
 		AA6600000000000000000B06 /* ParaderosIluminadosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A06 /* ParaderosIluminadosView.swift */; };
 		AA6600000000000000000D02 /* gtfs in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000D01 /* gtfs */; };
+		AA9900000000000000000B02 /* BusEn3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000B01 /* BusEn3D.swift */; };
 		AA6600000000000000000E02 /* Senia.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E01 /* Senia.swift */; };
 		AA6600000000000000000E04 /* SeniasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E03 /* SeniasService.swift */; };
 		AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E05 /* SeniasOverlay.swift */; };
@@ -191,6 +192,7 @@
 		AA6600000000000000000E03 /* SeniasService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasService.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E05 /* SeniasOverlay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlay.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E07 /* senias */ = {isa = PBXFileReference; lastKnownFileType = folder; path = senias; sourceTree = "<group>"; };
+		AA9900000000000000000B01 /* BusEn3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BusEn3D.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E09 /* ReportarSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportarSheet.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E11 /* PublicarComunidadSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PublicarComunidadSheet.swift; sourceTree = "<group>"; };
 		AA6600000000000000000F01 /* Idioma.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
@@ -385,6 +387,7 @@
 				0A8004CE300AD9FE004E1676 /* MapaView.swift */,
 				0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */,
 				0A8004D0300AD9FE004E1676 /* MapMarkers.swift */,
+				AA9900000000000000000B01 /* BusEn3D.swift */,
 				0A8004D1300AD9FE004E1676 /* SideDrawer.swift */,
 				0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */,
 				0A800423300AD9FE004E1676 /* DrawerSheets.swift */,
@@ -811,6 +814,7 @@
 				0A80050E300AD9FE004E1676 /* TarjetaFormSheet.swift in Sources */,
 				0A800501300AD9FE004E1676 /* RootView.swift in Sources */,
 				0A800509300AD9FE004E1676 /* MapMarkers.swift in Sources */,
+				AA9900000000000000000B02 /* BusEn3D.swift in Sources */,
 				0A800507300AD9FE004E1676 /* MapaView.swift in Sources */,
 				0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */,
 				0A800510300AD9FE004E1676 /* SeguridadView.swift in Sources */,
