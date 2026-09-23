@@ -121,34 +121,31 @@ final class MQTTConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration.port, 1234)
     }
 
-    /// Un puerto ilegible no debe romper la configuración.
-    func testPuertoInvalidoCaeAlDefecto() throws {
-        var environment = baseEnvironment()
-        environment["MQTT_PORT"] = "no-es-un-puerto"
-
-        let configuration = try XCTUnwrap(
-            MQTTConfiguration.from(environment: environment)
-        )
-
-        XCTAssertEqual(
-            configuration.port,
-            MQTTConfiguration.defaultPlainPort
-        )
+    /// Los valores explícitos inválidos no cambian silenciosamente el destino
+    /// ni guardan credenciales asociadas a un puerto de respaldo.
+    func testPuertoInvalidoRechazaConfiguracionSinGuardarCredenciales() {
+        for tls in ["0", "1"] {
+            for port in ["0", "-1", "70000", "no-es-un-puerto"] {
+                var environment = baseEnvironment()
+                environment["MQTT_PORT"] = port
+                environment["MQTT_TLS"] = tls
+                let store = MemoryCredentials()
+                XCTAssertNil(MQTTConfiguration.from(
+                    environment: environment, credentialStore: store),
+                    "Puerto \(port), TLS \(tls)")
+                XCTAssertTrue(store.entries.isEmpty)
+            }
+        }
     }
 
-    /// Un puerto fuera del rango de 16 bits también cae al valor por defecto.
-    func testPuertoFueraDeRangoCaeAlDefecto() throws {
-        var environment = baseEnvironment()
-        environment["MQTT_PORT"] = "70000"
-
-        let configuration = try XCTUnwrap(
-            MQTTConfiguration.from(environment: environment)
-        )
-
-        XCTAssertEqual(
-            configuration.port,
-            MQTTConfiguration.defaultPlainPort
-        )
+    func testPuertosValidosIncluyenLosLimitesYEMQX() throws {
+        for port in ["1", "8883", "65535"] {
+            var environment = baseEnvironment()
+            environment["MQTT_TLS"] = "1"
+            environment["MQTT_PORT"] = port
+            let configuration = try XCTUnwrap(MQTTConfiguration.from(environment: environment))
+            XCTAssertEqual(configuration.port, UInt16(port))
+        }
     }
 
     // MARK: - Detección de TLS
@@ -315,12 +312,59 @@ final class MQTTConfigurationTests: XCTestCase {
         defaults.set("1", forKey: "MQTT_TLS")
 
         let configuration = try XCTUnwrap(
-            MQTTConfiguration.from(environment: [:], defaults: defaults)
+            MQTTConfiguration.from(environment: [:], defaults: defaults,
+                                   credentialStore: MemoryCredentials())
         )
 
         XCTAssertEqual(configuration.host, "mqtt.distribuido.com")
         XCTAssertTrue(configuration.useTLS)
         XCTAssertEqual(configuration.port, MQTTConfiguration.defaultTLSPort)
+        XCTAssertNil(defaults.string(forKey: "MQTT_PASSWORD"))
+        XCTAssertNil(defaults.string(forKey: "MQTT_USERNAME"))
+    }
+
+    func testCredencialesPersistenSinElEntornoYSeAislanPorServidor() throws {
+        let store = MemoryCredentials()
+        XCTAssertNotNil(MQTTConfiguration.from(environment: baseEnvironment(), credentialStore: store))
+        let restored = try XCTUnwrap(MQTTConfiguration.from(
+            environment: ["MQTT_HOST": "mqtt.ejemplo.com"], credentialStore: store))
+        XCTAssertEqual(restored.password, "secreto")
+        XCTAssertNil(MQTTConfiguration.from(
+            environment: ["MQTT_HOST": "otro.example"], credentialStore: store))
+        XCTAssertNil(MQTTConfiguration.from(
+            environment: ["MQTT_HOST": "mqtt.ejemplo.com", "MQTT_TLS": "1"], credentialStore: store))
+    }
+
+    func testEntornoIncompletoNoMezclaCredencialesGuardadas() {
+        let store = MemoryCredentials()
+        XCTAssertNotNil(MQTTConfiguration.from(environment: baseEnvironment(), credentialStore: store))
+        XCTAssertNil(MQTTConfiguration.from(environment: [
+            "MQTT_HOST": "mqtt.ejemplo.com", "MQTT_USERNAME": "otra-cuenta"
+        ], credentialStore: store))
+    }
+
+    func testFalloDeMigracionConservaLaCredencialOriginal() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("mqtt.ejemplo.com", forKey: "MQTT_HOST")
+        defaults.set("device-test", forKey: "MQTT_USERNAME")
+        defaults.set("dummy-password", forKey: "MQTT_PASSWORD")
+        let store = MemoryCredentials()
+        store.failSave = true
+        XCTAssertNil(MQTTConfiguration.from(environment: [:], defaults: defaults, credentialStore: store))
+        XCTAssertEqual(defaults.string(forKey: "MQTT_PASSWORD"), "dummy-password")
+        XCTAssertEqual(defaults.string(forKey: "MQTT_USERNAME"), "device-test")
+    }
+
+    private final class MemoryCredentials: MQTTCredentialStoring {
+        var entries: [String: MQTTCredentials] = [:]
+        var failSave = false
+        func load(endpoint: String) throws -> MQTTCredentials? { entries[endpoint] }
+        func save(_ credentials: MQTTCredentials, endpoint: String) throws {
+            if failSave { throw NSError(domain: "KeychainTest", code: -1) }
+            entries[endpoint] = credentials
+        }
     }
 
     /// Un valor vacío no cuenta como informado y no bloquea al siguiente nivel.
