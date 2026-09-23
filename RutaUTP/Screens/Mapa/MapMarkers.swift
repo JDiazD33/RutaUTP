@@ -86,8 +86,13 @@ struct MarcadorDestinoBuscado: View {
     }
 }
 
-// MARK: - Bus: etiqueta compacta con acento de línea y rumbo discreto
-struct AnimatedBusMarker: View {
+// MARK: - Etiqueta del bus (la píldora con la línea)
+
+/// La píldora que identifica el bus: color de la línea, icono, nombre y rumbo.
+///
+/// Se separó de `AnimatedBusMarker` para poder ponerla también encima del modelo
+/// 3D sin duplicar el diseño. Conserva el aspecto que ya tenía.
+struct EtiquetaBus: View {
     let linea: String
     let color: Color
     let heading: Double
@@ -140,10 +145,67 @@ struct AnimatedBusMarker: View {
                               lineWidth: seleccionado ? 1.5 : 0.75)
         }
         .shadow(color: .black.opacity(seleccionado ? 0.16 : 0.10), radius: 3, x: 0, y: 2)
-        // Área táctil suficiente sin agrandar la etiqueta visible.
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: seleccionado)
+    }
+}
+
+// MARK: - Bus: solo la etiqueta (Rutas y demo de tracking)
+struct AnimatedBusMarker: View {
+    let linea: String
+    let color: Color
+    let heading: Double
+    var seleccionado: Bool = false
+
+    var body: some View {
+        EtiquetaBus(linea: linea, color: color, heading: heading, seleccionado: seleccionado)
+            // Área táctil suficiente sin agrandar la etiqueta visible.
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L.t("Micro, línea ", "Bus, line ") + linea)
+            .accessibilityValue(seleccionado ? L.t("Seleccionado", "Selected") : "")
+            .accessibilityHint(L.t("Toca para ver la información del micro", "Tap to view bus information"))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAddTraits(seleccionado ? .isSelected : [])
+    }
+}
+
+// MARK: - Bus en 3D con su etiqueta encima (marcador del mapa)
+
+/// El marcador del mapa: el bus en 3D y, justo encima, la etiqueta de la línea.
+///
+/// La etiqueta se conserva a propósito. Es la que dice de un vistazo qué línea
+/// es y de qué color; el modelo aporta el aspecto de vehículo y, sobre todo, el
+/// sentido de la marcha, que antes se resolvía con una flechita diminuta.
+struct BusMarker3D: View {
+    let linea: String
+    let color: Color
+    let heading: Double
+    var seleccionado: Bool = false
+
+    /// Alto del modelo. A 56 pt se distingue la franja roja de la carrocería;
+    /// por debajo se convierte en una mancha y no compensa el coste.
+    private let altoModelo: CGFloat = 56
+
+    /// Altura total del marcador: la etiqueta más el modelo.
+    static let altoTotal: CGFloat = 36 + 56
+
+    /// Punto del marcador que se clava en la coordenada.
+    ///
+    /// Por defecto MapKit centra la vista entera, y con la etiqueta arriba eso
+    /// dejaría el bus dibujado por debajo del punto real. Se ancla en el centro
+    /// del modelo para que el vehículo caiga donde toca.
+    static let ancla = UnitPoint(x: 0.5, y: (36 + 56 / 2) / altoTotal)
+
+    var body: some View {
+        VStack(spacing: 0) {
+            EtiquetaBus(linea: linea, color: color, heading: heading, seleccionado: seleccionado)
+                .zIndex(1)
+
+            BusEn3D(rumbo: heading, lado: altoModelo, seleccionado: seleccionado)
+        }
         .frame(minHeight: 44)
         .contentShape(Rectangle())
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: seleccionado)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.t("Micro, línea ", "Bus, line ") + linea)
         .accessibilityValue(seleccionado ? L.t("Seleccionado", "Selected") : "")
