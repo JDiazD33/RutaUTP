@@ -134,15 +134,22 @@ struct MapaView: View {
                 // 5. Marcadores de Buses Animados en Tiempo Real.
                 // Tope de 8 en el mapa por rendimiento; las cards del panel
                 // muestran TODAS las líneas que pasan por el punto.
+                //
+                // El marcador lleva el modelo 3D del bus y la etiqueta de la
+                // línea encima. El ancla no es el centro de la vista: con la
+                // etiqueta arriba, centrarla dejaría el vehículo dibujado por
+                // debajo del punto real.
                 ForEach(vm.busesAnimados.prefix(8)) { bus in
-                    Annotation(L.t("Línea", "Line") + " \(bus.linea)", coordinate: bus.coordinate) {
+                    Annotation(L.t("Línea", "Line") + " \(bus.linea)",
+                               coordinate: bus.coordinate,
+                               anchor: BusMarker3D.ancla) {
                         Button {
                             campoEnfocado = false
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 vm.busSeleccionado = bus
                             }
                         } label: {
-                            AnimatedBusMarker(
+                            BusMarker3D(
                                 linea: bus.linea,
                                 color: bus.color,
                                 heading: bus.heading,
