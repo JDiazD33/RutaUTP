@@ -3,8 +3,8 @@ import Security
 
 /// Configuración del canal MQTT, construida desde el Scheme de Xcode.
 ///
-/// Ninguna credencial vive en el repositorio: host, usuario, contraseña y
-/// la ruta al certificado de la CA se leen de variables de entorno.
+/// Las credenciales aprovisionadas se conservan en Keychain, separadas por
+/// servidor, puerto y transporte. Nunca se leen del paquete de la app.
 struct MQTTConfiguration {
     let host: String
     let port: UInt16
@@ -52,23 +52,16 @@ struct MQTTConfiguration {
     ///   MQTT_TLS (opcional, "1"/"true"/"yes" habilita TLS)
     ///   MQTT_CA_CERT (opcional, ruta a la CA propia en PEM o DER)
     ///
-    /// Resuelve en tres niveles, de más específico a menos:
-    ///
-    /// 1. **Entorno del proceso.** El Scheme de Xcode. Es la vía de desarrollo.
-    /// 2. **`UserDefaults`.** Para instalaciones fuera de Xcode: un perfil de
-    ///    gestión (MDM), una pantalla de aprovisionamiento o un `.plist`
-    ///    cargado al arrancar. Es la vía para distribuir la app **sin incrustar
-    ///    credenciales en el binario**, que es lo que no hay que hacer: un
-    ///    secreto privilegiado compartido dentro del IPA se extrae en minutos.
-    /// 3. **`Info.plist`.** Solo para valores no secretos (host y puerto), que
-    ///    pueden diferir entre compilaciones.
-    ///
-    /// La contraseña no debería llegar nunca por el tercer nivel.
+    /// Host, puerto, TLS y CA: entorno, UserDefaults y finalmente Info.plist.
+    /// Credenciales: pareja completa del entorno, Keychain o migración de
+    /// UserDefaults. La migración solo borra el original tras guardarlo.
+    /// Cada instalación debe recibir una cuenta propia registrada en el broker.
     static func fromEnvironment() -> MQTTConfiguration? {
         from(
             environment: ProcessInfo.processInfo.environment,
             defaults: .standard,
-            bundle: .main
+            bundle: .main,
+            credentialStore: MQTTKeychainStore()
         )
     }
 
@@ -80,7 +73,8 @@ struct MQTTConfiguration {
     static func from(
         environment: [String: String],
         defaults: UserDefaults? = nil,
-        bundle: Bundle? = nil
+        bundle: Bundle? = nil,
+        credentialStore: MQTTCredentialStoring? = nil
     ) -> MQTTConfiguration? {
         func valor(_ clave: String) -> String? {
             let candidatos: [String?] = [
@@ -94,24 +88,7 @@ struct MQTTConfiguration {
                 .first { !$0.isEmpty }
         }
 
-        guard
-            let host = valor("MQTT_HOST"),
-            let username = valor("MQTT_USERNAME"),
-            let password = valor("MQTT_PASSWORD")
-        else {
-            return nil
-        }
-
-        // El usuario forma un nivel del tópico y la ACL lo compara con `%u`.
-        // Separadores o comodines alterarían el contrato del tópico.
-        let topicReserved = CharacterSet(charactersIn: "/+#\0")
-
-        guard
-            username.count <= 128,
-            username.rangeOfCharacter(from: topicReserved) == nil
-        else {
-            return nil
-        }
+        guard let host = valor("MQTT_HOST") else { return nil }
 
         let tlsFlags = ["1", "true", "yes"]
 
@@ -125,8 +102,49 @@ struct MQTTConfiguration {
             ? defaultTLSPort
             : defaultPlainPort
 
-        let port = valor("MQTT_PORT")
-            .flatMap { UInt16($0) } ?? fallbackPort
+        let port: UInt16
+        if let configuredPort = valor("MQTT_PORT") {
+            // Un error explícito no debe redirigir la conexión a otro puerto.
+            guard let parsedPort = UInt16(configuredPort), parsedPort > 0 else {
+                return nil
+            }
+            port = parsedPort
+        } else {
+            port = fallbackPort
+        }
+
+        let endpoint = "\(useTLS ? "mqtts" : "mqtt")://\(host.lowercased()):\(port)"
+        let credentials: MQTTCredentials
+        do {
+            // No mezclar usuario de una fuente con contraseña de otra.
+            if environment["MQTT_USERNAME"] != nil || environment["MQTT_PASSWORD"] != nil {
+                guard let username = environment["MQTT_USERNAME"],
+                      let password = environment["MQTT_PASSWORD"] else { return nil }
+                credentials = MQTTCredentials(username: username, password: password)
+                guard credentials.isValid else { return nil }
+                try credentialStore?.save(credentials, endpoint: endpoint)
+            } else if let stored = try credentialStore?.load(endpoint: endpoint) {
+                credentials = stored
+            } else {
+                guard let credentialStore,
+                      let username = defaults?.string(forKey: "MQTT_USERNAME"),
+                      let password = defaults?.string(forKey: "MQTT_PASSWORD") else { return nil }
+                credentials = MQTTCredentials(username: username, password: password)
+                guard credentials.isValid else { return nil }
+                try credentialStore.save(credentials, endpoint: endpoint)
+            }
+            guard credentials.isValid else { return nil }
+            if credentialStore != nil,
+               defaults?.string(forKey: "MQTT_USERNAME") == credentials.username,
+               defaults?.string(forKey: "MQTT_PASSWORD") == credentials.password {
+                defaults?.removeObject(forKey: "MQTT_USERNAME")
+                defaults?.removeObject(forKey: "MQTT_PASSWORD")
+            }
+        } catch {
+            // Keychain bloqueado o escritura fallida: no conectar con secretos
+            // alternativos ni eliminar los datos pendientes de migración.
+            return nil
+        }
 
         let caPath = resolveCertificatePath(
             valor("MQTT_CA_CERT") ?? "",
@@ -150,8 +168,8 @@ struct MQTTConfiguration {
         return MQTTConfiguration(
             host: host,
             port: port,
-            username: username,
-            password: password,
+            username: credentials.username,
+            password: credentials.password,
             useTLS: useTLS,
             trustedCACertificates: trustedCA
         )
@@ -182,6 +200,58 @@ struct MQTTConfiguration {
             forResource: nombre,
             ofType: extension_.isEmpty ? nil : extension_
         ) ?? value
+    }
+}
+
+struct MQTTCredentials: Codable, Equatable {
+    let username: String
+    let password: String
+
+    var isValid: Bool {
+        !username.isEmpty && !password.isEmpty && username.count <= 128 &&
+        username.rangeOfCharacter(from: CharacterSet(charactersIn: "/+#\0")) == nil
+    }
+}
+
+protocol MQTTCredentialStoring {
+    func load(endpoint: String) throws -> MQTTCredentials?
+    func save(_ credentials: MQTTCredentials, endpoint: String) throws
+}
+
+struct MQTTKeychainStore: MQTTCredentialStoring {
+    private struct KeychainError: Error { let status: OSStatus }
+
+    private func query(endpoint: String) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: "RutaUTP.MQTT.credentials",
+         kSecAttrAccount as String: endpoint,
+         kSecAttrSynchronizable as String: false]
+    }
+
+    func load(endpoint: String) throws -> MQTTCredentials? {
+        var request = query(endpoint: endpoint)
+        request[kSecReturnData as String] = true
+        request[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(request as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else { throw KeychainError(status: status) }
+        guard let data = result as? Data else { throw KeychainError(status: errSecDecode) }
+        return try JSONDecoder().decode(MQTTCredentials.self, from: data)
+    }
+
+    func save(_ credentials: MQTTCredentials, endpoint: String) throws {
+        let attributes: [String: Any] = [
+            kSecValueData as String: try JSONEncoder().encode(credentials),
+            // No se sincroniza ni migra a otro dispositivo mediante backups.
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        let request = query(endpoint: endpoint)
+        var status = SecItemUpdate(request as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            status = SecItemAdd(request.merging(attributes) { _, new in new } as CFDictionary, nil)
+        }
+        guard status == errSecSuccess else { throw KeychainError(status: status) }
     }
 }
 
