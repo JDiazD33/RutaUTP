@@ -399,3 +399,85 @@ parte del ruido de ~10 m.
 La observación más reciente es el mejor estimador con esta cadencia de publicación.
 Si algún día las balizas publican más seguido, conviene repetir la medición antes
 de reconsiderarlo.
+
+## Cambios de ruta (punto 4)
+
+El puente atiende también un canal independiente de incidencias. No modifica
+el seguimiento de vehículos, la geometría GTFS ni el cálculo de llegada.
+
+- Entrada: `rutautp/cambios/{principal}/reporte`, QoS 1, sin retención.
+  JSON: `schemaVersion: 1`, `requestId` (UUID), `routeId`, `reason`
+  (`works`, `closure`, `detour`), `lat`, `lon`, `place` (3–120 caracteres),
+  `timestamp` (Unix en segundos). El punto debe quedar a 500 m o menos de
+  la ruta GTFS y el mensaje tener como máximo 120 s de antigüedad.
+- Recibo privado: `rutautp/cambios/{principal}/recibo`, con `requestId`,
+  `accepted` y `code`: `pending`, `confirmed`, `off_route`, `rate_limit`,
+  `busy` o `invalid`. Un recibo de MQTT no sustituye esta respuesta del servidor.
+- Consulta: `rutautp/cambios/estado`. Snapshot completo cada 5 s, incluso
+  vacío, con `schemaVersion`, `timestamp` y `alerts`. Cada alerta contiene
+  `id`, `routeId`, `reason`, `lat`, `lon`, `place`, `confirmations`, `expiresAt`.
+  No contiene las identidades de quienes reportaron.
+
+Se agrupan misma ruta y motivo dentro de 200 m del punto inicial. Se requieren
+**dos principales autenticados distintos**; cambiar requestId o repetir desde
+la misma cuenta nunca suma otra confirmación. Cada voto dura 15 minutos y la
+alerta desaparece si deja de haber dos vigentes. Se permite un reporte cada
+30 segundos por cuenta; hay límites de grupos y votos en memoria. El estado
+es efímero: reiniciar el backend requiere reportes nuevos. Dos cuentas no
+prueban por sí solas la existencia de una incidencia; dependen del
+aprovisionamiento de cuentas independientes, igual que el quorum vehicular.
+
+La app ofrece «Obras, cierres o cambios de ruta» dentro de «Reportar».
+El mapa del formulario se puede ampliar a pantalla completa para elegir el
+lugar afectado. «Reportar» conserva además alertas de seguridad, sugerencias
+y otros incidentes.
+Permite seleccionar línea/ramal, motivo y punto, revisar alertas y confirmar
+lo observado. Sin conexión o sin un snapshot reciente no afirma que no haya
+incidencias: muestra información no disponible y deshabilita el envío.
+Los avisos indican la zona afectada; **no inventan ni dibujan un itinerario
+alterno** que los reportes no proporcionan. No hay notificaciones push.
+
+Para habilitarlo en un despliegue existente, actualizar el backend y aplicar
+las reglas `rutautp/cambios/…` de `mqtt/config/acl.example` al ACL activo,
+recargando Mosquitto. No compartir una cuenta entre instalaciones. La plantilla
+se prueba con `bash mqtt/tools/acl_test.sh` desde la raíz del proyecto.
+
+## Ocupación del bus (punto 5)
+
+La ocupación se consulta y reporta en el **detalle del bus en vivo**: «Vacío»
+o «Lleno». Cada envío pide confirmar que el estudiante está en esa unidad.
+Los buses de demostración no admiten reportes. Se usa el `vehicleId` emitido
+por el backend; dos buses de una misma línea mantienen votos separados.
+
+El servidor requiere que la cuenta MQTT haya contribuido una observación
+aceptada para ese vehículo durante los últimos 60 s, y que el bus tenga una
+posición de como máximo 45 s. Para reportar desde la app hay que tener activo
+«Ayudar con ubicaciones» y esperar a ser detectado a bordo. Esto reutiliza la
+asociación existente sin modificar la detección ni el movimiento del mapa.
+La asociación es una estimación, no una prueba física de presencia.
+
+Cada cuenta mantiene un único voto por unidad; cambiar de opinión reemplaza
+el anterior y reportar otro bus retira el voto de la unidad previa. Se exige
+un mínimo de **dos cuentas coincidentes y mayoría estricta**. Un empate,
+votos insuficientes o su caducidad se muestran como «Sin confirmar», nunca
+como «Vacío». Cada voto vence a los **3 minutos**. Los reportes se limitan a
+uno cada 30 s por cuenta y el estado se pierde al reiniciar el backend.
+
+Contratos MQTT (QoS 1, sin retención):
+
+- `rutautp/ocupacion/{principal}/reporte`: `schemaVersion: 1`, `requestId`
+  (UUID), `vehicleId`, `state` (`empty` o `full`), `timestamp` Unix. Se aceptan
+  mensajes de hasta 1024 bytes, con antigüedad de hasta 60 s y desfase futuro
+  de hasta 10 s. La identidad proviene del tópico protegido por ACL.
+- `rutautp/ocupacion/{principal}/recibo`: `requestId`, `accepted`, `code`
+  (`pending`, `confirmed`, `not_onboard`, `unavailable`, `rate_limit`, `busy`,
+  `invalid`). Solo este recibo confirma que el backend recibió el reporte.
+- `rutautp/ocupacion/estado`: snapshot cada 5 s con `schemaVersion`,
+  `timestamp`, `buses`. Cada elemento contiene `vehicleId`, `state`,
+  `confirmations`, `updatedAt`, `expiresAt`. No se publican identidades.
+
+La app retira datos al vencer o tras 20 s sin un snapshot reciente, y distingue
+«No disponible» de «Sin confirmar». No permite enviar mientras el canal no
+está listo. Para habilitarlo en el servidor, actualizar el backend y aplicar
+las reglas `rutautp/ocupacion/…` de `mqtt/config/acl.example` al ACL activo,
+recargando Mosquitto. El código no aplica cambios al despliegue existente.
