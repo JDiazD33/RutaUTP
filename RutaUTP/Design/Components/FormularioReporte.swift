@@ -30,6 +30,7 @@ enum FormularioReporte {
 struct SelectorTipoReporte: View {
 
     @Binding var tipo: TipoReporte
+    var tiposDisponibles: [TipoReporte] = TipoReporte.allCases
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -39,7 +40,7 @@ struct SelectorTipoReporte: View {
                 .appTracking(AppTracking.wideLabel)
 
             HStack(spacing: 8) {
-                ForEach(TipoReporte.allCases) { t in
+                ForEach(tiposDisponibles) { t in
                     tarjeta(t)
                 }
             }

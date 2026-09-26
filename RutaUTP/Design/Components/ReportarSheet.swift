@@ -18,6 +18,8 @@ struct ReportarSheet: View {
     @State private var tipo: TipoReporte = .alerta
     @State private var descripcion: String = ""
     @State private var showSuccess = false
+    @State private var showRouteChanges = false
+    @StateObject private var routeChanges = RouteChangesService()
 
     private var puedeEnviar: Bool {
         !descripcion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -28,14 +30,33 @@ struct ReportarSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
                     encabezado
+                    Button { showRouteChanges = true } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "arrow.triangle.branch")
+                            Text(L.t("Obras, cierres o cambios de ruta", "Roadworks, closures or route changes"))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .padding()
+                        .background(Color.appPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.appPrimary)
                     // Selector, detalle y descripción: compartidos con Publicar.
-                    SelectorTipoReporte(tipo: $tipo)
+                    SelectorTipoReporte(tipo: $tipo, tiposDisponibles: [.alerta, .sugerencia, .otro])
                     DetalleTipoReporte(tipo: tipo)
                     CampoDescripcionReporte(descripcion: $descripcion, tipo: tipo)
                 }
                 .padding(20)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) { botonEnviar }
+        }
+        .sheet(isPresented: $showRouteChanges) {
+            RouteChangesSheet(service: routeChanges)
+                .presentationDetents([.large])
+                .onAppear { routeChanges.start() }
+                .onDisappear { routeChanges.stop() }
         }
         // Mensaje honesto: el reporte no se envía a ningún sitio todavía. El
         // texto anterior ("Reporte enviado / Gracias por colaborar") prometía
@@ -136,11 +157,11 @@ extension TipoReporte {
     var detalle: String {
         switch self {
         case .alerta:
-            return L.t("Cuenta qué pasó: robo, acoso, persona sospechosa o accidente. Indica el lugar aproximado.",
-                       "Tell us what happened: theft, harassment, suspicious person or accident. Include the approximate location.")
+            return L.t("Cuenta qué pasó: robo, acoso o una persona sospechosa. Indica el lugar aproximado.",
+                       "Tell us what happened: theft, harassment or a suspicious person. Include the approximate location.")
         case .trafico:
-            return L.t("Reporta congestión, choques o desvíos que estén afectando tu ruta ahora mismo.",
-                       "Report congestion, crashes or detours affecting your route right now.")
+            return L.t("Cuenta cómo está el tráfico: congestión o choques. Indica el lugar aproximado.",
+                       "Describe traffic conditions: congestion or crashes. Include the approximate location.")
         case .sugerencia:
             return L.t("Propón mejoras: frecuencias, limpieza, nuevos paraderos o precios justos.",
                        "Suggest improvements: frequency, cleanliness, new stops or fair fares.")
@@ -165,11 +186,11 @@ extension TipoReporte {
         case .alerta:
             return [L.t("Robo en el paradero", "Theft at the stop"),
                     L.t("Persona sospechosa", "Suspicious person"),
-                    L.t("Accidente", "Accident")]
+                    L.t("Acoso", "Harassment")]
         case .trafico:
             return [L.t("Tráfico detenido", "Traffic stopped"),
                     L.t("Choque", "Crash"),
-                    L.t("Desvío en la ruta", "Route detour")]
+                    L.t("Congestión en el paradero", "Congestion at the stop")]
         case .sugerencia:
             return [L.t("Más frecuencia", "More frequency"),
                     L.t("Nuevo paradero", "New stop"),

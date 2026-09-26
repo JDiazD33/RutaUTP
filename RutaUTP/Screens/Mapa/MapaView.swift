@@ -355,24 +355,16 @@ struct MapaView: View {
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
 
-            Text(vm.fuenteFlota == .real
-                 ? L.t("EN VIVO", "LIVE")
-                 : "DEMO")
-                .font(.system(size: 9, weight: .bold))
-                .appTracking(AppTracking.wideLabel)
-                .foregroundStyle(vm.fuenteFlota == .real ? Color.green : Color.onSurfaceVariant)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule().fill(
-                        vm.fuenteFlota == .real
-                            ? Color.green.opacity(0.14)
-                            : Color.surfaceContainerHigh
-                    )
-                )
-                .accessibilityLabel(vm.fuenteFlota == .real
-                                    ? L.t("Vehículos en vivo", "Live vehicles")
-                                    : L.t("Vehículos de demostración", "Demo vehicles"))
+            if vm.fuenteFlota == .real {
+                Text(L.t("EN VIVO", "LIVE"))
+                    .font(.system(size: 9, weight: .bold))
+                    .appTracking(AppTracking.wideLabel)
+                    .foregroundStyle(Color.green)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.green.opacity(0.14)))
+                    .accessibilityLabel(L.t("Vehículos en vivo", "Live vehicles"))
+            }
 
             Spacer()
         }
@@ -994,6 +986,21 @@ private struct BusDetailPopup: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            if bus.fuente == .real {
+                Text(bus.minutosLlegada == nil
+                     ? L.t("Llegada no disponible: faltan datos suficientes para estimarla.",
+                           "Arrival unavailable: not enough data to estimate it.")
+                     : L.t("Llegada aproximada al punto consultado de la ruta. Puede variar por tráfico y paradas.",
+                           "Approximate arrival at the queried point on the route. Traffic and stops may change it."))
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            BusOccupancyPanel(vehicleID: bus.fuente == .real && bus.id.hasPrefix("real-")
+                              ? String(bus.id.dropFirst(5)) : nil)
+                .id(bus.id)
 
             Button(action: onVerRuta) {
                 HStack(spacing: 8) {

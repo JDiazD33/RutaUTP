@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BB9900000000000000000022 /* OccupancyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000021 /* OccupancyTests.swift */; };
+		BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000011 /* BusOccupancyPanel.swift */; };
+		BB9900000000000000000002 /* OccupancyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000001 /* OccupancyService.swift */; };
+		BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000011 /* RouteChangesSheet.swift */; };
+		BA9900000000000000000002 /* RouteChangesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000001 /* RouteChangesService.swift */; };
 		0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043E300AD9FE004E1676 /* MonederoStore.swift */; };
 		0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800440300AD9FE004E1676 /* MonederoView.swift */; };
 		AA9900000000000000000A02 /* PagoQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A01 /* PagoQR.swift */; };
@@ -120,6 +125,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BB9900000000000000000021 /* OccupancyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000011 /* BusOccupancyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusOccupancyPanel.swift; sourceTree = "<group>"; };
+		BB9900000000000000000001 /* OccupancyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyService.swift; sourceTree = "<group>"; };
+		BA9900000000000000000011 /* RouteChangesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesSheet.swift; sourceTree = "<group>"; };
+		BA9900000000000000000001 /* RouteChangesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesService.swift; sourceTree = "<group>"; };
 		0A80043E300AD9FE004E1676 /* MonederoStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoStore.swift; sourceTree = "<group>"; };
 		0A800440300AD9FE004E1676 /* MonederoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoView.swift; sourceTree = "<group>"; };
 		AA9900000000000000000A01 /* PagoQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PagoQR.swift; sourceTree = "<group>"; };
@@ -272,6 +282,7 @@
 				0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */,
 				0A800408300AD9FE004E1676 /* StartGuardTests.swift */,
 				0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */,
+				BB9900000000000000000021 /* OccupancyTests.swift */,
 			);
 			path = RutaUTPTests;
 			sourceTree = "<group>";
@@ -303,6 +314,10 @@
 				0A800427300AD9FE004E1676 /* ImagePicker.swift */,
 				AA7700000000000000000008 /* NegociosComponents.swift */,
 				AA6600000000000000000E09 /* ReportarSheet.swift */,
+				BB9900000000000000000011 /* BusOccupancyPanel.swift */,
+				BB9900000000000000000001 /* OccupancyService.swift */,
+				BA9900000000000000000011 /* RouteChangesSheet.swift */,
+				BA9900000000000000000001 /* RouteChangesService.swift */,
 				0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */,
 				0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */,
 				0A800435300AD9FE004E1676 /* FormularioReporte.swift */,
@@ -732,6 +747,7 @@
 				0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */,
 				0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */,
 				0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */,
+				BB9900000000000000000022 /* OccupancyTests.swift in Sources */,
 				0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -757,6 +773,10 @@
 				AA6600000000000000000E04 /* SeniasService.swift in Sources */,
 				AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */,
 				AA6600000000000000000E10 /* ReportarSheet.swift in Sources */,
+				BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */,
+				BB9900000000000000000002 /* OccupancyService.swift in Sources */,
+				BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */,
+				BA9900000000000000000002 /* RouteChangesService.swift in Sources */,
 				0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */,
 				0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */,
 				0A800436300AD9FE004E1676 /* FormularioReporte.swift in Sources */,
