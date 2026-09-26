@@ -48,9 +48,8 @@ final class PassiveTrackingCoordinator: ObservableObject {
 
     /// Componente encargado de transmitir observaciones autorizadas.
     ///
-    /// Es opcional para que la detección pasiva pueda funcionar aunque las
-    /// variables MQTT todavía no estén configuradas. Durante las pruebas
-    /// unitarias también podrá sustituirse por un publicador simulado.
+    /// Sin configuración la contribución permanece deshabilitada. Durante
+    /// las pruebas puede sustituirse por un publicador simulado.
     private let observationPublisher:
         ObservationPublishing?
 
@@ -144,7 +143,8 @@ private let isForcedOnboardForMQTTTest =
             CoreMotionActivityService(),
         repository: GTFSRepository = .shared,
         initialRoutes: [DetectionRouteGeometry] = [],
-        observationPublisher: ObservationPublishing? = nil
+        observationPublisher: ObservationPublishing? = nil,
+        configurationProvider: () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment
     ) {
         self.locationService = locationService
         self.motionService = motionService
@@ -157,8 +157,7 @@ private let isForcedOnboardForMQTTTest =
         if let observationPublisher {
             // Conserva el mock o implementación proporcionada externamente.
             self.observationPublisher = observationPublisher
-        } else if let configuration =
-            MQTTConfiguration.fromEnvironment() {
+        } else if let configuration = configurationProvider() {
             // Crea el publicador real solamente cuando están disponibles
             // MQTT_HOST, MQTT_PORT, MQTT_USERNAME y MQTT_PASSWORD.
             self.observationPublisher =
@@ -166,17 +165,18 @@ private let isForcedOnboardForMQTTTest =
                     configuration: configuration
                 )
         } else {
-            // La detección seguirá funcionando localmente, pero no transmitirá
-            // ubicaciones mientras la configuración MQTT esté ausente.
+            // Sin canal configurado, la contribución queda deshabilitada.
             self.observationPublisher = nil
         }
 
         let storedConsent = UserDefaults.standard.bool(
             forKey: consentStorageKey
         )
-        isEnabled = storedConsent && observationPublisher != nil
+        // Consultar el publicador resuelto, no el parámetro opcional: en el
+        // arranque normal ese parámetro es nil aunque se haya creado MQTT.
+        isEnabled = storedConsent && self.observationPublisher != nil
 
-        if storedConsent && observationPublisher == nil {
+        if storedConsent && self.observationPublisher == nil {
             UserDefaults.standard.set(false, forKey: consentStorageKey)
             statusMessage = "Canal MQTT no configurado"
         }

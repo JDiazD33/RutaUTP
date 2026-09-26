@@ -23,6 +23,59 @@ import Combine
 final class PassiveTrackingCoordinatorTests:
     XCTestCase {
 
+    func testRestauraConsentimientoConPublicadorCreadoDesdeConfiguracion() {
+        withStoredConsent(true) {
+            let coordinator = PassiveTrackingCoordinator(
+                locationService: MockLocationService(),
+                configurationProvider: {
+                    MQTTConfiguration(host: "localhost", port: 1883,
+                                      username: "test-device", password: "test-only")
+                }
+            )
+            XCTAssertTrue(coordinator.isPublisherConfigured)
+            XCTAssertTrue(coordinator.isEnabled)
+            XCTAssertTrue(UserDefaults.standard.bool(forKey: "rutautp.passive-tracking-consent"))
+            XCTAssertFalse(coordinator.isRunning)
+        }
+    }
+
+    func testConfiguracionNoActivaContribucionSinConsentimiento() {
+        withStoredConsent(false) {
+            let coordinator = PassiveTrackingCoordinator(
+                locationService: MockLocationService(),
+                configurationProvider: {
+                    MQTTConfiguration(host: "localhost", port: 1883,
+                                      username: "test-device", password: "test-only")
+                }
+            )
+            XCTAssertTrue(coordinator.isPublisherConfigured)
+            XCTAssertFalse(coordinator.isEnabled)
+        }
+    }
+
+    func testSinConfiguracionNoActivaSensoresNiPublicacion() {
+        withStoredConsent(true) {
+            let coordinator = PassiveTrackingCoordinator(
+                locationService: MockLocationService(), configurationProvider: { nil }
+            )
+            XCTAssertFalse(coordinator.isPublisherConfigured)
+            XCTAssertFalse(coordinator.isEnabled)
+            XCTAssertFalse(coordinator.isRunning)
+            XCTAssertEqual(coordinator.statusMessage, "Canal MQTT no configurado")
+        }
+    }
+
+    private func withStoredConsent(_ enabled: Bool, body: () -> Void) {
+        let key = "rutautp.passive-tracking-consent"
+        let previous = UserDefaults.standard.object(forKey: key)
+        defer {
+            if let previous { UserDefaults.standard.set(previous, forKey: key) }
+            else { UserDefaults.standard.removeObject(forKey: key) }
+        }
+        UserDefaults.standard.set(enabled, forKey: key)
+        body()
+    }
+
     /// Dos muestras vehiculares todavía no deben iniciar ni publicar
     /// una sesión, porque el umbral vigente exige tres muestras.
     func testNoPublicaAntesDeConfirmarAbordaje() {
