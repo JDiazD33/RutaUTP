@@ -124,9 +124,9 @@ struct BusAnimado: Identifiable, Equatable {
 /// Estima la llegada de una posición MQTT al punto consultado en el mapa.
 ///
 /// El cálculo sigue el shape GTFS, respeta el sentido indicado por el rumbo y
-/// usa la velocidad observada. Si el vehículo está detenido o la velocidad no
-/// está disponible, cae a la velocidad media programada de la ruta. No devuelve
-/// ETA cuando vehículo/destino están fuera del recorrido o la unidad se aleja.
+/// usa la velocidad observada, incluso en tráfico lento. Solo si la velocidad
+/// es desconocida usa la media programada. Sin rumbo o con el bus detenido no
+/// puede anticipar la llegada; tampoco cuando está fuera de ruta o se aleja.
 enum VehicleETAEstimator {
 
     static func minutes(
@@ -170,7 +170,7 @@ enum VehicleETAEstimator {
         )
 
         let movingForward: Bool?
-        if position.heading >= 0, forwardHeading >= 0 {
+        if position.heading.isFinite, position.heading >= 0, forwardHeading >= 0 {
             movingForward = angularDifference(
                 position.heading,
                 forwardHeading
@@ -184,14 +184,13 @@ enum VehicleETAEstimator {
             route.shape[route.shape.count - 1]
         ) <= 200
 
-        if let movingForward {
-            if isCircular {
-                if movingForward, progressDelta < 0 { progressDelta += 1 }
-                if !movingForward, progressDelta > 0 { progressDelta -= 1 }
-            } else {
-                guard movingForward ? progressDelta >= 0 : progressDelta <= 0 else {
-                    return nil
-                }
+        guard let movingForward else { return nil }
+        if isCircular {
+            if movingForward, progressDelta < 0 { progressDelta += 1 }
+            if !movingForward, progressDelta > 0 { progressDelta -= 1 }
+        } else {
+            guard movingForward ? progressDelta >= 0 : progressDelta <= 0 else {
+                return nil
             }
         }
 
@@ -202,13 +201,18 @@ enum VehicleETAEstimator {
             guard route.duracionMin > 0 else { return 7 }
             return routeLength / (Double(route.duracionMin) * 60)
         }()
-        let observedSpeed = position.speed >= 2
-            ? position.speed
-            : scheduledSpeed
-        let effectiveSpeed = min(max(observedSpeed, 3), 15)
+        // Estar detenido no equivale a circular a la velocidad programada.
+        // El umbral de 0.5 m/s evita extrapolar el ruido de un GPS inmóvil.
+        guard position.speed.isFinite else { return nil }
+        if position.speed >= 0, position.speed < 0.5 { return nil }
+        let effectiveSpeed = position.speed >= 0.5
+            ? min(position.speed, 15)
+            : min(max(scheduledSpeed, 0.5), 15)
 
-        let estimate = Int(ceil(remainingMeters / effectiveSpeed / 60))
-        return min(max(estimate, 1), 120)
+        let estimate = ceil(remainingMeters / effectiveSpeed / 60)
+        // No convertir una espera superior a dos horas en exactamente 120 min.
+        guard estimate.isFinite, estimate <= 120 else { return nil }
+        return max(Int(estimate), 1)
     }
 
     private static func angularDifference(_ lhs: Double, _ rhs: Double) -> Double {

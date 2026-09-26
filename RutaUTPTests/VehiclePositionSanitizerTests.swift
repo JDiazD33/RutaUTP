@@ -293,7 +293,49 @@ final class VehiclePositionSanitizerTests: XCTestCase {
         )
     }
 
-    private func testRoute() -> RutaGTFS {
+    func testETASinRumboNoInventaSentido() {
+        XCTAssertNil(eta(speed: 10, heading: -1))
+        XCTAssertNil(eta(speed: 10, heading: .nan))
+    }
+
+    func testETATraficoLentoRespetaVelocidadObservada() {
+        // 1.11 km a 1 m/s: cerca de 19 min, no 4 min a velocidad programada.
+        XCTAssertEqual(eta(speed: 1), 19)
+    }
+
+    func testETADetenidoNoUsaVelocidadProgramada() {
+        XCTAssertNil(eta(speed: 0))
+        XCTAssertNil(eta(speed: 0.2))
+    }
+
+    func testETAVelocidadDesconocidaUsaHorario() {
+        XCTAssertEqual(eta(speed: -1), 4)
+        XCTAssertNil(eta(speed: .nan))
+    }
+
+    func testETARecorridoInversoHaciaDestino() {
+        XCTAssertEqual(eta(speed: 10, heading: 270, targetLongitude: 0), 1)
+    }
+
+    func testETAMayorDeDosHorasNoSeTrunca() {
+        XCTAssertNil(eta(speed: 0.5, targetLongitude: 0.08, route: testRoute(endLongitude: 0.1)))
+    }
+
+    private func eta(
+        speed: Double,
+        heading: Double = 90,
+        targetLongitude: Double = 0.012,
+        route: RutaGTFS? = nil
+    ) -> Int? {
+        VehicleETAEstimator.minutes(
+            position: VehiclePosition(id: "eta", linea: "10", lat: 0, lon: 0.002,
+                                      heading: heading, speed: speed, timestamp: now),
+            route: route ?? testRoute(),
+            target: coordinate(0, targetLongitude)
+        )
+    }
+
+    private func testRoute(endLongitude: Double = 0.02) -> RutaGTFS {
         RutaGTFS(
             id: "route-10",
             linea: "10",
@@ -305,7 +347,7 @@ final class VehiclePositionSanitizerTests: XCTestCase {
             shape: [
                 coordinate(0, 0),
                 coordinate(0, 0.01),
-                coordinate(0, 0.02)
+                coordinate(0, endLongitude)
             ],
             paraderos: [],
             duracionMin: 8,
