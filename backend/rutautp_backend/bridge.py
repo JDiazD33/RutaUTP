@@ -25,6 +25,8 @@ from .metrics import Metrics
 from .models import RejectReason
 from .persistence import ObservationStore, open_store
 from .validation import ObservationValidator
+from .route_changes import RouteChanges, REPORT_TOPIC
+from .occupancy import Occupancy, REPORT_TOPIC as OCCUPANCY_REPORT_TOPIC
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +93,13 @@ class Bridge:
     ) -> None:
         self.config = config
         self.feed = feed
+        self.route_changes = RouteChanges(feed)
         self.publisher = publisher
         self.validator = validator or ObservationValidator(feed, config)
         # El feed se pasa al agregador para que conozca la longitud de cada
         # recorrido: es lo que convierte una diferencia de `progress` en metros.
         self.aggregator = aggregator or VehicleAggregator(config, feed)
+        self.occupancy = Occupancy(self.aggregator.snapshot)
         self.metrics = metrics or Metrics()
         self.store = store or open_store(
             config.database_path, config.retention_days
@@ -486,6 +490,8 @@ class Bridge:
             while running:
                 client.loop(timeout=tick_interval_s)
                 self.tick(connected=client.is_connected())
+                self.route_changes.publish_snapshot(time.time(), self.publisher)
+                self.occupancy.publish_snapshot(time.time(), self.publisher)
 
                 if client.is_connected():
                     if delay != RECONNECT_INITIAL_S:
@@ -585,6 +591,18 @@ class Bridge:
         client.on_disconnect = self._on_disconnect
 
         def on_message(_client: Any, _userdata: Any, message: Any) -> None:
+            if message.topic.startswith("rutautp/ocupacion/"):
+                receipt = self.occupancy.handle(message.topic, message.payload, time.time())
+                if receipt and self.publisher:
+                    principal, body = receipt
+                    self.publisher(f"rutautp/ocupacion/{principal}/recibo", json.dumps(body))
+                return
+            if message.topic.startswith("rutautp/cambios/"):
+                receipt = self.route_changes.handle(message.topic, message.payload, time.time())
+                if receipt and self.publisher:
+                    principal, body = receipt
+                    self.publisher(f"rutautp/cambios/{principal}/recibo", json.dumps(body))
+                return
             self.handle_message(message.topic, message.payload)
 
         client.on_message = on_message
@@ -606,6 +624,10 @@ class Bridge:
         logger.info("conectado; suscribiendo a %s", self.config.observations_topic)
 
         client.subscribe(self.config.observations_topic, qos=1)
+        client.subscribe(REPORT_TOPIC, qos=1)
+        self.route_changes.last_snapshot = float("-inf")
+        client.subscribe(OCCUPANCY_REPORT_TOPIC, qos=1)
+        self.occupancy.last_snapshot = float("-inf")
 
     def _on_disconnect(
         self,
