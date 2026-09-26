@@ -32,7 +32,10 @@ Conservar las reglas de observaciones y vehículos ya creadas, y la denegación
 general para lo no autorizado. Añadir estas reglas por usuario con permiso
 Allow para los puntos 4 y 5. No sustituirlas por permisos generales sobre `#`.
 La plantilla `mqtt/config/acl.example` es de Mosquitto: EMQX Cloud no la carga
-automáticamente. Los permisos siguientes aún requieren aplicarse en EMQX.
+automáticamente. Las reglas siguientes deben existir en EMQX. El 25 de septiembre de 2026 se
+comprobó que la cuenta `backend` puede suscribirse a observaciones y reportes
+y publicar los estados y recibos de cambios y ocupación. Los permisos de
+los teléfonos todavía requieren verificación desde cada cuenta.
 
 | Usuario | Acción | Tópico |
 |---|---|---|
