@@ -29,6 +29,16 @@
 pattern write rutautp/observaciones/%u/+/posicion
 pattern read rutautp/vehiculos/+/posicion
 
+# Cambios de ruta: identidad del reportante ligada a la cuenta MQTT.
+pattern write rutautp/cambios/%u/reporte
+pattern read rutautp/cambios/%u/recibo
+pattern read rutautp/cambios/estado
+
+# Ocupación: cada instalación solo reporta con su identidad.
+pattern write rutautp/ocupacion/%u/reporte
+pattern read rutautp/ocupacion/%u/recibo
+pattern read rutautp/ocupacion/estado
+
 # Bloqueo deliberado de la identidad compartida histórica. Los `deny` tienen
 # precedencia sobre los permisos `pattern`; así una migración incompleta falla
 # de forma visible en lugar de conservar el aislamiento roto.
@@ -49,6 +59,12 @@ topic deny rutautp/#
 user backend
 topic read rutautp/observaciones/+/+/posicion
 topic write rutautp/vehiculos/+/posicion
+topic read rutautp/cambios/+/reporte
+topic write rutautp/cambios/+/recibo
+topic write rutautp/cambios/estado
+topic read rutautp/ocupacion/+/reporte
+topic write rutautp/ocupacion/+/recibo
+topic write rutautp/ocupacion/estado
 
 # ── Cuenta humana de depuración ───────────────────────────────────────────
 #

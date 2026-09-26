@@ -162,6 +162,62 @@ check "device-001 NO PUEDE publicar posiciones vehiculares" \
     device-001 "rutautp/vehiculos/probe/posicion" \
     no
 
+check "app PUEDE enviar cambios bajo su identidad" \
+    backend "rutautp/cambios/device-001/reporte" \
+    device-001 "rutautp/cambios/device-001/reporte" si
+
+check "app NO PUEDE suplantar otra cuenta en cambios" \
+    backend "rutautp/cambios/device-002/reporte" \
+    device-001 "rutautp/cambios/device-002/reporte" no
+
+check "app PUEDE leer alertas confirmadas del backend" \
+    device-001 "rutautp/cambios/estado" \
+    backend "rutautp/cambios/estado" si
+
+check "app NO PUEDE publicar alertas confirmadas" \
+    device-001 "rutautp/cambios/estado" \
+    device-001 "rutautp/cambios/estado" no
+
+check "app PUEDE leer su recibo" \
+    device-001 "rutautp/cambios/device-001/recibo" \
+    backend "rutautp/cambios/device-001/recibo" si
+
+check "app NO PUEDE leer recibos ajenos" \
+    device-001 "rutautp/cambios/device-002/recibo" \
+    backend "rutautp/cambios/device-002/recibo" no
+
+check "app NO PUEDE leer reportes individuales" \
+    device-001 "rutautp/cambios/device-001/reporte" \
+    device-001 "rutautp/cambios/device-001/reporte" no
+
+check "app PUEDE reportar ocupación propia" \
+    backend "rutautp/ocupacion/device-001/reporte" \
+    device-001 "rutautp/ocupacion/device-001/reporte" si
+
+check "app NO PUEDE suplantar votos de ocupación" \
+    backend "rutautp/ocupacion/device-002/reporte" \
+    device-001 "rutautp/ocupacion/device-002/reporte" no
+
+check "app PUEDE consultar ocupación confirmada" \
+    device-001 "rutautp/ocupacion/estado" \
+    backend "rutautp/ocupacion/estado" si
+
+check "app NO PUEDE inventar ocupación confirmada" \
+    device-001 "rutautp/ocupacion/estado" \
+    device-001 "rutautp/ocupacion/estado" no
+
+check "app PUEDE leer su recibo de ocupación" \
+    device-001 "rutautp/ocupacion/device-001/recibo" \
+    backend "rutautp/ocupacion/device-001/recibo" si
+
+check "app NO PUEDE leer recibos de ocupación ajenos" \
+    device-001 "rutautp/ocupacion/device-002/recibo" \
+    backend "rutautp/ocupacion/device-002/recibo" no
+
+check "app NO PUEDE leer votos individuales" \
+    device-001 "rutautp/ocupacion/device-001/reporte" \
+    device-001 "rutautp/ocupacion/device-001/reporte" no
+
 check "debug PUEDE leer observaciones (cuenta de diagnóstico)" \
     debug "rutautp/observaciones/device-001/probe/posicion" \
     device-001 "rutautp/observaciones/device-001/probe/posicion" \
