@@ -165,22 +165,23 @@ final class RouteTrackingViewModel: ObservableObject {
     private var allStops: [ParaderoGTFS] = []
     private var nearestAnchor: CLLocationCoordinate2D?
 
-    enum JourneyLeg { case walkingToBoard, riding, walkingToDestination }
+    enum JourneyLeg { case walkingToBoard, riding, transferring, ridingSecond, walkingToDestination }
     var journeyLeg: JourneyLeg {
         guard let plan = itinerary else { return .walkingToBoard }
         let meters = progreso * distanciaTotalM
         if meters < plan.walkToBoardMeters { return .walkingToBoard }
-        if meters < plan.walkToBoardMeters + plan.busMeters { return .riding }
+        let firstEnd = plan.walkToBoardMeters + plan.firstBusMeters
+        if meters < firstEnd { return .riding }
+        if let transfer = plan.transfer {
+            if meters < firstEnd + transfer.walkMeters { return .transferring }
+            if meters < firstEnd + transfer.walkMeters + transfer.busMeters { return .ridingSecond }
+        }
         return .walkingToDestination
     }
 
     var remainingSeconds: Double {
         guard let plan = itinerary else { return (etaTotalSeg ?? 0) * (1 - progreso) }
-        let traveled = progreso * distanciaTotalM
-        let first = max(0, plan.walkToBoardMeters - traveled) / 1.4
-        let bus = max(0, plan.busMeters - max(0, traveled - plan.walkToBoardMeters)) / plan.busSpeed
-        let last = max(0, plan.walkToDestinationMeters - max(0, traveled - plan.walkToBoardMeters - plan.busMeters)) / 1.4
-        return first + bus + last
+        return plan.remainingSeconds(after: progreso * distanciaTotalM)
     }
 
     func buscarDestino(_ text: String) async -> DestinoDemo? {
@@ -408,7 +409,7 @@ final class RouteTrackingViewModel: ObservableObject {
         await calcularRuta(desde: origen, hacia: destino.coordinate)
 
         if let plan = itinerary, routePolyline != nil {
-            sesion = TripSession(linea: plan.route.linea, empresa: plan.route.empresa,
+            sesion = TripSession(linea: plan.lineDescription, empresa: plan.route.empresa,
                 origen: TrackingPoint(lat: origen.latitude, lon: origen.longitude),
                 destino: TrackingPoint(lat: destino.coordinate.latitude, lon: destino.coordinate.longitude),
                 estado: .inProgress, startedAt: Date().timeIntervalSince1970)
@@ -454,7 +455,7 @@ final class RouteTrackingViewModel: ObservableObject {
             guard !Task.isCancelled, revision == routeRevision else { return }
             let resolved = await candidate.withWalkingDirections(using: routeService)
             guard !Task.isCancelled, revision == routeRevision else { return }
-            if resolved.walkToBoardMeters <= radio && resolved.walkToDestinationMeters <= radio {
+            if resolved.walkToBoardMeters <= radio && resolved.walkToDestinationMeters <= radio && resolved.walkingWithinTransferLimit {
                 selected = resolved
                 break
             }
@@ -464,8 +465,8 @@ final class RouteTrackingViewModel: ObservableObject {
             let sugerencia = radio < 800
                 ? L.t("Prueba un radio mayor u otro destino.", "Try a larger radius or another destination.")
                 : L.t("Prueba otro destino.", "Try another destination.")
-            errorMessage = L.t("No encontramos una línea directa con paraderos a menos de \(Int(radio)) m de ambos extremos. ",
-                               "No direct line has stops within \(Int(radio)) m of both ends. ") + sugerencia
+            errorMessage = L.t("No encontramos una ruta directa ni con un transbordo con paraderos a menos de \(Int(radio)) m de ambos extremos. ",
+                               "No direct or one-transfer route has stops within \(Int(radio)) m of both ends. ") + sugerencia
             return
         }
         errorMessage = nil
@@ -573,7 +574,12 @@ final class RouteTrackingViewModel: ObservableObject {
                 guard let total = self.distanciasAcumuladas.last, total > 1 else { continue }
                 // Avance por METROS reales: velocidad real de la ruta (m/s)
                 // × multiplicador elegido. 1× = ritmo real de la línea.
-                let speed = self.journeyLeg == .riding ? (self.itinerary?.busSpeed ?? 6) : 1.4
+                let speed: Double
+                switch self.journeyLeg {
+                case .riding: speed = self.itinerary?.busSpeed ?? 6
+                case .ridingSecond: speed = self.itinerary?.transfer?.busSpeed ?? 6
+                default: speed = 1.4
+                }
                 let deltaMetros = speed * self.velocidadDemo * 0.08
                 self.demoProgreso = min(1.0, self.demoProgreso + deltaMetros / total)
                 let coord = self.coordenadaEnFraccion(self.demoProgreso)
@@ -770,15 +776,18 @@ final class RouteTrackingViewModel: ObservableObject {
 struct TransitItinerary {
     let route: RutaGTFS
     let board: ParaderoGTFS
-    let alight: ParaderoGTFS
+    let firstAlight: ParaderoGTFS
+    var transfer: TransitTransfer?
+    var alight: ParaderoGTFS { transfer?.alight ?? firstAlight }
     var walkToBoard: [CLLocationCoordinate2D]
     let bus: [CLLocationCoordinate2D]
     var walkToDestination: [CLLocationCoordinate2D]
     var walkingApproximate = true
     var walkToBoardMeters: Double { PolylineMatching.totalLengthMeters(walkToBoard) }
-    let busMeters: Double
+    let firstBusMeters: Double
+    var busMeters: Double { firstBusMeters + (transfer?.busMeters ?? 0) }
     var walkToDestinationMeters: Double { PolylineMatching.totalLengthMeters(walkToDestination) }
-    var coordinates: [CLLocationCoordinate2D] { walkToBoard + bus + walkToDestination }
+    var coordinates: [CLLocationCoordinate2D] { walkToBoard + bus + (transfer?.walk ?? []) + (transfer?.bus ?? []) + walkToDestination }
     let busSpeed: Double
 
     /// Geometría del tramo en bus lista para DIBUJAR, decimada una sola vez.
@@ -794,58 +803,122 @@ struct TransitItinerary {
          walkToDestination: [CLLocationCoordinate2D]) {
         self.route = route
         self.board = board
-        self.alight = alight
+        self.firstAlight = alight
         self.walkToBoard = walkToBoard
         self.bus = bus
         self.walkToDestination = walkToDestination
-        self.busMeters = PolylineMatching.totalLengthMeters(bus)
+        self.firstBusMeters = PolylineMatching.totalLengthMeters(bus)
         self.busSpeed = min(14, max(3, route.distanciaKm * 1000 / Double(max(1, route.duracionMin) * 60)))
         self.busDibujo = PolylineMatching.decimate(bus, maxPoints: 250)
     }
 
-    var totalSeconds: Double { (walkToBoardMeters + walkToDestinationMeters) / 1.4 + busMeters / busSpeed }
+    var lineDescription: String {
+        route.linea + (transfer.map { " → " + $0.route.linea } ?? "")
+    }
+    static let maximumTransferWalk: Double = 350
+    var transferWalkMeters: Double { transfer?.walkMeters ?? 0 }
+    var walkingWithinTransferLimit: Bool { transferWalkMeters <= Self.maximumTransferWalk }
+    // Frecuencia del feed: espera media estimada, no una predicción en vivo.
+    var transferWaitSeconds: Double {
+        transfer.map { Double(max(0, $0.route.headwayMin)) * 30 + 120 } ?? 0
+    }
+    var totalSeconds: Double {
+        (walkToBoardMeters + walkToDestinationMeters + transferWalkMeters) / 1.4
+        + firstBusMeters / busSpeed + (transfer.map { $0.busMeters / $0.busSpeed } ?? 0)
+        + transferWaitSeconds
+    }
+
+    func remainingSeconds(after meters: Double) -> Double {
+        var traveled = max(0, meters)
+        var seconds = 0.0
+        var segments = [(walkToBoardMeters, 1.4), (firstBusMeters, busSpeed)]
+        if let transfer {
+            segments += [(transfer.walkMeters, 1.4), (transfer.busMeters, transfer.busSpeed)]
+            if meters < walkToBoardMeters + firstBusMeters + transfer.walkMeters {
+                seconds += transferWaitSeconds
+            }
+        }
+        segments.append((walkToDestinationMeters, 1.4))
+        for (distance, speed) in segments {
+            seconds += max(0, distance - traveled) / speed
+            traveled = max(0, traveled - distance)
+        }
+        return seconds
+    }
 
     static func candidates(in routes: [RutaGTFS], origin: CLLocationCoordinate2D,
                            destination: CLLocationCoordinate2D, radius: Double) -> [TransitItinerary] {
+        guard radius.isFinite, radius > 0 else { return [] }
+        let prepared = routes.filter { route in
+            route.shape.count >= 2 && route.paraderos.count >= 2 && route.paraderos.contains {
+                PolylineMatching.distanceMeters(origin, $0.coordinate) <= radius
+                || PolylineMatching.distanceMeters(destination, $0.coordinate) <= radius
+            }
+        }.map { PreparedTransitRoute(route: $0, origin: origin, destination: destination, radius: radius) }
+        // Celdas mayores que el radio de conexión: solo se consultan la celda
+        // del paradero y sus ocho vecinas, en vez de comparar todos contra todos.
+        let maximumLatitude = prepared.flatMap { $0.route.paraderos }.map { abs($0.lat) }.max() ?? 0
+        let cellSize = maximumTransferWalk * MKMapPointsPerMeterAtLatitude(min(85, maximumLatitude)) * 1.02
         var result: [TransitItinerary] = []
-        for route in routes where route.shape.count >= 2 {
-            let boarding = route.paraderos.enumerated().filter {
-                PolylineMatching.distanceMeters(origin, $0.element.coordinate) <= radius
+        for first in prepared {
+            if Task.isCancelled { return [] }
+            for board in first.boarding {
+                for alight in first.arriving where first.validRide(board, alight) {
+                    result.append(first.plan(board, alight, origin: origin, destination: destination))
+                }
             }
-            let arriving = route.paraderos.enumerated().filter {
-                PolylineMatching.distanceMeters(destination, $0.element.coordinate) <= radius
-            }
-            guard !boarding.isEmpty, !arriving.isEmpty else { continue }
-            // Mapear en orden evita invertir un recorrido o elegir el inicio de un bucle.
-            var shapeIndices: [Int] = []
-            var lower = 0
-            for stop in route.paraderos {
-                let best = (lower..<route.shape.count).min {
-                    PolylineMatching.distanceMeters(stop.coordinate, route.shape[$0]) <
-                    PolylineMatching.distanceMeters(stop.coordinate, route.shape[$1])
-                } ?? lower
-                shapeIndices.append(best)
-                lower = best
-            }
-            for board in boarding {
-                for alight in arriving where alight.offset > board.offset {
-                    let first = shapeIndices[board.offset], last = shapeIndices[alight.offset]
-                    guard last > first else { continue }
-                    let segment = Array(route.shape[first...last])
-                    guard PolylineMatching.distanceMeters(board.element.coordinate, segment[0]) < 80,
-                          PolylineMatching.distanceMeters(alight.element.coordinate, segment[segment.count - 1]) < 80 else { continue }
-                    // Conectores peatonales hasta el shape; el trazo continuo es siempre el GTFS.
-                    let plan = TransitItinerary(route: route, board: board.element, alight: alight.element,
-                        walkToBoard: [origin, board.element.coordinate, segment[0]], bus: segment,
-                        walkToDestination: [segment[segment.count - 1], alight.element.coordinate, destination])
-                    if plan.busMeters > 50 { result.append(plan) }
+            guard !first.boarding.isEmpty else { continue }
+            for second in prepared where second.route.id != first.route.id && !second.arriving.isEmpty {
+                // Conservar la mejor conexión de cada pareja de recorridos evita llenar
+                // la lista con variaciones del mismo viaje. Nunca invertir los paraderos.
+                var best: (score: Double, board: Int, exit: Int, enter: Int, alight: Int)?
+                let departures = first.route.paraderos.indices.compactMap { exit -> (Int, Int)? in
+                    first.boarding.filter { first.validRide($0, exit) }.min {
+                        first.startCost($0, exit) < first.startCost($1, exit)
+                    }.map { ($0, exit) }
+                }
+                let arrivals = second.route.paraderos.indices.compactMap { enter -> (Int, Int)? in
+                    second.arriving.filter { second.validRide(enter, $0) }.min {
+                        second.endCost(enter, $0) < second.endCost(enter, $1)
+                    }.map { (enter, $0) }
+                }
+                let nearby = Dictionary(grouping: arrivals) {
+                    TransitGridCell(point: second.stopPoints[$0.0], size: cellSize)
+                }
+                for (board, exit) in departures {
+                    if Task.isCancelled { return [] }
+                    let cell = TransitGridCell(point: first.stopPoints[exit], size: cellSize)
+                    for dx in -1...1 {
+                        for dy in -1...1 {
+                            let neighbor = TransitGridCell(x: cell.x + dx, y: cell.y + dy)
+                            for (enter, alight) in nearby[neighbor] ?? [] {
+                                let walking = PolylineMatching.distanceMeters(first.route.paraderos[exit].coordinate,
+                                                                              second.route.paraderos[enter].coordinate)
+                                guard walking + first.connectorMeters[exit] + second.connectorMeters[enter] <= maximumTransferWalk else { continue }
+                                let score = first.startCost(board, exit) + walking / 1.4 + second.endCost(enter, alight)
+                                if best == nil || score < best!.score { best = (score, board, exit, enter, alight) }
+                            }
+                        }
+                    }
+                }
+                if let best {
+                    var plan = first.plan(best.board, best.exit, origin: origin, destination: destination)
+                    let next = second.plan(best.enter, best.alight, origin: origin, destination: destination)
+                    plan.transfer = TransitTransfer(route: next.route, board: next.board, alight: next.alight,
+                        walk: [plan.bus.last!, plan.firstAlight.coordinate, next.board.coordinate, next.bus[0]],
+                        bus: next.bus, busDibujo: next.busDibujo, busMeters: next.firstBusMeters, busSpeed: next.busSpeed)
+                    plan.walkToDestination = next.walkToDestination
+                    if plan.walkingWithinTransferLimit { result.append(plan) }
                 }
             }
         }
-        return result.sorted {
-            if abs($0.totalSeconds - $1.totalSeconds) > 0.01 { return $0.totalSeconds < $1.totalSeconds }
-            return $0.route.id < $1.route.id
-        }
+        // Calcular el coste una vez: ordenar no debe volver a medir las caminatas.
+        return result.map { (plan: $0, score: $0.totalSeconds + ($0.transfer == nil ? 0 : 180)) }
+            .sorted {
+                if $0.score != $1.score { return $0.score < $1.score }
+                return ($0.plan.route.id + ($0.plan.transfer?.route.id ?? ""))
+                    < ($1.plan.route.id + ($1.plan.transfer?.route.id ?? ""))
+            }.map(\.plan)
     }
 
     func withWalkingDirections(using service: RouteCalculationService) async -> TransitItinerary {
@@ -861,13 +934,124 @@ struct TransitItinerary {
         }
         if let last {
             let points = PolylineMatching.coordinates(from: last.polyline)
-            if points.count >= 2 { result.walkToDestination = [bus[bus.count - 1], alight.coordinate] + points + [destination] }
+            if points.count >= 2 { result.walkToDestination = [(transfer?.bus.last ?? bus.last)!, alight.coordinate] + points + [destination] }
         }
         result.walkingApproximate = first == nil || last == nil || (first?.polyline.pointCount ?? 0) < 2 || (last?.polyline.pointCount ?? 0) < 2
+        if Task.isCancelled { return result }
+        if let connection = transfer {
+            let directions = try? await service.calculateRoute(from: firstAlight.coordinate,
+                                                               to: connection.board.coordinate, transportType: .walking)
+            if let directions, directions.polyline.pointCount >= 2 {
+                result.transfer?.walk = [bus.last!, firstAlight.coordinate]
+                    + PolylineMatching.coordinates(from: directions.polyline)
+                    + [connection.board.coordinate, connection.bus[0]]
+            } else {
+                result.walkingApproximate = true
+            }
+        }
         return result
     }
 }
 
+struct TransitTransfer {
+    let route: RutaGTFS
+    let board: ParaderoGTFS
+    let alight: ParaderoGTFS
+    var walk: [CLLocationCoordinate2D]
+    let bus: [CLLocationCoordinate2D]
+    let busDibujo: [CLLocationCoordinate2D]
+    let busMeters: Double
+    let busSpeed: Double
+    var walkMeters: Double { PolylineMatching.totalLengthMeters(walk) }
+}
+
+private struct TransitGridCell: Hashable {
+    let x: Int
+    let y: Int
+    init(x: Int, y: Int) { self.x = x; self.y = y }
+    init(point: MKMapPoint, size: Double) {
+        x = Int(floor(point.x / size))
+        y = Int(floor(point.y / size))
+    }
+}
+
+/// Índices y distancias acumuladas calculados una vez por recorrido y búsqueda.
+private struct PreparedTransitRoute {
+    let route: RutaGTFS
+    let indices: [Int]
+    let distances: [Double]
+    let connectorMeters: [Double]
+    let stopPoints: [MKMapPoint]
+    let startWalk: [Double]
+    let endWalk: [Double]
+    let boarding: [Int]
+    let arriving: [Int]
+    let origin: CLLocationCoordinate2D
+    let destination: CLLocationCoordinate2D
+    let speed: Double
+
+    init(route: RutaGTFS, origin: CLLocationCoordinate2D, destination: CLLocationCoordinate2D, radius: Double) {
+        self.route = route
+        self.origin = origin
+        self.destination = destination
+        speed = min(14, max(3, route.distanciaKm * 1000 / Double(max(1, route.duracionMin) * 60)))
+        stopPoints = route.paraderos.map { MKMapPoint($0.coordinate) }
+        let shapePoints = route.shape.map { MKMapPoint($0) }
+        var indices: [Int] = []
+        var lower = 0
+        for stop in route.paraderos {
+            let point = MKMapPoint(stop.coordinate)
+            var nearest = lower
+            var bestDistance = Double.infinity
+            for index in lower..<shapePoints.count {
+                let dx = point.x - shapePoints[index].x
+                let dy = point.y - shapePoints[index].y
+                let distance = dx * dx + dy * dy
+                if distance < bestDistance {
+                    bestDistance = distance
+                    nearest = index
+                }
+            }
+            lower = nearest
+            indices.append(lower)
+        }
+        self.indices = indices
+        let connectorMeters = route.paraderos.indices.map {
+            PolylineMatching.distanceMeters(route.paraderos[$0].coordinate, route.shape[indices[$0]])
+        }
+        self.connectorMeters = connectorMeters
+        var distances = [0.0]
+        for i in 1..<route.shape.count {
+            distances.append(distances.last! + PolylineMatching.distanceMeters(route.shape[i-1], route.shape[i]))
+        }
+        self.distances = distances
+        let startWalk = route.paraderos.map { PolylineMatching.distanceMeters(origin, $0.coordinate) }
+        let endWalk = route.paraderos.map { PolylineMatching.distanceMeters(destination, $0.coordinate) }
+        self.startWalk = startWalk
+        self.endWalk = endWalk
+        boarding = route.paraderos.indices.filter { startWalk[$0] + connectorMeters[$0] <= radius }
+        arriving = route.paraderos.indices.filter { endWalk[$0] + connectorMeters[$0] <= radius }
+    }
+    func validRide(_ board: Int, _ alight: Int) -> Bool {
+        alight > board && distances[indices[alight]] - distances[indices[board]] > 50
+        && connectorMeters[board] < 80 && connectorMeters[alight] < 80
+    }
+    func startCost(_ board: Int, _ alight: Int) -> Double {
+        (startWalk[board] + connectorMeters[board] + connectorMeters[alight]) / 1.4
+        + (distances[indices[alight]] - distances[indices[board]]) / speed
+    }
+    func endCost(_ board: Int, _ alight: Int) -> Double {
+        (endWalk[alight] + connectorMeters[board] + connectorMeters[alight]) / 1.4
+        + (distances[indices[alight]] - distances[indices[board]]) / speed
+    }
+    func plan(_ board: Int, _ alight: Int, origin: CLLocationCoordinate2D,
+              destination: CLLocationCoordinate2D) -> TransitItinerary {
+        let segment = Array(route.shape[indices[board]...indices[alight]])
+        return TransitItinerary(route: route, board: route.paraderos[board], alight: route.paraderos[alight],
+            walkToBoard: [origin, route.paraderos[board].coordinate, segment[0]], bus: segment,
+            walkToDestination: [segment.last!, route.paraderos[alight].coordinate, destination])
+    }
+}
 
 /// El cálculo geométrico del feed no bloquea los gestos ni las animaciones.
 actor TransitPlanner {

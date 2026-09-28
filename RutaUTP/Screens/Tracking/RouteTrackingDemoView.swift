@@ -219,13 +219,27 @@ struct RouteTrackingDemoView: View {
                     .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
                 MapPolyline(coordinates: plan.busDibujo)
                     .stroke(colorRuta, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                if let transfer = plan.transfer {
+                    MapPolyline(coordinates: transfer.walk)
+                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
+                    MapPolyline(coordinates: transfer.busDibujo)
+                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                    MapPolyline(coordinates: transfer.busDibujo)
+                        .stroke(transfer.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    Annotation(plan.firstAlight.nombre, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
+                        TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .orange)
+                    }
+                    Annotation(transfer.board.nombre, coordinate: transfer.board.coordinate, anchor: .bottom) {
+                        TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
+                    }
+                }
                 MapPolyline(coordinates: plan.walkToDestination)
                     .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
                 Annotation(L.t("Sube aquí", "Board here"), coordinate: plan.board.coordinate, anchor: .bottom) {
                     TransitStopMarker(number: "1", title: L.t("SUBE", "BOARD"), color: .secondary)
                 }
                 Annotation(L.t("Baja aquí", "Get off here"), coordinate: plan.alight.coordinate, anchor: .bottom) {
-                    TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .appPrimary)
+                    TransitStopMarker(number: plan.transfer == nil ? "2" : "4", title: L.t("BAJA", "EXIT"), color: .appPrimary)
                 }
             } else if let stop = vm.nearestStop {
                 Annotation(stop.nombre, coordinate: stop.coordinate, anchor: .bottom) {
@@ -524,8 +538,7 @@ struct RouteTrackingDemoView: View {
                 if let rutaReal = vm.rutaGTFS {
                     HStack(spacing: 6) {
                         Circle().fill(rutaReal.color).frame(width: 7, height: 7)
-                        Text(L.t("Ruta real · Línea \(rutaReal.linea) · \(rutaReal.empresa)",
-                                 "Real route · Line \(rutaReal.linea) · \(rutaReal.empresa)"))
+                        Text(L.t("Ruta real · ", "Real route · ") + (vm.itinerary?.lineDescription ?? rutaReal.linea))
                             .lineLimit(1)
                     }
                     .font(.system(size: 11, weight: .semibold))
@@ -837,7 +850,7 @@ struct RouteTrackingDemoView: View {
         case .esperandoGPS:  return "antenna.radiowaves.left.and.right"
         case .sinPermiso:    return "location.slash.fill"
         case .listo:         return "location.fill"
-        case .enRuta:        return vm.journeyLeg == .riding ? "bus.fill" : "figure.walk"
+        case .enRuta:        return (vm.journeyLeg == .riding || vm.journeyLeg == .ridingSecond) ? "bus.fill" : "figure.walk"
         case .fueraDeRuta:   return "exclamationmark.triangle.fill"
         case .cercaDestino:  return "bell.badge.fill"
         case .finalizado:    return "checkmark.circle.fill"
@@ -868,6 +881,8 @@ struct RouteTrackingDemoView: View {
             switch vm.journeyLeg {
             case .walkingToBoard: return L.t("Camina al paradero de subida", "Walk to your boarding stop")
             case .riding: return L.t("Toma el micro \(vm.rutaGTFS?.linea ?? "")", "Take bus \(vm.rutaGTFS?.linea ?? "")")
+            case .transferring: return L.t("Camina al segundo micro", "Walk to the second bus")
+            case .ridingSecond: return L.t("Toma el micro ", "Take bus ") + (vm.itinerary?.transfer?.route.linea ?? "")
             case .walkingToDestination: return L.t("Baja y camina a tu destino", "Get off and walk to your destination")
             }
         case .fueraDeRuta(let metros):
@@ -892,7 +907,9 @@ struct RouteTrackingDemoView: View {
             guard let plan = vm.itinerary else { return "" }
             switch vm.journeyLeg {
             case .walkingToBoard: return plan.board.nombre
-            case .riding: return L.t("Baja en ", "Get off at ") + plan.alight.nombre
+            case .riding: return L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre
+            case .transferring: return plan.transfer?.board.nombre ?? ""
+            case .ridingSecond: return L.t("Baja en ", "Get off at ") + plan.alight.nombre
             case .walkingToDestination: return vm.destinoSeleccionado?.label ?? ""
             }
         case .fueraDeRuta:
@@ -1010,7 +1027,18 @@ struct RouteTrackingDemoView: View {
                   systemImage: "figure.walk")
             Label(L.t("Micro ", "Bus ") + plan.route.linea + " · " + plan.route.precioTexto,
                   systemImage: "bus.fill")
-            Label("2 · " + plan.alight.nombre + " · \(Int(plan.walkToDestinationMeters)) m " + L.t("al destino", "to destination"),
+            if let transfer = plan.transfer {
+                Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
+                Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
+                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(transfer.walkMeters))) m · " + transfer.board.nombre,
+                      systemImage: "figure.walk")
+                Label(L.t("Luego toma ", "Then take ") + transfer.route.linea + " · " + transfer.route.precioTexto,
+                      systemImage: "arrow.triangle.swap")
+                Text(L.t("El tiempo incluye una espera estimada para el segundo micro.",
+                         "Time includes an estimated wait for the second bus."))
+                    .foregroundStyle(Color.onSurfaceVariant)
+            }
+            Label((plan.transfer == nil ? "2 · " : "4 · ") + plan.alight.nombre + " · \(Int(plan.walkToDestinationMeters)) m " + L.t("al destino", "to destination"),
                   systemImage: "flag.checkered")
             Text(L.t("··· Caminata     ━ Recorrido del micro", "··· Walk     ━ Bus route"))
                 .font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)

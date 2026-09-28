@@ -229,6 +229,106 @@ final class TransitItineraryTests: XCTestCase {
                                                   destination: inicioCualquiera, radius: 500).isEmpty)
     }
 
+    private func line(_ id: String, _ points: [CLLocationCoordinate2D], headway: Int = 6) -> RutaGTFS {
+        RutaGTFS(id: id, linea: id, variante: "", recorrido: id, empresa: "Test",
+                 colorHex: "00CC00", color: .green, shape: points,
+                 paraderos: points.enumerated().map {
+                     ParaderoGTFS(id: "\(id)-\($0.offset)", nombre: "\(id)-\($0.offset)",
+                                  lat: $0.element.latitude, lon: $0.element.longitude)
+                 }, duracionMin: 10, headwayMin: headway, precio: 2,
+                 distanciaKm: PolylineMatching.totalLengthMeters(points) / 1000, distanciaUTPMetros: 0)
+    }
+    private var transferNetwork: (RutaGTFS, RutaGTFS) {
+        let start = CLLocationCoordinate2D(latitude: -8.10, longitude: -79.04)
+        let exit = CLLocationCoordinate2D(latitude: -8.10, longitude: -79.03)
+        let enter = CLLocationCoordinate2D(latitude: -8.099, longitude: -79.03)
+        let end = CLLocationCoordinate2D(latitude: -8.09, longitude: -79.03)
+        return (line("A", [start, exit]), line("B", [enter, end]))
+    }
+
+    func testEncuentraDosMicrosSinLineaDirecta() throws {
+        let (a, b) = transferNetwork
+        let plans = TransitItinerary.candidates(in: [a, b], origin: a.shape[0], destination: b.shape[1], radius: 50)
+        let plan = try XCTUnwrap(plans.first)
+        let transfer = try XCTUnwrap(plan.transfer)
+        XCTAssertEqual(plan.route.id, "A")
+        XCTAssertEqual(transfer.route.id, "B")
+        XCTAssertEqual(plan.firstAlight.id, "A-1")
+        XCTAssertEqual(transfer.board.id, "B-0")
+        XCTAssertEqual(plan.alight.id, "B-1")
+        XCTAssertGreaterThan(plan.transferWalkMeters, 100)
+        XCTAssertLessThan(plan.transferWalkMeters, 120)
+        XCTAssertEqual(plan.busMeters, plan.firstBusMeters + transfer.busMeters, accuracy: 0.001)
+        XCTAssertEqual(plan.coordinates.count, plan.walkToBoard.count + plan.bus.count + transfer.walk.count
+                       + transfer.bus.count + plan.walkToDestination.count)
+        XCTAssertEqual(plan.remainingSeconds(after: 0), plan.totalSeconds, accuracy: 0.001)
+        XCTAssertEqual(plan.remainingSeconds(after: 100_000), 0)
+        XCTAssertEqual(plan.transferWaitSeconds, 300)
+    }
+
+    func testTransbordoNoInvierteSegundoMicro() {
+        let (a, b) = transferNetwork
+        let reversed = line("B", b.shape.reversed())
+        XCTAssertTrue(TransitItinerary.candidates(in: [a, reversed], origin: a.shape[0],
+                                                 destination: b.shape[1], radius: 50).isEmpty)
+    }
+
+    func testTransbordoNoInviertePrimerMicro() {
+        let (a, b) = transferNetwork
+        let reversed = line("A", a.shape.reversed())
+        XCTAssertTrue(TransitItinerary.candidates(in: [reversed, b], origin: a.shape[0],
+                                                 destination: b.shape[1], radius: 50).isEmpty)
+    }
+
+    func testRechazaConexionDemasiadoLejana() {
+        let (a, b) = transferNetwork
+        let far = line("B", [CLLocationCoordinate2D(latitude: -8.095, longitude: -79.03), b.shape[1]])
+        XCTAssertTrue(TransitItinerary.candidates(in: [a, far], origin: a.shape[0],
+                                                 destination: b.shape[1], radius: 50).isEmpty)
+    }
+
+    func testNoProponeCambiarAlMismoRecorrido() {
+        let a = rutaSintetica()
+        let plans = TransitItinerary.candidates(in: [a], origin: a.shape[0], destination: a.shape.last!, radius: 50)
+        XCTAssertFalse(plans.isEmpty)
+        XCTAssertTrue(plans.allSatisfy { $0.transfer == nil })
+    }
+
+    func testPrefiereDirectoCuandoLosTiemposSonParecidos() throws {
+        let (a, b) = transferNetwork
+        let direct = line("Direct", [a.shape[0], a.shape[1], b.shape[0], b.shape[1]])
+        let plans = TransitItinerary.candidates(in: [a, b, direct], origin: a.shape[0], destination: b.shape[1], radius: 50)
+        XCTAssertNil(try XCTUnwrap(plans.first).transfer)
+        XCTAssertTrue(plans.contains { $0.route.id == "A" && $0.transfer?.route.id == "B" })
+    }
+
+    func testPrefiereTransbordoAnteUnDesvioDirectoLargo() throws {
+        let (a, b) = transferNetwork
+        let direct = line("Detour", [a.shape[0], CLLocationCoordinate2D(latitude: -8.30, longitude: -79.20), b.shape[1]])
+        let plans = TransitItinerary.candidates(in: [a, b, direct], origin: a.shape[0], destination: b.shape[1], radius: 50)
+        XCTAssertNotNil(try XCTUnwrap(plans.first).transfer)
+    }
+
+    func testRechazaCaminataRealDeConexionSuperiorAlLimite() throws {
+        let (a, b) = transferNetwork
+        var plan = try XCTUnwrap(TransitItinerary.candidates(in: [a, b], origin: a.shape[0],
+                                                           destination: b.shape[1], radius: 50).first)
+        plan.transfer?.walk = [a.shape[1], CLLocationCoordinate2D(latitude: -8.11, longitude: -79.03), b.shape[0]]
+        XCTAssertFalse(plan.walkingWithinTransferLimit)
+    }
+
+    func testPlanificaConElFeedIncluido() async throws {
+        let routes = await GTFSRepository.shared.rutas()
+        let route = try XCTUnwrap(routes.first { $0.paraderos.count > 3 })
+        let start = Date()
+        let plans = await TransitPlanner.shared.candidates(in: routes, origin: route.paraderos.first!.coordinate,
+                                                           destination: route.paraderos.last!.coordinate, radius: 800)
+        XCTAssertFalse(plans.isEmpty)
+        XCTAssertTrue(plans.allSatisfy { $0.walkingWithinTransferLimit && $0.busMeters > 50 })
+        XCTAssertLessThan(Date().timeIntervalSince(start), 10, "La búsqueda local no debe tardar decenas de segundos")
+        print("[TransitPlanner] \(routes.count) rutas: \(plans.count) candidatos en \(Date().timeIntervalSince(start)) s")
+    }
+
     private var inicioCualquiera: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: -8.10, longitude: -79.04)
     }
