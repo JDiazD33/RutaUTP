@@ -86,6 +86,123 @@ struct MarcadorDestinoBuscado: View {
     }
 }
 
+// MARK: - Marcador de referencia (pin)
+
+// MARK: Forma de la "gota" del pin
+
+/// Silueta clásica de marcador de mapa: cabeza circular que se estrecha en una
+/// punta. La punta es la que se clava en la coordenada, así que el ancla del
+/// marcador es `.bottom` (`MarcadorPin.ancla`).
+struct FormaPinGota: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let r = rect.width / 2
+        let cx = rect.midX
+        let cy = r            // centro de la cabeza
+        let puntaY = rect.height
+
+        // La cabeza es un semicírculo por encima de `cy`.
+        p.move(to: CGPoint(x: cx - r, y: cy))
+        p.addArc(center: CGPoint(x: cx, y: cy), radius: r,
+                 startAngle: .degrees(180), endAngle: .degrees(360),
+                 clockwise: false)
+        // Y de ahí cae a la punta con dos curvas: los flancos del pin.
+        p.addQuadCurve(to: CGPoint(x: cx, y: puntaY),
+                       control: CGPoint(x: cx + r * 0.88,
+                                        y: cy + (puntaY - cy) * 0.55))
+        p.addQuadCurve(to: CGPoint(x: cx - r, y: cy),
+                       control: CGPoint(x: cx - r * 0.88,
+                                        y: cy + (puntaY - cy) * 0.55))
+        p.closeSubpath()
+        return p
+    }
+}
+
+// MARK: El pin que el usuario deja caer en el mapa
+
+/// Marcador de referencia que el usuario coloca sobre el mapa.
+///
+/// Distinto del marcador del usuario (el punto pulsante): aquel dice "aquí
+/// estoy", este dice "estoy mirando esto". Toca para quitarlo.
+struct MarcadorPin: View {
+    var color: Color = .appPrimary
+    var onTap: (() -> Void)?
+
+    /// Punto que se ancla en la coordenada: la punta de la gota.
+    static let ancla = UnitPoint(x: 0.5, y: 1)
+
+    var body: some View {
+        FormaPinGota()
+            .fill(color)
+            .frame(width: 34, height: 46)
+            .overlay {
+                // El hueco interior: sin él la gota es una mancha sólida y no
+                // se lee como "un punto" a tamaño real.
+                FormaPinGota()
+                    .fill(Color.surfaceContainerLowest)
+                    .frame(width: 12, height: 17)
+                    .offset(y: -11)
+            }
+            .overlay {
+                FormaPinGota()
+                    .stroke(Color.white, lineWidth: 2.5)
+            }
+            .shadow(color: .black.opacity(0.30), radius: 5, x: 0, y: 3)
+            .contentShape(Rectangle())
+            .onTapGesture { onTap?() }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L.t("Marcador en el mapa", "Map marker"))
+            .accessibilityHint(L.t("Toca para quitar el marcador",
+                                   "Tap to remove the marker"))
+            .accessibilityAddTraits(.isButton)
+    }
+}
+
+// MARK: El pin flotante mientras se está colocando
+
+/// La versión "en vuelo" del pin: aparece clavada en el centro de la pantalla
+/// mientras el usuario desplaza el mapa para elegir el punto.
+///
+/// Es la misma silueta pero sin sombra de mapa y con un anillo en el suelo que
+/// marca dónde va a caer, para que quede claro que la posición aún no está
+/// fijada.
+struct PinEnColocacion: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var latiendo = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            FormaPinGota()
+                .fill(Color.appPrimary)
+                .frame(width: 30, height: 40)
+                .overlay {
+                    FormaPinGota()
+                        .fill(Color.surfaceContainerLowest)
+                        .frame(width: 10, height: 14)
+                        .offset(y: -9)
+                }
+                .overlay {
+                    FormaPinGota()
+                        .stroke(Color.white, lineWidth: 2.5)
+                }
+                .shadow(color: .black.opacity(0.22), radius: 4, x: 0, y: 2)
+
+            // Anillo en el suelo: el punto exacto donde caerá el pin.
+            Circle()
+                .stroke(Color.appPrimary.opacity(0.35), lineWidth: 2)
+                .frame(width: latiendo ? 26 : 16, height: latiendo ? 26 : 16)
+                .animation(
+                    reduceMotion
+                    ? nil
+                    : .easeOut(duration: 0.9).repeatForever(autoreverses: true),
+                    value: latiendo
+                )
+        }
+        .allowsHitTesting(false)
+        .onAppear { latiendo = !reduceMotion }
+    }
+}
+
 // MARK: - Etiqueta del bus (la píldora con la línea)
 
 /// La píldora que identifica el bus: color de la línea, icono, nombre y rumbo.
