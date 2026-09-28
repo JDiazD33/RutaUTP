@@ -125,10 +125,15 @@ Con «Ayudar con ubicaciones» activo, el mapa ofrece **Estoy en un micro**.
 El selector muestra las líneas cercanas primero cuando existe ubicación, permite
 buscar por línea o empresa y distingue los ramales. Después se puede indicar
 **Vacío**, **Con espacio** o **Lleno**, o saltar ese paso. También hay un campo
-opcional «¿Dónde subiste?» para una calle, cruce o paradero de alumnos. Se guarda
+opcional «¿Dónde subiste?» para una calle, cruce o paradero de alumnos. Permite
+abrir un mapa completo, tocar el punto, centrar en la ubicación actual y confirmar
+con «Usar este punto». Cancelar conserva la selección anterior y «Quitar» elimina
+el punto del borrador. Texto y punto son independientes y opcionales. Se guarda
 solo en el teléfono, asociado a la ruta y hora de registro (no hora de abordaje
 verificada), con un máximo de 200 referencias. No se publica ni se atribuye la
-posición GPS actual al lugar descrito; queda disponible para un futuro catálogo.
+posición GPS actual al lugar descrito: solo se conservan coordenadas cuando el
+usuario confirma el punto. Los registros antiguos sin coordenadas siguen siendo
+legibles. Todo queda disponible para un futuro catálogo.
 La hora de inicio se registra localmente y las observaciones GPS llevan
 su hora y ubicación cuando el detector autoriza transmitir.
 
@@ -140,6 +145,14 @@ la sesión, descarta pendientes y espera otro viaje declarado; un descenso
 detectado termina también el viaje. Desactivar la contribución limpia la selección.
 El viaje declarado no se restaura tras cerrar el proceso; las credenciales y el
 consentimiento sí se conservan. En segundo plano se pausa el envío.
+
+### Paraderos guardados en Seguridad
+
+Antes de Comunidad aparece **Paraderos guardados**, con acceso al detalle,
+ubicación y eliminación de cada paradero. Comparte `LugaresStore` con Guardado
+y se actualiza al cerrar el mapa de paraderos. Los nuevos registros conservan
+el identificador GTFS; los antiguos se reconocen por nombre y coordenadas del
+catálogo completo, sin exigir volver a guardarlos.
 
 ### Persistencia
 
