@@ -321,6 +321,10 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var busesAnimados: [BusAnimado] = []
     @Published var busSeleccionado: BusAnimado? = nil
     @Published private(set) var fuenteFlota: VehicleTrackingSource = .simulated
+
+    var hayPosicionesRealesRecientes: Bool {
+        fuenteFlota == .real && !flotaBuses.isEmpty
+    }
     /// Movimiento mínimo (m) para publicar una nueva instantánea. A 20 Hz cada
     /// tick avanza unos centímetros, así que casi todas las publicaciones no
     /// cambiaban nada visible pero rehacían el cuerpo de `MapaView` completo

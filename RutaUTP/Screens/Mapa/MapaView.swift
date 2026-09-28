@@ -356,14 +356,23 @@ struct MapaView: View {
                 .foregroundStyle(.appPrimary)
 
             if vm.fuenteFlota == .real {
-                Text(L.t("EN VIVO", "LIVE"))
+                // Tener credenciales no demuestra que hayan llegado posiciones.
+                // El proveedor elimina los vehículos cuando sus datos caducan.
+                let hayDatosRecientes = vm.hayPosicionesRealesRecientes
+                Text(hayDatosRecientes
+                     ? L.t("DATOS RECIENTES", "RECENT DATA")
+                     : L.t("ESPERANDO DATOS", "WAITING FOR DATA"))
                     .font(.system(size: 9, weight: .bold))
                     .appTracking(AppTracking.wideLabel)
-                    .foregroundStyle(Color.green)
+                    .foregroundStyle(hayDatosRecientes ? Color.green : Color.secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.green.opacity(0.14)))
-                    .accessibilityLabel(L.t("Vehículos en vivo", "Live vehicles"))
+                    .background(Capsule().fill(
+                        (hayDatosRecientes ? Color.green : Color.secondary).opacity(0.14)
+                    ))
+                    .accessibilityLabel(hayDatosRecientes
+                        ? L.t("Posiciones recientes de vehículos", "Recent vehicle positions")
+                        : L.t("Esperando posiciones de vehículos confirmados", "Waiting for confirmed vehicle positions"))
             }
 
             Spacer()
