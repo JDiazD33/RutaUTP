@@ -40,12 +40,13 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var selectedTripRoute: DetectionRouteGeometry?
     @Published private(set) var tripStartedAt: Date?
     @Published private(set) var boardingPlace: String?
+    @Published private(set) var boardingPoint: BoardingPoint?
     @Published private(set) var latestLocation: CLLocation?
     let tripOccupancy = OccupancyService()
     private var waitingForNewTrip = false
 
     /// La declaración orienta el detector; nunca salta sus comprobaciones.
-    func beginTrip(route: DetectionRouteGeometry, occupancy: BusOccupancyState?, boardingPlace: String = "") {
+    func beginTrip(route: DetectionRouteGeometry, occupancy: BusOccupancyState?, boardingPlace: String = "", boardingPoint: BoardingPoint? = nil) {
         guard isEnabled, isPublisherConfigured else { return }
         stopObservationSession()
         tripOccupancy.clearTripReport()
@@ -57,9 +58,9 @@ final class PassiveTrackingCoordinator: ObservableObject {
         selectedTripRoute = route
         tripStartedAt = Date()
         self.boardingPlace = BoardingPlaceStore.normalized(boardingPlace)
-        if let place = self.boardingPlace {
-            BoardingPlaceStore.save(routeID: route.id, line: route.linea, place: place)
-        }
+        self.boardingPoint = boardingPoint
+        BoardingPlaceStore.save(routeID: route.id, line: route.linea,
+                                place: self.boardingPlace ?? "", point: boardingPoint)
         waitingForNewTrip = false
         statusMessage = "Esperando detectar el viaje en la línea \(route.linea)"
         if let occupancy { updateTripOccupancy(occupancy) }
@@ -76,6 +77,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
         selectedTripRoute = nil
         tripStartedAt = nil
         boardingPlace = nil
+        boardingPoint = nil
         detectionEngine.reset()
         detectionState = .idle
         confirmedLine = nil
@@ -620,6 +622,7 @@ if isForcedOnboardForMQTTTest {
         selectedTripRoute = nil
         tripStartedAt = nil
         boardingPlace = nil
+        boardingPoint = nil
         tripOccupancy.clearTripReport()
         waitingForNewTrip = false
         statusMessage =
@@ -850,11 +853,29 @@ private func processForcedOnboardForMQTTTest(
 
 /// Referencias declaradas, no paraderos verificados. No se infiere que la
 /// ubicación actual del teléfono sea donde el pasajero subió anteriormente.
+struct BoardingPoint: Codable, Equatable {
+    let latitude: Double
+    let longitude: Double
+
+    init?(coordinate: CLLocationCoordinate2D) {
+        guard coordinate.latitude.isFinite, coordinate.longitude.isFinite,
+              CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+        latitude = coordinate.latitude
+        longitude = coordinate.longitude
+    }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}
+
 struct BoardingPlaceNote: Codable, Identifiable {
     let id: UUID
     let routeID: String
     let line: String
     let place: String
+    // Opcional para poder seguir leyendo las referencias anteriores sin mapa.
+    let point: BoardingPoint?
     let recordedAt: Date
 }
 
@@ -872,12 +893,13 @@ enum BoardingPlaceStore {
         return notes
     }
 
-    static func save(routeID: String, line: String, place: String,
+    static func save(routeID: String, line: String, place: String, point: BoardingPoint? = nil,
                      defaults: UserDefaults = .standard) {
-        guard let place = normalized(place) else { return }
+        let place = normalized(place)
+        guard place != nil || point != nil else { return }
         var records = notes(defaults: defaults)
         records.append(BoardingPlaceNote(id: UUID(), routeID: routeID, line: line,
-                                         place: place, recordedAt: Date()))
+                                         place: place ?? "", point: point, recordedAt: Date()))
         // Historial local acotado para preparar el futuro catálogo de paraderos.
         if let data = try? JSONEncoder().encode(Array(records.suffix(200))) {
             defaults.set(data, forKey: key)

@@ -114,6 +114,35 @@ final class PassiveTrackingCoordinatorTests:
         }
     }
 
+    func testPuntoDeSubidaSeGuardaSinExigirTexto() throws {
+        let suite = "rutautp.boarding-tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let point = try XCTUnwrap(BoardingPoint(coordinate: coordinate(-8.1, -79.03)))
+        BoardingPlaceStore.save(routeID: "route-10", line: "10", place: "  ", point: point, defaults: defaults)
+        let note = try XCTUnwrap(BoardingPlaceStore.notes(defaults: defaults).first)
+        XCTAssertEqual(note.point, point)
+        XCTAssertEqual(note.place, "")
+        XCTAssertEqual(note.routeID, "route-10")
+        BoardingPlaceStore.save(routeID: "route-10", line: "10", place: "  ", defaults: defaults)
+        XCTAssertEqual(BoardingPlaceStore.notes(defaults: defaults).count, 1)
+        XCTAssertNil(BoardingPoint(coordinate: coordinate(100, -79)))
+    }
+
+    func testReferenciasAnterioresSinCoordenadasSeConservan() throws {
+        let suite = "rutautp.boarding-tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let legacy: [[String: Any]] = [["id": UUID().uuidString, "routeID": "route-10",
+                                      "line": "10", "place": "Frente al campus", "recordedAt": 0]]
+        defaults.set(try JSONSerialization.data(withJSONObject: legacy), forKey: BoardingPlaceStore.key)
+        let before = try XCTUnwrap(BoardingPlaceStore.notes(defaults: defaults).first)
+        XCTAssertEqual(before.place, "Frente al campus")
+        XCTAssertNil(before.point)
+        BoardingPlaceStore.save(routeID: "route-20", line: "20", place: "Mercado", defaults: defaults)
+        XCTAssertEqual(BoardingPlaceStore.notes(defaults: defaults).count, 2)
+    }
+
     private func withStoredConsent(_ enabled: Bool, body: () -> Void) {
         let key = "rutautp.passive-tracking-consent"
         let previous = UserDefaults.standard.object(forKey: key)
