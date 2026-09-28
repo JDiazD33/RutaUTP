@@ -9,7 +9,8 @@ import SwiftUI
 
 struct BienvenidaView: View {
     @EnvironmentObject private var router: AppRouter
-    @State private var isPressed = false
+    @State private var selectedPage = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showLegalSheet = false
 
     var body: some View {
@@ -19,32 +20,67 @@ struct BienvenidaView: View {
             VStack(spacing: 0) {
                 progressBar
                 header
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        llegandocard
-                            .padding(.top, 8)
-
-                        busImage
-                            .padding(.horizontal, 20)
-
-                        heroText
-                            .padding(.horizontal, 20)
-
-                        pageDots
-
-                        featureGrid
-                            .padding(.horizontal, 20)
-
-                        ctaButton
-                            .padding(.horizontal, 20)
-
-                        legalFooter
-                            .padding(.horizontal, 32)
-                            .padding(.bottom, 40)
+                TabView(selection: $selectedPage) {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 24) {
+                            llegandocard.padding(.top, 8)
+                            busImage.padding(.horizontal, 20)
+                            heroText.padding(.horizontal, 20)
+                            featureGrid.padding(.horizontal, 20)
+                        }
+                        .padding(.bottom, 20)
+                        .frame(maxWidth: 428)
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: 428)
-                    .frame(maxWidth: .infinity)
+                    .tag(0)
+
+                    newsPage(
+                        icon: "bus.fill",
+                        badge: L.t("NUEVO · TU VIAJE", "NEW · YOUR TRIP"),
+                        title: L.t("Tu micro, mejor identificado", "Help identify your bus"),
+                        description: L.t("Ahora puedes indicar qué línea tomaste y cómo va de llena, desde el mapa.",
+                                         "You can now choose your bus line and report how full it is, right from the map."),
+                        highlights: [
+                            ("hand.tap.fill", L.t("Activa «Ayudar con ubicaciones» y toca «Estoy en un micro».",
+                                                 "Enable location contributions and tap ‘I'm on a bus’.")),
+                            ("person.2.fill", L.t("Elige la línea y, si quieres, indica si va vacío, con espacio o lleno.",
+                                                 "Choose your line and optionally report empty, room available or full.")),
+                            ("checkmark.circle.fill", L.t("La app comprueba el viaje; al bajar, toca «Ya bajé».",
+                                                         "The app checks your trip; tap ‘I've got off’ when you leave."))
+                        ]
+                    )
+                    .tag(1)
+
+                    newsPage(
+                        icon: "mappin.and.ellipse",
+                        badge: L.t("NUEVO · TUS PARADEROS", "NEW · YOUR STOPS"),
+                        title: L.t("Guarda los puntos que te sirven", "Keep the stops you need"),
+                        description: L.t("Encuentra tus paraderos guardados en Seguridad, antes de Comunidad.",
+                                         "Find your saved stops in Safety, before Community."),
+                        highlights: [
+                            ("bookmark.fill", L.t("Guarda un paradero desde «Paraderos y referencias».",
+                                                 "Save a stop from ‘Stops and landmarks’.")),
+                            ("map.fill", L.t("En tu viaje puedes marcar dónde subiste o escribir una referencia. Es opcional.",
+                                            "During trip setup, optionally mark where you boarded or write a landmark.")),
+                            ("iphone", L.t("Las referencias de subida se guardan en tu teléfono para futuros paraderos de alumnos.",
+                                           "Boarding references stay on your phone for future student stops."))
+                        ]
+                    )
+                    .tag(2)
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                VStack(spacing: 14) {
+                    pageDots
+                    ctaButton
+                    legalFooter
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+                .frame(maxWidth: 428)
+                .frame(maxWidth: .infinity)
+
             }
         }
         .sheet(isPresented: $showLegalSheet) {
@@ -158,12 +194,76 @@ struct BienvenidaView: View {
     }
 
     private var pageDots: some View {
-        HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(Color.appPrimary)
-                .frame(width: 40, height: 8)
-            Circle().fill(Color.gray.opacity(0.3)).frame(width: 8, height: 8)
-            Circle().fill(Color.gray.opacity(0.3)).frame(width: 8, height: 8)
+        VStack(spacing: 0) {
+            HStack(spacing: 4) {
+                ForEach(0..<3) { page in
+                    Button {
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                            selectedPage = page
+                        }
+                    } label: {
+                        Capsule()
+                            .fill(selectedPage == page ? Color.appPrimary : Color.gray.opacity(0.3))
+                            .frame(width: selectedPage == page ? 36 : 8, height: 8)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Página \(page + 1) de 3", "Page \(page + 1) of 3"))
+                    .accessibilityValue(selectedPage == page ? L.t("Seleccionada", "Selected") : "")
+                }
+            }
+            Text(L.t("Desliza para conocer las novedades", "Swipe to discover what's new"))
+                .font(.caption).foregroundStyle(Color.onSurfaceVariant)
+        }
+    }
+
+    private func newsPage(icon: String, badge: String, title: String, description: String,
+                          highlights: [(String, String)]) -> some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 24) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 30)
+                        .fill(LinearGradient(colors: [Color.appPrimary.opacity(0.16), Color.surfaceContainerLowest],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Circle().stroke(Color.appPrimary.opacity(0.15), lineWidth: 1)
+                        .frame(width: 170, height: 170)
+                    Circle().fill(Color.appPrimary.opacity(0.1))
+                        .frame(width: 128, height: 128)
+                    Image(systemName: icon)
+                        .font(.system(size: 58, weight: .semibold))
+                        .foregroundStyle(Color.appPrimary)
+                }
+                .frame(height: 210)
+                .accessibilityHidden(true)
+
+                VStack(spacing: 12) {
+                    Text(badge).font(.caption.weight(.bold))
+                        .foregroundStyle(Color.appPrimary)
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(Color.appPrimary.opacity(0.08), in: Capsule())
+                    Text(title).font(.displayLg)
+                        .foregroundStyle(Color.onSurface).multilineTextAlignment(.center)
+                    Text(description).font(.bodyLg)
+                        .foregroundStyle(Color.onSurfaceVariant).multilineTextAlignment(.center)
+                }
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(highlights.indices, id: \.self) { index in
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: highlights[index].0)
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(Color.appPrimary).frame(width: 26)
+                                .accessibilityHidden(true)
+                            Text(highlights[index].1).font(.bodyMd).foregroundStyle(Color.onSurface)
+                        }
+                    }
+                }
+                .padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 22))
+            }
+            .padding(20)
+            .frame(maxWidth: 428)
+            .frame(maxWidth: .infinity)
         }
     }
 
