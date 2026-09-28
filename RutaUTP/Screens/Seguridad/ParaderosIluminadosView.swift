@@ -406,19 +406,15 @@ struct ParaderosIluminadosView: View {
     private func refreshSaved() {
         let places = LugaresStore.cargar()
         savedIDs = Set(stops.filter { stop in
-            places.contains { place in
-                place.nombre == stop.nombre && place.coordinate.map {
-                    PolylineMatching.distanceMeters($0, stop.coordinate) < 5
-                } == true
-            }
+            places.contains { $0.corresponde(al: stop) }
         }.map(\.id))
     }
     private func toggleSaved(_ stop: ParaderoGTFS) {
         var places = LugaresStore.cargar()
-        if let index = places.firstIndex(where: { $0.nombre == stop.nombre && $0.coordinate.map { PolylineMatching.distanceMeters($0, stop.coordinate) < 5 } == true && !$0.esFijo }) {
+        if let index = places.firstIndex(where: { $0.corresponde(al: stop) && !$0.esFijo }) {
             places.remove(at: index)
         } else {
-            places.append(LugarGuardado(nombre: stop.nombre, direccion: "Trujillo", categoria: .otro, lat: stop.lat, lon: stop.lon))
+            places.append(LugarGuardado(nombre: stop.nombre, direccion: "Trujillo", categoria: .otro, lat: stop.lat, lon: stop.lon, paraderoID: stop.id))
         }
         LugaresStore.guardar(places); refreshSaved(); AppHaptics.success()
     }

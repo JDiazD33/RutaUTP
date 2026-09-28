@@ -27,6 +27,7 @@ struct SeguridadView: View {
     // Paraderos iluminados (reales del feed GTFS) + mapa fullscreen
     @State private var paraderosIluminados: [ParaderoGTFS] = []
     @State private var showParaderosMap = false
+    @State private var catalogoParaderos: [ParaderoGTFS] = []
 
     /// Lugares guardados, tiles y modo edición (estilo Springboard).
     /// Los datos y sus operaciones viven en el modelo; en la vista solo queda
@@ -301,6 +302,7 @@ struct SeguridadView: View {
                             greetingCard
                             lugaresSection
                             rutasSegurasSection
+                            paraderosGuardadosSection
                             comunidadSection
                         }
                         Spacer(minLength: 20)
@@ -339,10 +341,11 @@ struct SeguridadView: View {
             if paraderosIluminados.isEmpty {
                 let feed = await GTFSRepository.shared.rutas()
                 paraderosIluminados = ParaderosIluminados.seleccionar(feed)
+                catalogoParaderos = feed.flatMap(\.paraderos)
             }
         }
         // Mapa fullscreen de paraderos iluminados (desde el banner)
-        .fullScreenCover(isPresented: $showParaderosMap) {
+        .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { lugaresVM.cargar() }) {
             ParaderosIluminadosView(paraderos: paraderosIluminados)
         }
         .sheet(isPresented: $showReportarSheet) {
@@ -782,6 +785,60 @@ struct SeguridadView: View {
             } catch {
                 guard zonaSeleccionada?.id == zona.id else { return }
                 errorZona = L.t("No pudimos buscar el lugar. Revisa tu conexión.", "Could not find the location. Check your connection.")
+            }
+        }
+    }
+
+    private var paraderosGuardados: [LugarGuardado] {
+        lugaresVM.lugares.filter { lugar in
+            !lugar.esFijo && (lugar.paraderoID != nil || catalogoParaderos.contains { lugar.corresponde(al: $0) })
+        }
+    }
+
+    private var paraderosGuardadosSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "bookmark.fill").foregroundStyle(Color.appPrimary)
+                Text(L.t("Paraderos guardados", "Saved stops")).font(.headlineSm)
+                Spacer()
+                Text("\(paraderosGuardados.count)")
+                    .font(.caption.weight(.semibold)).foregroundStyle(Color.onSurfaceVariant)
+            }
+            if paraderosGuardados.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L.t("Guarda un paradero en «Paraderos y referencias» y lo encontrarás aquí.",
+                             "Save a stop in ‘Stops and landmarks’ to find it here."))
+                        .font(.subheadline).foregroundStyle(Color.onSurfaceVariant)
+                    Button { showParaderosMap = true } label: {
+                        Label(L.t("Explorar paraderos", "Explore stops"), systemImage: "map")
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 18))
+            } else {
+                ForEach(paraderosGuardados) { lugar in
+                    Button { selectedLugar = lugar } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bus.fill")
+                                .foregroundStyle(Color.appPrimary)
+                                .frame(width: 44, height: 44)
+                                .background(Color.appPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(lugar.nombre).font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.onSurface).multilineTextAlignment(.leading)
+                                Text(L.t("Ver ubicación y opciones", "View location and options"))
+                                    .font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").foregroundStyle(Color.onSurfaceVariant)
+                        }
+                        .padding(14)
+                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 18))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Abrir paradero guardado: ", "Open saved stop: ") + lugar.nombre)
+                }
             }
         }
     }

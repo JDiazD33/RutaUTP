@@ -343,6 +343,32 @@ final class SeguridadLugaresModelTests: XCTestCase {
                       categoria: fijo ? .universidad : .otro, esFijo: fijo)
     }
 
+    func testParaderoGuardadoConservaIdentidadAlRecargar() throws {
+        let saved = LugarGuardado(nombre: "Paradero de prueba", direccion: "Trujillo",
+                                 categoria: .otro, lat: -8.1, lon: -79.03, paraderoID: "stop-test")
+        LugaresStore.guardar([LugaresStore.lugarUTP(), saved])
+        LugaresStore.invalidarCache()
+        let restored = try XCTUnwrap(LugaresStore.cargar().first { $0.id == saved.id })
+        XCTAssertEqual(restored.paraderoID, "stop-test")
+        let model = SeguridadLugaresModel()
+        model.cargar()
+        model.eliminar(restored)
+        LugaresStore.invalidarCache()
+        XCTAssertFalse(LugaresStore.cargar().contains { $0.id == saved.id })
+    }
+
+    func testParaderoAnteriorSinIdentificadorSigueSiendoLegible() throws {
+        let saved = LugarGuardado(nombre: "Paradero anterior", direccion: "Trujillo",
+                                 categoria: .otro, lat: -8.1, lon: -79.03)
+        var body = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(saved)) as? [String: Any])
+        body.removeValue(forKey: "paraderoID")
+        let restored = try JSONDecoder().decode(LugarGuardado.self, from: JSONSerialization.data(withJSONObject: body))
+        XCTAssertEqual(restored.nombre, saved.nombre)
+        XCTAssertNil(restored.paraderoID)
+        let stop = ParaderoGTFS(id: "legacy-stop", nombre: "Paradero anterior", lat: -8.1, lon: -79.03)
+        XCTAssertTrue(restored.corresponde(al: stop))
+    }
+
     func testElFijoSiempreVaPrimero() {
         // El fijo se guarda al FINAL a propósito: el modelo debe subirlo.
         let utp = lugar("UTP", fijo: true)

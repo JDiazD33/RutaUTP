@@ -53,6 +53,7 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
     var esFrecuente: Bool
     var lat: Double?
     var lon: Double?
+    var paraderoID: String?
 
     /// Lugares fijos de la app (ej. campus UTP): no se pueden eliminar.
     ///
@@ -77,7 +78,8 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
          esFrecuente: Bool = false,
          lat: Double? = nil,
          lon: Double? = nil,
-         esFijo: Bool = false) {
+         esFijo: Bool = false,
+         paraderoID: String? = nil) {
         self.id = id
         self.nombre = nombre
         self.direccion = direccion
@@ -86,11 +88,20 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
         self.lat = lat
         self.lon = lon
         self.esFijo = esFijo
+        self.paraderoID = paraderoID
+    }
+
+    /// Compatibilidad con los paraderos guardados antes de persistir su ID.
+    func corresponde(al paradero: ParaderoGTFS) -> Bool {
+        if paraderoID == paradero.id { return true }
+        return nombre == paradero.nombre && coordinate.map {
+            PolylineMatching.distanceMeters($0, paradero.coordinate) < 5
+        } == true
     }
 
     // MARK: - Codable (colorBadge fuera de la persistencia)
     private enum CodingKeys: String, CodingKey {
-        case id, nombre, direccion, categoria, esFrecuente, lat, lon, esFijo
+        case id, nombre, direccion, categoria, esFrecuente, lat, lon, esFijo, paraderoID
     }
 
     init(from decoder: Decoder) throws {
@@ -102,6 +113,7 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
         esFrecuente = try c.decodeIfPresent(Bool.self, forKey: .esFrecuente) ?? false
         lat         = try c.decodeIfPresent(Double.self, forKey: .lat)
         lon         = try c.decodeIfPresent(Double.self, forKey: .lon)
+        paraderoID  = try c.decodeIfPresent(String.self, forKey: .paraderoID)
         // Ausente en datos guardados por versiones anteriores: `LugaresStore`
         // los migra al cargar.
         esFijo      = try c.decodeIfPresent(Bool.self, forKey: .esFijo) ?? false
