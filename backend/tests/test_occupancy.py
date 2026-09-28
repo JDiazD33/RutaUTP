@@ -149,3 +149,58 @@ def test_passenger_identity_is_reused_from_real_tracking_pipeline(feed, config, 
     assert send(bridge.occupancy, "outsider", vehicle_id=vehicle_id)[1]["code"] == "not_onboard"
     assert bridge.occupancy.snapshot(NOW)["buses"][0]["vehicleId"] == vehicle_id
     bridge.store.close()
+
+
+def test_route_report_uses_detected_vehicle_not_just_declared_line(setup):
+    service, vehicles = setup
+    vehicles[0].route_id = 'route-10'
+    vehicles[1].route_id = 'route-20'
+    assert send(service, vehicle_id=None, routeId='route-10', state='space')[1]['code'] == 'pending'
+    assert send(service, 'person-2', vehicle_id=None, routeId='route-10', state='space')[1]['code'] == 'confirmed'
+    assert service.snapshot(NOW)['buses'][0]['vehicleId'] == 'bus-1'
+    assert service.snapshot(NOW)['buses'][0]['state'] == 'space'
+    assert send(service, 'outsider', vehicle_id=None, routeId='route-10')[1]['code'] == 'not_onboard'
+    assert send(service, 'person-3', vehicle_id=None, routeId='unknown')[1]['code'] == 'not_onboard'
+
+
+def test_route_report_does_not_guess_between_two_vehicles(setup):
+    service, vehicles = setup
+    for vehicle in vehicles:
+        vehicle.route_id = 'route-10'
+    assert send(service, vehicle_id=None, routeId='route-10')[1]['code'] == 'not_onboard'
+    assert not service.votes
+
+
+def test_route_report_preserves_original_age(setup):
+    service, vehicles = setup
+    vehicles[0].route_id = 'route-10'
+    vehicles[1].route_id = 'route-20'
+    for principal in ('person-1', 'person-2'):
+        assert send(service, principal, vehicle_id=None, routeId='route-10', timestamp=NOW-120)[1]['accepted']
+    reading = service.snapshot(NOW)['buses'][0]
+    assert reading['expiresAt'] == NOW+60
+    assert send(service, 'person-3', vehicle_id=None, routeId='route-10', timestamp=NOW-180)[1]['code'] == 'invalid'
+
+
+def test_three_states_need_absolute_majority(setup):
+    service, _ = setup
+    send(service, 'person-1', state='space')
+    send(service, 'person-2', state='space')
+    send(service, 'person-3', state='empty')
+    send(service, 'person-4', state='full')
+    assert service.snapshot(NOW)['buses'] == []
+    send(service, 'person-5', state='space')
+    assert service.snapshot(NOW)['buses'][0]['confirmations'] == 3
+
+
+def test_report_cannot_mix_vehicle_and_route(setup):
+    service, _ = setup
+    assert send(service, routeId='route-10')[1]['code'] == 'invalid'
+
+
+def test_route_choice_waits_for_observation_after_choice(setup):
+    service, vehicles = setup
+    vehicles[0].route_id = 'route-10'
+    vehicles[1].route_id = 'route-20'
+    assert send(service, vehicle_id=None, routeId='route-10', now=NOW+1)[1]['code'] == 'not_onboard'
+    assert not service.votes

@@ -34,10 +34,9 @@ class Occupancy:
     def status(self, vehicle_id, now):
         votes = self.votes.get(vehicle_id, {})
         counts = {state: sum(v[0] == state for v in votes.values())
-                  for state in ("empty", "full")}
+                  for state in ("empty", "space", "full")}
         state = max(counts, key=counts.get)
-        other = "empty" if state == "full" else "full"
-        if counts[state] < 2 or counts[state] <= counts[other]:
+        if counts[state] < 2 or counts[state] * 2 <= sum(counts.values()):
             return None
         # Conservador: retirar al vencer el voto más antiguo de la mayoría.
         # El siguiente snapshot recalcula si aún queda quorum suficiente.
@@ -57,13 +56,27 @@ class Occupancy:
             if not isinstance(request_id, str) or not re.fullmatch(r"[A-Za-z0-9-]{1,64}", request_id):
                 return None
             receipt = dict(requestId=request_id, accepted=False, code="invalid")
-            vehicle_id, state, timestamp = body["vehicleId"], body["state"], body["timestamp"]
+            vehicle_id, route_id = body.get("vehicleId"), body.get("routeId")
+            state, timestamp = body["state"], body["timestamp"]
+            by_route = route_id is not None
+            target = route_id if by_route else vehicle_id
             if (type(body.get("schemaVersion")) is not int or body["schemaVersion"] != 1
-                or not isinstance(vehicle_id, str) or not 1 <= len(vehicle_id) <= 200
-                or state not in ("empty", "full")
+                or not isinstance(target, str) or not 1 <= len(target) <= 200
+                or (by_route and vehicle_id is not None)
+                or state not in ("empty", "space", "full")
                 or type(timestamp) not in (int, float) or not math.isfinite(timestamp)
-                or not -10 <= now - timestamp <= 60):
+                or not (-10 <= now - timestamp < WINDOW if by_route else -10 <= now - timestamp <= 60)):
                 return principal, receipt
+            if by_route:
+                # La línea declarada no crea vehículos ni acredita pasajeros.
+                # Resolver exclusivamente la unidad con observaciones validadas.
+                matches = [v for v in active.values() if v.route_id == route_id
+                           and -10 <= now - v.principals.get(principal, float("-inf")) <= 60
+                           and v.principals[principal] >= timestamp]
+                if len(matches) != 1:
+                    receipt["code"] = "not_onboard"
+                    return principal, receipt
+                vehicle_id = matches[0].vehicle_id
             vehicle = active.get(vehicle_id)
             if vehicle is None:
                 receipt["code"] = "unavailable"
@@ -85,7 +98,7 @@ class Occupancy:
             # Una cuenta no respalda simultáneamente la ocupación de dos buses.
             for group in self.votes.values():
                 group.pop(principal, None)
-            votes[principal] = state, now
+            votes[principal] = state, timestamp if by_route else now
             status = self.status(vehicle_id, now)
             receipt.update(accepted=True, code="confirmed" if status and status["state"] == state else "pending")
             return principal, receipt
