@@ -1,5 +1,36 @@
 # Cómo prender y apagar el backend de RutaUTP
 
+## Inicio rápido: encenderlo
+
+**El comando con `--health-check` solo revisa el estado. No prende el backend.**
+Si muestra «no hay latido legible» y no hay un proceso activo, el backend está
+apagado. Es esperable después de detenerlo; no es un error de los iPhone.
+
+Si ya está encendido, no abras otra copia. Puedes comprobar si hay un proceso
+con `pgrep -fl 'rutautp_backend|run_configured.py'`. Si no aparece ninguno,
+pega estas dos líneas en Terminal:
+
+```sh
+cd /Users/joaquindiaz05/Documents/RU-IOQT/RutaUTP
+backend/.venv/bin/python backend/tools/run_configured.py
+```
+
+**Para encenderlo, la segunda línea va SIN `--health-check`.** Deja esa terminal
+abierta. Verás los mensajes de carga y, al conectar, «conectado; suscribiendo…».
+Mientras funciona, es normal que la terminal no vuelva a mostrar el cursor
+para escribir otro comando. Para apagarlo desde esa terminal, pulsa **Control + C**.
+
+Después de encenderlo, abre **otra pestaña o ventana de Terminal** y comprueba:
+
+```sh
+cd /Users/joaquindiaz05/Documents/RU-IOQT/RutaUTP
+backend/.venv/bin/python backend/tools/run_configured.py --health-check
+```
+
+Debe mostrar `salud OK`. Si sigue fallando, revisa los mensajes de la primera
+terminal; no inicies otra copia. Para mantenerlo funcionando al cerrar Terminal,
+usa la alternativa «Prenderlo en segundo plano» de esta guía.
+
 ## Qué debe estar encendido
 
 EMQX recibe y distribuye los mensajes por internet. El backend de la carpeta
@@ -31,6 +62,8 @@ backend/.venv/bin/python backend/tools/run_configured.py --health-check
 pgrep -fl 'rutautp_backend|run_configured.py'
 ```
 
+Esta comprobación no lo enciende. Si aparece `salud FALLA: no hay latido legible`
+y la búsqueda no muestra procesos, continúa con «Prenderlo y ver sus mensajes».
 Si aparece `salud OK`, ya está activo. Si hay un proceso pero la comprobación
 falla, revisa sus mensajes y detenlo antes de iniciar otra copia. Un archivo de
 salud antiguo puede permanecer tras un cierre abrupto: por sí solo no prueba
@@ -117,6 +150,10 @@ se necesitan nuevas confirmaciones. El histórico SQLite se conserva en
 
 ## Problemas frecuentes
 
+- **«No hay latido legible» después de ejecutar `--health-check`:** ese comando
+  solo consulta. Si no hay proceso activo, enciéndelo con el comando sin
+  `--health-check`, como indica el inicio rápido. No crees `health.json` a mano;
+  lo escribe el backend cuando está funcionando.
 - **Contraseña rechazada:** revisa la contraseña MQTT del usuario `backend` en
   `backend.env`, sin agregar comillas. No es la contraseña de EMQX Cloud.
 - **Conectado, pero sin reportes:** comprueba los permisos de publicación y
