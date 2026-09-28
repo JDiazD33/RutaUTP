@@ -113,9 +113,33 @@ Los mapas base, las búsquedas y Apple Directions dependen de los servicios de A
 
 La configuración del broker se resuelve desde las variables `MQTT_HOST`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_PORT`, `MQTT_TLS` y `MQTT_CA_CERT`. Durante el desarrollo pueden definirse en el esquema local de Xcode. Las credenciales no se incluyen en el esquema compartido ni en el repositorio; cada instalación debe recibir un principal MQTT propio para que el quórum del backend distinga dispositivos reales.
 
+La app incluye el host de EMQX con TLS. Tras la primera ejecución desde Xcode con una cuenta propia, guarda la pareja de credenciales en Keychain y los datos públicos de conexión en preferencias. Puede recuperar esa configuración al abrirse desde su icono, sin las variables de Xcode. Los pasos de instalación para dos iPhone están en [la guía de EMQX](../backend/deploy/EMQX-PUESTA-EN-MARCHA.md#3-configurar-cada-iphone). Esto no crea cuentas automáticamente ni activa la contribución sin consentimiento.
+
 El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuando existe una configuración MQTT completa. Al activarlo, la app solicita consentimiento antes de iniciar GPS y Core Motion. El mapa muestra el estado de la contribución sobre el buscador. La publicación se pausa al bloquear la pantalla o enviar la app a segundo plano.
 
 El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición. El perfil productivo conserva las observaciones durante 30 días. La configuración, operación y pruebas del servicio están documentadas en `backend/README.md` y `mqtt/README.md`.
+
+### Declarar el micro del viaje
+
+Con «Ayudar con ubicaciones» activo, el mapa ofrece **Estoy en un micro**.
+El selector muestra las líneas cercanas primero cuando existe ubicación, permite
+buscar por línea o empresa y distingue los ramales. Después se puede indicar
+**Vacío**, **Con espacio** o **Lleno**, o saltar ese paso. También hay un campo
+opcional «¿Dónde subiste?» para una calle, cruce o paradero de alumnos. Se guarda
+solo en el teléfono, asociado a la ruta y hora de registro (no hora de abordaje
+verificada), con un máximo de 200 referencias. No se publica ni se atribuye la
+posición GPS actual al lugar descrito; queda disponible para un futuro catálogo.
+La hora de inicio se registra localmente y las observaciones GPS llevan
+su hora y ubicación cuando el detector autoriza transmitir.
+
+La línea declarada guía al detector sin forzar el abordaje. La ocupación queda
+pendiente hasta detectar el viaje y tener conexión con el backend; se reintenta
+cada 30 segundos como máximo durante los 3 minutos de validez de la elección.
+No se renueva un voto sin una nueva indicación del usuario. **Ya bajé** corta
+la sesión, descarta pendientes y espera otro viaje declarado; un descenso
+detectado termina también el viaje. Desactivar la contribución limpia la selección.
+El viaje declarado no se restaura tras cerrar el proceso; las credenciales y el
+consentimiento sí se conservan. En segundo plano se pausa el envío.
 
 ### Persistencia
 
