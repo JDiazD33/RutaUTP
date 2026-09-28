@@ -60,20 +60,42 @@ los teléfonos todavía requieren verificación desde cada cuenta.
 
 ## 3. Configurar cada iPhone
 
-En el esquema **local y no compartido** de Xcode usado para instalar en cada
-telefono, declarar estas variables en Run → Arguments → Environment Variables:
+La app ya incluye la dirección pública del broker, puerto 8883 y TLS.
+Cada instalación necesita recibir su propia pareja de usuario y contraseña una
+vez; no se necesita un registro de usuarios ni una base de datos de cuentas.
 
-- `MQTT_HOST`: `ce14c140.ala.us-east-1.emqxsl.com`
-- `MQTT_PORT`: `8883`
-- `MQTT_TLS`: `1`
-- `MQTT_USERNAME`: `device-001` en el primero y `device-002` en el segundo.
-- `MQTT_PASSWORD`: la contraseña correspondiente a cada cuenta.
+1. En Xcode, abrir Product → Scheme → Manage Schemes. Duplicar `RutaUTP`
+   para crear un esquema local, por ejemplo `RutaUTP-iPhone-001`, y asegurarse
+   de que **Shared no esté marcado** en la copia. Mantener intacto el esquema
+   compartido original.
+2. Seleccionar ese esquema y el iPhone de destino. En Edit Scheme → Run →
+   Arguments → Environment Variables, añadir y activar:
+   - `MQTT_USERNAME`: `device-001` en tu iPhone.
+   - `MQTT_PASSWORD`: la contraseña MQTT de esa cuenta, sin comillas añadidas.
+3. Ejecutar la app desde Xcode y abrir el mapa. La app guarda las credenciales
+   en Keychain y recuerda el destino de conexión. No las sincroniza a otros
+   teléfonos. Guardarlas no confirma que el broker las haya aceptado: hay que
+   comprobar la conexión real.
+4. Detener la ejecución desde Xcode, desconectar el cable y abrir la app desde
+   su icono. Esta reapertura ya no necesita las variables de Xcode.
+5. Para el iPhone del amigo, repetir con otro esquema local y `device-002`,
+   usando su propia contraseña. No ejecutar el esquema de `device-001` en ambos
+   teléfonos: una misma cuenta no cuenta como dos confirmaciones.
 
-No guardar contraseñas en el esquema compartido ni usar la misma cuenta en
-ambos teléfonos. Ejecutar desde Xcode con esas variables durante esta prueba;
-el registro automático para instalaciones distribuidas todavía está pendiente.
-La app admite las credenciales guardadas en Keychain, pero también necesita
-resolver host, puerto y TLS al abrirse fuera de Xcode.
+Opcionalmente se pueden desactivar o eliminar las dos variables del esquema
+local después del primer aprovisionamiento. Para cambiar una contraseña, volver
+a ejecutar una vez desde Xcode con la pareja completa y actualizada. No dejar
+solo una de las dos variables activa: una pareja incompleta se rechaza.
+
+No guardar secretos en el esquema compartido, Info.plist ni en el repositorio.
+Las variables opcionales `MQTT_HOST`, `MQTT_PORT`, `MQTT_TLS` y `MQTT_CA_CERT`
+permiten probar otro servidor; se recuerdan tras guardar correctamente sus
+credenciales. Para volver a EMQX, proporcionar explícitamente el host de esta
+guía, puerto `8883` y `MQTT_TLS=1`, junto con la cuenta correspondiente.
+
+La app no crea usuarios en EMQX. Para un tercer teléfono habría que crear otra
+cuenta con sus permisos y repetir este aprovisionamiento. El borrado o una
+instalación con otra identidad de firma puede requerir configurarlo nuevamente.
 
 Activar «Ayudar con ubicaciones» y conceder ubicación/actividad física cuando
 la app lo solicite. Para verificar detección real, ambos teléfonos deben viajar
