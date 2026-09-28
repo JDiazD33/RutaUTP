@@ -65,6 +65,55 @@ final class PassiveTrackingCoordinatorTests:
         }
     }
 
+    func testElegirLineaEnCasaNoIniciaPublicacion() {
+        withStoredConsent(true) {
+            let publisher = MockObservationPublisher()
+            let coordinator = makeCoordinator(publisher: publisher)
+            coordinator.beginTrip(route: testRoute(), occupancy: nil)
+            for _ in 0..<5 {
+                coordinator.process(location(speed: 0, course: 90), activity: .stationary)
+            }
+            XCTAssertEqual(coordinator.selectedTripRoute?.id, "route-10")
+            XCTAssertNotNil(coordinator.tripStartedAt)
+            XCTAssertFalse(coordinator.shouldPublish)
+            XCTAssertTrue(publisher.startCalls.isEmpty)
+        }
+    }
+
+    func testLineaElegidaDesambiguaRecorridosSuperpuestos() {
+        withStoredConsent(true) {
+            let publisher = MockObservationPublisher()
+            let coordinator = makeCoordinator(publisher: publisher)
+            let original = testRoute()
+            let selected = DetectionRouteGeometry(id: "route-20", linea: "20",
+                shape: original.shape, stops: original.stops)
+            coordinator.beginTrip(route: selected, occupancy: nil)
+            processBoardingSamples(with: coordinator)
+            XCTAssertEqual(coordinator.confirmedLine, "20")
+            XCTAssertEqual(publisher.publishCalls.first?.routeID, "route-20")
+            coordinator.endTrip()
+            let count = publisher.publishCalls.count
+            processBoardingSamples(with: coordinator)
+            XCTAssertEqual(publisher.publishCalls.count, count)
+            XCTAssertNil(coordinator.selectedTripRoute)
+            XCTAssertFalse(coordinator.shouldPublish)
+            XCTAssertTrue(coordinator.isEnabled)
+            coordinator.beginTrip(route: original, occupancy: nil)
+            processBoardingSamples(with: coordinator)
+            XCTAssertEqual(coordinator.confirmedLine, "10")
+        }
+    }
+
+    func testNoIniciaViajeDeclaradoSinConsentimiento() {
+        withStoredConsent(false) {
+            let publisher = MockObservationPublisher()
+            let coordinator = makeCoordinator(publisher: publisher)
+            coordinator.beginTrip(route: testRoute(), occupancy: nil)
+            XCTAssertNil(coordinator.selectedTripRoute)
+            XCTAssertNil(coordinator.tripStartedAt)
+        }
+    }
+
     private func withStoredConsent(_ enabled: Bool, body: () -> Void) {
         let key = "rutautp.passive-tracking-consent"
         let previous = UserDefaults.standard.object(forKey: key)

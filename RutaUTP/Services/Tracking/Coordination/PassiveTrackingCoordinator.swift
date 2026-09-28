@@ -37,6 +37,55 @@ final class PassiveTrackingCoordinator: ObservableObject {
         observationPublisher != nil
     }
 
+    @Published private(set) var selectedTripRoute: DetectionRouteGeometry?
+    @Published private(set) var tripStartedAt: Date?
+    @Published private(set) var boardingPlace: String?
+    @Published private(set) var latestLocation: CLLocation?
+    let tripOccupancy = OccupancyService()
+    private var waitingForNewTrip = false
+
+    /// La declaración orienta el detector; nunca salta sus comprobaciones.
+    func beginTrip(route: DetectionRouteGeometry, occupancy: BusOccupancyState?, boardingPlace: String = "") {
+        guard isEnabled, isPublisherConfigured else { return }
+        stopObservationSession()
+        tripOccupancy.clearTripReport()
+        detectionEngine.reset()
+        detectionState = .idle
+        confirmedLine = nil
+        boardingRouteID = nil
+        shouldPublish = false
+        selectedTripRoute = route
+        tripStartedAt = Date()
+        self.boardingPlace = BoardingPlaceStore.normalized(boardingPlace)
+        if let place = self.boardingPlace {
+            BoardingPlaceStore.save(routeID: route.id, line: route.linea, place: place)
+        }
+        waitingForNewTrip = false
+        statusMessage = "Esperando detectar el viaje en la línea \(route.linea)"
+        if let occupancy { updateTripOccupancy(occupancy) }
+    }
+
+    func updateTripOccupancy(_ state: BusOccupancyState) {
+        guard isEnabled, let route = selectedTripRoute else { return }
+        tripOccupancy.prepareTripReport(routeID: route.id, state: state)
+    }
+
+    func endTrip() {
+        stopObservationSession()
+        tripOccupancy.clearTripReport()
+        selectedTripRoute = nil
+        tripStartedAt = nil
+        boardingPlace = nil
+        detectionEngine.reset()
+        detectionState = .idle
+        confirmedLine = nil
+        candidateLine = nil
+        boardingRouteID = nil
+        shouldPublish = false
+        waitingForNewTrip = true
+        statusMessage = "Viaje terminado. Indica tu próximo micro para volver a ayudar."
+    }
+
     private let locationService:
         LocationServiceProtocol
 
@@ -387,10 +436,13 @@ private let isForcedOnboardForMQTTTest =
         _ location: CLLocation,
         activity: DetectedMotionActivity
     ) {
+        latestLocation = location
+        guard !waitingForNewTrip else { return }
+        let candidateRoutes = selectedTripRoute.map { [$0] } ?? routes
         guard let candidate =
             RouteCandidateMatcher.closestMatch(
                 for: location,
-                routes: routes
+                routes: candidateRoutes
             )
         else {
             candidateLine = nil
@@ -475,6 +527,11 @@ if isForcedOnboardForMQTTTest {
                 candidate.linea
 
         } else if decision.didConfirmAlighting {
+            if selectedTripRoute != nil {
+                endTrip()
+                statusMessage = "Descenso detectado. Viaje terminado."
+                return
+            }
             // El descenso confirmado finaliza inmediatamente la conexión
             // correspondiente al viaje y elimina sus identificadores.
             stopObservationSession()
@@ -510,6 +567,7 @@ if isForcedOnboardForMQTTTest {
                 routeID: confirmedRouteID,
                 activity: activity
             )
+            if selectedTripRoute != nil, tripOccupancy.hasPendingTripReport { tripOccupancy.start() }
         }
 
         // Copia el estado actualizado del publicador a la propiedad observable.
@@ -559,6 +617,11 @@ if isForcedOnboardForMQTTTest {
         distanceToRoute = nil
         shouldPublish = false
         boardingRouteID = nil
+        selectedTripRoute = nil
+        tripStartedAt = nil
+        boardingPlace = nil
+        tripOccupancy.clearTripReport()
+        waitingForNewTrip = false
         statusMessage =
             "Contribución desactivada"
 
@@ -633,6 +696,7 @@ private func processForcedOnboardForMQTTTest(
     /// Se llama al confirmar el descenso, desactivar la contribución o detener
     /// completamente el coordinador. Ningún UUID se reutiliza entre viajes.
     private func stopObservationSession() {
+        tripOccupancy.stop()
         observationPublisher?.stop()
 
         observationSessionID = nil
@@ -707,6 +771,7 @@ private func processForcedOnboardForMQTTTest(
     /// Visibilidad interna para que XCTest verifique la pausa/reanudación
     /// sin simular el ciclo de vida real de la app.
     func pauseObservationSessionForBackground() {
+        tripOccupancy.stop()
         guard observationSessionID != nil else {
             return
         }
@@ -778,6 +843,44 @@ private func processForcedOnboardForMQTTTest(
 
         case .alightingCandidate:
             return "Comprobando posible descenso"
+        }
+    }
+}
+
+
+/// Referencias declaradas, no paraderos verificados. No se infiere que la
+/// ubicación actual del teléfono sea donde el pasajero subió anteriormente.
+struct BoardingPlaceNote: Codable, Identifiable {
+    let id: UUID
+    let routeID: String
+    let line: String
+    let place: String
+    let recordedAt: Date
+}
+
+enum BoardingPlaceStore {
+    static let key = "rutautp.boarding-place-notes.v1"
+
+    static func normalized(_ text: String) -> String? {
+        let value = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
+        return value.isEmpty ? nil : value
+    }
+
+    static func notes(defaults: UserDefaults = .standard) -> [BoardingPlaceNote] {
+        guard let data = defaults.data(forKey: key),
+              let notes = try? JSONDecoder().decode([BoardingPlaceNote].self, from: data) else { return [] }
+        return notes
+    }
+
+    static func save(routeID: String, line: String, place: String,
+                     defaults: UserDefaults = .standard) {
+        guard let place = normalized(place) else { return }
+        var records = notes(defaults: defaults)
+        records.append(BoardingPlaceNote(id: UUID(), routeID: routeID, line: line,
+                                         place: place, recordedAt: Date()))
+        // Historial local acotado para preparar el futuro catálogo de paraderos.
+        if let data = try? JSONEncoder().encode(Array(records.suffix(200))) {
+            defaults.set(data, forKey: key)
         }
     }
 }
