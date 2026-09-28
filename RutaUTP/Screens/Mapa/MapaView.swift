@@ -24,6 +24,16 @@ struct MapaView: View {
     /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
     /// debajo del botón de mi ubicación.
     @State private var panelColapsado = false
+    /// Modo "colocar marcador": los paneles se retiran y el mapa queda limpio
+    /// para que el siguiente toque caiga en el punto que se quiere señalar.
+    @State private var modoColocarMarcador = false
+    /// Punto señalado por el usuario. Es un estado de la PANTALLA, no del
+    /// ViewModel: no lo lee nadie más y no debe sobrevivir a la navegación
+    /// hacia atrás, donde volvería a aparecer sin que se haya pedido.
+    @State private var marcadorUsuario: CLLocationCoordinate2D?
+    /// Centro de lo que se está viendo. Lo mantiene MapKit, no se deduce: es
+    /// el punto exacto que caerá el marcador.
+    @State private var centroMapa: CLLocationCoordinate2D?
     @FocusState private var campoEnfocado: Bool
 
     @State private var cameraPosition: MapCameraPosition = .region(
@@ -34,6 +44,15 @@ struct MapaView: View {
     )
 
     private let tabBarHeight: CGFloat = 64
+
+    /// Distancia a la que se empujan los paneles para retirarlos del mapa.
+    ///
+    /// Es un valor fijo y holgado, no la altura de la pantalla: sirve para
+    /// expulsarlos del todo sea cual sea el dispositivo, y evita depender de
+    /// `UIScreen.main` (deprecado, y que en iPad mide la pantalla en vez de la
+    /// ventana). 900 pt supera con holgura la altura de cualquier iPhone,
+    /// incluso en landscape.
+    private let desplazamientoFueraDePantalla: CGFloat = 900
 
     /// El servicio de ubicación se inyecta para compartirlo con el rastreo
     /// pasivo: una sola instancia para toda la app (ver `RutaUTPApp`).
@@ -125,9 +144,20 @@ struct MapaView: View {
                 }
 
                 // 4. Marcador del Destino Buscado (ej. UPAO, Casa, Mall Plaza)
-                if let res = vm.busquedaResultado, res.titulo != "UTP" {
+                if let res = vm.busquedaResultado, res.titulo != "UTP", !marcadorEsDestinoActual {
                     Annotation(res.titulo, coordinate: res.coordenada) {
                         MarcadorDestinoBuscado(titulo: res.titulo)
+                    }
+                }
+
+                // 4b. Marcador dejado por el usuario. Va POR ENCIMA del
+                // marcador pulsante de su posición, que es decorativo: si
+                // coinciden, el pin es el que informa.
+                if let marcador = marcadorUsuario {
+                    Annotation(L.t("Mi punto", "My point"),
+                               coordinate: marcador,
+                               anchor: MarcadorPin.ancla) {
+                        MarcadorPin { despejarMarcador() }
                     }
                 }
 
@@ -161,53 +191,91 @@ struct MapaView: View {
                 }
             }
             .ignoresSafeArea()
+            // Mantiene `centroMapa` al día para poder fijar el marcador en el
+            // punto exacto que el usuario está viendo. `.onEnd` y no
+            // `.immediate`: solo importa al soltar el dedo, y así no se
+            // dispara en cada fotograma del arrastre.
+            .onMapCameraChange(frequency: .onEnd) { context in
+                centroMapa = context.region.center
+            }
+            .simultaneousGesture(TapGesture().onEnded {
+                guard modoColocarMarcador else { return }
+                fijarMarcadorEnCentro()
+            })
             // Las anotaciones gestionan sus toques; la ficha se cierra con su X.
             // Un gesto en el Map padre competía con la selección del micro.
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
-                // Header
-                header
-                    .padding(.top, 0)
+                // Todo lo de ARRIBA (header, estado, panel de contribución,
+                // buscador, resumen del itinerario) viaja como un solo bloque:
+                // así se retira hacia arriba de un tirón y no pieza a pieza.
+                VStack(spacing: 0) {
+                    // Header
+                    header
+                        .padding(.top, 0)
 
-                if trackingCoordinator.isEnabled {
-                    estadoContribucion
+                    if trackingCoordinator.isEnabled {
+                        estadoContribucion
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                    }
+
+                    if trackingCoordinator.isEnabled {
+                        TripContributionPanel(coordinator: trackingCoordinator)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                    }
+
+                    // Panel de búsqueda
+                    searchPanel
                         .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                }
+                        .padding(.top, trackingCoordinator.isEnabled ? 8 : 12)
 
-                if trackingCoordinator.isEnabled {
-                    TripContributionPanel(coordinator: trackingCoordinator)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
+                    if vm.busquedaResultado != nil {
+                        resumenItinerario
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                    }
                 }
-
-                // Panel de búsqueda
-                searchPanel
-                    .padding(.horizontal, 16)
-                    .padding(.top, trackingCoordinator.isEnabled ? 8 : 12)
-
-                if vm.busquedaResultado != nil {
-                    resumenItinerario
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                }
+                .offset(y: modoColocarMarcador ? -desplazamientoFueraDePantalla : 0)
+                .opacity(modoColocarMarcador ? 0 : 1)
+                // Sin esto el bloque se sigue dibujando fuera de pantalla y
+                // seguiría robando toques al mapa.
+                .allowsHitTesting(!modoColocarMarcador)
 
                 Spacer()
 
-                // Botón "Mi Ubicación" GPS: siempre en la misma posición.
-                HStack {
-                    Spacer()
-                    botonMiUbicacion
+                // Todo lo de ABAJO se va por abajo, por el mismo motivo.
+                VStack(spacing: 0) {
+                    // Botones flotantes a la derecha, apilados: el de colocar
+                    // el marcador encima del de "Mi ubicación", que es el que
+                    // se usa a diario y se queda a la altura de la vista.
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 10) {
+                            botonColocarMarcador
+                            botonMiUbicacion
+                        }
                         .padding(.trailing, 20)
                         .padding(.bottom, 8)
-                }
+                    }
 
-                // Bottom panel: REPORTAR + cards siempre visibles; solo el
-                // encabezado "Transportes cercanos" se desliza al colapsar.
-                bottomPanel
-                    .padding(.bottom, tabBarHeight + 8)
+                    // Bottom panel: REPORTAR + cards siempre visibles; solo el
+                    // encabezado "Transportes cercanos" se desliza al colapsar.
+                    bottomPanel
+                        .padding(.bottom, tabBarHeight + 8)
+                }
+                .offset(y: modoColocarMarcador ? desplazamientoFueraDePantalla : 0)
+                .opacity(modoColocarMarcador ? 0 : 1)
+                .allowsHitTesting(!modoColocarMarcador)
             }
+            .animation(
+                modoColocarMarcador
+                ? .easeIn(duration: 0.26)
+                : .spring(response: 0.42, dampingFraction: 0.86),
+                value: modoColocarMarcador
+            )
 
             // ── POPUP DETALLE DE BUS ANIMADO ──
             if let bus = vm.busSeleccionado {
@@ -242,6 +310,12 @@ struct MapaView: View {
                     .transition(.move(edge: .leading))
             }
 
+            // ── OVERLAY DE COLOCACIÓN DEL MARCADOR ──
+            // Encima de la UI flotante: el botón de cancelar debe recibir el
+            // toque aunque los paneles se estén retirando.
+            overlayColocandoMarcador
+                .zIndex(20)
+
             // ── NAVBAR ──
             BottomNavBar()
         }
@@ -271,7 +345,11 @@ struct MapaView: View {
             }
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
+            if !marcadorEsDestinoActual { marcadorUsuario = nil }
             withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }
+        }
+        .onChange(of: vm.busquedaResultado?.titulo) { _, _ in
+            if !marcadorEsDestinoActual { marcadorUsuario = nil }
         }
         .onChange(of: vm.region.center.latitude) { _, _ in
             withAnimation {
@@ -593,6 +671,132 @@ struct MapaView: View {
     private var botonMiUbicacion: some View {
         BotonMiUbicacion(tieneUbicacion: vm.userRealCoordinate != nil) {
             vm.recenterOnUser()
+        }
+    }
+
+    // MARK: - Marcador de referencia
+
+    /// Botón que deja caer un marcador en el mapa, al estilo Uber/InDrive:
+    /// se retira la interfaz, el mapa queda limpio y el siguiente toque fija
+    /// el punto.
+    private var botonColocarMarcador: some View {
+        Button {
+            campoEnfocado = false
+            withAnimation {
+                modoColocarMarcador = true
+            }
+            AppHaptics.impact(.light)
+        } label: {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.onSurface)
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle().fill(Color.surfaceContainerLow)
+                )
+                .overlay(
+                    Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.08), radius: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Colocar un marcador en el mapa",
+                                "Drop a marker on the map"))
+        .accessibilityHint(L.t("Mueve el mapa y toca para señalar un punto",
+                               "Move the map and tap to mark a point"))
+    }
+
+    private var marcadorEsDestinoActual: Bool {
+        guard let marcador = marcadorUsuario, let destino = vm.busquedaResultado else { return false }
+        return marcador.latitude == destino.coordenada.latitude && marcador.longitude == destino.coordenada.longitude
+    }
+
+    /// Fija el marcador en el centro del mapa.
+    ///
+    /// El pin central marca el destino al desplazar el mapa. Confirmarlo
+    /// utiliza ese centro, no la posición del dedo que confirma la selección.
+    private func fijarMarcadorEnCentro() {
+        let centro = centroMapa ?? vm.region.center
+        guard CLLocationCoordinate2DIsValid(centro) else { return }
+        AppHaptics.impact(.medium)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            marcadorUsuario = centro
+            modoColocarMarcador = false
+        }
+        // Misma entrada que buscador y destinos guardados: cancela la ruta
+        // anterior, calcula caminata + micro + caminata y actualiza las líneas.
+        vm.seleccionarLugar(titulo: L.t("Punto marcado", "Marked point"), coordenada: centro)
+    }
+
+    /// Quita el marcador y devuelve los paneles a su sitio.
+    private func despejarMarcador() {
+        AppHaptics.impact(.light)
+        if marcadorEsDestinoActual { vm.limpiar() }
+        withAnimation {
+            marcadorUsuario = nil
+            modoColocarMarcador = false
+        }
+    }
+
+    /// Lo que se ve mientras se elige el punto: el pin clavado en el centro y
+    /// una barra con la instrucción y la salida.
+    @ViewBuilder
+    private var overlayColocandoMarcador: some View {
+        if modoColocarMarcador {
+            ZStack {
+                // El pin va en el centro geométrico de la pantalla, que es
+                // justo lo que se está viendo. Se posiciona con el `ZStack`
+                // y no con `UIScreen.main.bounds`: esa API está deprecada y
+                // en iPad multitasking mide la pantalla, no la ventana.
+                PinEnColocacion()
+                    .allowsHitTesting(false)
+
+                VStack {
+                    Spacer()
+                    HStack(spacing: 6) {
+                        Image(systemName: "hand.tap.fill")
+                            .font(.system(size: 12, weight: .bold))
+                        Text(L.t("Mueve el mapa y toca para calcular la ruta",
+                                 "Move the map and tap to calculate the route"))
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.black.opacity(0.55)))
+
+                    Button(action: cancelarMarcador) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                            Text(L.t("Cancelar", "Cancel"))
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.onSurface)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule().fill(.ultraThinMaterial)
+                        )
+                    }
+                    .buttonStyle(PressableCapsuleStyle())
+                    .accessibilityLabel(L.t("Cancelar el marcador", "Cancel the marker"))
+                    // Único punto del overlay que debe recibir toques: el resto
+                    // deja pasar el gesto hasta el mapa, que es quien coloca
+                    // el marcador.
+                    .allowsHitTesting(true)
+
+                    Spacer().frame(height: tabBarHeight + 16)
+                }
+            }
+            .transition(.opacity)
+        }
+    }
+
+    private func cancelarMarcador() {
+        AppHaptics.impact(.light)
+        withAnimation {
+            modoColocarMarcador = false
         }
     }
 
