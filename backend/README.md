@@ -444,16 +444,19 @@ se prueba con `bash mqtt/tools/acl_test.sh` desde la raíz del proyecto.
 
 ## Ocupación del bus (punto 5)
 
-La ocupación se consulta y reporta en el **detalle del bus en vivo**: «Vacío»
-o «Lleno». Cada envío pide confirmar que el estudiante está en esa unidad.
-Los buses de demostración no admiten reportes. Se usa el `vehicleId` emitido
-por el backend; dos buses de una misma línea mantienen votos separados.
+La ocupación se consulta en el **detalle del bus en vivo**. Se reporta desde
+«Estoy en un micro», junto con la línea elegida: «Vacío», «Con espacio» o «Lleno».
+La selección de ocupación es opcional y se puede actualizar durante el viaje.
+El servidor resuelve el `vehicleId` a partir de las observaciones validadas del
+pasajero; dos buses de una misma línea mantienen votos separados. Declarar una
+línea no crea vehículos ni acredita estar a bordo.
 
 El servidor requiere que la cuenta MQTT haya contribuido una observación
 aceptada para ese vehículo durante los últimos 60 s, y que el bus tenga una
 posición de como máximo 45 s. Para reportar desde la app hay que tener activo
 «Ayudar con ubicaciones» y esperar a ser detectado a bordo. Esto reutiliza la
-asociación existente sin modificar la detección ni el movimiento del mapa.
+asociación existente. La línea elegida limita las rutas candidatas del detector,
+pero conserva sus comprobaciones de movimiento, precisión y recorrido.
 La asociación es una estimación, no una prueba física de presencia.
 
 Cada cuenta mantiene un único voto por unidad; cambiar de opinión reemplaza
@@ -466,9 +469,14 @@ uno cada 30 s por cuenta y el estado se pierde al reiniciar el backend.
 Contratos MQTT (QoS 1, sin retención):
 
 - `rutautp/ocupacion/{principal}/reporte`: `schemaVersion: 1`, `requestId`
-  (UUID), `vehicleId`, `state` (`empty` o `full`), `timestamp` Unix. Se aceptan
-  mensajes de hasta 1024 bytes, con antigüedad de hasta 60 s y desfase futuro
-  de hasta 10 s. La identidad proviene del tópico protegido por ACL.
+  (UUID), `state` (`empty`, `space` o `full`), `timestamp` Unix y exactamente
+  uno de `vehicleId` (contrato anterior, antigüedad máxima 60 s) o `routeId`
+  (viaje declarado, antigüedad menor de 180 s). Para `routeId`, debe existir
+  exactamente una unidad de esa ruta con una observación reciente del principal
+  y posterior o igual a la elección. El voto conserva la hora original de la
+  elección; los reintentos no renuevan su caducidad. Se aceptan hasta 1024 bytes
+  y desfase futuro de hasta 10 s. La identidad proviene del tópico protegido
+  por ACL. No hacen falta permisos MQTT nuevos para este flujo.
 - `rutautp/ocupacion/{principal}/recibo`: `requestId`, `accepted`, `code`
   (`pending`, `confirmed`, `not_onboard`, `unavailable`, `rate_limit`, `busy`,
   `invalid`). Solo este recibo confirma que el backend recibió el reporte.
