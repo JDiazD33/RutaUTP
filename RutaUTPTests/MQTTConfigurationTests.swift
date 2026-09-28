@@ -357,6 +357,72 @@ final class MQTTConfigurationTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "MQTT_USERNAME"), "device-test")
     }
 
+    func testReaperturaSinXcodeConservaDestinoTLSYCuenta() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        var environment = baseEnvironment()
+        environment["MQTT_USERNAME"] = "device-001"
+        environment["MQTT_TLS"] = "1"
+        environment["MQTT_PORT"] = "8884"
+        XCTAssertNotNil(MQTTConfiguration.from(
+            environment: environment, defaults: defaults, credentialStore: store))
+
+        let reopened = try XCTUnwrap(MQTTConfiguration.from(
+            environment: [:], defaults: defaults, credentialStore: store))
+        XCTAssertEqual(reopened.host, "mqtt.ejemplo.com")
+        XCTAssertEqual(reopened.port, 8884)
+        XCTAssertTrue(reopened.useTLS)
+        XCTAssertEqual(reopened.username, "device-001")
+        XCTAssertEqual(reopened.password, "secreto")
+        XCTAssertNil(defaults.string(forKey: "MQTT_USERNAME"))
+        XCTAssertNil(defaults.string(forKey: "MQTT_PASSWORD"))
+        // El destino público no basta para habilitar otra instalación.
+        XCTAssertNil(MQTTConfiguration.from(
+            environment: [:], defaults: defaults, credentialStore: MemoryCredentials()))
+    }
+
+    func testFalloAlGuardarNuevaCuentaConservaConexionAnterior() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        XCTAssertNotNil(MQTTConfiguration.from(
+            environment: baseEnvironment(), defaults: defaults, credentialStore: store))
+        store.failSave = true
+        var changed = baseEnvironment()
+        changed["MQTT_HOST"] = "otro.example"
+        changed["MQTT_TLS"] = "1"
+        XCTAssertNil(MQTTConfiguration.from(
+            environment: changed, defaults: defaults, credentialStore: store))
+        let reopened = try XCTUnwrap(MQTTConfiguration.from(
+            environment: [:], defaults: defaults, credentialStore: store))
+        XCTAssertEqual(reopened.host, "mqtt.ejemplo.com")
+        XCTAssertFalse(reopened.useTLS)
+        XCTAssertEqual(reopened.port, 1883)
+    }
+
+    func testBrokerIncluidoNoIncluyeCredenciales() throws {
+        // Las pruebas se ejecutan alojadas en la app.
+        let bundle = Bundle.main
+        XCTAssertEqual(bundle.object(forInfoDictionaryKey: "MQTT_HOST") as? String,
+                       "ce14c140.ala.us-east-1.emqxsl.com")
+        XCTAssertEqual(bundle.object(forInfoDictionaryKey: "MQTT_TLS") as? String, "1")
+        XCTAssertNil(bundle.object(forInfoDictionaryKey: "MQTT_USERNAME"))
+        XCTAssertNil(bundle.object(forInfoDictionaryKey: "MQTT_PASSWORD"))
+        let store = MemoryCredentials()
+        XCTAssertNil(MQTTConfiguration.from(environment: [:], bundle: bundle, credentialStore: store))
+        let configured = try XCTUnwrap(MQTTConfiguration.from(environment: [
+            "MQTT_USERNAME": "device-002", "MQTT_PASSWORD": "test-only"
+        ], bundle: bundle, credentialStore: store))
+        XCTAssertTrue(configured.useTLS)
+        XCTAssertEqual(configured.port, 8883)
+        let reopened = try XCTUnwrap(MQTTConfiguration.from(
+            environment: [:], bundle: bundle, credentialStore: store))
+        XCTAssertEqual(reopened.username, "device-002")
+    }
+
     private final class MemoryCredentials: MQTTCredentialStoring {
         var entries: [String: MQTTCredentials] = [:]
         var failSave = false

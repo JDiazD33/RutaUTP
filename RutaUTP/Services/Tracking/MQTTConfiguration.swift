@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Configuración del canal MQTT, construida desde el Scheme de Xcode.
+/// Configuración MQTT: aprovisionamiento desde Xcode y reapertura autónoma.
 ///
 /// Las credenciales aprovisionadas se conservan en Keychain, separadas por
 /// servidor, puerto y transporte. Nunca se leen del paquete de la app.
@@ -47,7 +47,8 @@ struct MQTTConfiguration {
     }
 
     /// Variables reconocidas en el Scheme de Xcode:
-    ///   MQTT_HOST, MQTT_USERNAME, MQTT_PASSWORD (obligatorias)
+    ///   MQTT_USERNAME, MQTT_PASSWORD (pareja para aprovisionar cada iPhone)
+    ///   MQTT_HOST (opcional si el servidor ya está incluido en Info.plist)
     ///   MQTT_PORT (opcional; por defecto 1883, o 8883 si MQTT_TLS=1)
     ///   MQTT_TLS (opcional, "1"/"true"/"yes" habilita TLS)
     ///   MQTT_CA_CERT (opcional, ruta a la CA propia en PEM o DER)
@@ -146,8 +147,9 @@ struct MQTTConfiguration {
             return nil
         }
 
+        let configuredCA = valor("MQTT_CA_CERT") ?? ""
         let caPath = resolveCertificatePath(
-            valor("MQTT_CA_CERT") ?? "",
+            configuredCA,
             bundle: bundle
         )
 
@@ -164,6 +166,16 @@ struct MQTTConfiguration {
             )
         }
         #endif
+
+        // Solo recordar el destino después de resolver/guardar sus credenciales.
+        // Así, un fallo de Keychain no reemplaza la conexión anterior. Se guarda
+        // el nombre relativo de la CA, no la ruta variable del paquete instalado.
+        if credentialStore != nil, let defaults {
+            defaults.set(host, forKey: "MQTT_HOST")
+            defaults.set(String(port), forKey: "MQTT_PORT")
+            defaults.set(useTLS ? "1" : "0", forKey: "MQTT_TLS")
+            defaults.set(configuredCA, forKey: "MQTT_CA_CERT")
+        }
 
         return MQTTConfiguration(
             host: host,
