@@ -3,10 +3,14 @@ import Combine
 import CocoaMQTT
 
 enum BusOccupancyState: String, Codable, CaseIterable {
-    case empty, full
+    case empty, space, full
 
     var title: String {
-        self == .empty ? L.t("Vacío", "Empty") : L.t("Lleno", "Full")
+        switch self {
+        case .empty: return L.t("Vacío", "Empty")
+        case .space: return L.t("Con espacio", "Room available")
+        case .full: return L.t("Lleno", "Full")
+        }
     }
 }
 
@@ -45,6 +49,28 @@ final class OccupancyService: ObservableObject {
     @Published private(set) var sending = false
     @Published private(set) var result: String?
     @Published private(set) var configured = false
+
+    private var tripReport: (routeID: String, state: BusOccupancyState, at: TimeInterval)?
+    private var lastTripAttempt: TimeInterval = -.infinity
+    var hasPendingTripReport: Bool { tripReport != nil }
+
+    /// Conserva solo la elección actual; nunca renueva automáticamente su edad.
+    func prepareTripReport(routeID: String, state: BusOccupancyState) {
+        tripReport = (routeID, state, Date().timeIntervalSince1970)
+        pendingID = nil
+        sending = false
+        result = L.t("Se enviará al detectar tu viaje y tener conexión.",
+                     "Will send once your trip is detected and connected.")
+        refresh()
+    }
+
+    func clearTripReport() {
+        tripReport = nil
+        pendingID = nil
+        sending = false
+        result = nil
+        lastTripAttempt = -.infinity
+    }
 
     private var mqtt: CocoaMQTT?
     private var principal = ""
@@ -117,11 +143,17 @@ final class OccupancyService: ObservableObject {
     }
 
     func send(vehicleID: String, state: BusOccupancyState) {
+        guard ready, !sending else { return }
+        publishReport(target: ["vehicleId": vehicleID], state: state,
+                      timestamp: Date().timeIntervalSince1970)
+    }
+
+    private func publishReport(target: [String: String], state: BusOccupancyState, timestamp: TimeInterval) {
         guard ready, !sending, let mqtt else { return }
         let id = UUID().uuidString
-        let body: [String: Any] = ["schemaVersion": 1, "requestId": id,
-                                  "vehicleId": vehicleID, "state": state.rawValue,
-                                  "timestamp": Date().timeIntervalSince1970]
+        var body: [String: Any] = ["schemaVersion": 1, "requestId": id,
+                                  "state": state.rawValue, "timestamp": timestamp]
+        target.forEach { body[$0.key] = $0.value }
         guard let data = try? JSONSerialization.data(withJSONObject: body),
               let json = String(data: data, encoding: .utf8) else { return }
         pendingID = id
@@ -137,6 +169,15 @@ final class OccupancyService: ObservableObject {
         if ready != available { ready = available }
         let current = available ? buses.filter { $0.expiresAt > now } : []
         if buses != current { buses = current }
+        if let trip = tripReport, now - trip.at >= 180 {
+            clearTripReport()
+            result = L.t("Actualiza qué tan lleno va el micro; tu elección venció.",
+                         "Update how full your bus is; your selection expired.")
+        }
+        if let trip = tripReport, ready, !sending, now - lastTripAttempt >= 30 {
+            lastTripAttempt = now
+            publishReport(target: ["routeId": trip.routeID], state: trip.state, timestamp: trip.at)
+        }
         if sending, now - sentAt >= 12 {
             sending = false
             pendingID = nil
@@ -167,6 +208,7 @@ final class OccupancyService: ObservableObject {
             sending = false
             pendingID = nil
             if receipt.accepted {
+                tripReport = nil
                 result = receipt.code == "confirmed"
                     ? L.t("Reporte recibido. La ocupación ya cuenta con al menos dos cuentas distintas.",
                           "Report received. At least two different accounts now support this occupancy report.")
@@ -174,6 +216,9 @@ final class OccupancyService: ObservableObject {
                           "Report received. There are not enough matching reports yet to confirm this state.")
             } else {
                 switch receipt.code {
+                case "not_onboard" where tripReport != nil:
+                    result = L.t("Esperando que tus ubicaciones confirmen el micro. Reintentaremos mientras el reporte siga vigente.",
+                                 "Waiting for your locations to identify the bus. We'll retry while your report is fresh.")
                 case "not_onboard":
                     result = L.t("Necesitamos detectarte a bordo de este bus. Activa «Ayudar con ubicaciones» y espera la detección antes de reportar.",
                                  "You must be detected aboard this bus. Enable location contributions and wait for detection before reporting.")
