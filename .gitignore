@@ -50,7 +50,6 @@ backend/data/
 backend/deploy/backend.env
 
 .vscode/
-.workbuddy-ai/
 
 # Archivos temporales del editor
 *.swp
