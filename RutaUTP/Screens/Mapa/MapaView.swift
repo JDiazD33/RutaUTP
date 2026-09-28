@@ -176,6 +176,12 @@ struct MapaView: View {
                         .padding(.top, 8)
                 }
 
+                if trackingCoordinator.isEnabled {
+                    TripContributionPanel(coordinator: trackingCoordinator)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                }
+
                 // Panel de búsqueda
                 searchPanel
                     .padding(.horizontal, 16)
