@@ -41,8 +41,8 @@ struct BienvenidaView: View {
                         description: L.t("Ahora puedes indicar qué línea tomaste y cómo va de llena, desde el mapa.",
                                          "You can now choose your bus line and report how full it is, right from the map."),
                         highlights: [
-                            ("hand.tap.fill", L.t("Activa «Ayudar con ubicaciones» y toca «Estoy en un micro».",
-                                                 "Enable location contributions and tap ‘I'm on a bus’.")),
+                            ("hand.tap.fill", L.t("Busca tu ruta y confirma «Sí, ya subí» cuando estés en el micro.",
+                                                 "Find your route and confirm ‘Yes, I'm on board’ once you've boarded.")),
                             ("person.2.fill", L.t("Elige la línea y, si quieres, indica si va vacío, con espacio o lleno.",
                                                  "Choose your line and optionally report empty, room available or full.")),
                             ("checkmark.circle.fill", L.t("La app comprueba el viaje; al bajar, toca «Ya bajé».",
