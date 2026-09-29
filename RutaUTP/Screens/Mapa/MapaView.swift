@@ -86,6 +86,17 @@ struct MapaView: View {
                       systemImage: "figure.walk")
                 Label(L.t("Toma la línea ", "Take line ") + plan.route.linea + " · " + plan.route.precioTexto,
                       systemImage: "bus.fill")
+                if let transfer = plan.transfer {
+                    Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
+                    Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
+                    Label(L.t("Camina ", "Walk ") + "\(Int(ceil(transfer.walkMeters))) m · " + transfer.board.nombre,
+                          systemImage: "figure.walk")
+                    Label(L.t("Luego toma ", "Then take ") + transfer.route.linea + " · " + transfer.route.precioTexto,
+                          systemImage: "arrow.triangle.swap")
+                    Text(L.t("El tiempo incluye una espera estimada para el segundo micro.",
+                             "Time includes an estimated wait for the second bus."))
+                        .foregroundStyle(Color.onSurfaceVariant)
+                }
                 Label(L.t("Baja en ", "Get off at ") + plan.alight.nombre,
                       systemImage: "mappin.and.ellipse")
                 Text(L.t("Luego camina \(Int(ceil(plan.walkToDestinationMeters))) m hasta tu destino.",
@@ -133,13 +144,27 @@ struct MapaView: View {
                         .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
                     MapPolyline(coordinates: plan.busDibujo)
                         .stroke(plan.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    if let transfer = plan.transfer {
+                        MapPolyline(coordinates: transfer.walk)
+                            .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
+                        MapPolyline(coordinates: transfer.busDibujo)
+                            .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                        MapPolyline(coordinates: transfer.busDibujo)
+                            .stroke(transfer.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                        Annotation(plan.firstAlight.nombre, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
+                            TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .orange)
+                        }
+                        Annotation(transfer.board.nombre, coordinate: transfer.board.coordinate, anchor: .bottom) {
+                            TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
+                        }
+                    }
                     MapPolyline(coordinates: plan.walkToDestination)
                         .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
                     Annotation(L.t("Sube aquí", "Board here"), coordinate: plan.board.coordinate, anchor: .bottom) {
                         TransitStopMarker(number: "1", title: L.t("SUBE", "BOARD"), color: .secondary)
                     }
                     Annotation(L.t("Baja aquí", "Get off here"), coordinate: plan.alight.coordinate, anchor: .bottom) {
-                        TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .appPrimary)
+                        TransitStopMarker(number: plan.transfer == nil ? "2" : "4", title: L.t("BAJA", "EXIT"), color: .appPrimary)
                     }
                 }
 

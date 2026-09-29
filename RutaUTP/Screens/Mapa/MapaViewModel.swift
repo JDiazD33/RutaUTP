@@ -1023,16 +1023,16 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             for candidate in candidates.prefix(4) {
                 let plan = await candidate.withWalkingDirections(using: self.routeService)
                 guard !Task.isCancelled, self.routeRevision == revision else { return }
-                guard plan.walkToBoardMeters <= 800, plan.walkToDestinationMeters <= 800 else { continue }
+                guard plan.walkToBoardMeters <= 800, plan.walkToDestinationMeters <= 800, plan.walkingWithinTransferLimit else { continue }
                 self.itinerario = plan
                 self.routePolyline = MKPolyline(coordinates: plan.coordinates, count: plan.coordinates.count)
                 self.etaMinutos = max(1, Int(ceil(plan.totalSeconds / 60)))
-                self.distanciaKm = (plan.walkToBoardMeters + plan.busMeters + plan.walkToDestinationMeters) / 1000
+                self.distanciaKm = (plan.walkToBoardMeters + plan.busMeters + plan.transferWalkMeters + plan.walkToDestinationMeters) / 1000
                 self.itinerarioFocusTick += 1
                 return
             }
-            self.mensajeRuta = L.t("No encontramos una línea directa con paraderos a menos de 800 m de ambos extremos. Prueba otro destino.",
-                                   "No direct line has stops within 800 m of both ends. Try another destination.")
+            self.mensajeRuta = L.t("No encontramos una ruta directa ni con un transbordo con paraderos a menos de 800 m de ambos extremos. Prueba otro destino.",
+                                   "No direct or one-transfer route has stops within 800 m of both ends. Try another destination.")
         }
     }
 
