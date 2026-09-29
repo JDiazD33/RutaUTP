@@ -54,6 +54,21 @@ struct MapaView: View {
     /// incluso en landscape.
     private let desplazamientoFueraDePantalla: CGFloat = 900
 
+    /// Paneles flotantes retirados del mapa.
+    ///
+    /// Dos situaciones comparten el mismo gesto visual, y por eso una sola
+    /// bandera las gobierna:
+    ///  - **Colocar un marcador**: el mapa debe quedar libre para que el
+    ///    siguiente toque caiga en el punto que se quiere señalar.
+    ///  - **Buscar el recorrido**: mientras se resuelve el itinerario, el
+    ///    buscador y las líneas se apartan y solo queda la ventana de carga.
+    ///
+    /// Reutilizar el mecanismo evita tener dos animaciones distintas para el
+    /// mismo movimiento; lo único que cambia es la causa.
+    private var panelesRetirados: Bool {
+        modoColocarMarcador || vm.calculandoItinerario
+    }
+
     /// El servicio de ubicación se inyecta para compartirlo con el rastreo
     /// pasivo: una sola instancia para toda la app (ver `RutaUTPApp`).
     init(locationService: LocationServiceProtocol = LocationService()) {
@@ -252,10 +267,16 @@ struct MapaView: View {
                             .padding(.top, 8)
                     }
 
-                    // Panel de búsqueda
-                    searchPanel
-                        .padding(.horizontal, 16)
-                        .padding(.top, trackingCoordinator.isEnabled ? 8 : 12)
+                    // Panel de búsqueda. Se aparta en cuanto hay un itinerario
+                    // resuelto: a partir de ahí mandan la guía del viaje, el
+                    // panel de transportes y los accesos al mapa. El buscador
+                    // vuelve al limpiar la ruta (la X de la guía).
+                    if vm.itinerario == nil {
+                        searchPanel
+                            .padding(.horizontal, 16)
+                            .padding(.top, trackingCoordinator.isEnabled ? 8 : 12)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
 
                     if vm.busquedaResultado != nil {
                         resumenItinerario
@@ -263,11 +284,11 @@ struct MapaView: View {
                             .padding(.top, 8)
                     }
                 }
-                .offset(y: modoColocarMarcador ? -desplazamientoFueraDePantalla : 0)
-                .opacity(modoColocarMarcador ? 0 : 1)
+                .offset(y: panelesRetirados ? -desplazamientoFueraDePantalla : 0)
+                .opacity(panelesRetirados ? 0 : 1)
                 // Sin esto el bloque se sigue dibujando fuera de pantalla y
                 // seguiría robando toques al mapa.
-                .allowsHitTesting(!modoColocarMarcador)
+                .allowsHitTesting(!panelesRetirados)
 
                 Spacer()
 
@@ -291,16 +312,18 @@ struct MapaView: View {
                     bottomPanel
                         .padding(.bottom, tabBarHeight + 8)
                 }
-                .offset(y: modoColocarMarcador ? desplazamientoFueraDePantalla : 0)
-                .opacity(modoColocarMarcador ? 0 : 1)
-                .allowsHitTesting(!modoColocarMarcador)
+                .offset(y: panelesRetirados ? desplazamientoFueraDePantalla : 0)
+                .opacity(panelesRetirados ? 0 : 1)
+                .allowsHitTesting(!panelesRetirados)
             }
             .animation(
-                modoColocarMarcador
+                panelesRetirados
                 ? .easeIn(duration: 0.26)
                 : .spring(response: 0.42, dampingFraction: 0.86),
-                value: modoColocarMarcador
+                value: panelesRetirados
             )
+            // Entrada/salida del buscador según haya o no itinerario resuelto.
+            .animation(.easeInOut(duration: 0.28), value: vm.itinerario != nil)
 
             // ── POPUP DETALLE DE BUS ANIMADO ──
             if let bus = vm.busSeleccionado {
@@ -340,6 +363,12 @@ struct MapaView: View {
             // toque aunque los paneles se estén retirando.
             overlayColocandoMarcador
                 .zIndex(20)
+
+            // ── VENTANA DE CARGA DEL ITINERARIO ──
+            // Vive fuera del bloque flotante a propósito: ese bloque se retira
+            // mientras se busca, y esta tarjeta es lo único que debe quedar.
+            ventanaCargaItinerario
+                .zIndex(15)
 
             // ── NAVBAR ──
             BottomNavBar()
@@ -816,6 +845,48 @@ struct MapaView: View {
             }
             .transition(.opacity)
         }
+    }
+
+    /// Tarjeta que sustituye al buscador y a las líneas mientras se resuelve el
+    /// recorrido del destino elegido.
+    ///
+    /// Se ancla arriba, en el mismo sitio que ocupaba el buscador, para que el
+    /// cambio se lea como "el buscador se fue y dejó su progreso". El `VStack`
+    /// exterior está siempre presente para que la transición interna tenga un
+    /// contenedor estable donde animarse.
+    @ViewBuilder
+    private var ventanaCargaItinerario: some View {
+        VStack {
+            if vm.calculandoItinerario && !modoColocarMarcador {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(L.t("Buscando paradero y transporte…",
+                             "Finding stops and transit…"))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.onSurface)
+                    Spacer(minLength: 4)
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 2)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .accessibilityElement(children: .combine)
+            }
+            Spacer()
+        }
+        .animation(.easeInOut(duration: 0.25), value: vm.calculandoItinerario)
+        // Solo informa: no debe interceptar el gesto del mapa.
+        .allowsHitTesting(false)
     }
 
     private func cancelarMarcador() {
