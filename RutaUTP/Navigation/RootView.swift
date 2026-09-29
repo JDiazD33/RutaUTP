@@ -20,7 +20,6 @@ struct RootView: View {
 
     /// Tema claro/oscuro. Se aplica SOLO con aplicarTemaEnVentanas (abajo):
     /// un único escritor de overrideUserInterfaceStyle. No volver a añadir
-    /// .preferredColorScheme aquí ni animar el cambio de isDarkMode —
     /// cuando ambos canales escriben la misma propiedad de la ventana y el
     /// cambio va dentro de una animación, SwiftUI deja de re-aplicar el
     /// estilo al VOLVER a claro (el tema quedaba "pegado" en oscuro).
