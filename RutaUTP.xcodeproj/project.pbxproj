@@ -68,6 +68,7 @@
 		0A80051A300AD9FE004E1676 /* SimulatedTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */; };
 		0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */; };
 		0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */; };
+		0A80FE0001A1B2C3004E1676 /* Geocodificacion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80FE0001A1B2C3004E1677 /* Geocodificacion.swift */; };
 		0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F2300AD9FE004E1676 /* Assets.xcassets */; };
 		0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
@@ -188,6 +189,7 @@
 		0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimulatedTrackingProvider.swift; sourceTree = "<group>"; };
 		0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VehicleTrackingProviding.swift; sourceTree = "<group>"; };
 		0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PolylineMatching.swift; sourceTree = "<group>"; };
+		0A80FE0001A1B2C3004E1677 /* Geocodificacion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Geocodificacion.swift; sourceTree = "<group>"; };
 		0A8004F2300AD9FE004E1676 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A8004F4300AD9FE004E1676 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
@@ -550,6 +552,7 @@
 			isa = PBXGroup;
 			children = (
 				0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */,
+				0A80FE0001A1B2C3004E1677 /* Geocodificacion.swift */,
 				0A800437300AD9FE004E1676 /* RejillaEspacial.swift */,
 				0A800400300AD9FE004E1676 /* DestinosFijos.swift */,
 				AA6600000000000000000F01 /* Idioma.swift */,
@@ -843,6 +846,7 @@
 				0A80042E300AD9FE004E1676 /* SeguridadZonas.swift in Sources */,
 				0A80042C300AD9FE004E1676 /* SeguridadComunidad.swift in Sources */,
 				0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */,
+				0A80FE0001A1B2C3004E1676 /* Geocodificacion.swift in Sources */,
 				0A800438300AD9FE004E1676 /* RejillaEspacial.swift in Sources */,
 				0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */,
 			);

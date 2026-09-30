@@ -180,6 +180,11 @@ struct AddLugarSheet: View {
     @State private var geocoderActivo: CLGeocoder?
     @State private var revisionUbicacion = UUID()
     @State private var direccionValidada: String?
+    /// Marca el PRÓXIMO cambio de `direccion` como automático (viene del mapa)
+    /// y no como escritura de la persona. Existe solo para que
+    /// `programarGeocodificacion` no intente geocodificar lo que el sistema
+    /// acaba de escribir por ella.
+    @State private var rellenoDesdeMapa = false
     @State private var ajusteManual = false
     @State private var mapaExpandido = false
 
@@ -187,16 +192,22 @@ struct AddLugarSheet: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(coordElegida == nil
-                         ? L.t("Ubica el lugar para guardar", "Pin the place to save")
-                         : L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
+                    // Con el mapa arriba, el rótulo ya no necesita pedir que se
+                    // ubique: el gesto siguiente es tocarlo, y el propio mapa
+                    // lo dice ("Toca el mapa para ubicar el lugar"). Este
+                    // encabezado nombra la acción, no repite la instrucción.
+                    Text(L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
                         .font(.headlineMd)
                         .seniable(coordElegida == nil ? nil : "guardado.guardar_lugar")
 
-                    campoNombre
+                    // Orden: el MAPA primero. El lugar se elige mirando el
+                    // mapa, no escribiendo; la dirección sale sola de ahí.
+                    // Antes el campo iba primero y el mapa al final, que
+                    // obligaba a escribir para poder ver dónde era.
+                    mapaElegir
                     campoDireccion
                     estadoUbicacion
-                    mapaElegir
+                    campoNombre
                     selectorCategoria
 
                     botonGuardar
@@ -240,7 +251,8 @@ struct AddLugarSheet: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.onSurfaceVariant)
-                TextField(L.t("Ej. Av. España 123, Trujillo", "e.g. 123 España Ave, Trujillo"), text: $direccion)
+                TextField(L.t("Toca el mapa y la dirección se escribe sola",
+                              "Tap the map and the address fills in"), text: $direccion)
                     .font(.bodySm)
                     .autocorrectionDisabled()
                     .onChange(of: direccion) { _, _ in programarGeocodificacion() }
@@ -268,12 +280,21 @@ struct AddLugarSheet: View {
             Label(L.t("No encontramos esa dirección — toca el mapa para ubicarla tú", "We could not find that address — tap the map to place it yourself"), systemImage: "exclamationmark.circle.fill")
                 .font(.bodySm)
                 .foregroundStyle(.orange)
+        } else if ajusteManual, !buscandoUbicacion {
+            Label(direccion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                  ? L.t("Toca el mapa para escribir la dirección", "Tap the map to fill in the address")
+                  : L.t("Dirección del punto marcado ✓", "Address of the marked spot ✓"),
+                  systemImage: direccion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                  ? "hand.tap.fill" : "checkmark.circle.fill")
+                .font(.bodySm)
+                .foregroundStyle(direccion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                 ? Color.onSurfaceVariant : .green)
         } else if coordElegida != nil {
             Label(L.t("Ubicación encontrada ✓", "Location found ✓"), systemImage: "checkmark.circle.fill")
                 .font(.bodySm)
                 .foregroundStyle(.green)
         } else {
-            Label(L.t("Escribe la dirección para verla en el mapa", "Type the address to see it on the map"), systemImage: "info.circle")
+            Label(L.t("Toca el mapa para ubicar el lugar", "Tap the map to place the place"), systemImage: "info.circle")
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
         }
@@ -290,6 +311,7 @@ struct AddLugarSheet: View {
                     withAnimation(.spring(response: 0.3)) {
                         coordElegida = coord
                     }
+                    escribirDireccionDesdeMapa(coord)
                 },
                 recentrarTrigger: recentrarTrigger
             )
@@ -306,7 +328,10 @@ struct AddLugarSheet: View {
             .background(Capsule().fill(Color.black.opacity(0.55)))
             .padding(.bottom, 10)
         }
-        .frame(height: 210)
+        // Con el mapa al frente del formulario pasa a ser la pieza principal
+        // de la pantalla: 210 pt obligaban a apretar los dedos para colocar un
+        // punto con precisión, que es justo lo contrario de lo que se hace aquí.
+        .frame(height: 300)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(alignment: .topTrailing) { botonExpandirMapa }
         .overlay(
@@ -316,9 +341,10 @@ struct AddLugarSheet: View {
         .fullScreenCover(isPresented: $mapaExpandido) {
             MapaElegirExpandido(
                 coordenada: $coordElegida,
-                onTocar: {
+                onTocar: { nueva in
                     AppHaptics.impact(.light)
                     confirmarSeleccionManual()
+                    escribirDireccionDesdeMapa(nueva)
                 },
                 onCerrar: { mapaExpandido = false }
             )
@@ -419,6 +445,16 @@ struct AddLugarSheet: View {
     // MARK: Geocodificación con debounce
     /// Espera 0.7 s a que el usuario deje de escribir y geocodifica.
     private func programarGeocodificacion() {
+        // `direccion` también cambia cuando la LLENA el propio mapa. En ese
+        // caso no hay nada que geocodificar: el punto ya está colocado y
+        // `programarGeocodificacion` haría `coordElegida = nil`, borrando
+        // justo el pin que el usuario acaba de marcar. Sin esta guarda, cada
+        // toque en el mapa se desharía a sí mismo ~0.7 s después.
+        guard !rellenoDesdeMapa else {
+            rellenoDesdeMapa = false
+            ajusteManual = true
+            return
+        }
         cancelarGeocodificacion()
         ajusteManual = false
         direccionNoEncontrada = false
@@ -452,6 +488,41 @@ struct AddLugarSheet: View {
         ajusteManual = true
         direccionNoEncontrada = false
         direccionValidada = direccion
+        // Si el relleno acaba de dejar el campo con un texto IDENTICAL al que
+        // había, SwiftUI no dispara `onChange` y el flag se quedaría armado:
+        // el próximo texto que escriba la persona se trataría como automático
+        // y no se geocodificaría. Se limpia aquí, en el único punto por el que
+        // pasa todo toque en el mapa.
+        rellenoDesdeMapa = false
+    }
+
+    /// Rellena la dirección con la calle del punto tocado en el mapa.
+    ///
+    /// Usa la MISMA revisión que la geocodificación por texto (`geocodeTask` y
+    /// `revisionUbicacion`) a propósito: si el usuario toca el mapa y luego
+    /// escribe algo, la respuesta tardía del mapa no debe pisar lo que acaba
+    /// de escribir. Un solo par de tarea+revisión para las dos vías evita
+    /// justo esa carrera.
+    private func escribirDireccionDesdeMapa(_ coord: CLLocationCoordinate2D) {
+        cancelarGeocodificacion()
+        let revision = revisionUbicacion
+        // Texto tal como estaba al tocar: si al volver la respuesta el campo
+        // ya no dice esto, el usuario lo editó y su versión gana.
+        let textoAlTocar = direccion
+        buscandoUbicacion = true
+        geocodeTask = Task { @MainActor in
+            let nombre = await Geocodificacion.nombreDelLugar(coord)
+            guard !Task.isCancelled, revision == revisionUbicacion else { return }
+            geocodeTask = nil
+            buscandoUbicacion = false
+            if direccion == textoAlTocar {
+                // Se avisa del cambio automático ANTES de asignar: el
+                // `onChange` del campo lee este flag al dispararse.
+                rellenoDesdeMapa = true
+                direccion = nombre
+                direccionValidada = nombre
+            }
+        }
     }
 
     private func geocodificar(_ texto: String, direccionSolicitada: String, revision: UUID) async {
@@ -489,7 +560,8 @@ struct AddLugarSheet: View {
 struct MapaElegirExpandido: View {
     @Binding var coordenada: CLLocationCoordinate2D?
     /// Se dispara en cada toque del mapa, después de actualizar la coordenada.
-    var onTocar: () -> Void
+    /// Recibe la coordenada tocada para poder geocodificarla.
+    var onTocar: (CLLocationCoordinate2D) -> Void
     var onCerrar: () -> Void
 
     var body: some View {
@@ -500,7 +572,7 @@ struct MapaElegirExpandido: View {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         coordenada = coord
                     }
-                    onTocar()
+                    onTocar(coord)
                 }
             )
             .ignoresSafeArea()
