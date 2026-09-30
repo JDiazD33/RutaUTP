@@ -361,6 +361,11 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
     @Published var recentrarToken = 0
 
     private let locationService: LocationServiceProtocol
+    /// El mismo servicio compartido, expuesto para las pantallas que lo
+    /// necesitan sin instanciar un segundo `CLLocationManager` (el reporte de
+    /// cambios de ruta lo usa para colocar el pin en la posición actual).
+    var sharedLocationService: LocationServiceProtocol { locationService }
+
     private let routeService: RouteCalculationService
     private let completer = MKLocalSearchCompleter()
     private var locationTask: Task<Void, Never>?

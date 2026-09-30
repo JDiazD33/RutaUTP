@@ -13,6 +13,12 @@ import SwiftUI
 
 struct ReportarSheet: View {
 
+    /// Ruta que el usuario tenía seleccionada en el mapa al abrir el reporte.
+    /// Si viene, "Cambios de ruta" la ofrece ya elegida en el Picker.
+    var initialRouteID: String? = nil
+    /// GPS compartido de la app, para que el formulario no abra un segundo
+    /// `CLLocationManager` mientras está en pantalla.
+    var locationService: LocationServiceProtocol = LocationService()
 
     @Environment(\.dismiss) private var dismiss
     @State private var tipo: TipoReporte = .alerta
@@ -53,7 +59,9 @@ struct ReportarSheet: View {
             .safeAreaInset(edge: .bottom, spacing: 0) { botonEnviar }
         }
         .sheet(isPresented: $showRouteChanges) {
-            RouteChangesSheet(service: routeChanges)
+            RouteChangesSheet(service: routeChanges,
+                              initialRouteID: initialRouteID,
+                              locationService: locationService)
                 .presentationDetents([.large])
                 .onAppear { routeChanges.start() }
                 .onDisappear { routeChanges.stop() }
