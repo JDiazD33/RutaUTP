@@ -119,6 +119,12 @@ El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuan
 
 El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición. El perfil productivo conserva las observaciones durante 30 días. La configuración, operación y pruebas del servicio están documentadas en `backend/README.md` y `mqtt/README.md`.
 
+### Rapidez del cálculo de rutas
+
+El planificador conserva la geometría del GTFS entre búsquedas y la invalida si cambian sus paraderos o coordenadas. Ordena los candidatos por coste antes de construir sus polylines; materializa los mejores 32 y mantiene hasta cuatro comprobaciones peatonales. La elección de paraderos respeta el sentido y los radios configurados.
+
+Las dos o tres caminatas de cada candidato se consultan en paralelo. Cada petición a Apple Directions tiene un plazo de cuatro segundos y cancelación real; los resultados correctos se guardan durante cinco minutos, con un máximo de 128 entradas por extremos exactos y modo. Los errores no se guardan. Si falta una respuesta, la app conserva el recorrido GTFS y muestra **Caminata estimada en línea recta**; la rapidez no convierte esa estimación en una caminata verificada. El tiempo total todavía depende de la carga inicial del catálogo, la red y cuántos candidatos superen el filtro peatonal.
+
 ### Declarar el micro del viaje
 
 Después de encontrar una ruta, el mapa muestra una tarjeta discreta **¿Ya subiste? Confirma tu línea** debajo de las indicaciones. Se puede tocar en cualquier momento. Si no se usa, a los 30 segundos aparece una única pregunta automática para esa ruta. Abrir la tarjeta cancela ese aviso; cerrarlo no lo repite automáticamente. **Recordarme en 2 minutos** pospone la pregunta para esa ruta; no se muestra sobre otras pantallas ni con la app inactiva. Cambiar o quitar la ruta, o salir del mapa, cancela el recordatorio. **Sí, ya subí** permite confirmar la línea y activar «Ayudar con ubicaciones» con consentimiento si aún está desactivado. La tarjeta del mapa aparece solo después de confirmar el viaje; **Todavía no** conserva la ruta sin iniciar la contribución ni programar otro aviso.
