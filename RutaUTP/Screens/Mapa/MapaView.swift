@@ -14,19 +14,24 @@ import SwiftUI
 import MapKit
 
 struct MapaView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
     @StateObject private var vm: MapaViewModel
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
+    @State private var showBoardingConfirmation = false
+    @State private var boardingReminderTask: Task<Void, Never>?
+    @State private var boardingReminderDate: Date?
+    @State private var boardingReminderRoute = 0
     /// Selector de destino tocando el mapa (botón del buscador).
     @State private var showElegirEnMapa = false
     /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
     /// debajo del botón de mi ubicación.
     @State private var panelColapsado = false
-    /// Modo "colocar marcador": los paneles se retiran y el mapa queda limpio
-    /// para que el siguiente toque caiga en el punto que se quiere señalar.
+    /// El punto central se confirma al dejar de mover el mapa durante un segundo.
     @State private var modoColocarMarcador = false
+    @State private var confirmacionMarcador: Task<Void, Never>?
     /// Punto señalado por el usuario. Es un estado de la PANTALLA, no del
     /// ViewModel: no lo lee nadie más y no debe sobrevivir a la navegación
     /// hacia atrás, donde volvería a aparecer sin que se haya pedido.
@@ -58,8 +63,8 @@ struct MapaView: View {
     ///
     /// Dos situaciones comparten el mismo gesto visual, y por eso una sola
     /// bandera las gobierna:
-    ///  - **Colocar un marcador**: el mapa debe quedar libre para que el
-    ///    siguiente toque caiga en el punto que se quiere señalar.
+    ///  - **Colocar un marcador**: el mapa debe quedar libre para elegir
+    ///    el punto central sin taparlo.
     ///  - **Buscar el recorrido**: mientras se resuelve el itinerario, el
     ///    buscador y las líneas se apartan y solo queda la ventana de carga.
     ///
@@ -68,6 +73,8 @@ struct MapaView: View {
     private var panelesRetirados: Bool {
         modoColocarMarcador || vm.calculandoItinerario
     }
+
+    private var mostrandoRuta: Bool { vm.itinerario != nil }
 
     /// El servicio de ubicación se inyecta para compartirlo con el rastreo
     /// pasivo: una sola instancia para toda la app (ver `RutaUTPApp`).
@@ -122,6 +129,9 @@ struct MapaView: View {
                 if plan.walkingApproximate {
                     AvisoRutaAproximada()
                 }
+                if trackingCoordinator.selectedTripRoute == nil {
+                    invitacionConfirmarViaje
+                }
             } else if let mensaje = vm.mensajeRuta {
                 Text(mensaje).foregroundStyle(Color.onSurfaceVariant)
             }
@@ -131,6 +141,40 @@ struct MapaView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Acceso voluntario que permanece disponible aunque se cierre el aviso.
+    private var invitacionConfirmarViaje: some View {
+        Button {
+            cancelarPreguntaDeViaje()
+            showBoardingConfirmation = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "bus.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.appPrimary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L.t("¿Ya subiste?", "Already on board?"))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.onSurface)
+                    Text(L.t("Confirma tu línea", "Confirm your line"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.onSurfaceVariant)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.onSurfaceVariant)
+            }
+            .frame(minHeight: 44)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+        .accessibilityLabel(L.t("¿Ya subiste? Confirma tu línea", "Already on board? Confirm your line"))
     }
 
     var body: some View {
@@ -231,40 +275,23 @@ struct MapaView: View {
                 }
             }
             .ignoresSafeArea()
-            // Mantiene `centroMapa` al día para poder fijar el marcador en el
-            // punto exacto que el usuario está viendo. `.onEnd` y no
-            // `.immediate`: solo importa al soltar el dedo, y así no se
-            // dispara en cada fotograma del arrastre.
-            .onMapCameraChange(frequency: .onEnd) { context in
+            // Cada movimiento reinicia la espera, incluido el deslizamiento
+            // por inercia: nunca confirmar el centro anterior mientras se arrastra.
+            .onMapCameraChange(frequency: .continuous) { context in
                 centroMapa = context.region.center
+                if modoColocarMarcador { programarConfirmacionMarcador() }
             }
-            .simultaneousGesture(TapGesture().onEnded {
-                guard modoColocarMarcador else { return }
-                fijarMarcadorEnCentro()
-            })
             // Las anotaciones gestionan sus toques; la ficha se cierra con su X.
             // Un gesto en el Map padre competía con la selección del micro.
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
-                // Todo lo de ARRIBA (header, estado, panel de contribución,
-                // buscador, resumen del itinerario) viaja como un solo bloque:
+                // Todo lo de ARRIBA (header, buscador y resumen del itinerario) viaja como un solo bloque:
                 // así se retira hacia arriba de un tirón y no pieza a pieza.
                 VStack(spacing: 0) {
-                    // Header
-                    header
-                        .padding(.top, 0)
-
-                    if trackingCoordinator.isEnabled {
-                        estadoContribucion
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                    }
-
-                    if trackingCoordinator.isEnabled {
-                        TripContributionPanel(coordinator: trackingCoordinator)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
+                    if !mostrandoRuta {
+                        header
+                            .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
                     // Panel de búsqueda. Se aparta en cuanto hay un itinerario
@@ -274,7 +301,7 @@ struct MapaView: View {
                     if vm.itinerario == nil {
                         searchPanel
                             .padding(.horizontal, 16)
-                            .padding(.top, trackingCoordinator.isEnabled ? 8 : 12)
+                            .padding(.top, 12)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
 
@@ -294,23 +321,49 @@ struct MapaView: View {
 
                 // Todo lo de ABAJO se va por abajo, por el mismo motivo.
                 VStack(spacing: 0) {
-                    // Botones flotantes a la derecha, apilados: el de colocar
-                    // el marcador encima del de "Mi ubicación", que es el que
-                    // se usa a diario y se queda a la altura de la vista.
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 10) {
-                            botonColocarMarcador
-                            botonMiUbicacion
+                    // Antes de elegir ruta se ofrecen ambos accesos al mapa.
+                    if !mostrandoRuta {
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 10) {
+                                botonColocarMarcador
+                                botonMiUbicacion
+                            }
+                            .padding(.trailing, 20)
+                            .padding(.bottom, 8)
                         }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 8)
+                        .transition(.opacity)
+                    }
+
+                    // El inicio del viaje se ofrece al resolver una ruta.
+                    // Aquí solo se muestran los controles de un viaje confirmado.
+                    if !mostrandoRuta, trackingCoordinator.isEnabled, trackingCoordinator.selectedTripRoute != nil {
+                        TripContributionPanel(
+                            coordinator: trackingCoordinator,
+                            statusMessage: trackingCoordinator.statusMessage,
+                            statusColor: colorEstadoContribucion
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
                     }
 
                     // Bottom panel: REPORTAR + cards siempre visibles; solo el
                     // encabezado "Transportes cercanos" se desliza al colapsar.
-                    bottomPanel
-                        .padding(.bottom, tabBarHeight + 8)
+                    if mostrandoRuta {
+                        HStack(alignment: .center) {
+                            botonReportar
+                            Spacer(minLength: 12)
+                            botonMiUbicacion
+                        }
+                        .frame(height: 44)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 56)
+                        .transition(.opacity)
+                    } else {
+                        bottomPanel
+                            .padding(.bottom, tabBarHeight + 8)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
                 .offset(y: panelesRetirados ? desplazamientoFueraDePantalla : 0)
                 .opacity(panelesRetirados ? 0 : 1)
@@ -370,10 +423,14 @@ struct MapaView: View {
             ventanaCargaItinerario
                 .zIndex(15)
 
-            // ── NAVBAR ──
-            BottomNavBar()
+            // La X de la guía devuelve todos los paneles y la navegación.
+            if !mostrandoRuta {
+                BottomNavBar()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .ignoresSafeArea(edges: .bottom)
+        .animation(.easeInOut(duration: 0.3), value: mostrandoRuta)
         .onAppear {
             vm.iniciarGPS()
             vm.refrescarDestinos() // chips: refleja lo guardado en Guardado
@@ -384,26 +441,52 @@ struct MapaView: View {
             }
             #endif
         }
-        .onDisappear { vm.detener() }
+        .onDisappear {
+            cancelarPreguntaDeViaje()
+            confirmacionMarcador?.cancel()
+            modoColocarMarcador = false
+            vm.detener()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                confirmacionMarcador?.cancel()
+                modoColocarMarcador = false
+                boardingReminderTask?.cancel()
+            } else if boardingReminderDate != nil {
+                // Si venció mientras la app no estaba activa, dar un momento al volver.
+                iniciarEsperaDeViaje(minimumDelay: 3)
+            }
+        }
         .onChange(of: router.destinoPendiente) { _, _ in
             consumirDestinoPendiente()
         }
         .onChange(of: vm.itinerarioFocusTick) { _, _ in
             guard let polyline = vm.routePolyline else { return }
-            // Dejar espacio a la guía superior y mostrar el itinerario completo.
+            programarPreguntaDeViaje(en: 30)
+            // Acercar el inicio del viaje; el usuario conserva el zoom y arrastre manual.
             let rect = polyline.boundingMapRect
             withAnimation(.easeInOut(duration: 0.4)) {
                 panelColapsado = true
-                cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
-                                                   dy: -max(rect.height * 0.65, 1800)))
+                if let origin = vm.userRealCoordinate {
+                    cameraPosition = .region(MKCoordinateRegion(center: origin,
+                        latitudinalMeters: 1000, longitudinalMeters: 1000))
+                } else {
+                    cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
+                                                       dy: -max(rect.height * 0.65, 1800)))
+                }
             }
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
+            cancelarPreguntaDeViaje()
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
             withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }
         }
         .onChange(of: vm.busquedaResultado?.titulo) { _, _ in
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
+            if vm.busquedaResultado == nil { cancelarPreguntaDeViaje() }
+        }
+        .onChange(of: vm.calculandoItinerario) { _, calculating in
+            if calculating { cancelarPreguntaDeViaje() }
         }
         .onChange(of: vm.region.center.latitude) { _, _ in
             withAnimation {
@@ -423,8 +506,18 @@ struct MapaView: View {
             }
         }
         .animation(.easeInOut(duration: 0.28), value: mostrarDrawer)
+        .sheet(isPresented: $showBoardingConfirmation) {
+            BoardingConfirmationSheet(coordinator: trackingCoordinator,
+                                      suggestedRouteID: vm.itinerario?.route.id,
+                                      onRemindLater: { programarPreguntaDeViaje(en: 120) })
+        }
         .sheet(isPresented: $showReportarSheet) {
-            ReportarSheet()
+            // La ruta del itinerario calculado entra ya seleccionada: si el
+            // usuario acaba de buscar cómo llegar y luego reporta un cambio,
+            // es casi siempre de ESA línea, y elegirla otra vez a mano es
+            // un paso que soloServía para equivocarse.
+            ReportarSheet(initialRouteID: vm.itinerario?.route.id,
+                          locationService: vm.sharedLocationService)
                 .presentationDetents([.medium, .large])
         }
         .fullScreenCover(isPresented: $showElegirEnMapa) {
@@ -440,23 +533,47 @@ struct MapaView: View {
         }
     }
 
-    private var estadoContribucion: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(colorEstadoContribucion)
-                .frame(width: 8, height: 8)
+    private func cancelarPreguntaDeViaje() {
+        boardingReminderTask?.cancel()
+        boardingReminderTask = nil
+        boardingReminderDate = nil
+        showBoardingConfirmation = false
+    }
 
-            Text(trackingCoordinator.statusMessage)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.onSurfaceVariant)
-                .lineLimit(1)
+    private func programarPreguntaDeViaje(en seconds: TimeInterval) {
+        cancelarPreguntaDeViaje()
+        guard vm.itinerario != nil, trackingCoordinator.selectedTripRoute == nil else { return }
+        boardingReminderRoute = vm.itinerarioFocusTick
+        boardingReminderDate = Date().addingTimeInterval(seconds)
+        iniciarEsperaDeViaje()
+    }
 
-            Spacer(minLength: 0)
+    private func iniciarEsperaDeViaje(minimumDelay: TimeInterval = 0) {
+        boardingReminderTask?.cancel()
+        guard let date = boardingReminderDate else { return }
+        let revision = boardingReminderRoute
+        let delay = max(minimumDelay, date.timeIntervalSinceNow)
+        boardingReminderTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(delay))
+                while !Task.isCancelled {
+                    guard revision == vm.itinerarioFocusTick, vm.itinerario != nil,
+                          !vm.calculandoItinerario, trackingCoordinator.selectedTripRoute == nil else {
+                        boardingReminderDate = nil
+                        return
+                    }
+                    // Mantener el recordatorio pendiente sin interrumpir otras pantallas.
+                    guard scenePhase == .active else { return }
+                    if !showReportarSheet && !showElegirEnMapa && !mostrarDrawer && !modoColocarMarcador
+                        && vm.busSeleccionado == nil && !campoEnfocado {
+                        boardingReminderDate = nil
+                        showBoardingConfirmation = true
+                        return
+                    }
+                    try await Task.sleep(for: .seconds(2))
+                }
+            } catch { return }
         }
-        .padding(.horizontal, 12)
-        .frame(minHeight: 30)
-        .background(.ultraThinMaterial, in: Capsule())
-        .accessibilityElement(children: .combine)
     }
 
     private var colorEstadoContribucion: Color {
@@ -724,21 +841,28 @@ struct MapaView: View {
     // MARK: - Botón Mi Ubicación (centra el mapa en el GPS real)
     private var botonMiUbicacion: some View {
         BotonMiUbicacion(tieneUbicacion: vm.userRealCoordinate != nil) {
-            vm.recenterOnUser()
+            if mostrandoRuta, let origin = vm.userRealCoordinate {
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    cameraPosition = .region(MKCoordinateRegion(center: origin,
+                        latitudinalMeters: 1000, longitudinalMeters: 1000))
+                }
+            } else {
+                vm.recenterOnUser()
+            }
         }
     }
 
     // MARK: - Marcador de referencia
 
     /// Botón que deja caer un marcador en el mapa, al estilo Uber/InDrive:
-    /// se retira la interfaz, el mapa queda limpio y el siguiente toque fija
-    /// el punto.
+    /// se retira la interfaz y el punto se fija automáticamente al detenerse.
     private var botonColocarMarcador: some View {
         Button {
             campoEnfocado = false
             withAnimation {
                 modoColocarMarcador = true
             }
+            programarConfirmacionMarcador()
             AppHaptics.impact(.light)
         } label: {
             Image(systemName: "mappin.and.ellipse")
@@ -756,8 +880,8 @@ struct MapaView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(L.t("Colocar un marcador en el mapa",
                                 "Drop a marker on the map"))
-        .accessibilityHint(L.t("Mueve el mapa y toca para señalar un punto",
-                               "Move the map and tap to mark a point"))
+        .accessibilityHint(L.t("Mueve el mapa. El punto se selecciona tras un segundo sin moverlo",
+                               "Move the map. The point is selected after one second without movement"))
     }
 
     private var marcadorEsDestinoActual: Bool {
@@ -765,11 +889,24 @@ struct MapaView: View {
         return marcador.latitude == destino.coordenada.latitude && marcador.longitude == destino.coordenada.longitude
     }
 
+    private func programarConfirmacionMarcador() {
+        confirmacionMarcador?.cancel()
+        confirmacionMarcador = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(1))
+            } catch { return }
+            guard !Task.isCancelled, modoColocarMarcador, scenePhase == .active else { return }
+            fijarMarcadorEnCentro()
+        }
+    }
+
     /// Fija el marcador en el centro del mapa.
     ///
-    /// El pin central marca el destino al desplazar el mapa. Confirmarlo
-    /// utiliza ese centro, no la posición del dedo que confirma la selección.
+    /// Usa el último centro visible cuando termina la espera automática.
     private func fijarMarcadorEnCentro() {
+        confirmacionMarcador?.cancel()
+        confirmacionMarcador = nil
+        guard modoColocarMarcador else { return }
         let centro = centroMapa ?? vm.region.center
         guard CLLocationCoordinate2DIsValid(centro) else { return }
         AppHaptics.impact(.medium)
@@ -784,6 +921,7 @@ struct MapaView: View {
 
     /// Quita el marcador y devuelve los paneles a su sitio.
     private func despejarMarcador() {
+        confirmacionMarcador?.cancel()
         AppHaptics.impact(.light)
         if marcadorEsDestinoActual { vm.limpiar() }
         withAnimation {
@@ -808,12 +946,13 @@ struct MapaView: View {
                 VStack {
                     Spacer()
                     HStack(spacing: 6) {
-                        Image(systemName: "hand.tap.fill")
+                        Image(systemName: "hand.draw.fill")
                             .font(.system(size: 12, weight: .bold))
-                        Text(L.t("Mueve el mapa y toca para calcular la ruta",
-                                 "Move the map and tap to calculate the route"))
+                        Text(L.t("Mueve el mapa. Al parar 1 s, se calcula la ruta",
+                                 "Move the map. Pause for 1 s to calculate the route"))
                             .font(.system(size: 12, weight: .semibold))
                     }
+                    .allowsHitTesting(false)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
@@ -847,17 +986,12 @@ struct MapaView: View {
         }
     }
 
-    /// Tarjeta que sustituye al buscador y a las líneas mientras se resuelve el
-    /// recorrido del destino elegido.
-    ///
-    /// Se ancla arriba, en el mismo sitio que ocupaba el buscador, para que el
-    /// cambio se lea como "el buscador se fue y dejó su progreso". El `VStack`
-    /// exterior está siempre presente para que la transición interna tenga un
-    /// contenedor estable donde animarse.
+    /// La carga vive fuera de los paneles que se retiran al buscar una ruta.
+    /// Conserva el aviso y su cancelación arriba, y los controles alineados abajo.
     @ViewBuilder
     private var ventanaCargaItinerario: some View {
-        VStack {
-            if vm.calculandoItinerario && !modoColocarMarcador {
+        if vm.calculandoItinerario && !modoColocarMarcador {
+            VStack {
                 HStack(spacing: 10) {
                     ProgressView()
                         .controlSize(.small)
@@ -866,34 +1000,79 @@ struct MapaView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.onSurface)
                     Spacer(minLength: 4)
+                    Button {
+                        confirmacionMarcador?.cancel()
+                        cancelarPreguntaDeViaje()
+                        marcadorUsuario = nil
+                        vm.limpiar()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color.onSurfaceVariant)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Cancelar búsqueda de ruta", "Cancel route search"))
                 }
                 .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                )
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14)
                         .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
+                        .allowsHitTesting(false)
                 )
                 .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 2)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-                .accessibilityElement(children: .combine)
+                .accessibilityElement(children: .contain)
+
+                Spacer()
+
+                HStack {
+                    botonReportar
+                    Spacer(minLength: 12)
+                    botonMiUbicacion
+                }
+                .frame(height: 44)
+                .padding(.horizontal, 20)
+                .padding(.bottom, tabBarHeight + 32)
             }
-            Spacer()
+            .transition(.opacity)
         }
-        .animation(.easeInOut(duration: 0.25), value: vm.calculandoItinerario)
-        // Solo informa: no debe interceptar el gesto del mapa.
-        .allowsHitTesting(false)
     }
 
     private func cancelarMarcador() {
+        confirmacionMarcador?.cancel()
         AppHaptics.impact(.light)
         withAnimation {
             modoColocarMarcador = false
         }
+    }
+
+    private var botonReportar: some View {
+        Button {
+            // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
+            SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "mapa.reportar") { showReportarSheet = true }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(L.signable("mapa.reportar", "REPORTAR", "REPORT"))
+                    .font(.labelCapsMd)
+                    .appTracking(AppTracking.wideLabel)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            .background(
+                Capsule()
+                    .fill(Color.appPrimary)
+                    .shadow(color: .appPrimary.opacity(0.35), radius: 8, x: 0, y: 4)
+            )
+        }
+        .buttonStyle(.plain)
+        .seniable("mapa.reportar", conGesto: false)
     }
 
     // MARK: - Bottom panel
@@ -901,28 +1080,7 @@ struct MapaView: View {
     private var bottomPanel: some View {
         VStack(spacing: 10) {
             HStack(alignment: .center) {
-                Button {
-                    // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
-                    SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "mapa.reportar") { showReportarSheet = true }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(L.signable("mapa.reportar", "REPORTAR", "REPORT"))
-                            .font(.labelCapsMd)
-                            .appTracking(AppTracking.wideLabel)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .background(
-                        Capsule()
-                            .fill(Color.appPrimary)
-                            .shadow(color: .appPrimary.opacity(0.35), radius: 8, x: 0, y: 4)
-                    )
-                }
-                .buttonStyle(.plain)
-                .seniable("mapa.reportar", conGesto: false)
+                botonReportar
 
                 Spacer()
 
@@ -1241,17 +1399,10 @@ private struct ElegirDestinoEnMapa: View {
         }
     }
 
+    /// Delega en el helper compartido: la misma resolución la usan el guardado
+    /// de lugares y el punto de subida.
     static func nombreDelLugar(_ coord: CLLocationCoordinate2D) async -> String {
-        let geocoder = CLGeocoder()
-        let lugar = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
-        if let marcas = try? await geocoder.reverseGeocodeLocation(lugar),
-           let marca = marcas.first {
-            // name = calle/número; locality = Trujillo. Prioriza la calle.
-            if let calle = marca.name, !calle.isEmpty { return calle }
-            if let distrito = marca.subLocality, !distrito.isEmpty { return distrito }
-            if let ciudad = marca.locality, !ciudad.isEmpty { return ciudad }
-        }
-        return L.t("Punto en el mapa", "Picked spot")
+        await Geocodificacion.nombreDelLugar(coord)
     }
 }
 
