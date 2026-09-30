@@ -121,7 +121,7 @@ El backend valida cada observación contra el feed GTFS, limita mensajes por pri
 
 ### Declarar el micro del viaje
 
-Con «Ayudar con ubicaciones» activo, el mapa ofrece **Estoy en un micro**.
+Después de encontrar una ruta, el mapa muestra una tarjeta discreta **¿Ya subiste? Confirma tu línea** debajo de las indicaciones. Se puede tocar en cualquier momento. Si no se usa, a los 30 segundos aparece una única pregunta automática para esa ruta. Abrir la tarjeta cancela ese aviso; cerrarlo no lo repite automáticamente. **Recordarme en 2 minutos** pospone la pregunta para esa ruta; no se muestra sobre otras pantallas ni con la app inactiva. Cambiar o quitar la ruta, o salir del mapa, cancela el recordatorio. **Sí, ya subí** permite confirmar la línea y activar «Ayudar con ubicaciones» con consentimiento si aún está desactivado. La tarjeta del mapa aparece solo después de confirmar el viaje; **Todavía no** conserva la ruta sin iniciar la contribución ni programar otro aviso.
 El selector muestra las líneas cercanas primero cuando existe ubicación, permite
 buscar por línea o empresa y distingue los ramales. Después se puede indicar
 **Vacío**, **Con espacio** o **Lleno**, o saltar ese paso. También hay un campo

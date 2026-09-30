@@ -27,8 +27,8 @@ struct BusOccupancyPanel: View {
             }
             Text(vehicleID == nil
                  ? L.t("Disponible para vehículos reales.", "Available for real vehicles.")
-                 : L.t("Para indicar cómo va tu micro, usa «Estoy en un micro» en el mapa.",
-                       "To report your bus occupancy, use ‘I'm on a bus’ on the map."))
+                 : L.t("Busca tu ruta y confirma «Sí, ya subí» para indicar cómo va tu micro.",
+                       "Find your route and confirm ‘Yes, I'm on board’ to report bus occupancy."))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(12)
@@ -40,6 +40,8 @@ struct BusOccupancyPanel: View {
 
 struct TripContributionPanel: View {
     @ObservedObject var coordinator: PassiveTrackingCoordinator
+    var statusMessage: String? = nil
+    var statusColor: Color = .secondary
     @State private var showTrip = false
 
     var body: some View {
@@ -76,8 +78,23 @@ struct TripContributionPanel: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
+            if let statusMessage {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                    Text(statusMessage)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.onSurfaceVariant)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 4)
+                .accessibilityElement(children: .combine)
+            }
         }
-        .padding(10)
+        .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
         .sheet(isPresented: $showTrip) { TripSelectionSheet(coordinator: coordinator) }
     }
@@ -105,8 +122,64 @@ private struct TripOccupancyControls: View {
     }
 }
 
+/// Pregunta tras encontrar una ruta; responder no conserva el itinerario.
+struct BoardingConfirmationSheet: View {
+    @ObservedObject var coordinator: PassiveTrackingCoordinator
+    let suggestedRouteID: String?
+    let onRemindLater: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirmingLine = false
+
+    var body: some View {
+        Group {
+            if confirmingLine {
+                TripSelectionSheet(coordinator: coordinator, suggestedRouteID: suggestedRouteID)
+            } else {
+                VStack(spacing: 18) {
+                    Image(systemName: "bus.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(Color.appPrimary)
+                        .frame(width: 64, height: 64)
+                        .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 22))
+                    Text(L.t("¿Ya te encuentras en el transporte público?",
+                             "Are you already on public transport?"))
+                        .font(.title3.weight(.bold))
+                        .multilineTextAlignment(.center)
+                    Text(L.t("Si ya subiste, confirma la línea que tomaste. Si aún no, puedes seguir viendo tu ruta.",
+                             "If you've boarded, confirm your line. Otherwise, keep viewing your route."))
+                        .font(.subheadline)
+                        .foregroundStyle(Color.onSurfaceVariant)
+                        .multilineTextAlignment(.center)
+                    Button { confirmingLine = true } label: {
+                        Text(L.t("Sí, ya subí", "Yes, I'm on board"))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.appPrimary)
+                    Button {
+                        onRemindLater()
+                        dismiss()
+                    } label: {
+                        Label(L.t("Recordarme en 2 minutos", "Remind me in 2 minutes"), systemImage: "clock")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    Button(L.t("Todavía no", "Not yet")) { dismiss() }
+                        .frame(minHeight: 44)
+                }
+                .padding(24)
+            }
+        }
+        .presentationDetents(confirmingLine ? [.large] : [.height(490), .large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(28)
+    }
+}
+
 private struct TripSelectionSheet: View {
     @ObservedObject var coordinator: PassiveTrackingCoordinator
+    var suggestedRouteID: String? = nil
+    @State private var showConsent = false
     @Environment(\.dismiss) private var dismiss
     @State private var routes: [RutaGTFS] = []
     @State private var selected: RutaGTFS?
@@ -116,6 +189,27 @@ private struct TripSelectionSheet: View {
     @State private var boardingPoint: BoardingPoint?
     @State private var showBoardingMap = false
     @State private var loading = true
+    /// Geocodificación inversa en curso. Se cancela al mover el punto otra vez:
+    /// si no, la respuesta de un punto viejo landingaría después y pondría una
+    /// calle que ya no corresponde al pin.
+    @State private var tareaDireccion: Task<Void, Never>?
+
+    /// Escribe la calle del punto marcado, sustituyendo lo que hubiera.
+    ///
+    /// Es un RELLENO, no un cierre: el campo sigue editable porque la calle
+    /// que devuelve el sistema no siempre es la que el usuario reconoce
+    /// ("Av. España" puede salir como "Calle España").
+    private func escribirDireccion(para punto: BoardingPoint) {
+        tareaDireccion?.cancel()
+        tareaDireccion = Task { @MainActor in
+            let nombre = await Geocodificacion.nombreDelLugar(
+                CLLocationCoordinate2D(latitude: punto.latitude,
+                                       longitude: punto.longitude)
+            )
+            guard !Task.isCancelled else { return }
+            boardingPlace = String(nombre.prefix(120))
+        }
+    }
 
     private func occupancyOption(_ value: String, title: String, icon: String) -> some View {
         let selected = occupancy == value
@@ -154,6 +248,21 @@ private struct TripSelectionSheet: View {
             Group {
                 if let route = selected {
                     Form {
+                        if !coordinator.isEnabled {
+                            Section {
+                                if coordinator.isPublisherConfigured {
+                                    Button(L.t("Activar Ayudar con ubicaciones", "Turn on Help with locations")) {
+                                        showConsent = true
+                                    }
+                                    Text(L.t("Para contribuir con tu viaje, activa esta opción y concede los permisos de ubicación y movimiento.",
+                                             "To contribute your trip, enable this option and grant location and motion permissions."))
+                                        .font(.caption).foregroundStyle(.secondary)
+                                } else {
+                                    Text(L.t("Esta instalación aún no tiene habilitada la contribución de viajes. Puedes seguir consultando la ruta en el mapa.",
+                                             "Trip contributions aren't configured on this installation yet. You can still view your route on the map."))
+                                }
+                            }
+                        }
                         Section(L.t("Tu Transporte Público", "Your Public Transport")) {
                             Text(L.t("Línea ", "Line ") + route.linea).font(.headline)
                             Text(route.empresa + " · " + route.variante).font(.subheadline)
@@ -172,11 +281,14 @@ private struct TripSelectionSheet: View {
                                     Label(L.t("Punto seleccionado", "Point selected"), systemImage: "checkmark.circle.fill")
                                         .font(.caption).foregroundStyle(Color.appPrimary)
                                     Spacer()
-                                    Button(L.t("Quitar", "Remove"), role: .destructive) { boardingPoint = nil }
+                                    Button(L.t("Quitar", "Remove"), role: .destructive) {
+                                        boardingPoint = nil
+                                        boardingPlace = ""
+                                    }
                                         .font(.caption)
                                 }
                             }
-                            TextField(L.t("Calle o referencia (opcional)", "Street or landmark (optional)"),
+                            TextField(L.t("Calle o referencia", "Street or landmark"),
                                       text: $boardingPlace, axis: .vertical)
                                 .lineLimit(1...3)
                                 .onChange(of: boardingPlace) { _, value in
@@ -185,8 +297,8 @@ private struct TripSelectionSheet: View {
                         } header: {
                             Text(L.t("¿Dónde subiste? (opcional)", "Where did you board? (optional)"))
                         } footer: {
-                            Text(L.t("Marca el lugar, escribe una referencia o usa ambos. Es opcional y se guarda solo en tu teléfono para futuros paraderos de alumnos.",
-                                     "Mark the spot, write a reference, or use both. This is optional and stays on your phone for future student stops."))
+                            Text(L.t("Marca el lugar y la dirección se escribe sola; puedes corregirla. Es opcional y se guarda solo en tu teléfono para futuros paraderos de alumnos.",
+                                     "Mark the spot and the address is written for you; you can edit it. This is optional and stays on your phone for future student stops."))
                         }
                         Section {
                             occupancyOption("", title: L.t("Prefiero no indicar", "Skip for now"),
@@ -237,17 +349,35 @@ private struct TripSelectionSheet: View {
             .fullScreenCover(isPresented: $showBoardingMap) {
                 if let route = selected {
                     BoardingPointMap(route: route, initialPoint: boardingPoint,
-                                     currentLocation: coordinator.latestLocation) { boardingPoint = $0 }
+                                     currentLocation: coordinator.latestLocation) { nuevo in
+                        boardingPoint = nuevo
+                        // La calle se escribe sola a partir del punto marcado:
+                        // es lo que el usuario acaba de señalar, y preguntárselo
+                        // otra vez es el mismo dato dos veces.
+                        escribirDireccion(para: nuevo)
+                    }
                 }
             }
             .navigationTitle(L.t("Estoy en un micro", "I'm on a bus"))
             .navigationBarTitleDisplayMode(.inline)
+            .onDisappear { tareaDireccion?.cancel() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.t("Cancelar", "Cancel")) { dismiss() }
                 }
             }
+            .confirmationDialog(L.t("Ayudar con ubicaciones en tiempo real", "Help with real-time locations"),
+                                isPresented: $showConsent, titleVisibility: .visible) {
+                Button(L.t("Aceptar y activar", "Accept and turn on")) {
+                    coordinator.setContributionEnabled(true)
+                }
+                Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+            } message: {
+                Text(L.t("Se enviarán observaciones anónimas de tu viaje al servidor de prueba. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
+                         "Anonymous observations of your trip will be sent to the test server. Contribution pauses while the app is in the background or the screen is locked."))
+            }
             .task {
+                guard loading else { return }
                 let feed = await GTFSRepository.shared.rutas()
                 if let location = coordinator.latestLocation {
                     let distances = Dictionary(uniqueKeysWithValues: feed.map { route in
@@ -258,6 +388,7 @@ private struct TripSelectionSheet: View {
                 } else {
                     routes = feed.sorted { $0.linea.localizedStandardCompare($1.linea) == .orderedAscending }
                 }
+                if let suggestedRouteID { selected = routes.first { $0.id == suggestedRouteID } }
                 loading = false
             }
         }
