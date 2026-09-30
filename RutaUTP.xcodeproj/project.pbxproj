@@ -7,35 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BB9900000000000000000022 /* OccupancyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000021 /* OccupancyTests.swift */; };
-		BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000011 /* BusOccupancyPanel.swift */; };
-		BB9900000000000000000002 /* OccupancyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000001 /* OccupancyService.swift */; };
-		BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000011 /* RouteChangesSheet.swift */; };
-		BA9900000000000000000002 /* RouteChangesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000001 /* RouteChangesService.swift */; };
+		0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800400300AD9FE004E1676 /* DestinosFijos.swift */; };
+		0A800411300AD9FE004E1676 /* AppHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800410300AD9FE004E1676 /* AppHaptics.swift */; };
+		0A800413300AD9FE004E1676 /* Persistencia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800412300AD9FE004E1676 /* Persistencia.swift */; };
+		0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800416300AD9FE004E1676 /* RutaUTPTests.swift */; };
+		0A800424300AD9FE004E1676 /* DrawerSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800423300AD9FE004E1676 /* DrawerSheets.swift */; };
+		0A800426300AD9FE004E1676 /* DatosPersonalesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */; };
+		0A800428300AD9FE004E1676 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800427300AD9FE004E1676 /* ImagePicker.swift */; };
+		0A80042A300AD9FE004E1676 /* ProfileImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800429300AD9FE004E1676 /* ProfileImageStore.swift */; };
+		0A80042C300AD9FE004E1676 /* SeguridadComunidad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80042B300AD9FE004E1676 /* SeguridadComunidad.swift */; };
+		0A80042E300AD9FE004E1676 /* SeguridadZonas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80042D300AD9FE004E1676 /* SeguridadZonas.swift */; };
+		0A800430300AD9FE004E1676 /* SeguridadLugares.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80042F300AD9FE004E1676 /* SeguridadLugares.swift */; };
+		0A800432300AD9FE004E1676 /* LugaresStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800431300AD9FE004E1676 /* LugaresStore.swift */; };
+		0A800434300AD9FE004E1676 /* SeguridadLugaresModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800433300AD9FE004E1676 /* SeguridadLugaresModel.swift */; };
+		0A800436300AD9FE004E1676 /* FormularioReporte.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800435300AD9FE004E1676 /* FormularioReporte.swift */; };
+		0A800438300AD9FE004E1676 /* RejillaEspacial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800437300AD9FE004E1676 /* RejillaEspacial.swift */; };
+		0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */; };
+		0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */; };
 		0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043E300AD9FE004E1676 /* MonederoStore.swift */; };
 		0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800440300AD9FE004E1676 /* MonederoView.swift */; };
-		AA9900000000000000000A02 /* PagoQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A01 /* PagoQR.swift */; };
-		AA9900000000000000000A04 /* EscanerQRView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A03 /* EscanerQRView.swift */; };
-		0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */; };
-		0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */; };
-		0A800438300AD9FE004E1676 /* RejillaEspacial.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800437300AD9FE004E1676 /* RejillaEspacial.swift */; };
-		0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800400300AD9FE004E1676 /* DestinosFijos.swift */; };
-		0A800436300AD9FE004E1676 /* FormularioReporte.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800435300AD9FE004E1676 /* FormularioReporte.swift */; };
-		0A800434300AD9FE004E1676 /* SeguridadLugaresModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800433300AD9FE004E1676 /* SeguridadLugaresModel.swift */; };
-		0A800432300AD9FE004E1676 /* LugaresStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800431300AD9FE004E1676 /* LugaresStore.swift */; };
-		0A800430300AD9FE004E1676 /* SeguridadLugares.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80042F300AD9FE004E1676 /* SeguridadLugares.swift */; };
-		0A80042E300AD9FE004E1676 /* SeguridadZonas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80042D300AD9FE004E1676 /* SeguridadZonas.swift */; };
-		0A80042C300AD9FE004E1676 /* SeguridadComunidad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80042B300AD9FE004E1676 /* SeguridadComunidad.swift */; };
-		0A80042A300AD9FE004E1676 /* ProfileImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800429300AD9FE004E1676 /* ProfileImageStore.swift */; };
-		0A800428300AD9FE004E1676 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800427300AD9FE004E1676 /* ImagePicker.swift */; };
-		0A800426300AD9FE004E1676 /* DatosPersonalesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */; };
-		0A800424300AD9FE004E1676 /* DrawerSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800423300AD9FE004E1676 /* DrawerSheets.swift */; };
-		0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800416300AD9FE004E1676 /* RutaUTPTests.swift */; };
 		0A8004F7300AD9FE004E1676 /* BottomNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */; };
 		0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004B9300AD9FE004E1676 /* Colors.swift */; };
 		0A8004FB300AD9FE004E1676 /* Spacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BA300AD9FE004E1676 /* Spacing.swift */; };
-		0A800411300AD9FE004E1676 /* AppHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800410300AD9FE004E1676 /* AppHaptics.swift */; };
-		0A800413300AD9FE004E1676 /* Persistencia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800412300AD9FE004E1676 /* Persistencia.swift */; };
 		0A8004FC300AD9FE004E1676 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BB300AD9FE004E1676 /* Typography.swift */; };
 		0A8004FD300AD9FE004E1676 /* LugarGuardado.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BD300AD9FE004E1676 /* LugarGuardado.swift */; };
 		0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BE300AD9FE004E1676 /* ReporteComunidad.swift */; };
@@ -43,6 +36,7 @@
 		0A800500300AD9FE004E1676 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C1300AD9FE004E1676 /* AppRouter.swift */; };
 		0A800501300AD9FE004E1676 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C2300AD9FE004E1676 /* RootView.swift */; };
 		0A800502300AD9FE004E1676 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004C4300AD9FE004E1676 /* Preview Assets.xcassets */; };
+		0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */; };
 		0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C8300AD9FE004E1676 /* BienvenidaView.swift */; };
 		0A800505300AD9FE004E1676 /* RutaMapKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CA300AD9FE004E1676 /* RutaMapKitView.swift */; };
 		0A800506300AD9FE004E1676 /* GuardadoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CC300AD9FE004E1676 /* GuardadoView.swift */; };
@@ -50,14 +44,13 @@
 		0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */; };
 		0A800509300AD9FE004E1676 /* MapMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D0300AD9FE004E1676 /* MapMarkers.swift */; };
 		0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D1300AD9FE004E1676 /* SideDrawer.swift */; };
+		0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */; };
 		0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */; };
-		0AC4E0A120260907004E1676 /* CarneDigitalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC4E0A220260907004E1676 /* CarneDigitalView.swift */; };
 		0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D6300AD9FE004E1676 /* PerfilView.swift */; };
 		0A80050E300AD9FE004E1676 /* TarjetaFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */; };
 		0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D9300AD9FE004E1676 /* RutasView.swift */; };
 		0A800510300AD9FE004E1676 /* SeguridadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004DB300AD9FE004E1676 /* SeguridadView.swift */; };
 		0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004DD300AD9FE004E1676 /* RouteTrackingDemoView.swift */; };
-		0A8005AA300AD9FE004E1676 /* TrackingDemoComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */; };
 		0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004DE300AD9FE004E1676 /* RouteTrackingViewModel.swift */; };
 		0A800513300AD9FE004E1676 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E1300AD9FE004E1676 /* LocationService.swift */; };
 		0A800514300AD9FE004E1676 /* LocationServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004E2300AD9FE004E1676 /* LocationServiceProtocol.swift */; };
@@ -68,9 +61,30 @@
 		0A80051A300AD9FE004E1676 /* SimulatedTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */; };
 		0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */; };
 		0A80051C300AD9FE004E1676 /* PolylineMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */; };
-		0A80FE0001A1B2C3004E1676 /* Geocodificacion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80FE0001A1B2C3004E1677 /* Geocodificacion.swift */; };
 		0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004F2300AD9FE004E1676 /* Assets.xcassets */; };
+		0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800404300AD9FE004E1676 /* PassengerDetectionEngineTests.swift */; };
+		0A80051F300AD9FE004E1676 /* PassengerObservationPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800405300AD9FE004E1676 /* PassengerObservationPayloadTests.swift */; };
 		0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */; };
+		0A800521300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800406300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift */; };
+		0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */; };
+		0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800408300AD9FE004E1676 /* StartGuardTests.swift */; };
+		0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */; };
+		0A8005AA300AD9FE004E1676 /* TrackingDemoComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */; };
+		0A80FE0001A1B2C3004E1676 /* Geocodificacion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80FE0001A1B2C3004E1677 /* Geocodificacion.swift */; };
+		0AC4E0A120260907004E1676 /* CarneDigitalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC4E0A220260907004E1676 /* CarneDigitalView.swift */; };
+		2F53143E304F16D500AC2B66 /* ObservationPublishing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */; };
+		2F531442304F170200AC2B66 /* MQTTObservationPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */; };
+		2F87EE07304DE59800E2F5F2 /* CocoaMQTT in Frameworks */ = {isa = PBXBuildFile; productRef = 2F87EE06304DE59800E2F5F2 /* CocoaMQTT */; };
+		2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */; };
+		2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */; };
+		2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */; };
+		2F87EE12304E036B00E2F5F2 /* PassengerDetectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */; };
+		2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */; };
+		2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */; };
+		2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */; };
+		2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */; };
+		2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */; };
+		2F87EE28304E0F2000E2F5F2 /* StartGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */; };
 		AA6600000000000000000B01 /* GTFSModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A01 /* GTFSModels.swift */; };
 		AA6600000000000000000B02 /* GTFSCSV.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A02 /* GTFSCSV.swift */; };
 		AA6600000000000000000B03 /* GTFSRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A03 /* GTFSRepository.swift */; };
@@ -78,7 +92,6 @@
 		AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A05 /* NavegacionRutaView.swift */; };
 		AA6600000000000000000B06 /* ParaderosIluminadosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000A06 /* ParaderosIluminadosView.swift */; };
 		AA6600000000000000000D02 /* gtfs in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000D01 /* gtfs */; };
-		AA9900000000000000000B02 /* BusEn3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000B01 /* BusEn3D.swift */; };
 		AA6600000000000000000E02 /* Senia.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E01 /* Senia.swift */; };
 		AA6600000000000000000E04 /* SeniasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E03 /* SeniasService.swift */; };
 		AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E05 /* SeniasOverlay.swift */; };
@@ -88,31 +101,18 @@
 		AA6600000000000000000F02 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000F01 /* Idioma.swift */; };
 		AA7700000000000000000002 /* Negocio.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000001 /* Negocio.swift */; };
 		AA7700000000000000000004 /* NegociosService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000003 /* NegociosService.swift */; };
+		AA7700000000000000000006 /* negocios_promocionados.json in Resources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000005 /* negocios_promocionados.json */; };
 		AA7700000000000000000009 /* NegociosComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000008 /* NegociosComponents.swift */; };
 		AA8800000000000000000B01 /* GuardadoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8800000000000000000A01 /* GuardadoViewModel.swift */; };
 		AA8800000000000000000B02 /* GuardadoSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8800000000000000000A02 /* GuardadoSheets.swift */; };
-		AA7700000000000000000006 /* negocios_promocionados.json in Resources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000005 /* negocios_promocionados.json */; };
-		2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */; };
-		2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */; };
-		2F87EE28304E0F2000E2F5F2 /* StartGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */; };
-		2F87EE16304E041400E2F5F2 /* PassengerDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */; };
-		2F87EE12304E036B00E2F5F2 /* PassengerDetectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */; };
-		2F87EE20304E0CD200E2F5F2 /* RouteCandidateMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */; };
-		2F87EE1E304E097E00E2F5F2 /* CoreMotionActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */; };
-		2F87EE1C304E095800E2F5F2 /* MotionActivityProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */; };
-		2F87EE0D304DE9AC00E2F5F2 /* MQTTTrackingProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */; };
-		2F87EE0F304DEA2100E2F5F2 /* TrackingProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */; };
-		2F531442304F170200AC2B66 /* MQTTObservationPublisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */; };
-		2F53143E304F16D500AC2B66 /* ObservationPublishing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */; };
-		0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */; };
-		0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */; };
-		0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800404300AD9FE004E1676 /* PassengerDetectionEngineTests.swift */; };
-		0A80051F300AD9FE004E1676 /* PassengerObservationPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800405300AD9FE004E1676 /* PassengerObservationPayloadTests.swift */; };
-		0A800521300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800406300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift */; };
-		0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */; };
-		0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800408300AD9FE004E1676 /* StartGuardTests.swift */; };
-		0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */; };
-		2F87EE07304DE59800E2F5F2 /* CocoaMQTT in Frameworks */ = {isa = PBXBuildFile; productRef = 2F87EE06304DE59800E2F5F2 /* CocoaMQTT */; };
+		AA9900000000000000000A02 /* PagoQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A01 /* PagoQR.swift */; };
+		AA9900000000000000000A04 /* EscanerQRView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A03 /* EscanerQRView.swift */; };
+		AA9900000000000000000B02 /* BusEn3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000B01 /* BusEn3D.swift */; };
+		BA9900000000000000000002 /* RouteChangesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000001 /* RouteChangesService.swift */; };
+		BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000011 /* RouteChangesSheet.swift */; };
+		BB9900000000000000000002 /* OccupancyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000001 /* OccupancyService.swift */; };
+		BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000011 /* BusOccupancyPanel.swift */; };
+		BB9900000000000000000022 /* OccupancyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000021 /* OccupancyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -126,37 +126,38 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		BB9900000000000000000021 /* OccupancyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyTests.swift; sourceTree = "<group>"; };
-		BB9900000000000000000011 /* BusOccupancyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusOccupancyPanel.swift; sourceTree = "<group>"; };
-		BB9900000000000000000001 /* OccupancyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyService.swift; sourceTree = "<group>"; };
-		BA9900000000000000000011 /* RouteChangesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesSheet.swift; sourceTree = "<group>"; };
-		BA9900000000000000000001 /* RouteChangesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesService.swift; sourceTree = "<group>"; };
+		0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RutaUTP.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A800400300AD9FE004E1676 /* DestinosFijos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DestinosFijos.swift; sourceTree = "<group>"; };
+		0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfigurationTests.swift; sourceTree = "<group>"; };
+		0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservationPublishThrottleTests.swift; sourceTree = "<group>"; };
+		0A800404300AD9FE004E1676 /* PassengerDetectionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngineTests.swift; sourceTree = "<group>"; };
+		0A800405300AD9FE004E1676 /* PassengerObservationPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerObservationPayloadTests.swift; sourceTree = "<group>"; };
+		0A800406300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinatorTest.swift; sourceTree = "<group>"; };
+		0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcherTests.swift; sourceTree = "<group>"; };
+		0A800408300AD9FE004E1676 /* StartGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartGuardTests.swift; sourceTree = "<group>"; };
+		0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclePositionSanitizerTests.swift; sourceTree = "<group>"; };
+		0A800410300AD9FE004E1676 /* AppHaptics.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppHaptics.swift; sourceTree = "<group>"; };
+		0A800412300AD9FE004E1676 /* Persistencia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Persistencia.swift; sourceTree = "<group>"; };
+		0A800416300AD9FE004E1676 /* RutaUTPTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPTests.swift; sourceTree = "<group>"; };
+		0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RutaUTPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A800423300AD9FE004E1676 /* DrawerSheets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DrawerSheets.swift; sourceTree = "<group>"; };
+		0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DatosPersonalesSheet.swift; sourceTree = "<group>"; };
+		0A800427300AD9FE004E1676 /* ImagePicker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
+		0A800429300AD9FE004E1676 /* ProfileImageStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileImageStore.swift; sourceTree = "<group>"; };
+		0A80042B300AD9FE004E1676 /* SeguridadComunidad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadComunidad.swift; sourceTree = "<group>"; };
+		0A80042D300AD9FE004E1676 /* SeguridadZonas.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadZonas.swift; sourceTree = "<group>"; };
+		0A80042F300AD9FE004E1676 /* SeguridadLugares.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadLugares.swift; sourceTree = "<group>"; };
+		0A800431300AD9FE004E1676 /* LugaresStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugaresStore.swift; sourceTree = "<group>"; };
+		0A800433300AD9FE004E1676 /* SeguridadLugaresModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadLugaresModel.swift; sourceTree = "<group>"; };
+		0A800435300AD9FE004E1676 /* FormularioReporte.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormularioReporte.swift; sourceTree = "<group>"; };
+		0A800437300AD9FE004E1676 /* RejillaEspacial.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RejillaEspacial.swift; sourceTree = "<group>"; };
+		0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OfflineMapSheet.swift; sourceTree = "<group>"; };
+		0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvisoRutaAproximada.swift; sourceTree = "<group>"; };
 		0A80043E300AD9FE004E1676 /* MonederoStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoStore.swift; sourceTree = "<group>"; };
 		0A800440300AD9FE004E1676 /* MonederoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoView.swift; sourceTree = "<group>"; };
-		AA9900000000000000000A01 /* PagoQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PagoQR.swift; sourceTree = "<group>"; };
-		AA9900000000000000000A03 /* EscanerQRView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscanerQRView.swift; sourceTree = "<group>"; };
-		0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvisoRutaAproximada.swift; sourceTree = "<group>"; };
-		0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OfflineMapSheet.swift; sourceTree = "<group>"; };
-		0A800437300AD9FE004E1676 /* RejillaEspacial.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RejillaEspacial.swift; sourceTree = "<group>"; };
-		0A800400300AD9FE004E1676 /* DestinosFijos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DestinosFijos.swift; sourceTree = "<group>"; };
-		0A800435300AD9FE004E1676 /* FormularioReporte.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormularioReporte.swift; sourceTree = "<group>"; };
-		0A800433300AD9FE004E1676 /* SeguridadLugaresModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadLugaresModel.swift; sourceTree = "<group>"; };
-		0A800431300AD9FE004E1676 /* LugaresStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugaresStore.swift; sourceTree = "<group>"; };
-		0A80042F300AD9FE004E1676 /* SeguridadLugares.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadLugares.swift; sourceTree = "<group>"; };
-		0A80042D300AD9FE004E1676 /* SeguridadZonas.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadZonas.swift; sourceTree = "<group>"; };
-		0A80042B300AD9FE004E1676 /* SeguridadComunidad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadComunidad.swift; sourceTree = "<group>"; };
-		0A800429300AD9FE004E1676 /* ProfileImageStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileImageStore.swift; sourceTree = "<group>"; };
-		0A800427300AD9FE004E1676 /* ImagePicker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
-		0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DatosPersonalesSheet.swift; sourceTree = "<group>"; };
-		0A800423300AD9FE004E1676 /* DrawerSheets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DrawerSheets.swift; sourceTree = "<group>"; };
-		0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RutaUTPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		0A800416300AD9FE004E1676 /* RutaUTPTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPTests.swift; sourceTree = "<group>"; };
-		0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RutaUTP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BottomNavBar.swift; sourceTree = "<group>"; };
 		0A8004B9300AD9FE004E1676 /* Colors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		0A8004BA300AD9FE004E1676 /* Spacing.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Spacing.swift; sourceTree = "<group>"; };
-		0A800410300AD9FE004E1676 /* AppHaptics.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppHaptics.swift; sourceTree = "<group>"; };
-		0A800412300AD9FE004E1676 /* Persistencia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Persistencia.swift; sourceTree = "<group>"; };
 		0A8004BB300AD9FE004E1676 /* Typography.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		0A8004BD300AD9FE004E1676 /* LugarGuardado.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugarGuardado.swift; sourceTree = "<group>"; };
 		0A8004BE300AD9FE004E1676 /* ReporteComunidad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReporteComunidad.swift; sourceTree = "<group>"; };
@@ -172,13 +173,11 @@
 		0A8004D0300AD9FE004E1676 /* MapMarkers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapMarkers.swift; sourceTree = "<group>"; };
 		0A8004D1300AD9FE004E1676 /* SideDrawer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideDrawer.swift; sourceTree = "<group>"; };
 		0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarnetScannerView.swift; sourceTree = "<group>"; };
-		0AC4E0A220260907004E1676 /* CarneDigitalView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarneDigitalView.swift; sourceTree = "<group>"; };
 		0A8004D6300AD9FE004E1676 /* PerfilView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerfilView.swift; sourceTree = "<group>"; };
 		0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TarjetaFormSheet.swift; sourceTree = "<group>"; };
 		0A8004D9300AD9FE004E1676 /* RutasView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutasView.swift; sourceTree = "<group>"; };
 		0A8004DB300AD9FE004E1676 /* SeguridadView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeguridadView.swift; sourceTree = "<group>"; };
 		0A8004DD300AD9FE004E1676 /* RouteTrackingDemoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RouteTrackingDemoView.swift; sourceTree = "<group>"; };
-		0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TrackingDemoComponents.swift; sourceTree = "<group>"; };
 		0A8004DE300AD9FE004E1676 /* RouteTrackingViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RouteTrackingViewModel.swift; sourceTree = "<group>"; };
 		0A8004E1300AD9FE004E1676 /* LocationService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		0A8004E2300AD9FE004E1676 /* LocationServiceProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocationServiceProtocol.swift; sourceTree = "<group>"; };
@@ -189,10 +188,24 @@
 		0A8004EB300AD9FE004E1676 /* SimulatedTrackingProvider.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimulatedTrackingProvider.swift; sourceTree = "<group>"; };
 		0A8004EC300AD9FE004E1676 /* VehicleTrackingProviding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VehicleTrackingProviding.swift; sourceTree = "<group>"; };
 		0A8004F0300AD9FE004E1676 /* PolylineMatching.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PolylineMatching.swift; sourceTree = "<group>"; };
-		0A80FE0001A1B2C3004E1677 /* Geocodificacion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Geocodificacion.swift; sourceTree = "<group>"; };
 		0A8004F2300AD9FE004E1676 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A8004F4300AD9FE004E1676 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		0A8004F5300AD9FE004E1676 /* RutaUTPApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPApp.swift; sourceTree = "<group>"; };
+		0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TrackingDemoComponents.swift; sourceTree = "<group>"; };
+		0A80FE0001A1B2C3004E1677 /* Geocodificacion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Geocodificacion.swift; sourceTree = "<group>"; };
+		0AC4E0A220260907004E1676 /* CarneDigitalView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarneDigitalView.swift; sourceTree = "<group>"; };
+		2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservationPublishing.swift; sourceTree = "<group>"; };
+		2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTObservationPublisher.swift; sourceTree = "<group>"; };
+		2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfiguration.swift; sourceTree = "<group>"; };
+		2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTTrackingProvider.swift; sourceTree = "<group>"; };
+		2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingProviderFactory.swift; sourceTree = "<group>"; };
+		2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionModels.swift; sourceTree = "<group>"; };
+		2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngine.swift; sourceTree = "<group>"; };
+		2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityProviding.swift; sourceTree = "<group>"; };
+		2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMotionActivityService.swift; sourceTree = "<group>"; };
+		2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcher.swift; sourceTree = "<group>"; };
+		2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinator.swift; sourceTree = "<group>"; };
+		2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartGuard.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A01 /* GTFSModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSModels.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A02 /* GTFSCSV.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSCSV.swift; sourceTree = "<group>"; };
 		AA6600000000000000000A03 /* GTFSRepository.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GTFSRepository.swift; sourceTree = "<group>"; };
@@ -204,7 +217,6 @@
 		AA6600000000000000000E03 /* SeniasService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasService.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E05 /* SeniasOverlay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlay.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E07 /* senias */ = {isa = PBXFileReference; lastKnownFileType = folder; path = senias; sourceTree = "<group>"; };
-		AA9900000000000000000B01 /* BusEn3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BusEn3D.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E09 /* ReportarSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportarSheet.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E11 /* PublicarComunidadSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PublicarComunidadSheet.swift; sourceTree = "<group>"; };
 		AA6600000000000000000F01 /* Idioma.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
@@ -214,36 +226,17 @@
 		AA7700000000000000000008 /* NegociosComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NegociosComponents.swift; sourceTree = "<group>"; };
 		AA8800000000000000000A01 /* GuardadoViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoViewModel.swift; sourceTree = "<group>"; };
 		AA8800000000000000000A02 /* GuardadoSheets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoSheets.swift; sourceTree = "<group>"; };
-		2F87EE08304DE96300E2F5F2 /* MQTTConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfiguration.swift; sourceTree = "<group>"; };
-		2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinator.swift; sourceTree = "<group>"; };
-		2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartGuard.swift; sourceTree = "<group>"; };
-		2F87EE15304E040700E2F5F2 /* PassengerDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngine.swift; sourceTree = "<group>"; };
-		2F87EE11304E033600E2F5F2 /* PassengerDetectionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionModels.swift; sourceTree = "<group>"; };
-		2F87EE1F304E0CCF00E2F5F2 /* RouteCandidateMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcher.swift; sourceTree = "<group>"; };
-		2F87EE1D304E097C00E2F5F2 /* CoreMotionActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreMotionActivityService.swift; sourceTree = "<group>"; };
-		2F87EE1B304E095300E2F5F2 /* MotionActivityProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityProviding.swift; sourceTree = "<group>"; };
-		2F87EE0C304DE9AA00E2F5F2 /* MQTTTrackingProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTTrackingProvider.swift; sourceTree = "<group>"; };
-		2F87EE0E304DEA1E00E2F5F2 /* TrackingProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingProviderFactory.swift; sourceTree = "<group>"; };
-		2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTObservationPublisher.swift; sourceTree = "<group>"; };
-		2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservationPublishing.swift; sourceTree = "<group>"; };
-		0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfigurationTests.swift; sourceTree = "<group>"; };
-		0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservationPublishThrottleTests.swift; sourceTree = "<group>"; };
-		0A800404300AD9FE004E1676 /* PassengerDetectionEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerDetectionEngineTests.swift; sourceTree = "<group>"; };
-		0A800405300AD9FE004E1676 /* PassengerObservationPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassengerObservationPayloadTests.swift; sourceTree = "<group>"; };
-		0A800406300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PassiveTrackingCoordinatorTest.swift; sourceTree = "<group>"; };
-		0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCandidateMatcherTests.swift; sourceTree = "<group>"; };
-		0A800408300AD9FE004E1676 /* StartGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartGuardTests.swift; sourceTree = "<group>"; };
-		0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclePositionSanitizerTests.swift; sourceTree = "<group>"; };
+		AA9900000000000000000A01 /* PagoQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PagoQR.swift; sourceTree = "<group>"; };
+		AA9900000000000000000A03 /* EscanerQRView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscanerQRView.swift; sourceTree = "<group>"; };
+		AA9900000000000000000B01 /* BusEn3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BusEn3D.swift; sourceTree = "<group>"; };
+		BA9900000000000000000001 /* RouteChangesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesService.swift; sourceTree = "<group>"; };
+		BA9900000000000000000011 /* RouteChangesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesSheet.swift; sourceTree = "<group>"; };
+		BB9900000000000000000001 /* OccupancyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyService.swift; sourceTree = "<group>"; };
+		BB9900000000000000000011 /* BusOccupancyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusOccupancyPanel.swift; sourceTree = "<group>"; };
+		BB9900000000000000000021 /* OccupancyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		0A800418300AD9FE004E1676 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		0A40D9112FDE5E7D00F79FBC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -252,24 +245,43 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0A800418300AD9FE004E1676 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0A80043D300AD9FE004E1676 /* Monedero */ = {
+		0A40D90B2FDE5E7D00F79FBC = {
 			isa = PBXGroup;
 			children = (
-				0A80043E300AD9FE004E1676 /* MonederoStore.swift */,
-				AA9900000000000000000A01 /* PagoQR.swift */,
+				0A8004F6300AD9FE004E1676 /* RutaUTP */,
+				AA6600000000000000000D01 /* gtfs */,
+				AA6600000000000000000E07 /* senias */,
+				0A80041B300AD9FE004E1676 /* RutaUTPTests */,
+				0A40D9152FDE5E7D00F79FBC /* Products */,
 			);
-			path = Monedero;
 			sourceTree = "<group>";
 		};
-		0A800422300AD9FE004E1676 /* Imagenes */ = {
+		0A40D9152FDE5E7D00F79FBC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0A800429300AD9FE004E1676 /* ProfileImageStore.swift */,
+				0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */,
+				0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */,
 			);
-			path = Imagenes;
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0A800414300AD9FE004E1676 /* Persistencia */ = {
+			isa = PBXGroup;
+			children = (
+				0A800412300AD9FE004E1676 /* Persistencia.swift */,
+				0A800431300AD9FE004E1676 /* LugaresStore.swift */,
+			);
+			path = Persistencia;
 			sourceTree = "<group>";
 		};
 		0A80041B300AD9FE004E1676 /* RutaUTPTests */ = {
@@ -289,24 +301,21 @@
 			path = RutaUTPTests;
 			sourceTree = "<group>";
 		};
-		0A40D90B2FDE5E7D00F79FBC = {
+		0A800422300AD9FE004E1676 /* Imagenes */ = {
 			isa = PBXGroup;
 			children = (
-				0A8004F6300AD9FE004E1676 /* RutaUTP */,
-				AA6600000000000000000D01 /* gtfs */,
-				AA6600000000000000000E07 /* senias */,
-				0A80041B300AD9FE004E1676 /* RutaUTPTests */,
-				0A40D9152FDE5E7D00F79FBC /* Products */,
+				0A800429300AD9FE004E1676 /* ProfileImageStore.swift */,
 			);
+			path = Imagenes;
 			sourceTree = "<group>";
 		};
-		0A40D9152FDE5E7D00F79FBC /* Products */ = {
+		0A80043D300AD9FE004E1676 /* Monedero */ = {
 			isa = PBXGroup;
 			children = (
-				0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */,
-				0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */,
+				0A80043E300AD9FE004E1676 /* MonederoStore.swift */,
+				AA9900000000000000000A01 /* PagoQR.swift */,
 			);
-			name = Products;
+			path = Monedero;
 			sourceTree = "<group>";
 		};
 		0A8004B8300AD9FE004E1676 /* Components */ = {
@@ -523,15 +532,6 @@
 			path = Tracking;
 			sourceTree = "<group>";
 		};
-		0A800414300AD9FE004E1676 /* Persistencia */ = {
-			isa = PBXGroup;
-			children = (
-				0A800412300AD9FE004E1676 /* Persistencia.swift */,
-				0A800431300AD9FE004E1676 /* LugaresStore.swift */,
-			);
-			path = Persistencia;
-			sourceTree = "<group>";
-		};
 		0A8004EF300AD9FE004E1676 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -577,32 +577,13 @@
 			path = RutaUTP;
 			sourceTree = "<group>";
 		};
-		AA6600000000000000000C01 /* GTFS */ = {
+		2F53143C304F16B600AC2B66 /* Publishers */ = {
 			isa = PBXGroup;
 			children = (
-				AA6600000000000000000A01 /* GTFSModels.swift */,
-				AA6600000000000000000A02 /* GTFSCSV.swift */,
-				AA6600000000000000000A03 /* GTFSRepository.swift */,
+				2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */,
+				2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */,
 			);
-			path = GTFS;
-			sourceTree = "<group>";
-		};
-		AA7700000000000000000007 /* Negocios */ = {
-			isa = PBXGroup;
-			children = (
-				AA7700000000000000000005 /* negocios_promocionados.json */,
-				AA7700000000000000000003 /* NegociosService.swift */,
-			);
-			path = Negocios;
-			sourceTree = "<group>";
-		};
-		2F87EE24304E0F0A00E2F5F2 /* Coordination */ = {
-			isa = PBXGroup;
-			children = (
-				2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */,
-				2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */,
-			);
-			path = Coordination;
+			path = Publishers;
 			sourceTree = "<group>";
 		};
 		2F87EE10304E032300E2F5F2 /* Detection */ = {
@@ -624,18 +605,57 @@
 			path = Motion;
 			sourceTree = "<group>";
 		};
-		2F53143C304F16B600AC2B66 /* Publishers */ = {
+		2F87EE24304E0F0A00E2F5F2 /* Coordination */ = {
 			isa = PBXGroup;
 			children = (
-				2F531441304F170000AC2B66 /* MQTTObservationPublisher.swift */,
-				2F53143D304F16D200AC2B66 /* ObservationPublishing.swift */,
+				2F87EE25304E0F1D00E2F5F2 /* PassiveTrackingCoordinator.swift */,
+				2F87EE27304E0F1D00E2F5F2 /* StartGuard.swift */,
 			);
-			path = Publishers;
+			path = Coordination;
+			sourceTree = "<group>";
+		};
+		AA6600000000000000000C01 /* GTFS */ = {
+			isa = PBXGroup;
+			children = (
+				AA6600000000000000000A01 /* GTFSModels.swift */,
+				AA6600000000000000000A02 /* GTFSCSV.swift */,
+				AA6600000000000000000A03 /* GTFSRepository.swift */,
+			);
+			path = GTFS;
+			sourceTree = "<group>";
+		};
+		AA7700000000000000000007 /* Negocios */ = {
+			isa = PBXGroup;
+			children = (
+				AA7700000000000000000005 /* negocios_promocionados.json */,
+				AA7700000000000000000003 /* NegociosService.swift */,
+			);
+			path = Negocios;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0A40D9132FDE5E7D00F79FBC /* RutaUTP */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0A40D9222FDE5E7F00F79FBC /* Build configuration list for PBXNativeTarget "RutaUTP" */;
+			buildPhases = (
+				0A40D9102FDE5E7D00F79FBC /* Sources */,
+				0A40D9112FDE5E7D00F79FBC /* Frameworks */,
+				0A40D9122FDE5E7D00F79FBC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RutaUTP;
+			packageProductDependencies = (
+				2F87EE06304DE59800E2F5F2 /* CocoaMQTT */,
+			);
+			productName = RutaUTP;
+			productReference = 0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */;
+			productType = "com.apple.product-type.application";
+		};
 		0A80041C300AD9FE004E1676 /* RutaUTPTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0A80041F300AD9FE004E1676 /* Build configuration list for PBXNativeTarget "RutaUTPTests" */;
@@ -653,26 +673,6 @@
 			productName = RutaUTPTests;
 			productReference = 0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		0A40D9132FDE5E7D00F79FBC /* RutaUTP */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 0A40D9222FDE5E7F00F79FBC /* Build configuration list for PBXNativeTarget "RutaUTP" */;
-			buildPhases = (
-				0A40D9102FDE5E7D00F79FBC /* Sources */,
-				0A40D9112FDE5E7D00F79FBC /* Frameworks */,
-				0A40D9122FDE5E7D00F79FBC /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = RutaUTP;
-			productName = RutaUTP;
-			packageProductDependencies = (
-				2F87EE06304DE59800E2F5F2 /* CocoaMQTT */,
-			);
-			productReference = 0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */;
-			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -716,13 +716,6 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		0A80041A300AD9FE004E1676 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		0A40D9122FDE5E7D00F79FBC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -735,26 +728,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXSourcesBuildPhase section */
-		0A800419300AD9FE004E1676 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
+		0A80041A300AD9FE004E1676 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */,
-				0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */,
-				0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */,
-				0A80051F300AD9FE004E1676 /* PassengerObservationPayloadTests.swift in Sources */,
-				0A800521300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift in Sources */,
-				0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */,
-				0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */,
-				0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */,
-				BB9900000000000000000022 /* OccupancyTests.swift in Sources */,
-				0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
 		0A40D9102FDE5E7D00F79FBC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -852,9 +835,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0A800419300AD9FE004E1676 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */,
+				0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */,
+				0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */,
+				0A80051F300AD9FE004E1676 /* PassengerObservationPayloadTests.swift in Sources */,
+				0A800521300AD9FE004E1676 /* PassiveTrackingCoordinatorTest.swift in Sources */,
+				0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */,
+				0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */,
+				0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */,
+				BB9900000000000000000022 /* OccupancyTests.swift in Sources */,
+				0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin XCBuildConfiguration section */
 /* Begin PBXTargetDependency section */
 		0A80041D300AD9FE004E1676 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -863,42 +862,7 @@
 		};
 /* End PBXTargetDependency section */
 
-		0A800420300AD9FE004E1676 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = apolito.RutaUTP.dev-o-joaquindiaz.RutaUTPTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";
-			};
-			name = Debug;
-		};
-		0A800421300AD9FE004E1676 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = apolito.RutaUTP.dev-o-joaquindiaz.RutaUTPTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";
-			};
-			name = Release;
-		};
+/* Begin XCBuildConfiguration section */
 		0A40D9202FDE5E7F00F79FBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1021,7 +985,6 @@
 		0A40D9232FDE5E7F00F79FBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ENABLE_TESTABILITY = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
@@ -1029,13 +992,14 @@
 				DEVELOPMENT_ASSET_PATHS = "\"RutaUTP/Preview Content\"";
 				DEVELOPMENT_TEAM = 2DB6N5Q47S;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP usa la actividad física para distinguir cuándo caminas y cuándo viajas en transporte público.";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1051,7 +1015,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = targeted;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -1069,9 +1033,9 @@
 				INFOPLIST_FILE = RutaUTP/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP usa la actividad física para distinguir cuándo caminas y cuándo viajas en transporte público.";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1087,22 +1051,49 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = targeted;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		0A800420300AD9FE004E1676 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "apolito.RutaUTP.dev-o-joaquindiaz.RutaUTPTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";
+			};
+			name = Debug;
+		};
+		0A800421300AD9FE004E1676 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "apolito.RutaUTP.dev-o-joaquindiaz.RutaUTPTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0A80041F300AD9FE004E1676 /* Build configuration list for PBXNativeTarget "RutaUTPTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				0A800420300AD9FE004E1676 /* Debug */,
-				0A800421300AD9FE004E1676 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		0A40D90F2FDE5E7D00F79FBC /* Build configuration list for PBXProject "RutaUTP" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1117,6 +1108,15 @@
 			buildConfigurations = (
 				0A40D9232FDE5E7F00F79FBC /* Debug */,
 				0A40D9242FDE5E7F00F79FBC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0A80041F300AD9FE004E1676 /* Build configuration list for PBXNativeTarget "RutaUTPTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A800420300AD9FE004E1676 /* Debug */,
+				0A800421300AD9FE004E1676 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
