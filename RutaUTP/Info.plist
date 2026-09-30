@@ -2,13 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Dirección pública del broker; las credenciales se guardan por iPhone. -->
-	<key>MQTT_HOST</key>
-	<string>ce14c140.ala.us-east-1.emqxsl.com</string>
-	<key>MQTT_PORT</key>
-	<string>8883</string>
-	<key>MQTT_TLS</key>
-	<string>1</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>es</string>
@@ -19,5 +12,11 @@
 	<array>
 		<string>tel</string>
 	</array>
+	<key>MQTT_HOST</key>
+	<string>ce14c140.ala.us-east-1.emqxsl.com</string>
+	<key>MQTT_PORT</key>
+	<string>8883</string>
+	<key>MQTT_TLS</key>
+	<string>1</string>
 </dict>
 </plist>
