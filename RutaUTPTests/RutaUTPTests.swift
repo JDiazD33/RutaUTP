@@ -22,6 +22,7 @@
 
 import XCTest
 import CoreLocation
+import MapKit
 import SwiftUI
 @testable import RutaUTP
 
@@ -329,6 +330,202 @@ final class TransitItineraryTests: XCTestCase {
         print("[TransitPlanner] \(routes.count) rutas: \(plans.count) candidatos en \(Date().timeIntervalSince(start)) s")
     }
 
+    @MainActor
+    func testRendimientoRadio1600() async throws {
+        let routes = await GTFSRepository.shared.rutas()
+        let route = try XCTUnwrap(routes.first { $0.paraderos.count > 3 })
+        let planner = TransitPlanner()
+        for iteration in 0..<2 {
+            let start = Date()
+            let plans = await planner.candidates(in: routes,
+                origin: route.paraderos.first!.coordinate, destination: route.paraderos.last!.coordinate, radius: 1600)
+            let elapsed = Date().timeIntervalSince(start)
+            XCTAssertLessThan(elapsed, 8, "La consulta local de 1600 m no debe volver al barrido lento")
+            XCTAssertFalse(plans.isEmpty)
+            let signatures = plans.prefix(4).map {
+                "\($0.route.id):\($0.board.id):\($0.firstAlight.id):\($0.transfer?.route.id ?? "-"):\($0.transfer?.board.id ?? "-"):\($0.alight.id) ETA=\($0.totalSeconds)"
+            }
+            XCTContext.runActivity(named: "BENCH1600 pass=\(iteration) seconds=\(elapsed) count=\(plans.count)") { activity in
+                let attachment = XCTAttachment(string: signatures.joined(separator: "\n"))
+                attachment.lifetime = .keepAlways
+                activity.add(attachment)
+            }
+        }
+    }
+
+    func testCacheInvalidaGeometriaModificadaConMismoID() async throws {
+        let planner = TransitPlanner()
+        let route = rutaSintetica()
+        let original = await planner.candidates(in: [route], origin: route.shape.first!,
+                                                destination: route.shape.last!, radius: 300)
+        XCTAssertFalse(original.isEmpty)
+        let changed = RutaGTFS(id: route.id, linea: route.linea, variante: route.variante,
+            recorrido: route.recorrido, empresa: route.empresa, colorHex: route.colorHex, color: route.color,
+            shape: route.shape.map { CLLocationCoordinate2D(latitude: $0.latitude + 0.1, longitude: $0.longitude) },
+            paraderos: route.paraderos, duracionMin: route.duracionMin, headwayMin: route.headwayMin,
+            precio: route.precio, distanciaKm: route.distanciaKm, distanciaUTPMetros: route.distanciaUTPMetros)
+        let invalid = await planner.candidates(in: [changed], origin: route.shape.first!,
+                                               destination: route.shape.last!, radius: 300)
+        XCTAssertTrue(invalid.isEmpty, "No reutilizar paraderos proyectados sobre un shape anterior")
+    }
+
+    func testOrdenOptimizadoCoincideConEnumeracionDirecta() throws {
+        let route = line("Oracle", rutaSintetica().shape)
+        let origin = CLLocationCoordinate2D(latitude: -8.1003, longitude: -79.0401)
+        let destination = CLLocationCoordinate2D(latitude: -8.0997, longitude: -79.0299)
+        let radius = 500.0
+        var reference: [TransitItinerary] = []
+        for board in route.paraderos.indices {
+            for alight in route.paraderos.indices where alight > board {
+                let plan = TransitItinerary(route: route, board: route.paraderos[board], alight: route.paraderos[alight],
+                    walkToBoard: [origin, route.shape[board]], bus: Array(route.shape[board...alight]),
+                    walkToDestination: [route.shape[alight], destination])
+                if plan.walkToBoardMeters <= radius && plan.walkToDestinationMeters <= radius && plan.busMeters > 50 {
+                    reference.append(plan)
+                }
+            }
+        }
+        reference.sort { $0.totalSeconds < $1.totalSeconds }
+        let optimized = TransitItinerary.candidates(in: [route], origin: origin, destination: destination, radius: radius)
+        XCTAssertEqual(optimized.count, min(32, reference.count))
+        for (actual, expected) in zip(optimized, reference) {
+            XCTAssertEqual(actual.board.id, expected.board.id)
+            XCTAssertEqual(actual.alight.id, expected.alight.id)
+            XCTAssertEqual(actual.totalSeconds, expected.totalSeconds, accuracy: 0.001)
+        }
+    }
+
+    func testCaminatasSeConsultanEnParaleloYRespaldoSeIdentifica() async throws {
+        let (a, b) = transferNetwork
+        let plan = try XCTUnwrap(TransitItinerary.candidates(in: [a, b], origin: a.shape[0],
+                                                           destination: b.shape[1], radius: 50).first)
+        let probe = DirectionsProbe()
+        let service = RouteCalculationService(loader: { request in try await probe.load(request, fail: false) })
+        let resolved = await plan.withWalkingDirections(using: service)
+        let concurrency = await probe.maximumConcurrent
+        XCTAssertEqual(concurrency, 3, "Las tres caminatas del mismo viaje no deben esperarse en serie")
+        XCTAssertFalse(resolved.walkingApproximate)
+        let failing = RouteCalculationService(loader: { _ in throw RouteCalculationError.timedOut })
+        let approximate = await plan.withWalkingDirections(using: failing)
+        XCTAssertTrue(approximate.walkingApproximate)
+        XCTAssertEqual(approximate.route.id, plan.route.id)
+        XCTAssertEqual(approximate.transfer?.route.id, plan.transfer?.route.id)
+    }
+
+    func testCacheDeCaminataRespetaExtremosModoYCancelacion() async throws {
+        let probe = DirectionsProbe()
+        let service = RouteCalculationService(loader: { request in try await probe.load(request, fail: false) })
+        let points = rutaSintetica().shape
+        _ = try await service.calculateRoute(from: points[0], to: points[5], transportType: .walking)
+        _ = try await service.calculateRoute(from: points[0], to: points[5], transportType: .walking)
+        let firstCount = await probe.calls
+        XCTAssertEqual(firstCount, 1)
+        _ = try await service.calculateRoute(from: points[0], to: points[6], transportType: .walking)
+        _ = try await service.calculateRoute(from: points[0], to: points[5], transportType: .automobile)
+        let secondCount = await probe.calls
+        XCTAssertEqual(secondCount, 3)
+        let pending = Task { try await service.calculateRoute(from: points[1], to: points[8], transportType: .walking) }
+        try await Task.sleep(for: .milliseconds(10))
+        pending.cancel()
+        do {
+            _ = try await pending.value
+            XCTFail("La cancelación debe llegar a la petición de caminata")
+        } catch is CancellationError {} catch { XCTFail("Cancelación inesperada: \(error)") }
+        let cancelled = await probe.cancelled
+        XCTAssertEqual(cancelled, 1)
+    }
+
+    func testTransbordoOptimizadoCoincideConBusquedaExhaustiva() throws {
+        let a = line("A", [-79.06, -79.05, -79.04, -79.03].map { CLLocationCoordinate2D(latitude: -8.1, longitude: $0) })
+        let b = line("B", [-8.1, -8.098, -8.096, -8.092, -8.085].map { CLLocationCoordinate2D(latitude: $0, longitude: -79.029) })
+        let origin = a.shape.first!, destination = b.shape.last!, radius = 1400.0
+        var reference: [TransitItinerary] = []
+        for board in a.paraderos.indices {
+            for exit in a.paraderos.indices where exit > board {
+                for enter in b.paraderos.indices {
+                    for alight in b.paraderos.indices where alight > enter {
+                        var plan = TransitItinerary(route: a, board: a.paraderos[board], alight: a.paraderos[exit],
+                            walkToBoard: [origin, a.shape[board]], bus: Array(a.shape[board...exit]),
+                            walkToDestination: [b.shape[alight], destination])
+                        let bus = Array(b.shape[enter...alight])
+                        plan.transfer = TransitTransfer(route: b, board: b.paraderos[enter], alight: b.paraderos[alight],
+                            walk: [a.shape[exit], b.shape[enter]], bus: bus, busDibujo: bus,
+                            busMeters: PolylineMatching.totalLengthMeters(bus),
+                            busSpeed: min(14, max(3, b.distanciaKm * 1000 / Double(b.duracionMin * 60))))
+                        if plan.walkToBoardMeters <= radius && plan.walkToDestinationMeters <= radius && plan.walkingWithinTransferLimit {
+                            reference.append(plan)
+                        }
+                    }
+                }
+            }
+        }
+        let expected = try XCTUnwrap(reference.min { $0.totalSeconds < $1.totalSeconds })
+        let actual = try XCTUnwrap(TransitItinerary.candidates(in: [a, b], origin: origin,
+                                                              destination: destination, radius: radius).first)
+        XCTAssertEqual(actual.board.id, expected.board.id)
+        XCTAssertEqual(actual.firstAlight.id, expected.firstAlight.id)
+        XCTAssertEqual(actual.transfer?.board.id, expected.transfer?.board.id)
+        XCTAssertEqual(actual.alight.id, expected.alight.id)
+        XCTAssertEqual(actual.totalSeconds, expected.totalSeconds, accuracy: 0.01)
+    }
+
+    @MainActor
+    func testPlazoDeDirectionsCancelaYDescartaRespuestaTardia() async throws {
+        var callback: PendingDirections.Completion?
+        var cancellations = 0
+        let pending = PendingDirections(start: { callback = $0 }, cancel: { cancellations += 1 })
+        let start = Date()
+        do {
+            _ = try await pending.run(timeout: 0.02)
+            XCTFail("No debe esperar indefinidamente una respuesta que no llega")
+        } catch {
+            XCTAssertEqual(error as? RouteCalculationError, .timedOut)
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(start), 2)
+        XCTAssertEqual(cancellations, 1)
+        callback?(.failure(RouteCalculationError.noRoutesAvailable))
+        await Task.yield()
+        XCTAssertEqual(cancellations, 1, "El callback tardío no debe finalizar dos veces")
+    }
+
+    @MainActor
+    func testCancelarDirectionsNoEsperaElTimeout() async throws {
+        let started = expectation(description: "request started")
+        var cancellations = 0
+        let pending = PendingDirections(start: { _ in started.fulfill() }, cancel: { cancellations += 1 })
+        let task = Task { try await pending.run(timeout: 10) }
+        await fulfillment(of: [started], timeout: 1)
+        task.cancel()
+        do {
+            _ = try await task.value
+            XCTFail("Se esperaba cancelación")
+        } catch is CancellationError {} catch { XCTFail("Error inesperado: \(error)") }
+        XCTAssertEqual(cancellations, 1)
+    }
+
+    func testCacheDeCaminatasExpiraYNoGuardaFallos() async throws {
+        let clock = DirectionsTestClock()
+        let probe = DirectionsProbe()
+        let service = RouteCalculationService(loader: { request in try await probe.load(request, fail: false) },
+                                              now: { clock.date() })
+        let points = rutaSintetica().shape
+        _ = try await service.calculateRoute(from: points[0], to: points[5], transportType: .walking)
+        clock.advance(301)
+        _ = try await service.calculateRoute(from: points[0], to: points[5], transportType: .walking)
+        let calls = await probe.calls
+        XCTAssertEqual(calls, 2)
+        let failedProbe = DirectionsProbe()
+        let failing = RouteCalculationService(loader: { request in try await failedProbe.load(request, fail: true) })
+        for _ in 0..<2 {
+            do {
+                _ = try await failing.calculateRoute(from: points[0], to: points[5], transportType: .walking)
+                XCTFail("Se esperaba fallo")
+            } catch { XCTAssertEqual(error as? RouteCalculationError, .noRoutesAvailable) }
+        }
+        let failures = await failedProbe.calls
+        XCTAssertEqual(failures, 2)
+    }
+
     private var inicioCualquiera: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: -8.10, longitude: -79.04)
     }
@@ -597,4 +794,30 @@ final class LineasPorParaderoTests: XCTestCase {
                            "difiere en el paradero \(paradero.nombre)")
         }
     }
+}
+
+private actor DirectionsProbe {
+    var calls = 0
+    var active = 0
+    var maximumConcurrent = 0
+    var cancelled = 0
+    func load(_ request: MKDirections.Request, fail: Bool) async throws -> CalculatedRoute {
+        calls += 1
+        active += 1
+        maximumConcurrent = max(maximumConcurrent, active)
+        defer { active -= 1 }
+        do { try await Task.sleep(for: .milliseconds(100)) }
+        catch { cancelled += 1; throw error }
+        if fail { throw RouteCalculationError.noRoutesAvailable }
+        let points = [request.source!.placemark.coordinate, request.destination!.placemark.coordinate]
+        return CalculatedRoute(polyline: MKPolyline(coordinates: points, count: 2),
+                               expectedTravelTime: 1, distance: PolylineMatching.totalLengthMeters(points), steps: [])
+    }
+}
+
+private final class DirectionsTestClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = Date()
+    func date() -> Date { lock.lock(); defer { lock.unlock() }; return value }
+    func advance(_ seconds: TimeInterval) { lock.lock(); defer { lock.unlock() }; value.addTimeInterval(seconds) }
 }
