@@ -112,7 +112,11 @@ final class RouteTrackingViewModel: ObservableObject {
         /// Opciones compartidas por la validación y los controles de la vista.
         var valoresPermitidos: [Double] {
             switch self {
-            case .radio: return [200, 500, 800]
+            // 1 600 m llega donde el mapa principal ya llega por defecto
+            // (`MapaViewModel.radioBusquedaRuta`). Con el tope en 800 el
+            // Tracking no encontraba rutas que el mapa sí mostraba, y parecía
+            // un fallo del modo de demostración en lugar de un radio corto.
+            case .radio: return [200, 500, 800, 1600]
             case .velocidad: return [1, 3, 10]
             }
         }
@@ -462,7 +466,11 @@ final class RouteTrackingViewModel: ObservableObject {
         }
         guard revision == routeRevision, !Task.isCancelled else { return }
         guard let plan = selected else {
-            let sugerencia = radio < 800
+            // Compara contra el MAYOR radio que ofrece el selector, no contra
+            // un número fijo: con el tope en 800, un usuario que ya estaba en
+            // 800 veía "prueba otro destino" sin ninguna opción que probar.
+            let maximo = Preferencia.radio.valoresPermitidos.max() ?? radio
+            let sugerencia = radio < maximo
                 ? L.t("Prueba un radio mayor u otro destino.", "Try a larger radius or another destination.")
                 : L.t("Prueba otro destino.", "Try another destination.")
             errorMessage = L.t("No encontramos una ruta directa ni con un transbordo con paraderos a menos de \(Int(radio)) m de ambos extremos. ",

@@ -143,10 +143,15 @@ enum VehicleETAEstimator {
                 thresholdMeters: 120
             ),
             vehicleMatch.isOnRoute,
+            // El destino puede estar hasta `radioBusquedaRuta` del recorrido
+            // (es lo que se acepta como bajada). Con el umbral viejo en 800,
+            // una ruta válida a 1 000 m de la calle habría llegado aquí sin
+            // ETA: el plan se aceptaba, pero el tiempo hasta llegar se negaba
+            // en silencio. El mismo umbral evita esa contradicción.
             let targetMatch = PolylineMatching.match(
                 point: target,
                 on: route.shape,
-                thresholdMeters: 800
+                thresholdMeters: MapaViewModel.radioBusquedaRuta
             ),
             targetMatch.isOnRoute
         else {
@@ -260,6 +265,22 @@ struct MapaAnotacion: Identifiable, Equatable {
 
 // MARK: - ViewModel
 final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+
+    // MARK: - Radio de búsqueda de ruta
+    /// Distancia máxima a la que se acepta un paradero como punto de subida o
+    /// de bajada, medida desde el origen y el destino.
+    ///
+    /// Antes eran 800 m y en la práctica dejaban fuera medio mapa: la UTP está
+    /// en el borde de Trujillo y muchas rutas panes bien junto al destino pero
+    /// no lo bastante. 1 600 m cubre una caminada de unos 12-15 min, que es lo
+    /// que alguien está dispuesto a hacer si de verdad no hay nada más cerca.
+    ///
+    /// Es una constante y no un número suelto porque el mismo valor aparece en
+    /// la búsqueda de candidatos, en el filtro del plan y en el mensaje de
+    /// error: si uno de los tres se desincroniza, el usuario ve "no encontramos
+    /// ruta a menos de 1 600 m" junto a un plan que el filtro ya descartó, y no
+    /// hay forma de saber cuál de los dos va bien.
+    static let radioBusquedaRuta: Double = 1600
 
     // Región por defecto centrada en Trujillo / UTP
     @Published var region: MKCoordinateRegion = MKCoordinateRegion(
@@ -520,6 +541,12 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             // 400 m cubre "pasa por la puerta"; si el punto quedó algo
             // alejado del recorrido se amplía a 800 m antes de declarar
             // que no pasa ninguna línea.
+            //
+            // OJO: este 800 NO es `radioBusquedaRuta`. Aquí se pregunta qué
+            // líneas pasan por el punto (la lista de transportes cercanos);
+            // allí se pregunta qué paraderos sirven para un viaje concreto.
+            // Subir este valor sí tendría efecto, pero llenaría el panel de
+            // líneas cercanas con rutas que no pasan por donde está la persona.
             var feed = await GTFSRepository.shared.rutasQuePasanPor(punto, radioMetros: 400)
             guard !Task.isCancelled else { return }
             if feed.isEmpty {
@@ -1021,14 +1048,16 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
             defer {
                 if self.routeRevision == revision { self.calculandoItinerario = false }
             }
-            // Misma política del Tracking: hasta 800 m a pie en cada extremo.
+            // Misma política del Tracking: hasta `radioBusquedaRuta` a pie en
+            // cada extremo.
+            let radio = Self.radioBusquedaRuta
             let candidates = await TransitPlanner.shared.candidates(in: feed, origin: origen,
-                destination: destinoCoord, radius: 800)
+                destination: destinoCoord, radius: radio)
             guard !Task.isCancelled, self.routeRevision == revision else { return }
             for candidate in candidates.prefix(4) {
                 let plan = await candidate.withWalkingDirections(using: self.routeService)
                 guard !Task.isCancelled, self.routeRevision == revision else { return }
-                guard plan.walkToBoardMeters <= 800, plan.walkToDestinationMeters <= 800, plan.walkingWithinTransferLimit else { continue }
+                guard plan.walkToBoardMeters <= radio, plan.walkToDestinationMeters <= radio, plan.walkingWithinTransferLimit else { continue }
                 self.itinerario = plan
                 self.routePolyline = MKPolyline(coordinates: plan.coordinates, count: plan.coordinates.count)
                 self.etaMinutos = max(1, Int(ceil(plan.totalSeconds / 60)))
@@ -1036,8 +1065,8 @@ final class MapaViewModel: NSObject, ObservableObject, MKLocalSearchCompleterDel
                 self.itinerarioFocusTick += 1
                 return
             }
-            self.mensajeRuta = L.t("No encontramos una ruta directa ni con un transbordo con paraderos a menos de 800 m de ambos extremos. Prueba otro destino.",
-                                   "No direct or one-transfer route has stops within 800 m of both ends. Try another destination.")
+            self.mensajeRuta = L.t("No encontramos una ruta directa ni con un transbordo con paraderos a menos de \(Int(radio)) m de ambos extremos. Prueba otro destino.",
+                                   "No direct or one-transfer route has stops within \(Int(radio)) m of both ends. Try another destination.")
         }
     }
 
