@@ -1,24 +1,3 @@
-//
-//  RouteCalculationService.swift
-//  RutaUTP
-//
-//  Servicio que calcula rutas entre dos puntos usando MKDirections
-//  (los directions de Apple, gratis, sin API key, sin dependencias).
-//
-//  API async/await moderna. Internamente puentea el API basada en
-//  completion handlers de MKDirections usando withCheckedContinuation.
-//
-//  Importante:
-//   - MKDirections requiere transporte .automobile por defecto. Pedimos
-//     .transit y dejamos .automobile como fallback. MKDirections no soporta
-//     un modo específicamente "bus urbano": usamos .transit y dejamos que el
-//     servidor de Apple devuelva pasos de transporte público.
-//   - Si Apple no tiene datos de tránsito en Trujillo, MKDirections devuelve
-//     error (o rutas vacías). En producción se necesita un respaldo manual;
-//     por ahora el consumidor debe manejar `RouteCalculationError`.
-//   - Usamos MKDirections con un único MKDirections.Request.
-//
-
 import Foundation
 import MapKit
 
@@ -26,6 +5,7 @@ enum RouteCalculationError: Error, Equatable {
     case noRoutesAvailable
     case appleDirectionsFailed(String)
     case invalidRequest
+    case timedOut
 }
 
 struct CalculatedRoute: Equatable {
@@ -44,50 +24,129 @@ struct CalculatedRoute: Equatable {
     }
 }
 
-final class RouteCalculationService {
+/// Caché por extremos exactos y modo; nunca reutiliza una caminata para otro punto.
+actor RouteCalculationService {
+    typealias Loader = @Sendable (MKDirections.Request) async throws -> CalculatedRoute
+    private struct Key: Hashable {
+        let lat1: Double
+        let lon1: Double
+        let lat2: Double
+        let lon2: Double
+        let transport: UInt
+    }
+    private struct Entry {
+        let route: CalculatedRoute
+        let date: Date
+    }
+    private let loader: Loader
+    private let now: @Sendable () -> Date
+    private var cache: [Key: Entry] = [:]
+    private var active: [UUID: Task<CalculatedRoute, Error>] = [:]
 
-    /// Calcula una ruta entre `origin` y `destination`.
-    /// Lanza `RouteCalculationError` si Apple Directions no responde bien.
+    init(loader: @escaping Loader = { request in
+        try await PendingDirections(request: request).run()
+    }, now: @escaping @Sendable () -> Date = { Date() }) {
+        self.loader = loader
+        self.now = now
+    }
+
     func calculateRoute(from origin: CLLocationCoordinate2D,
                         to destination: CLLocationCoordinate2D,
                         transportType: MKDirectionsTransportType = .transit) async throws -> CalculatedRoute {
-
+        try Task.checkCancellation()
+        guard CLLocationCoordinate2DIsValid(origin), CLLocationCoordinate2DIsValid(destination) else {
+            throw RouteCalculationError.invalidRequest
+        }
+        let key = Key(lat1: origin.latitude, lon1: origin.longitude,
+                      lat2: destination.latitude, lon2: destination.longitude, transport: transportType.rawValue)
+        let date = now()
+        if let entry = cache[key], date.timeIntervalSince(entry.date) < 300 { return entry.route }
         let request = MKDirections.Request()
         request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
         request.transportType = transportType
         request.requestsAlternateRoutes = false
-
-        guard !origin.latitude.isNaN, !origin.longitude.isNaN,
-              !destination.latitude.isNaN, !destination.longitude.isNaN else {
-            throw RouteCalculationError.invalidRequest
+        let id = UUID()
+        let task = Task { try await loader(request) }
+        active[id] = task
+        defer { active[id] = nil }
+        let route = try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
         }
+        try Task.checkCancellation()
+        cache = cache.filter { date.timeIntervalSince($0.value.date) < 300 }
+        if cache.count >= 128, let oldest = cache.min(by: { $0.value.date < $1.value.date })?.key {
+            cache[oldest] = nil
+        }
+        cache[key] = Entry(route: route, date: now())
+        return route
+    }
 
+    func cancel() {
+        for task in active.values { task.cancel() }
+    }
+}
+
+/// Una sola finalización: respuesta, cancelación o plazo máximo. MKDirections
+/// se cancela de verdad y un callback tardío nunca reanuda dos veces la espera.
+@MainActor
+final class PendingDirections {
+    typealias Completion = @Sendable (Result<CalculatedRoute, Error>) -> Void
+    private let startRequest: (@escaping Completion) -> Void
+    private let cancelRequest: () -> Void
+    private var continuation: CheckedContinuation<CalculatedRoute, Error>?
+    private var timeoutTask: Task<Void, Never>?
+    private var finished = false
+
+    convenience init(request: MKDirections.Request) {
         let directions = MKDirections(request: request)
-        return try await withCheckedThrowingContinuation { continuation in
+        self.init(start: { completion in
             directions.calculate { response, error in
-                if let error = error {
-                    continuation.resume(throwing: RouteCalculationError.appleDirectionsFailed(error.localizedDescription))
-                    return
+                if let error {
+                    completion(.failure(RouteCalculationError.appleDirectionsFailed(error.localizedDescription)))
+                } else if let route = response?.routes.first {
+                    completion(.success(CalculatedRoute(polyline: route.polyline,
+                        expectedTravelTime: route.expectedTravelTime, distance: route.distance, steps: route.steps)))
+                } else {
+                    completion(.failure(RouteCalculationError.noRoutesAvailable))
                 }
-                guard let route = response?.routes.first else {
-                    continuation.resume(throwing: RouteCalculationError.noRoutesAvailable)
-                    return
-                }
-                let calculated = CalculatedRoute(
-                    polyline: route.polyline,
-                    expectedTravelTime: route.expectedTravelTime,
-                    distance: route.distance,
-                    steps: route.steps
-                )
-                continuation.resume(returning: calculated)
             }
+        }, cancel: { directions.cancel() })
+    }
+
+    /// Transporte inyectable para probar el plazo y callbacks tardíos sin red.
+    init(start: @escaping (@escaping Completion) -> Void, cancel: @escaping () -> Void) {
+        startRequest = start
+        cancelRequest = cancel
+    }
+
+    func run(timeout: TimeInterval = 4) async throws -> CalculatedRoute {
+        try await withTaskCancellationHandler {
+            try Task.checkCancellation()
+            return try await withCheckedThrowingContinuation { continuation in
+                self.continuation = continuation
+                startRequest { result in
+                    Task { @MainActor in self.finish(result) }
+                }
+                timeoutTask = Task { @MainActor in
+                    do { try await Task.sleep(for: .seconds(timeout)) } catch { return }
+                    finish(.failure(RouteCalculationError.timedOut))
+                }
+            }
+        } onCancel: {
+            Task { @MainActor in self.finish(.failure(CancellationError())) }
         }
     }
 
-    /// Cancela cualquier cálculo en curso (placeholder por si se quiere
-    /// cancelar recálculos en cascade Detectó-desvío).
-    func cancel() {
-        // MKDirections no soporta cancel() oficial, ignorar por ahora.
+    private func finish(_ result: Result<CalculatedRoute, Error>) {
+        guard !finished else { return }
+        finished = true
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        cancelRequest()
+        continuation?.resume(with: result)
+        continuation = nil
     }
 }
