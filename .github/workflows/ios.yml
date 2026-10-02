@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -28,33 +28,36 @@ jobs:
         with:
           xcode-version: '26.3'
 
-      - name: Select available iPhone simulator
-        id: simulator
+      # Xcode 26.3 uses the iOS 26.2 SDK. The runner may have Xcode
+      # installed without its runtime or any corresponding simulator devices.
+      - name: Install iOS simulator runtime
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
           xcodebuild -version
-          xcodebuild -showdestinations -project RutaUTP.xcodeproj -scheme RutaUTP > artifacts/destinations.log 2>&1
-          python3 - <<'PYTHON'
-          import os
-          import re
-          from pathlib import Path
+          xcodebuild -downloadPlatform iOS -buildVersion 26.2 -architectureVariant universal \
+            2>&1 | tee artifacts/runtime-install.log
+          xcrun simctl list runtimes -j | tee artifacts/runtimes.json
 
-          destinations = Path("artifacts/destinations.log").read_text()
-          for line in destinations.splitlines():
-              if "platform:iOS Simulator," not in line or "name:iPhone" not in line:
-                  continue
-              match = re.search(r"id:([A-Fa-f0-9-]{36})[, }]", line)
-              if match:
-                  with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-                      output.write(f"id={match.group(1)}\n")
-                  print(f"Selected destination: {line.strip()}")
-                  break
-          else:
-              print(destinations)
-              raise SystemExit("No compatible iPhone simulator is available.")
-          PYTHON
+      - name: Create and boot iPhone simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          simulator_id=$(xcrun simctl create "RutaUTP CI" \
+            com.apple.CoreSimulator.SimDeviceType.iPhone-17 \
+            com.apple.CoreSimulator.SimRuntime.iOS-26-2)
+          echo "id=$simulator_id" >> "$GITHUB_OUTPUT"
+          xcrun simctl bootstatus "$simulator_id" -b \
+            2>&1 | tee artifacts/simulator-boot.log
+          xcrun simctl list devices -j > artifacts/devices.json
+          xcodebuild -showdestinations -project RutaUTP.xcodeproj -scheme RutaUTP \
+            2>&1 | tee artifacts/destinations.log
+          if ! grep -Fq "$simulator_id" artifacts/destinations.log; then
+            echo "::error::The created iPhone simulator is not a compatible destination. See the runtime and destination logs."
+            exit 1
+          fi
 
       - name: Build and test
         shell: bash
