@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
@@ -28,17 +28,21 @@ jobs:
         with:
           xcode-version: '26.3'
 
-      # Xcode 26.3 uses the iOS 26.2 SDK. The runner may have Xcode
-      # installed without its runtime or any corresponding simulator devices.
-      - name: Install iOS simulator runtime
+      # Keep the host, Xcode and runtime compatible. macos-26 includes
+      # iOS 26.2; installing a runtime on every run is unnecessary.
+      - name: Verify installed iOS simulator runtime
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts
-          xcodebuild -version
-          xcodebuild -downloadPlatform iOS -buildVersion 26.2 -architectureVariant universal \
-            2>&1 | tee artifacts/runtime-install.log
+          sw_vers | tee artifacts/host.log
+          uname -m | tee -a artifacts/host.log
+          xcodebuild -version | tee artifacts/xcode.log
           xcrun simctl list runtimes -j | tee artifacts/runtimes.json
+          if ! jq -e '.runtimes[] | select(.identifier == "com.apple.CoreSimulator.SimRuntime.iOS-26-2" and .isAvailable == true)' artifacts/runtimes.json; then
+            echo "::error::The runner does not provide an available iOS 26.2 runtime. See runtimes.json and host.log."
+            exit 1
+          fi
 
       - name: Create and boot iPhone simulator
         id: simulator
