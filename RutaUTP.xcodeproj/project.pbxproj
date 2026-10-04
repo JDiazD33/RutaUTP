@@ -783,7 +783,12 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Necesitamos acceso a la camara para escanear tu carnet universitario";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita acceder a la red local para recibir posiciones de vehículos durante las pruebas MQTT.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "RutaUTP puede usar tu ubicación en segundo plano para mantener activo el seguimiento de tu ruta incluso con la pantalla bloqueada (funcionalidad futura para el rol conductor).";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP utiliza la actividad física para distinguir cuándo estás caminando y cuándo viajas en transporte público.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -814,7 +819,12 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Necesitamos acceso a la camara para escanear tu carnet universitario";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita acceder a la red local para recibir posiciones de vehículos durante las pruebas MQTT.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "RutaUTP puede usar tu ubicación en segundo plano para mantener activo el seguimiento de tu ruta incluso con la pantalla bloqueada (funcionalidad futura para el rol conductor).";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP utiliza la actividad física para distinguir cuándo estás caminando y cuándo viajas en transporte público.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
