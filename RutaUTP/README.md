@@ -2,7 +2,7 @@
 
 Aplicación nativa para iOS orientada a estudiantes de la UTP en Trujillo. Permite consultar recorridos de transporte público, buscar destinos, guardar lugares y seguir el avance de un viaje.
 
-El proyecto combina mapas y ubicación del dispositivo con un feed GTFS local. Puede mostrar una flota de demostración o posiciones estimadas por el backend MQTT a partir de observaciones anónimas de pasajeros. Las publicaciones comunitarias y los pagos siguen sin backend.
+El proyecto combina mapas y ubicación del dispositivo con un feed GTFS local. Puede mostrar una flota de demostración o posiciones estimadas por el backend MQTT a partir de observaciones de ubicación de pasajeros vinculadas a una sesión de viaje y a una cuenta MQTT autenticada. Las publicaciones comunitarias y los pagos siguen sin backend.
 
 ## Requisitos y ejecución
 
@@ -30,7 +30,7 @@ El prefijo `DEVELOPER_DIR` permite usar Xcode aunque `xcode-select` apunte a Com
 | --- | --- |
 | Bienvenida | Entrada a la aplicación. |
 | Mapa | MapKit, GPS del usuario, búsqueda de direcciones y lugares, destinos guardados y líneas cercanas. Sin MQTT usa buses simulados; con MQTT muestra posiciones estimadas por el backend y las identifica como **EN VIVO**. |
-| Contribución IoT | Con consentimiento explícito, combina GPS y Core Motion para detectar un viaje y publicar observaciones anónimas mientras la app está en primer plano. |
+| Contribución IoT | Con consentimiento explícito, combina GPS y Core Motion para detectar un viaje y publicar observaciones de ubicación vinculadas a la cuenta MQTT y a una sesión mientras la app está en primer plano. |
 | Rutas | Catálogo GTFS, búsqueda por línea/empresa/recorrido, filtro de paraderos cercanos, detalle y exploración del recorrido. |
 | Navegación de una línea | Seguimiento del usuario sobre el recorrido GTFS, progreso, próximo paradero y modo de simulación. |
 | Tracking | Planificación de una línea directa con tramos a pie, seguimiento GPS, detección de desvíos, recálculo y resumen de sesión. Acceso desde el menú lateral. |
@@ -115,9 +115,19 @@ La configuración del broker se resuelve desde las variables `MQTT_HOST`, `MQTT_
 
 La app incluye el host de EMQX con TLS. Tras la primera ejecución desde Xcode con una cuenta propia, guarda la pareja de credenciales en Keychain y los datos públicos de conexión en preferencias. Puede recuperar esa configuración al abrirse desde su icono, sin las variables de Xcode. Los pasos de instalación para dos iPhone están en [la guía de EMQX](../backend/deploy/EMQX-PUESTA-EN-MARCHA.md#3-configurar-cada-iphone). Esto no crea cuentas automáticamente ni activa la contribución sin consentimiento.
 
+En este entorno hay dos esquemas **locales** ya configurados: `RutaUTP-iPhone-001` para el primer teléfono y `RutaUTP-iPhone-002` para el segundo. El esquema compartido `RutaUTP` no lleva credenciales. En una instalación nueva, ejecutar primero el esquema del teléfono permite guardar su cuenta; después se puede usar el esquema compartido o abrir desde el icono. Mantener estable el Bundle Identifier conserva la identidad de la instalación y el acceso a sus preferencias/Keychain. La versión visible del proyecto es 1.0 y el número de compilación es 1; no hay un script que los incremente.
+
+El proceso Python debe estar en marcha además del broker. Desde la raíz del proyecto, `backend/.venv/bin/python backend/tools/run_configured.py` lo inicia con el archivo local existente; `backend/.venv/bin/python backend/tools/run_configured.py --health-check` verifica su latido y conexión. Si el Mac se apaga o duerme, mantener EMQX activo no sustituye a ese proceso. El 5 de octubre se verificó autenticación TLS de las dos cuentas de teléfonos y del backend, y se restauró el proceso local; esto no sustituye la comprobación de GPS, permisos y viaje real en cada iPhone.
+
 El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuando existe una configuración MQTT completa. Al activarlo, la app solicita consentimiento antes de iniciar GPS y Core Motion. El mapa muestra el estado de la contribución sobre el buscador. La publicación se pausa al bloquear la pantalla o enviar la app a segundo plano.
 
-El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición. El perfil productivo conserva las observaciones durante 30 días. La configuración, operación y pruebas del servicio están documentadas en `backend/README.md` y `mqtt/README.md`.
+El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición.
+
+La conservación depende de `BACKEND_DB_RETENTION_DAYS`: el valor predeterminado es `0` (sin borrado) y la plantilla `mqtt/compose.prod.yaml` propone `30` días; esto no acredita la configuración de un despliegue activo.
+
+El JSON no incluye nombre ni correo, pero transmite sesión, ruta/línea, coordenadas, fecha, velocidad, rumbo, precisión y actividad. La cuenta aparece en el tópico y autentica la conexión, de modo que broker y backend pueden correlacionar viajes. SQLite conserva sesión y trayectoria sin columna de principal. Terminar el viaje local no solicita el borrado de esos datos ni garantiza anonimato.
+
+La configuración, operación y pruebas del servicio están documentadas en `backend/README.md` y `mqtt/README.md`.
 
 ### Rapidez del cálculo de rutas
 
@@ -178,7 +188,29 @@ La aplicación usa la **fuente del sistema**. Antes `Info.plist` declaraba Hanke
 
 `IdiomaManager` persiste el idioma y `L.t` resuelve los textos español/inglés. El gestor es `@Observable`: cualquier vista que llame a `L.t()` en su `body` registra la dependencia y se actualiza sola, así que cambiar de idioma **no** reconstruye el árbol de vistas ni reinicia la pantalla en la que está el usuario. Las etiquetas que se guardan en propiedades almacenadas se resuelven al renderizar (o son propiedades calculadas) precisamente para no quedarse congeladas en el idioma de arranque.
 
-El modo de señas relaciona claves estables con `senias/manifest.json` y busca vídeos en `senias/clips/es/` o `senias/clips/en/`. El reproductor vive en una ventana superpuesta para mostrarse también sobre formularios. Cuando falta un clip, muestra el estado pendiente. El manifiesto tiene 29 entradas; todavía faltan archivos para varias claves en ambos idiomas. Los botones señables muestran primero la tarjeta durante 3 segundos y luego ejecutan su acción una sola vez. Cerrar la tarjeta adelanta la acción; elegir otra acción o salir a otra pantalla cancela la anterior.
+El modo de señas relaciona claves estables con `senias/manifest.json` y busca vídeos en `senias/clips/es/` o `senias/clips/en/`. El reproductor vive en una ventana superpuesta para mostrarse también sobre formularios. Al activar el interruptor de Perfil, `perfil.modo_senias` se reproduce una vez en un panel centrado verticalmente en el teléfono, que ocupa media pantalla, conserva el encuadre completo y se cierra al terminar el video. El modo continúa activado y el contexto de la pantalla sigue visible arriba y abajo. Cerrar antes, desactivar el modo o pasar a segundo plano detiene la presentación; una nueva activación vuelve a reproducirla. Mantener el modo activado al reiniciar la app no abre automáticamente el video.
+
+Las señas consultadas desde textos conservan su miniplayer y reproducción en bucle. Los botones señables muestran primero la tarjeta durante 3 segundos y luego ejecutan su acción una sola vez. Cerrar la tarjeta adelanta la acción; elegir otra acción o salir a otra pantalla cancela la anterior. Cada presentación y cada carga del reproductor tienen una identidad propia para descartar finales y errores de videos anteriores, incluso al cambiar de idioma.
+
+El manifiesto tiene 29 entradas y 28 archivos únicos por idioma; con las dos guías nuevas ya están todos los archivos referenciados en español e inglés. `rutas.guia` abre `guia_paso_a_paso.mp4` desde Rutas: el video vertical se ajusta completo dentro del miniplayer cuadrado para mostrar cabeza y manos, conservando su bucle. Si falta un clip se muestra el estado pendiente, sin sustituirlo por el otro idioma; si el video de activación falta o no puede reproducirse, la tarjeta se cierra tras una espera breve.
+
+Las dos guías se comprimieron antes de incorporarlas al bundle con **AVFoundation (`AVAssetReader` y `AVAssetWriter`, H.264 a 500 kbit/s)**. ES pasó de 1.152.781 a 452.949 bytes y EN de 1.034.814 a 414.890 bytes: una reducción conjunta del 60,33 %. La codificación conserva 720×1280, la orientación, las duraciones originales (7,2072 s y 6,473133 s) y todos los fotogramas con sus tiempos; se verificó la decodificación completa y se revisaron capturas. La compresión es con pérdida. Los originales no tenían audio. La app reproduce directamente los archivos comprimidos, también sin conexión.
+
+La utilidad reproducible `tools/comprimir-senias.swift` inspecciona metadatos, extrae fotogramas y comprime a una ruta nueva. Rechaza sobrescribir entradas o salidas existentes y valida la secuencia completa del resultado. Para usarla en macOS:
+
+```sh
+xcrun swiftc -parse-as-library tools/comprimir-senias.swift -o build/comprimir-senias
+build/comprimir-senias inspect original.mp4 --frames build/fotogramas
+build/comprimir-senias compress original.mp4 comprimido.mp4 --bitrate 500000
+build/comprimir-senias validate comprimido.mp4
+```
+
+Los clips `modo_senias.mp4` ES/EN tenían franjas negras incrustadas de 45 píxeles por lado. Se retiraron con AVFoundation y Core Image, pasando de 360×480 a 270×480 sin recorte vertical. Se comprobó el contenido de todos los fotogramas antes de recortar y la decodificación completa del resultado: conserva los 150/156 fotogramas, sus tiempos, los 30 FPS y las duraciones de 5,0/5,2 segundos. El audio AAC se copió con sus bytes y tiempos originales; el video se recodifica con pérdida. La herramienta `tools/recortar-senias.swift` genera una salida nueva y valida video y audio antes de aceptarla:
+
+```sh
+xcrun swiftc -parse-as-library tools/recortar-senias.swift -o build/recortar-senias
+build/recortar-senias original.mp4 recortado.mp4 --left 45 --right 45 --bitrate 600000
+```
 
 ## Verificación y desarrollo
 
