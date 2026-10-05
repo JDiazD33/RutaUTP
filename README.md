@@ -1,0 +1,259 @@
+# Ruta UTP Trujillo
+
+Aplicación nativa para iOS orientada a estudiantes de la UTP en Trujillo. Permite consultar recorridos de transporte público, buscar destinos, guardar lugares y seguir el avance de un viaje.
+
+El proyecto combina mapas y ubicación del dispositivo con un feed GTFS local. Puede mostrar una flota de demostración o posiciones estimadas por el backend MQTT a partir de observaciones de ubicación de pasajeros vinculadas a una sesión de viaje y a una cuenta MQTT autenticada. Las publicaciones comunitarias y los pagos siguen sin backend.
+
+## Requisitos y ejecución
+
+- macOS con Xcode y un SDK de iOS compatible con el destino mínimo **iOS 17.5**.
+- SwiftUI, MapKit, CoreLocation, CoreMotion, Combine, PhotosUI y AVFoundation.
+- CocoaMQTT 2.4.0, fijado mediante Swift Package Manager.
+- El proyecto usa el modo de lenguaje Swift 5 (`SWIFT_VERSION = 5.0`).
+
+Abrir `RutaUTP.xcodeproj`, seleccionar el esquema **RutaUTP** y ejecutar en un simulador o iPhone. Para un dispositivo físico, configurar el equipo de firma en **Signing & Capabilities**. La cámara necesita un dispositivo con cámara disponible; en el simulador se puede utilizar la biblioteca de fotos.
+
+Desde la raíz del repositorio, compilar para simulador sin firma:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project RutaUTP.xcodeproj -scheme RutaUTP \
+  -configuration Debug -sdk iphonesimulator \
+  -derivedDataPath /tmp/rutautp-build CODE_SIGNING_ALLOWED=NO build
+```
+
+El prefijo `DEVELOPER_DIR` permite usar Xcode aunque `xcode-select` apunte a Command Line Tools. Ajustar la ruta si Xcode está instalado en otra ubicación.
+
+## Funcionalidades y estado
+
+| Área | Implementación actual |
+| --- | --- |
+| Bienvenida | Entrada a la aplicación. |
+| Mapa | MapKit, GPS del usuario, búsqueda de direcciones y lugares, destinos guardados y líneas cercanas. Sin MQTT usa buses simulados; con MQTT muestra posiciones estimadas por el backend y las identifica como **EN VIVO**. |
+| Contribución IoT | Con consentimiento explícito, combina GPS y Core Motion para detectar un viaje y publicar observaciones de ubicación vinculadas a la cuenta MQTT y a una sesión mientras la app está en primer plano. |
+| Rutas | Catálogo GTFS, búsqueda por línea/empresa/recorrido, filtro de paraderos cercanos, detalle y exploración del recorrido. |
+| Navegación de una línea | Seguimiento del usuario sobre el recorrido GTFS, progreso, próximo paradero y modo de simulación. |
+| Tracking | Planificación de una línea directa con tramos a pie, seguimiento GPS, detección de desvíos, recálculo y resumen de sesión. Acceso desde el menú lateral. |
+| Guardado | Lugares con coordenadas y referencias a líneas GTFS persistidos localmente. Se comparten con Mapa y Seguridad. |
+| Seguridad | Lugares configurables, referencias de paraderos iluminados, llamada al 105 y comunidad de demostración. |
+| Añadir a Comunidad | Formulario con descripción, foto opcional desde cámara o biblioteca de fotos y ubicación seleccionada en el mapa. La confirmación de publicación es demo: no envía ni guarda una publicación en un servidor. |
+| Perfil | Foto, datos personales, preferencias, carné, interfaz de método de pago y cupones. Parte del estado es temporal; carné y pagos no tienen verificación ni procesamiento real. |
+| Negocios | Catálogo local de 100 comercios ficticios para probar el mapa; cupones guardados localmente. |
+| Accesibilidad | Ayuda de VoiceOver y modo de señas con clips locales. El catálogo de clips todavía está incompleto. |
+| Idioma y apariencia | Español/inglés y tema claro/oscuro con preferencias persistidas. |
+| Modo offline | Los datos GTFS, negocios y clips existentes vienen en el bundle. El perfil comprueba las rutas locales y explica los límites sin conexión; no implementa descarga de mapas base. |
+
+### Añadir una foto en Seguridad
+
+1. Entrar a **Seguridad → Comunidad → Añadir**.
+2. Pulsar **Añadir foto**.
+3. Elegir **Tomar foto** (si hay cámara disponible) o **Elegir de la galería / biblioteca de fotos**.
+4. Seleccionar una imagen para verla en el formulario. El botón de quitar permite eliminarla y seleccionar otra.
+
+La biblioteca usa `PHPickerViewController`, limitado a una imagen, sin solicitar acceso completo a Fotos. La cámara utiliza `UIImagePickerController` y el permiso de cámara de iOS. El adjunto permanece en el formulario durante esa presentación.
+
+Para cambiar la foto de perfil, abrir **Datos personales** desde el menú hamburguesa o **Perfil → Editar perfil** y pulsar el botón de cámara sobre el avatar. Ambos accesos ofrecen cámara y galería / biblioteca de fotos. La imagen elegida se guarda localmente y se comparte entre el menú y Perfil.
+
+## Arquitectura y estructura
+
+```text
+RutaUTP.xcodeproj/               Proyecto, target y recursos de Xcode
+RutaUTP/
+  RutaUTPApp.swift               Punto de entrada y cambio de idioma
+  Navigation/                   AppRouter y RootView
+  Screens/
+    Bienvenida/                 Presentación
+    Mapa/                       Mapa, búsqueda, menú lateral y las hojas del menú
+    Rutas/                      Catálogo y detalle de líneas
+    DetalleRuta/                Explorador y navegación sobre GTFS
+    Tracking/                   Planificación y seguimiento de viajes
+    Guardado/                   Lugares y líneas favoritas
+    Seguridad/                  Comunidad y paraderos iluminados
+    Perfil/                     Preferencias, carné y formularios
+  Services/
+    GTFS/                       Parser CSV, modelos y repositorio con caché
+    Location/                   CoreLocation y protocolo de ubicación
+    Routing/                    Cálculo con MKDirections
+    Tracking/                   Modelos y proveedores real/simulado
+    Negocios/                   Catálogo JSON y cupones
+    Persistencia/               Versión de esquema y migraciones locales
+    Imagenes/                   Persistencia de la foto de perfil
+    SeniasService.swift         Resolución y presentación de señas
+  Models/                       Modelos de dominio y almacenamiento de lugares
+  Design/                       Colores, tipografía, espaciados, hápticos y componentes
+  Utils/                        Idioma y proyección sobre recorridos
+  Assets.xcassets/               Iconos y recursos visuales
+  Info.plist                    Configuración adicional del bundle
+  README.md
+ gtfs/                          Feed estático empaquetado con la aplicación
+ senias/                        Manifiesto y clips por idioma
+ ThirdPartyNotices/             Procedencia y licencias de datos y recursos de terceros
+ RutaUTPTests/                  Pruebas unitarias del núcleo puro
+ backend/                       Validación, agregación y publicación de vehículos
+ mqtt/                          Broker Mosquitto, ACL y perfiles de despliegue
+```
+
+La navegación principal usa `AppRouter`, un `ObservableObject` con un enum de pantallas. `RootView` selecciona la pantalla y las vistas presentan detalles mediante sheets y full-screen covers; algunos formularios usan `NavigationStack`. La barra inferior es un componente propio.
+
+Los módulos de mapa, rutas y seguimiento tienen ViewModels. Parte de la lógica y modelos auxiliares sigue dentro de archivos de vistas grandes. `GTFSRepository` es un actor compartido que carga el feed una vez y conserva el resultado. La ubicación y las posiciones de vehículos se consumen mediante `AsyncStream`.
+
+### Datos y cálculo de rutas
+
+El feed incluido contiene **102 rutas, 102 viajes, 4067 paraderos y 53 616 puntos de recorrido**. El repositorio relaciona agencias, rutas, viajes, shapes, paraderos, horarios, frecuencias y tarifas. El parser actual selecciona un viaje por ruta, de acuerdo con este feed.
+
+- La geometría se encuentra en el área de Trujillo. Los metadatos de `feed_info.txt` aún identifican al publicador como «Arequipa Bus» y requieren revisión de procedencia y actualización; estos datos no acreditan operación en vivo. Procedencia, archivos que la aplicación lee realmente y comprobaciones pendientes están en `ThirdPartyNotices/GTFS/`.
+- `MapaViewModel` calcula desde el GPS del usuario un itinerario de transporte GTFS con paraderos hasta 1600 m de ambos extremos (`MapaViewModel.radioBusquedaRuta`, antes 800 m). Muestra caminatas punteadas, recorrido del bus continuo y marcadores de subida/bajada; si falta ubicación o no hay línea directa, muestra un aviso. Las caminatas usan Apple Directions y se identifican como aproximadas cuando ese servicio no responde.
+- `TransitPlanner` compara viajes **directos o con un transbordo** (dos micros), respetando el orden de los paraderos de cada recorrido. Admite hasta 350 m a pie entre micros y el radio configurado en los extremos (1600 m en Mapa; en Tracking el selector ofrece 200/500/800/1600). El tiempo incluye la caminata, ambos recorridos y, al cambiar, media frecuencia del segundo micro más 2 minutos de margen; no es una llegada en vivo. Se favorece una ruta directa si los tiempos son similares. Apple Directions verifica las caminatas; si no responde, se indica que son aproximadas. Mapa y seguimiento muestran ambos micros, dónde cambiar y las tarifas por separado.
+- `PolylineMatching` proyecta el GPS sobre el recorrido para calcular avance y distancia a la ruta.
+- El mapa principal mantiene su simulación cuando no existe configuración MQTT. Cuando el canal está configurado, `MQTTTrackingProvider` consume las posiciones publicadas por el backend y desactiva la simulación para evitar duplicados.
+
+Los mapas base, las búsquedas y Apple Directions dependen de los servicios de Apple y de su disponibilidad de red y cobertura.
+
+### Canal IoT y contribución
+
+La configuración del broker se resuelve desde las variables `MQTT_HOST`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_PORT`, `MQTT_TLS` y `MQTT_CA_CERT`. Durante el desarrollo pueden definirse en el esquema local de Xcode. Las credenciales no se incluyen en el esquema compartido ni en el repositorio; cada instalación debe recibir un principal MQTT propio para que el quórum del backend distinga dispositivos reales.
+
+La app incluye el host de EMQX con TLS. Tras la primera ejecución desde Xcode con una cuenta propia, guarda la pareja de credenciales en Keychain y los datos públicos de conexión en preferencias. Puede recuperar esa configuración al abrirse desde su icono, sin las variables de Xcode. Los pasos de instalación para dos iPhone están en [la guía de EMQX](../backend/deploy/EMQX-PUESTA-EN-MARCHA.md#3-configurar-cada-iphone). Esto no crea cuentas automáticamente ni activa la contribución sin consentimiento.
+
+En este entorno hay dos esquemas **locales** ya configurados: `RutaUTP-iPhone-001` para el primer teléfono y `RutaUTP-iPhone-002` para el segundo. El esquema compartido `RutaUTP` no lleva credenciales. En una instalación nueva, ejecutar primero el esquema del teléfono permite guardar su cuenta; después se puede usar el esquema compartido o abrir desde el icono. Mantener estable el Bundle Identifier conserva la identidad de la instalación y el acceso a sus preferencias/Keychain. La versión visible del proyecto es 1.0 y el número de compilación es 1; no hay un script que los incremente.
+
+El proceso Python debe estar en marcha además del broker. Desde la raíz del proyecto, `backend/.venv/bin/python backend/tools/run_configured.py` lo inicia con el archivo local existente; `backend/.venv/bin/python backend/tools/run_configured.py --health-check` verifica su latido y conexión. Si el Mac se apaga o duerme, mantener EMQX activo no sustituye a ese proceso. El 5 de octubre se verificó autenticación TLS de las dos cuentas de teléfonos y del backend, y se restauró el proceso local; esto no sustituye la comprobación de GPS, permisos y viaje real en cada iPhone.
+
+El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuando existe una configuración MQTT completa. Al activarlo, la app solicita consentimiento antes de iniciar GPS y Core Motion. El mapa muestra el estado de la contribución sobre el buscador. La publicación se pausa al bloquear la pantalla o enviar la app a segundo plano.
+
+El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición.
+
+La conservación depende de `BACKEND_DB_RETENTION_DAYS`: el valor predeterminado es `0` (sin borrado) y la plantilla `mqtt/compose.prod.yaml` propone `30` días; esto no acredita la configuración de un despliegue activo.
+
+El JSON no incluye nombre ni correo, pero transmite sesión, ruta/línea, coordenadas, fecha, velocidad, rumbo, precisión y actividad. La cuenta aparece en el tópico y autentica la conexión, de modo que broker y backend pueden correlacionar viajes. SQLite conserva sesión y trayectoria sin columna de principal. Terminar el viaje local no solicita el borrado de esos datos ni garantiza anonimato.
+
+La configuración, operación y pruebas del servicio están documentadas en `backend/README.md` y `mqtt/README.md`.
+
+### Rapidez del cálculo de rutas
+
+El planificador conserva la geometría del GTFS entre búsquedas y la invalida si cambian sus paraderos o coordenadas. Ordena los candidatos por coste antes de construir sus polylines; materializa los mejores 32 y mantiene hasta cuatro comprobaciones peatonales. La elección de paraderos respeta el sentido y los radios configurados.
+
+Las dos o tres caminatas de cada candidato se consultan en paralelo. Cada petición a Apple Directions tiene un plazo de cuatro segundos y cancelación real; los resultados correctos se guardan durante cinco minutos, con un máximo de 128 entradas por extremos exactos y modo. Los errores no se guardan. Si falta una respuesta, la app conserva el recorrido GTFS y muestra **Caminata estimada en línea recta**; la rapidez no convierte esa estimación en una caminata verificada. El tiempo total todavía depende de la carga inicial del catálogo, la red y cuántos candidatos superen el filtro peatonal.
+
+### Declarar el micro del viaje
+
+Después de encontrar una ruta, el mapa muestra una tarjeta discreta **¿Ya subiste? Confirma tu línea** debajo de las indicaciones. Se puede tocar en cualquier momento. Si no se usa, a los 30 segundos aparece una única pregunta automática para esa ruta. Abrir la tarjeta cancela ese aviso; cerrarlo no lo repite automáticamente. **Recordarme en 2 minutos** pospone la pregunta para esa ruta; no se muestra sobre otras pantallas ni con la app inactiva. Cambiar o quitar la ruta, o salir del mapa, cancela el recordatorio. **Sí, ya subí** permite confirmar la línea y activar «Ayudar con ubicaciones» con consentimiento si aún está desactivado. La tarjeta del mapa aparece solo después de confirmar el viaje; **Todavía no** conserva la ruta sin iniciar la contribución ni programar otro aviso.
+El selector muestra las líneas cercanas primero cuando existe ubicación, permite
+buscar por línea o empresa y distingue los ramales. Después se puede indicar
+**Vacío**, **Con espacio** o **Lleno**, o saltar ese paso. También hay un campo
+opcional «¿Dónde subiste?» para una calle, cruce o paradero de alumnos. Permite
+abrir un mapa completo, tocar el punto, centrar en la ubicación actual y confirmar
+con «Usar este punto». Cancelar conserva la selección anterior y «Quitar» elimina
+el punto del borrador. Texto y punto son independientes y opcionales. Se guarda
+solo en el teléfono, asociado a la ruta y hora de registro (no hora de abordaje
+verificada), con un máximo de 200 referencias. No se publica ni se atribuye la
+posición GPS actual al lugar descrito: solo se conservan coordenadas cuando el
+usuario confirma el punto. Los registros antiguos sin coordenadas siguen siendo
+legibles. Todo queda disponible para un futuro catálogo.
+La hora de inicio se registra localmente y las observaciones GPS llevan
+su hora y ubicación cuando el detector autoriza transmitir.
+
+La línea declarada guía al detector sin forzar el abordaje. La ocupación queda
+pendiente hasta detectar el viaje y tener conexión con el backend; se reintenta
+cada 30 segundos como máximo durante los 3 minutos de validez de la elección.
+No se renueva un voto sin una nueva indicación del usuario. **Ya bajé** corta
+la sesión, descarta pendientes y espera otro viaje declarado; un descenso
+detectado termina también el viaje. Desactivar la contribución limpia la selección.
+El viaje declarado no se restaura tras cerrar el proceso; las credenciales y el
+consentimiento sí se conservan. En segundo plano se pausa el envío.
+
+### Paraderos guardados en Seguridad
+
+Antes de Comunidad aparece **Paraderos guardados**, con acceso al detalle,
+ubicación y eliminación de cada paradero. Comparte `LugaresStore` con Guardado
+y se actualiza al cerrar el mapa de paraderos. Los nuevos registros conservan
+el identificador GTFS; los antiguos se reconocen por nombre y coordenadas del
+catálogo completo, sin exigir volver a guardarlos.
+
+### Persistencia
+
+Se usa `UserDefaults` para lugares, referencias de líneas, cupones, idioma, tema, modo de señas, preferencias de Perfil (notificaciones y compartir ubicación) y algunos datos personales. La foto de perfil se guarda en Documents mediante `ProfileImageStore`.
+
+Los lugares guardados marcan el campus UTP con un campo `esFijo` persistido, no derivado del nombre: así la invariante «no se puede eliminar» sobrevive a cambios de texto. `LugaresStore` migra al cargar los datos guardados por versiones anteriores, que no traían ese campo.
+
+El esquema de datos locales está versionado en `Services/Persistencia/Persistencia.swift`: una versión única y explícita, una lista ordenada de migraciones idempotentes y el inventario de llaves que la app considera suyas. `Persistencia.migrarSiHaceFalta()` se ejecuta una sola vez al arrancar, antes de que ninguna vista lea datos persistidos. Las llaves existentes **no** se renombran: renombrarlas perdería los datos ya guardados, así que el versionado se añade por encima.
+
+No todo lo visible se persiste: parte del estado del perfil y de las pantallas sigue en `@State`; las reacciones comunitarias y sesiones de seguimiento permanecen en memoria. No hay autenticación ni sincronización entre dispositivos.
+
+### Diseño, idiomas y señas
+
+Los tokens visuales están en `Design/Colors.swift`, `Typography.swift` y `Spacing.swift`. Se utilizan SF Symbols.
+
+La aplicación usa la **fuente del sistema**. Antes `Info.plist` declaraba Hanken Grotesk, Be Vietnam Pro y JetBrains Mono bajo `UIAppFonts`, pero sus `.ttf` nunca estuvieron en el repositorio: no había un solo archivo de fuente en el bundle compilado, así que la interfaz ya se veía con la fuente del sistema. Esa declaración se eliminó y los tokens de `Typography.swift` ahora usan `.system(size:weight:)` con los mismos tamaños y pesos, de modo que el aspecto no cambia. Los tokens son de tamaño fijo: recuperar el escalado de Dynamic Type requiere migrarlos a `@ScaledMetric`.
+
+`IdiomaManager` persiste el idioma y `L.t` resuelve los textos español/inglés. El gestor es `@Observable`: cualquier vista que llame a `L.t()` en su `body` registra la dependencia y se actualiza sola, así que cambiar de idioma **no** reconstruye el árbol de vistas ni reinicia la pantalla en la que está el usuario. Las etiquetas que se guardan en propiedades almacenadas se resuelven al renderizar (o son propiedades calculadas) precisamente para no quedarse congeladas en el idioma de arranque.
+
+El modo de señas relaciona claves estables con `senias/manifest.json` y busca vídeos en `senias/clips/es/` o `senias/clips/en/`. El reproductor vive en una ventana superpuesta para mostrarse también sobre formularios. Al activar el interruptor de Perfil, `perfil.modo_senias` se reproduce una vez en un panel centrado verticalmente en el teléfono, que ocupa media pantalla, conserva el encuadre completo y se cierra al terminar el video. El modo continúa activado y el contexto de la pantalla sigue visible arriba y abajo. Cerrar antes, desactivar el modo o pasar a segundo plano detiene la presentación; una nueva activación vuelve a reproducirla. Mantener el modo activado al reiniciar la app no abre automáticamente el video.
+
+Las señas consultadas desde textos conservan su miniplayer y reproducción en bucle. Los botones señables muestran primero la tarjeta durante 3 segundos y luego ejecutan su acción una sola vez. Cerrar la tarjeta adelanta la acción; elegir otra acción o salir a otra pantalla cancela la anterior. Cada presentación y cada carga del reproductor tienen una identidad propia para descartar finales y errores de videos anteriores, incluso al cambiar de idioma.
+
+El manifiesto tiene 29 entradas y 28 archivos únicos por idioma; con las dos guías nuevas ya están todos los archivos referenciados en español e inglés. `rutas.guia` abre `guia_paso_a_paso.mp4` desde Rutas: el video vertical se ajusta completo dentro del miniplayer cuadrado para mostrar cabeza y manos, conservando su bucle. Si falta un clip se muestra el estado pendiente, sin sustituirlo por el otro idioma; si el video de activación falta o no puede reproducirse, la tarjeta se cierra tras una espera breve.
+
+Las dos guías se comprimieron antes de incorporarlas al bundle con **AVFoundation (`AVAssetReader` y `AVAssetWriter`, H.264 a 500 kbit/s)**. ES pasó de 1.152.781 a 452.949 bytes y EN de 1.034.814 a 414.890 bytes: una reducción conjunta del 60,33 %. La codificación conserva 720×1280, la orientación, las duraciones originales (7,2072 s y 6,473133 s) y todos los fotogramas con sus tiempos; se verificó la decodificación completa y se revisaron capturas. La compresión es con pérdida. Los originales no tenían audio. La app reproduce directamente los archivos comprimidos, también sin conexión.
+
+La utilidad reproducible `tools/comprimir-senias.swift` inspecciona metadatos, extrae fotogramas y comprime a una ruta nueva. Rechaza sobrescribir entradas o salidas existentes y valida la secuencia completa del resultado. Para usarla en macOS:
+
+```sh
+xcrun swiftc -parse-as-library tools/comprimir-senias.swift -o build/comprimir-senias
+build/comprimir-senias inspect original.mp4 --frames build/fotogramas
+build/comprimir-senias compress original.mp4 comprimido.mp4 --bitrate 500000
+build/comprimir-senias validate comprimido.mp4
+```
+
+Los clips `modo_senias.mp4` ES/EN tenían franjas negras incrustadas de 45 píxeles por lado. Se retiraron con AVFoundation y Core Image, pasando de 360×480 a 270×480 sin recorte vertical. Se comprobó el contenido de todos los fotogramas antes de recortar y la decodificación completa del resultado: conserva los 150/156 fotogramas, sus tiempos, los 30 FPS y las duraciones de 5,0/5,2 segundos. El audio AAC se copió con sus bytes y tiempos originales; el video se recodifica con pérdida. La herramienta `tools/recortar-senias.swift` genera una salida nueva y valida video y audio antes de aceptarla:
+
+```sh
+xcrun swiftc -parse-as-library tools/recortar-senias.swift -o build/recortar-senias
+build/recortar-senias original.mp4 recortado.mp4 --left 45 --right 45 --bitrate 600000
+```
+
+## Verificación y desarrollo
+
+La compilación Debug para simulador se verificó durante la revisión del proyecto. Quedan advertencias de APIs obsoletas; no hay ninguna de concurrencia (`SWIFT_STRICT_CONCURRENCY = targeted`).
+
+**Sobre iPad**: el proyecto declara `TARGETED_DEVICE_FAMILY = "1"` (solo iPhone). La interfaz está pensada para teléfono y el catálogo de iconos no incluía los tamaños que iPad exige (152 y 167 px); declarar soporte de iPad sin lo uno ni lo otro prometía una experiencia que no existe. Para dar soporte real hay que añadir esos iconos **y** maquetación de iPad.
+
+El proyecto incluye el target de pruebas unitarias **RutaUTPTests**, que cubre el núcleo puro: `GTFSCSV`, `GTFSNombreParser`, `PolylineMatching`, `TransitItinerary.candidates`, la vigencia de cupones y `ParaderosIluminados.seleccionar`. Para ejecutarlo:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild test -project RutaUTP.xcodeproj -scheme RutaUTP \
+  -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5' \
+  CODE_SIGNING_ALLOWED=NO \
+  OTHER_SWIFT_FLAGS='$(inherited) -disable-sandbox'
+```
+
+No se prueban los ViewModels que leen `UserDefaults` directamente (`GuardadoViewModel`): hacerlo exigiría inyectar el almacén, y eso es un cambio de diseño, no una prueba.
+
+En Debug se puede usar el argumento de lanzamiento `--pantalla` con `mapa`, `rutas`, `guardado`, `seguridad`, `perfil` o `tracking`. También existen argumentos específicos de algunas pantallas para abrir formularios y detalles; están documentados junto a sus hooks de depuración.
+
+Para validar cambios funcionales, comprobar en simulador y, cuando corresponda, en un iPhone:
+
+- Búsqueda, selección de destino, consulta del catálogo y navegación entre pestañas.
+- Guardar y quitar lugares o líneas, y comprobar su persistencia al reiniciar.
+- Permisos de ubicación concedidos y denegados, seguimiento y cancelación de viajes.
+- Seguridad: abrir Añadir, seleccionar una foto de la biblioteca, cancelar el selector, quitar la imagen y tomar una foto en un dispositivo físico.
+- Tema claro/oscuro, español/inglés y modo de señas con clips disponibles y pendientes.
+
+La compilación por sí sola no verifica GPS, cámara, biblioteca de fotos ni cobertura de Apple Directions.
+
+Los iconos de categorías de negocios y cupones usan **Uicons Regular Rounded de Flaticon**, incluidos como SVG locales. La atribución está en «Sobre nosotros» y la licencia y procedencia en `ThirdPartyNotices/Flaticon/`.
+
+Comunidad incluye 24 publicaciones demo (6 con fotografías de referencia de Trujillo). Cada ventana muestra una publicación con foto y tres de texto. Créditos, fechas y enlaces a las licencias están en el detalle y en `ThirdPartyNotices/Comunidad/`. Las imágenes se incluyen en el bundle y se ven sin conexión.
+
+La UTP Card del Perfil permite tomar una foto del carné o elegirla de la galería. Se guarda localmente en Documents (`utp-card.jpg`), separada de la foto de perfil, y se puede volver a abrir, ampliar o reemplazar. El estado «Carné guardado» confirma el almacenamiento, no una verificación universitaria.
+
+Modo offline comprueba las rutas del feed incluido y muestra su cantidad real. No simula descargas ni cambia la conectividad del dispositivo. Los mapas base, búsquedas e indicaciones de Apple Maps no se garantizan sin internet.
+
+Mis tarjetas permite añadir referencias, consultar su detalle, elegir una principal y eliminarlas con confirmación. Se guardan nombre, red y últimos cuatro dígitos en el llavero del dispositivo; no se almacenan números completos ni CVV y no se realizan cobros.
+
+Antes de guardar la foto del carné, el editor permite moverla y ajustar el zoom dentro de un marco rectangular. «Guardar encuadre» conserva el recorte mostrado; cancelar mantiene la foto anterior. «Ajustar encuadre» permite volver a recortar la imagen guardada.
+
+La foto de perfil usa el mismo editor con vista previa circular desde Datos Personales (Perfil y menú) y Carné Digital. Permite ajustar una foto nueva de cámara/galería o volver a encuadrar la actual; solo se reemplaza al confirmar el guardado.
+
+El Carné Digital muestra un código de barras ampliado y el logo institucional UTP en monocromo al pie. La tarjeta de foto se identifica como «Carnet Universitario». Fuente del logo en `ThirdPartyNotices/UTP/`.
