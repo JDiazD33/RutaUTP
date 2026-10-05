@@ -118,6 +118,9 @@
 		BB9900000000000000000082 /* GTFSCSVCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */; };
 		BB9900000000000000000092 /* GTFSDistanceToRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */; };
 		BB9900000000000000000102 /* GTFSLoadRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000101 /* GTFSLoadRecoveryTests.swift */; };
+		BB9900000000000000000112 /* QRPaymentEligibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000111 /* QRPaymentEligibilityTests.swift */; };
+		BB9900000000000000000122 /* QRSinglePaymentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000121 /* QRSinglePaymentTests.swift */; };
+		BB9900000000000000000132 /* QRCurrencyAndAmountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -244,6 +247,9 @@
 		BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSCSVCompatibilityTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSDistanceToRouteTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000101 /* GTFSLoadRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSLoadRecoveryTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000111 /* QRPaymentEligibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRPaymentEligibilityTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000121 /* QRSinglePaymentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRSinglePaymentTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCurrencyAndAmountTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -297,6 +303,9 @@
 		0A80041B300AD9FE004E1676 /* RutaUTPTests */ = {
 			isa = PBXGroup;
 			children = (
+				BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */,
+				BB9900000000000000000121 /* QRSinglePaymentTests.swift */,
+				BB9900000000000000000111 /* QRPaymentEligibilityTests.swift */,
 				BB9900000000000000000101 /* GTFSLoadRecoveryTests.swift */,
 				BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */,
 				BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */,
@@ -854,6 +863,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB9900000000000000000132 /* QRCurrencyAndAmountTests.swift in Sources */,
+				BB9900000000000000000122 /* QRSinglePaymentTests.swift in Sources */,
+				BB9900000000000000000112 /* QRPaymentEligibilityTests.swift in Sources */,
 				BB9900000000000000000102 /* GTFSLoadRecoveryTests.swift in Sources */,
 				BB9900000000000000000092 /* GTFSDistanceToRouteTests.swift in Sources */,
 				BB9900000000000000000082 /* GTFSCSVCompatibilityTests.swift in Sources */,

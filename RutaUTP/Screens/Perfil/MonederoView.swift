@@ -421,7 +421,9 @@ struct QRPasajeSheet: View {
         }
         .seguirTemaForzado()
         .fullScreenCover(isPresented: $escanear) {
-            EscanerQRView { importe in store.cobrarPasaje(importe) }
+            EscanerQRView(errorPago: { store.errorParaCobrarPasaje($0) }) { importe in
+                store.cobrarPasaje(importe)
+            }
         }
     }
 

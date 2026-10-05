@@ -18,10 +18,79 @@ import SwiftUI
 import AVFoundation
 import UIKit
 
+enum ErrorPagoQR: Equatable {
+    case formatoNoReconocido
+    case importeIlegible
+    case monedaAmbigua
+    case monedaNoIndicada
+    case monedaNoAdmitida
+    case importeInvalido
+
+    var mensaje: String {
+        switch self {
+        case .formatoNoReconocido:
+            return L.t("El código no tiene un formato de pago reconocido.",
+                       "The code does not have a recognized payment format.")
+        case .importeIlegible:
+            return L.t("El código contiene un importe ilegible o ambiguo. No se puede pagar con esta lectura.",
+                       "The code contains an unreadable or ambiguous amount. This reading can't be used to pay.")
+        case .monedaAmbigua:
+            return L.t("El QR repite la moneda. No se puede pagar con esta lectura.",
+                       "The QR repeats the currency. This reading can't be used to pay.")
+        case .monedaNoIndicada:
+            return L.t("No se puede confirmar la moneda de este importe. Usa un QR en soles.",
+                       "The currency of this amount cannot be confirmed. Use a QR in soles.")
+        case .monedaNoAdmitida:
+            return L.t("Este monedero demo solo admite soles. No se convierte la moneda del QR.",
+                       "This demo wallet only accepts soles. The QR currency is not converted.")
+        case .importeInvalido:
+            return L.t("El importe del QR no es válido para este monedero. Usa una cantidad positiva en soles y sin fracciones de céntimo.",
+                       "The QR amount is not valid for this wallet. Use a positive amount in soles with whole cents.")
+        }
+    }
+}
+
 /// Resultado de una lectura.
-struct ResultadoQR: Equatable {
+struct ResultadoQR: Identifiable, Equatable {
+    /// Dos viajes pueden leer el mismo QR estático. La identidad pertenece a
+    /// esta captura, no al texto ni al importe, y no se guarda en el monedero.
+    let id = UUID()
     let texto: String
     let campos: PagoQR.CamposQR
+
+    /// Política común para presentación y acción. PEN/604 son las dos formas
+    /// admitidas para soles; no hay conversión. Solo un QR estático reconocido
+    /// sin importe ni moneda puede conservar la tarifa local de la demo.
+    @MainActor
+    var errorParaPagoDemo: ErrorPagoQR? {
+        guard campos.esPago else { return .formatoNoReconocido }
+        guard !campos.importeInvalido else { return .importeIlegible }
+        guard !campos.monedaInvalida else { return .monedaAmbigua }
+        if let moneda = campos.monedaNormalizada {
+            guard !moneda.isEmpty else { return .monedaNoIndicada }
+            guard moneda == "PEN" || moneda == "604" else { return .monedaNoAdmitida }
+        } else if campos.importe != nil {
+            return .monedaNoIndicada
+        }
+        guard MonederoStore.importeValidoParaPasaje(campos.importe ?? MonederoStore.tarifaReferencia) != nil else {
+            return .importeInvalido
+        }
+        return nil
+    }
+
+    @MainActor
+    var importeParaPagoDemo: Double? {
+        guard errorParaPagoDemo == nil else { return nil }
+        return MonederoStore.importeValidoParaPasaje(campos.importe ?? MonederoStore.tarifaReferencia)
+    }
+
+    /// nil indica lectura no admitida: el callback ni siquiera se invoca.
+    /// El monedero sigue decidiendo si puede debitar el importe autorizado.
+    @MainActor
+    func pagarDemo(onPagar: @MainActor (Double) -> Bool) -> Bool? {
+        guard let importe = importeParaPagoDemo else { return nil }
+        return onPagar(importe)
+    }
 }
 
 /// Estado del permiso y de la cámara.
@@ -206,12 +275,17 @@ final class EscanerQRModel: ObservableObject {
 
     @Published private(set) var estado: EstadoCamaraQR = .comprobando
     @Published private(set) var resultado: ResultadoQR?
+    @Published private(set) var pagoRealizado = false
     @Published private(set) var linternaEncendida = false
     /// `true` si el dispositivo tiene linterna. Lo informa la propia cámara al
     /// configurarse, para no consultarlo después desde otro hilo.
     @Published private(set) var linternaDisponible = false
 
     let camara = CamaraQR()
+
+    // El callback y los observadores de @Published pueden reentrar de forma
+    // síncrona. La guarda se activa antes de cualquier publicación del pago.
+    private var pagoEnCurso = false
 
     init() {
         camara.alLeer = { [weak self] texto in
@@ -262,8 +336,33 @@ final class EscanerQRModel: ObservableObject {
 
     /// Deja el lector listo para otra lectura.
     func reanudar() {
+        // No reemplazar una lectura mientras su callback está debitando.
+        guard !pagoEnCurso else { return }
+        // También proteger las publicaciones del reinicio: sus observadores
+        // no deben cobrar una tarjeta que está siendo retirada.
+        pagoEnCurso = true
+        defer { pagoEnCurso = false }
         resultado = nil
-        camara.arrancar()
+        pagoRealizado = false
+        // Una lectura de ejemplo no configura ni autoriza la cámara.
+        if estado == .listo { camara.arrancar() }
+    }
+
+    func puedePagar(_ lectura: ResultadoQR) -> Bool {
+        resultado?.id == lectura.id && !pagoRealizado && !pagoEnCurso
+            && lectura.importeParaPagoDemo != nil
+    }
+
+    /// nil no invoca el monedero. Un fallo conserva la lectura para reintento;
+    /// solo un éxito la consume, sin deduplicar futuros viajes con el mismo QR.
+    func pagar(_ lectura: ResultadoQR, onPagar: @MainActor (Double) -> Bool) -> Bool? {
+        guard puedePagar(lectura) else { return nil }
+        pagoEnCurso = true
+        defer { pagoEnCurso = false }
+
+        guard let pagado = lectura.pagarDemo(onPagar: onPagar) else { return nil }
+        if pagado, resultado?.id == lectura.id { pagoRealizado = true }
+        return pagado
     }
 
     func alternarLinterna() {
@@ -282,7 +381,9 @@ final class EscanerQRModel: ObservableObject {
     }
 
     private func recibir(_ texto: String) {
-        guard resultado == nil else { return }
+        guard !pagoEnCurso, resultado == nil else { return }
+        pagoEnCurso = true
+        defer { pagoEnCurso = false }
 
         resultado = ResultadoQR(texto: texto, campos: PagoQR.leer(texto))
         AppHaptics.success()
@@ -326,6 +427,10 @@ struct VistaPreviaQR: UIViewRepresentable {
 // MARK: - Pantalla
 
 struct EscanerQRView: View {
+
+    /// Diagnóstico del monedero tras un rechazo. Mantenerlo antes de onPagar
+    /// conserva la construcción con el único trailing closure de cobro.
+    var errorPago: (@MainActor (Double) -> ErrorCobroPasaje?)? = nil
 
     /// Cobra el importe indicado con el monedero. Devuelve si se pudo.
     ///
@@ -570,10 +675,6 @@ struct EscanerQRView: View {
 
     /// Lo leído, con lo que se pudo entender y el pago simulado.
     private func tarjetaResultado(_ resultado: ResultadoQR) -> some View {
-        // Si el QR trae importe se respeta; si es estático (el caso normal de
-        // un QR de cuenta) se cobra la tarifa de referencia.
-        let importe = resultado.campos.importe ?? MonederoStore.tarifaReferencia
-
         return VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
@@ -606,6 +707,10 @@ struct EscanerQRView: View {
                     if let importeTexto = resultado.campos.importeTexto {
                         fila(L.t("Importe", "Amount"), importeTexto)
                     }
+                    if let moneda = resultado.campos.monedaNormalizada {
+                        fila(L.t("Moneda", "Currency"),
+                             moneda.isEmpty ? L.t("Sin indicar", "Not specified") : moneda)
+                    }
                     if let ciudad = resultado.campos.ciudad {
                         fila(L.t("Ciudad", "City"), ciudad)
                     }
@@ -619,31 +724,45 @@ struct EscanerQRView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Button {
-                if onPagar(importe) {
-                    AppHaptics.success()
-                    mensajePago = L.t("Pasaje pagado (simulado).",
-                                      "Fare paid (simulated).")
-                } else {
-                    AppHaptics.warning()
-                    mensajePago = L.t("Saldo insuficiente. Recarga para continuar.",
-                                      "Not enough balance. Top up to continue.")
+            if let importe = resultado.importeParaPagoDemo {
+                Button {
+                    // El modelo consume el éxito antes de permitir otra acción,
+                    // incluyendo toques pendientes de una tarjeta anterior.
+                    guard let pagado = modelo.pagar(resultado, onPagar: onPagar),
+                          modelo.resultado?.id == resultado.id else { return }
+                    if pagado {
+                        AppHaptics.success()
+                        mensajePago = L.t("Pasaje pagado (simulado).",
+                                          "Fare paid (simulated).")
+                    } else {
+                        AppHaptics.warning()
+                        mensajePago = errorPago?(importe)?.mensaje
+                            ?? L.t("No se pudo completar el pago. Inténtalo de nuevo.",
+                                   "The payment could not be completed. Try again.")
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bus.fill")
+                            .font(.system(size: 14, weight: .bold))
+                        Text(modelo.pagoRealizado
+                             ? L.t("Pasaje pagado (simulado)", "Fare paid (simulated)")
+                             : L.t("Pagar \(String(format: "S/ %.2f", importe)) (simulado)",
+                                   "Pay \(String(format: "S/ %.2f", importe)) (simulated)"))
+                            .font(.bodySmMedium)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.primaryContainer))
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "bus.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(L.t("Pagar \(String(format: "S/ %.2f", importe)) (simulado)",
-                             "Pay \(String(format: "S/ %.2f", importe)) (simulated)"))
-                        .font(.bodySmMedium)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.primaryContainer))
+                .buttonStyle(.plain)
+                .disabled(!modelo.puedePagar(resultado))
+            } else if resultado.campos.esPago, let error = resultado.errorParaPagoDemo {
+                Text(error.mensaje)
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
             }
-            .buttonStyle(.plain)
 
             if let mensajePago {
                 Text(mensajePago)

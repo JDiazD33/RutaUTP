@@ -197,20 +197,34 @@ enum PagoQR {
         var ciudad: String?
         var celular: String?
         var importe: Double?
+        /// Ausencia permite tarifa estática; un importe declarado pero ilegible
+        /// o ambiguo no debe convertirse silenciosamente en esa tarifa.
+        var importeInvalido: Bool = false
         var moneda: String?
+        /// Un duplicado no debe ocultar una moneda anterior con otro valor.
+        var monedaInvalida: Bool = false
         var pais: String?
         /// `true` si el código es de los nuestros: lo emite `cargaUtil`.
         var esDemo: Bool = false
         /// `true` si la carga útil tiene estructura de pago, no texto suelto.
         var esPago: Bool
 
-        /// Importe listo para mostrar, con el símbolo del sol.
+        var monedaNormalizada: String? {
+            moneda?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        }
+
+        /// Solo formatear como dinero una cantidad admitida por el monedero,
+        /// evitando redondear un importe inválido como si fuera cobrable.
+        @MainActor
         var importeTexto: String? {
             guard let importe else { return nil }
+            guard let valido = MonederoStore.importeValidoParaPasaje(importe) else {
+                return L.t("Importe no válido", "Invalid amount")
+            }
 
-            let simbolo = moneda == "604" || moneda == "PEN" ? "S/ " : ""
+            let simbolo = monedaNormalizada == "604" || monedaNormalizada == "PEN" ? "S/ " : ""
 
-            return simbolo + String(format: "%.2f", importe)
+            return simbolo + String(format: "%.2f", valido)
         }
     }
 
@@ -243,7 +257,8 @@ enum PagoQR {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
 
-        guard let primera = lineas.first, primera.hasPrefix("DEMO ") else {
+        guard let primera = lineas.first,
+              primera == "DEMO YAPO" || primera == "DEMO PLUN" else {
             return campos
         }
 
@@ -251,20 +266,30 @@ enum PagoQR {
         campos.esDemo = true
         campos.billetera = String(primera.dropFirst("DEMO ".count)).capitalized
 
+        var importeDeclarado = false
+        var monedaDeclarada = false
         for linea in lineas.dropFirst() {
-            let partes = linea.split(separator: ":", maxSplits: 1)
+            let partes = linea.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
 
-            guard partes.count == 2 else { continue }
+            guard partes.count == 2 else { return CamposQR(esPago: false) }
 
             let clave = partes[0].trimmingCharacters(in: .whitespaces).lowercased()
             let valor = partes[1].trimmingCharacters(in: .whitespaces)
+            guard !clave.isEmpty else { return CamposQR(esPago: false) }
 
             switch clave {
             case "titular": campos.titular = valor
             case "celular": campos.celular = valor
             case "ciudad": campos.ciudad = valor
-            case "moneda": campos.moneda = valor
-            case "importe": campos.importe = Double(valor)
+            case "moneda":
+                if monedaDeclarada { campos.monedaInvalida = true }
+                monedaDeclarada = true
+                campos.moneda = valor
+            case "importe":
+                if importeDeclarado { campos.importeInvalido = true }
+                importeDeclarado = true
+                campos.importe = Double(valor)
+                if campos.importe == nil { campos.importeInvalido = true }
             default: break
             }
         }
@@ -279,11 +304,13 @@ enum PagoQR {
     private static func leerTLV(_ cargaUtil: String) -> CamposQR {
         var campos = CamposQR(esPago: false)
 
-        let nivel1 = camposTLV(cargaUtil)
+        guard let nivel1 = camposTLVCompletos(cargaUtil) else { return campos }
 
-        // La versión de formato y el CRC son lo que distingue un QR de pago de
-        // cualquier otro código (una URL, un texto suelto).
-        guard nivel1["00"] == "01", nivel1["63"] != nil else {
+        // Reconocer estructura completa, no un prefijo que casualmente tiene
+        // versión/CRC. Esto no autentica un cobro ni verifica su checksum.
+        guard nivel1["00"] == "01", let crc = nivel1["63"],
+              crc.utf8.count == 4,
+              crc.utf8.allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }) else {
             return campos
         }
 
@@ -293,14 +320,37 @@ enum PagoQR {
         campos.pais = nivel1["58"]
         campos.moneda = nivel1["53"]
 
-        if let texto = nivel1["54"], let valor = Double(texto) {
-            campos.importe = valor
+        if let texto = nivel1["54"] {
+            campos.importe = Double(texto)
+            campos.importeInvalido = campos.importe == nil
         }
 
         if let cuenta = nivel1["26"] {
-            campos.celular = camposTLV(cuenta)["01"]
+            guard let detalles = camposTLVCompletos(cuenta) else { return CamposQR(esPago: false) }
+            campos.celular = detalles["01"]
         }
 
+        return campos
+    }
+
+    /// La clasificación de pago necesita consumir todos los bytes. El helper
+    /// público de lectura parcial se conserva, pero no autoriza una operación
+    /// cuando hay un campo truncado, repetido o con UTF-8 incompleto.
+    private static func camposTLVCompletos(_ texto: String) -> [String: String]? {
+        let bytes = Array(texto.utf8)
+        var campos: [String: String] = [:]
+        var indice = 0
+        while indice < bytes.count {
+            guard indice + 4 <= bytes.count,
+                  bytes[indice..<(indice + 4)].allSatisfy({ (48...57).contains($0) }) else { return nil }
+            let identificador = String(decoding: bytes[indice..<(indice + 2)], as: UTF8.self)
+            let longitud = Int(bytes[indice + 2] - 48) * 10 + Int(bytes[indice + 3] - 48)
+            let inicio = indice + 4
+            guard inicio + longitud <= bytes.count, campos[identificador] == nil,
+                  let valor = cadena(bytes[inicio..<(inicio + longitud)]) else { return nil }
+            campos[identificador] = valor
+            indice = inicio + longitud
+        }
         return campos
     }
 

@@ -20,6 +20,27 @@ struct MovimientoMonedero: Codable, Identifiable, Equatable {
     // del historial v1 se ignoran al leer y el texto sigue el idioma actual.
 }
 
+/// Diagnóstico local sin modificar preferencias ni registrar un movimiento.
+enum ErrorCobroPasaje: Equatable {
+    case datosLocalesInvalidos
+    case importeInvalido
+    case saldoInsuficiente
+
+    var mensaje: String {
+        switch self {
+        case .datosLocalesInvalidos:
+            return L.t("No se pudieron recuperar los datos del monedero. Las operaciones están bloqueadas y los datos originales se conservan.",
+                       "Wallet data could not be recovered. Operations are blocked and the original data has been preserved.")
+        case .importeInvalido:
+            return L.t("El importe no es válido para este monedero. No se hicieron cambios.",
+                       "The amount is not valid for this wallet. No changes were made.")
+        case .saldoInsuficiente:
+            return L.t("Saldo insuficiente. Recarga para continuar.",
+                       "Not enough balance. Top up to continue.")
+        }
+    }
+}
+
 @MainActor
 final class MonederoStore: ObservableObject {
     /// Referencia de la demo, no una tarifa consultada para una ruta concreta.
@@ -67,10 +88,23 @@ final class MonederoStore: ObservableObject {
 
     @discardableResult
     func cobrarPasaje(_ importe: Double) -> Bool {
-        guard !datosLocalesInvalidos,
-              let centimos = Self.centimos(importe), centimos > 0,
-              saldoCentimos >= centimos else { return false }
+        guard errorParaCobrarPasaje(importe) == nil,
+              let centimos = Self.centimos(importe) else { return false }
         return registrar(importe: -Double(centimos) / 100, saldoNuevo: saldoCentimos - centimos)
+    }
+
+    /// La lectura y el cobro comparten exactamente el límite y la tolerancia
+    /// binaria de céntimos. No endurecer cargar(): un saldo cero sigue válido.
+    static func importeValidoParaPasaje(_ importe: Double) -> Double? {
+        guard let centimos = Self.centimos(importe), centimos > 0 else { return nil }
+        return Double(centimos) / 100
+    }
+
+    func errorParaCobrarPasaje(_ importe: Double) -> ErrorCobroPasaje? {
+        guard !datosLocalesInvalidos else { return .datosLocalesInvalidos }
+        guard let centimos = Self.centimos(importe), centimos > 0 else { return .importeInvalido }
+        guard saldoCentimos >= centimos else { return .saldoInsuficiente }
+        return nil
     }
 
     private static func centimos(_ importe: Double) -> Int? {
