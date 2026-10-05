@@ -55,35 +55,41 @@ enum Persistencia {
     /// Idempotente: la segunda llamada no hace nada. Se invoca una sola vez,
     /// al arrancar la app, antes de que ninguna vista lea datos persistidos.
     @discardableResult
-    static func migrarSiHaceFalta() -> Int {
-        let instalada = versionInstalada
+    static func migrarSiHaceFalta(almacen: AlmacenLugares = LugaresStore.almacen) -> Int {
+        let defaults = almacen.defaults
+        let instalada = defaults.integer(forKey: llaveVersion)
         guard instalada < versionEsquema else { return instalada }
 
+        var actual = instalada
         for migracion in migraciones where migracion.version > instalada {
-            migracion.aplicar()
+            // No sellar un paso fallido: una versión compatible o una lectura
+            // posterior deben poder reintentar sin perder los datos originales.
+            guard migracion.aplicar(almacen) else { return actual }
             #if DEBUG
-            print("[Persistencia] esquema v\(instalada) → v\(migracion.version): \(migracion.descripcion)")
+            print("[Persistencia] esquema v\(actual) → v\(migracion.version): \(migracion.descripcion)")
             #endif
+            actual = migracion.version
+            defaults.set(actual, forKey: llaveVersion)
         }
 
-        UserDefaults.standard.set(versionEsquema, forKey: llaveVersion)
-        return versionEsquema
+        return actual
     }
 
     /// Migraciones ordenadas por versión destino. Cada `aplicar` debe ser
     /// idempotente y tolerante a datos ausentes.
-    private static let migraciones: [(version: Int, descripcion: String, aplicar: () -> Void)] = [
+    private static let migraciones: [(version: Int, descripcion: String, aplicar: (AlmacenLugares) -> Bool)] = [
         (
             1,
             "declara el esquema versionado y aplica al arranque la migración de campo de los lugares guardados",
-            {
+            { almacen in
                 // La migración real de este paso vive en `LugaresStore.cargar()`
                 // (el campo `esFijo`, que en datos anteriores no existía y se
                 // deducía del nombre). Se fuerza una carga aquí para que se
                 // aplique una sola vez, de forma determinista, en lugar de
                 // esperar a que el usuario abra Guardado o el Mapa. La carga es
                 // idempotente: si ya estaba migrado, no reescribe nada.
-                _ = LugaresStore.cargar()
+                _ = almacen.cargar()
+                return !almacen.datosLocalesInvalidos
             }
         )
     ]
@@ -98,6 +104,7 @@ enum Persistencia {
     static let llavesConocidas: [String] = [
         llaveVersion,
         LugaresStore.key,
+        LugaresStore.respaldoKey,
         "lineas.guardadas.v1",
         "negocios.cupones.guardados",
         "seguridad.tiles.v1",

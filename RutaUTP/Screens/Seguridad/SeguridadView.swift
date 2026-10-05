@@ -11,6 +11,8 @@ import UIKit
 import MapKit
 
 struct SeguridadView: View {
+    /// La misma instancia que Mapa y el rastreo; el valor por defecto es para previews.
+    var locationService: LocationServiceProtocol = LocationService()
     @EnvironmentObject private var router: AppRouter
 
     @State private var showReportarSheet = false
@@ -28,6 +30,9 @@ struct SeguridadView: View {
     @State private var paraderosIluminados: [ParaderoGTFS] = []
     @State private var showParaderosMap = false
     @State private var catalogoParaderos: [ParaderoGTFS] = []
+    @State private var errorCargaParaderos: String?
+    @State private var revisionCatalogo = 0
+    @State private var cargandoParaderos = false
 
     /// Lugares guardados, tiles y modo edición (estilo Springboard).
     /// Los datos y sus operaciones viven en el modelo; en la vista solo queda
@@ -336,20 +341,28 @@ struct SeguridadView: View {
             }
             #endif
         }
-        .task {
-            // Paraderos iluminados: selección determinista sobre el feed GTFS.
-            if paraderosIluminados.isEmpty {
-                let feed = await GTFSRepository.shared.rutas()
+        .task(id: revisionCatalogo) {
+            // El fallo se muestra y solo el botón solicita una carga nueva.
+            cargandoParaderos = true
+            errorCargaParaderos = nil
+            do {
+                let feed = try await GTFSRepository.shared.cargarRutas(reintentar: revisionCatalogo > 0)
+                guard !Task.isCancelled else { return }
                 paraderosIluminados = ParaderosIluminados.seleccionar(feed)
                 catalogoParaderos = feed.flatMap(\.paraderos)
+            } catch {
+                guard !Task.isCancelled else { return }
+                errorCargaParaderos = (error as? FalloCargaGTFS)?.mensajeUsuario
+                    ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
             }
+            cargandoParaderos = false
         }
         // Mapa fullscreen de paraderos iluminados (desde el banner)
         .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { lugaresVM.cargar() }) {
             ParaderosIluminadosView(paraderos: paraderosIluminados)
         }
         .sheet(isPresented: $showReportarSheet) {
-            ReportarSheet()
+            ReportarSheet(locationService: locationService)
                 .presentationDetents([.medium, .large])
         }
         // AÑADIR (Comunidad): sheet propio, distinto al de reportar, con foto
@@ -483,8 +496,16 @@ struct SeguridadView: View {
                 Text(L.t("Alertas hoy: \(Self.alertasEnFeed)",
                          "Alerts today: \(Self.alertasEnFeed)"))
                     .font(.bodySmMedium)
-                Text(L.t("Paraderos para explorar: \(paraderosIluminados.count)", "Stops to explore: \(paraderosIluminados.count)"))
-                    .font(.bodySmMedium)
+                if cargandoParaderos {
+                    Text(L.t("Cargando paraderos…", "Loading stops…")).font(.bodySmMedium)
+                } else if let errorCargaParaderos {
+                    Text(errorCargaParaderos).font(.bodyXs).foregroundStyle(Color.appError)
+                    Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
+                        .font(.bodyXsMedium)
+                } else {
+                    Text(L.t("Paraderos para explorar: \(paraderosIluminados.count)", "Stops to explore: \(paraderosIluminados.count)"))
+                        .font(.bodySmMedium)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button {
@@ -569,6 +590,14 @@ struct SeguridadView: View {
                 .buttonStyle(.plain)
             }
 
+            if lugaresVM.datosLugaresInvalidos {
+                Text(L.t("No se pudieron leer tus lugares. Se conservaron los datos originales; puedes reintentar la lectura en Guardado.",
+                         "Your places could not be read. The original data was preserved; you can retry reading in Saved."))
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
                 ForEach(lugaresVM.tilesActuales) { lugar in
                     lugarTileLugar(lugar)
@@ -586,6 +615,7 @@ struct SeguridadView: View {
                 }
                 lugarTileAñadir
             }
+            .disabled(lugaresVM.datosLugaresInvalidos)
         }
     }
 
@@ -914,4 +944,3 @@ struct SeguridadView: View {
 // MARK: - Reportar Sheet
 // ReportarSheet vive en Design/Components/ReportarSheet.swift (compartido
 // con el Mapa). Ver ahí el diseño completo.
-

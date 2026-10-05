@@ -24,6 +24,7 @@ import XCTest
 import CoreLocation
 import MapKit
 import SwiftUI
+import Combine
 @testable import RutaUTP
 
 final class GTFSCSVTests: XCTestCase {
@@ -615,7 +616,8 @@ final class ParaderosIluminadosTests: XCTestCase {
 @MainActor
 final class SeguridadLugaresModelTests: XCTestCase {
 
-    private let llaves = [LugaresStore.key, "seguridad.tiles.v1", "seguridad.tiles.orden.v1"]
+    private let llaves = [LugaresStore.key, LugaresStore.respaldoKey,
+                          "seguridad.tiles.v1", "seguridad.tiles.orden.v1"]
 
     override func setUp() {
         super.setUp()
@@ -820,4 +822,250 @@ private final class DirectionsTestClock: @unchecked Sendable {
     private var value = Date()
     func date() -> Date { lock.lock(); defer { lock.unlock() }; return value }
     func advance(_ seconds: TimeInterval) { lock.lock(); defer { lock.unlock() }; value.addTimeInterval(seconds) }
+}
+
+// MARK: - Recuperación de lugares sin pérdida de datos (E01)
+
+@MainActor
+final class LugaresStoreRecuperacionTests: XCTestCase {
+    private var dominio: String!
+    private var defaults: UserDefaults!
+    private var almacen: AlmacenLugares!
+    private let versionKey = "persistencia.esquema.version"
+
+    override func setUp() {
+        super.setUp()
+        dominio = "RutaUTPTests.LugaresRecuperacion.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: dominio)!
+        defaults.removePersistentDomain(forName: dominio)
+        almacen = AlmacenLugares(defaults: defaults)
+    }
+
+    override func tearDown() {
+        defaults.removePersistentDomain(forName: dominio)
+        almacen = nil
+        defaults = nil
+        dominio = nil
+        super.tearDown()
+    }
+
+    private func lugar(_ nombre: String, fijo: Bool = false) -> LugarGuardado {
+        LugarGuardado(nombre: nombre, direccion: "Dirección de prueba",
+                      categoria: fijo ? .universidad : .otro,
+                      lat: -8.1, lon: -79.03, esFijo: fijo,
+                      paraderoID: fijo ? nil : "paradero-test")
+    }
+
+    func testPrimeraInstalacionConservaSemillasYSusIdentidades() throws {
+        let inicial = almacen.cargar()
+        XCTAssertEqual(inicial.map(\.nombre), ["UTP", "Plaza de Armas"])
+        XCTAssertTrue(inicial[0].esFijo)
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+        XCTAssertNil(defaults.object(forKey: LugaresStore.respaldoKey))
+        let reiniciado = AlmacenLugares(defaults: defaults)
+        XCTAssertEqual(reiniciado.cargar(), inicial)
+    }
+
+    func testListaVaciaValidaNoSeConfundeConInstalacionNueva() {
+        let original = Data("[]".utf8)
+        defaults.set(original, forKey: LugaresStore.key)
+        let cargados = almacen.cargar()
+        XCTAssertEqual(cargados.map(\.nombre), ["UTP"])
+        XCTAssertTrue(cargados[0].esFijo)
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), original)
+    }
+
+    func testJSONTruncadoCategoriaDesconocidaYTiposInvalidosConservanOriginal() throws {
+        let valido = try JSONEncoder().encode([lugar("Anterior")])
+        let objeto = try XCTUnwrap(JSONSerialization.jsonObject(with: valido) as? [[String: Any]])
+        var categoriaNueva = objeto
+        categoriaNueva[0]["categoria"] = "CategoriaDeOtraVersion"
+        var tipoIncompatible = objeto
+        tipoIncompatible[0]["lat"] = "no-es-un-numero"
+        let casos = [Data("[{\"id\":".utf8),
+                     try JSONSerialization.data(withJSONObject: categoriaNueva),
+                     try JSONSerialization.data(withJSONObject: tipoIncompatible)]
+        for original in casos {
+            defaults.set(original, forKey: LugaresStore.key)
+            almacen.invalidarCache()
+            XCTAssertTrue(almacen.cargar().isEmpty)
+            XCTAssertTrue(almacen.datosLocalesInvalidos)
+            XCTAssertFalse(almacen.guardar([lugar("Nuevo")]))
+            XCTAssertFalse(almacen.eliminar(lugar("Anterior")))
+            let reiniciado = AlmacenLugares(defaults: defaults)
+            XCTAssertTrue(reiniciado.cargar().isEmpty)
+            XCTAssertFalse(reiniciado.guardar([lugar("Tras reiniciar")]))
+            XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+            XCTAssertNil(defaults.object(forKey: LugaresStore.respaldoKey))
+        }
+    }
+
+    func testTipoDeAlmacenamientoIncompatibleTampocoSeSobrescribe() {
+        defaults.set("dato de otra versión", forKey: LugaresStore.key)
+        XCTAssertTrue(almacen.cargar().isEmpty)
+        XCTAssertTrue(almacen.datosLocalesInvalidos)
+        XCTAssertFalse(almacen.guardar([lugar("Nuevo")]))
+        XCTAssertEqual(defaults.string(forKey: LugaresStore.key), "dato de otra versión")
+    }
+
+    func testGuardarSinLeerPrimeroTambienDetectaDatosInvalidos() {
+        let original = Data("ilegible".utf8)
+        defaults.set(original, forKey: LugaresStore.key)
+        XCTAssertFalse(almacen.guardar([lugar("Nuevo")]))
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+        XCTAssertTrue(almacen.datosLocalesInvalidos)
+    }
+
+    func testFalloDeLecturaNoReemplazaRespaldoAnterior() throws {
+        let respaldo = try JSONEncoder().encode([lugar("UTP", fijo: true), lugar("Anterior")])
+        let original = Data("ilegible".utf8)
+        defaults.set(respaldo, forKey: LugaresStore.respaldoKey)
+        defaults.set(original, forKey: LugaresStore.key)
+        _ = almacen.cargar()
+        XCTAssertFalse(almacen.guardar([lugar("Nuevo")]))
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), respaldo)
+    }
+
+    func testMigracionLegadaPreservaUUIDParaderoReferenciasYOriginal() throws {
+        let campus = lugar("UTP")
+        let paradero = lugar("Paradero anterior")
+        var objetos = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode([paradero, campus])) as? [[String: Any]])
+        objetos[0].removeValue(forKey: "esFijo")
+        objetos[1].removeValue(forKey: "esFijo")
+        objetos[1]["campoDeOtraVersion"] = "se conserva en el respaldo"
+        let original = try JSONSerialization.data(withJSONObject: objetos)
+        let seleccion = try JSONEncoder().encode([paradero.id])
+        defaults.set(original, forKey: LugaresStore.key)
+        defaults.set(seleccion, forKey: "seguridad.tiles.v1")
+        defaults.set(seleccion, forKey: "seguridad.tiles.orden.v1")
+
+        XCTAssertEqual(Persistencia.migrarSiHaceFalta(almacen: almacen), 1)
+        let migrados = almacen.cargar()
+        XCTAssertEqual(migrados.map(\.id), [campus.id, paradero.id])
+        XCTAssertTrue(migrados[0].esFijo)
+        XCTAssertEqual(migrados[1].paraderoID, paradero.paraderoID)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), original)
+        XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.v1"), seleccion)
+        XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.orden.v1"), seleccion)
+        let normalizados = defaults.data(forKey: LugaresStore.key)
+        let reiniciado = AlmacenLugares(defaults: defaults)
+        XCTAssertEqual(reiniciado.cargar(), migrados)
+        XCTAssertEqual(Persistencia.migrarSiHaceFalta(almacen: reiniciado), 1)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), normalizados)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), original)
+    }
+
+    func testLecturaValidaSinNormalizacionNoReescribeCamposDesconocidos() throws {
+        var objetos = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode([lugar("UTP", fijo: true)])) as? [[String: Any]])
+        objetos[0]["campoDeOtraVersion"] = "original intacto"
+        let original = try JSONSerialization.data(withJSONObject: objetos)
+        defaults.set(original, forKey: LugaresStore.key)
+        XCTAssertEqual(almacen.cargar().count, 1)
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+        XCTAssertNil(defaults.object(forKey: LugaresStore.respaldoKey))
+    }
+
+    func testMigracionFallidaNoSellaVersionNiModificaOtrasLlaves() throws {
+        let original = Data("ilegible".utf8)
+        let referencias = try JSONEncoder().encode([UUID()])
+        defaults.set(original, forKey: LugaresStore.key)
+        for key in ["seguridad.tiles.v1", "seguridad.tiles.orden.v1", "lineas.guardadas.v1"] {
+            defaults.set(referencias, forKey: key)
+        }
+        XCTAssertEqual(Persistencia.migrarSiHaceFalta(almacen: almacen), 0)
+        XCTAssertNil(defaults.object(forKey: versionKey))
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+        for key in ["seguridad.tiles.v1", "seguridad.tiles.orden.v1", "lineas.guardadas.v1"] {
+            XCTAssertEqual(defaults.data(forKey: key), referencias)
+        }
+    }
+
+    func testTrasRepararDatosSePuedeReintentarLecturaYMigracion() throws {
+        defaults.set(Data("ilegible".utf8), forKey: LugaresStore.key)
+        XCTAssertEqual(Persistencia.migrarSiHaceFalta(almacen: almacen), 0)
+        let anterior = lugar("UTP")
+        defaults.set(try JSONEncoder().encode([anterior]), forKey: LugaresStore.key)
+        almacen.invalidarCache()
+        XCTAssertEqual(Persistencia.migrarSiHaceFalta(almacen: almacen), 1)
+        XCTAssertEqual(almacen.cargar().map(\.id), [anterior.id])
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+        XCTAssertTrue(almacen.guardar(almacen.cargar() + [lugar("Nuevo")]))
+    }
+
+    func testEsquemaYaSelladoNoPermiteSobrescribirDatosInvalidos() {
+        let original = Data("ilegible".utf8)
+        defaults.set(1, forKey: versionKey)
+        defaults.set(original, forKey: LugaresStore.key)
+        XCTAssertEqual(Persistencia.migrarSiHaceFalta(almacen: almacen), 1)
+        XCTAssertFalse(almacen.guardar([lugar("Nuevo")]))
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+    }
+
+    func testGuardadoNoPublicaCambiosSiLaLecturaEsInvalida() {
+        let original = Data("ilegible".utf8)
+        defaults.set(original, forKey: LugaresStore.key)
+        let modelo = GuardadoViewModel(almacen: almacen)
+        modelo.cargar()
+        XCTAssertTrue(modelo.datosLugaresInvalidos)
+        XCTAssertFalse(modelo.añadirLugar(lugar("Nuevo")))
+        XCTAssertFalse(modelo.eliminarLugar(lugar("Anterior")))
+        modelo.reintentarLecturaLugares()
+        XCTAssertTrue(modelo.lugares.isEmpty)
+        XCTAssertTrue(modelo.datosLugaresInvalidos)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+    }
+
+    func testSeguridadConservaTilesYOrdenCuandoFallaLaLectura() throws {
+        let anterior = lugar("Anterior")
+        XCTAssertTrue(almacen.guardar([lugar("UTP", fijo: true), anterior]))
+        let seleccion = try JSONEncoder().encode([anterior.id])
+        defaults.set(seleccion, forKey: "seguridad.tiles.v1")
+        defaults.set(seleccion, forKey: "seguridad.tiles.orden.v1")
+        let modelo = SeguridadLugaresModel(almacen: almacen)
+        modelo.cargar()
+        let original = Data("ilegible".utf8)
+        defaults.set(original, forKey: LugaresStore.key)
+        almacen.invalidarCache()
+        XCTAssertFalse(modelo.eliminar(anterior))
+        modelo.reconstruirTiles(seleccion: [])
+        modelo.persistirOrden()
+        XCTAssertTrue(modelo.datosLugaresInvalidos)
+        XCTAssertTrue(modelo.tilesActuales.isEmpty)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+        XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.v1"), seleccion)
+        XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.orden.v1"), seleccion)
+    }
+
+    func testGuardadoConservaLugaresAñadidosDesdeOtraPantalla() {
+        let campus = lugar("UTP", fijo: true)
+        let primero = lugar("Primero")
+        let externo = lugar("Otra pantalla")
+        let nuevo = lugar("Nuevo")
+        XCTAssertTrue(almacen.guardar([campus, primero]))
+        let modelo = GuardadoViewModel(almacen: almacen)
+        modelo.cargar()
+        XCTAssertTrue(almacen.guardar([campus, primero, externo]))
+        XCTAssertTrue(modelo.añadirLugar(nuevo))
+        XCTAssertTrue(modelo.lugares.contains { $0.id == externo.id })
+        XCTAssertEqual(modelo.lugares.first?.id, campus.id)
+        XCTAssertTrue(modelo.eliminarLugar(primero))
+        XCTAssertEqual(Set(almacen.cargar().map(\.id)), [campus.id, externo.id, nuevo.id])
+    }
+
+    func testErrorDeCodificacionNoCambiaDiscoNiCache() {
+        let inicial = [lugar("UTP", fijo: true), lugar("Anterior")]
+        XCTAssertTrue(almacen.guardar(inicial))
+        let original = defaults.data(forKey: LugaresStore.key)
+        var invalido = lugar("Invalido")
+        invalido.lat = .nan
+        XCTAssertFalse(almacen.guardar(inicial + [invalido]))
+        XCTAssertEqual(almacen.cargar(), inicial)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+    }
 }

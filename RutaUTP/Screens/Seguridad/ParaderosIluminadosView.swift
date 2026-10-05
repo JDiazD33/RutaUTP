@@ -47,6 +47,8 @@ struct ParaderosIluminadosView: View {
     @State private var query = ""
     @State private var radius = 0
     @State private var loading = true
+    @State private var errorCargaRutas: String?
+    @State private var revisionCatalogo = 0
     @State private var locating = false
     @State private var location: CLLocationCoordinate2D?
     @State private var locationMessage: String?
@@ -58,6 +60,7 @@ struct ParaderosIluminadosView: View {
     @State private var walkingLoading = false
     @State private var walkingMessage: String?
     @State private var savedIDs = Set<String>()
+    @State private var errorAlGuardar = false
     @State private var satellite = false
     @FocusState private var searchFocused: Bool
 
@@ -105,9 +108,20 @@ struct ParaderosIluminadosView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { bottomPanel }
         .overlay(alignment: .trailing) { mapControls.padding(.trailing, 16) }
         .preferredColorScheme(dark ? .dark : .light)
-        .task {
-            routes = await GTFSRepository.shared.rutas()
-            guard !Task.isCancelled else { return }
+        .task(id: revisionCatalogo) {
+            loading = true
+            errorCargaRutas = nil
+            do {
+                let catalogo = try await GTFSRepository.shared.cargarRutas(reintentar: revisionCatalogo > 0)
+                guard !Task.isCancelled else { return }
+                routes = catalogo
+            } catch {
+                guard !Task.isCancelled else { return }
+                errorCargaRutas = (error as? FalloCargaGTFS)?.mensajeUsuario
+                    ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+                loading = false
+                return
+            }
             loadedStops = paraderos.isEmpty ? ParaderosIluminados.seleccionar(routes) : paraderos
             lineasPorParadero = Self.lineasQueSirven(loadedStops, en: routes)
             guard !Task.isCancelled else { return }
@@ -125,6 +139,12 @@ struct ParaderosIluminadosView: View {
             locationTask?.cancel()
             walkingTask?.cancel()
             locationService.stopUpdating()
+        }
+        .alert(L.t("No se pudieron cambiar tus guardados", "Unable to update saved places"), isPresented: $errorAlGuardar) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) { }
+        } message: {
+            Text(L.t("Los datos anteriores se conservaron. Revisa tus lugares en Guardado antes de volver a intentarlo.",
+                     "Your previous data was preserved. Check your places in Saved before trying again."))
         }
     }
 
@@ -202,6 +222,11 @@ struct ParaderosIluminadosView: View {
             }
             if loading {
                 HStack { ProgressView(); Text(L.t("Cargando paraderos…", "Loading stops…")) }.padding(18)
+            } else if let errorCargaRutas {
+                VStack(spacing: 8) {
+                    Text(errorCargaRutas).font(.system(size: 14)).multilineTextAlignment(.center)
+                    Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
+                }.frame(maxWidth: .infinity).padding(16)
             } else if visible.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "mappin.slash.circle").font(.system(size: 26)).foregroundStyle(accent)
@@ -416,7 +441,13 @@ struct ParaderosIluminadosView: View {
         } else {
             places.append(LugarGuardado(nombre: stop.nombre, direccion: "Trujillo", categoria: .otro, lat: stop.lat, lon: stop.lon, paraderoID: stop.id))
         }
-        LugaresStore.guardar(places); refreshSaved(); AppHaptics.success()
+        guard LugaresStore.guardar(places) else {
+            errorAlGuardar = true
+            AppHaptics.warning()
+            return
+        }
+        refreshSaved()
+        AppHaptics.success()
     }
 }
 

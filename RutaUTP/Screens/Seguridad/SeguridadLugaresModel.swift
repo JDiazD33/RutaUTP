@@ -24,6 +24,13 @@ final class SeguridadLugaresModel: ObservableObject {
 
     /// Lugares guardados tal como están en `LugaresStore`.
     @Published private(set) var lugares: [LugarGuardado] = []
+    @Published private(set) var datosLugaresInvalidos = false
+
+    private let almacen: AlmacenLugares
+
+    init(almacen: AlmacenLugares = LugaresStore.almacen) {
+        self.almacen = almacen
+    }
 
     /// Tiles visibles: el fijo (UTP) primero y después los elegidos.
     ///
@@ -44,28 +51,41 @@ final class SeguridadLugaresModel: ObservableObject {
 
     /// Relee los lugares y recompone los tiles. Idempotente.
     func cargar() {
-        lugares = LugaresStore.cargar()
+        lugares = almacen.cargar()
+        datosLugaresInvalidos = almacen.datosLocalesInvalidos
         reconstruirTiles()
     }
 
     func alternarEdicion() {
+        guard !datosLugaresInvalidos else { return }
         modoEdicion.toggle()
     }
 
     // MARK: - Lugares
 
     /// Quita un lugar de guardados, lo saca de los tiles y persiste el orden.
-    func eliminar(_ lugar: LugarGuardado) {
-        LugaresStore.eliminar(lugar)
-        lugares = LugaresStore.cargar()
+    @discardableResult
+    func eliminar(_ lugar: LugarGuardado) -> Bool {
+        guard almacen.eliminar(lugar) else {
+            cargar()
+            return false
+        }
+        lugares = almacen.cargar()
         tilesActuales.removeAll { $0.id == lugar.id }
         persistirOrden()
+        return true
     }
 
     // MARK: - Tiles
 
     /// UTP fijo primero + extras en el orden guardado por el usuario.
     func reconstruirTiles(seleccion: Set<UUID>? = nil) {
+        datosLugaresInvalidos = almacen.datosLocalesInvalidos
+        guard !datosLugaresInvalidos else {
+            tilesActuales = []
+            modoEdicion = false
+            return
+        }
         let utp = lugares.first(where: { $0.esFijo })
         let noFijos = lugares.filter { !$0.esFijo }
 
@@ -96,25 +116,27 @@ final class SeguridadLugaresModel: ObservableObject {
     }
 
     private func idsTilesGuardados() -> [UUID]? {
-        guard let data = UserDefaults.standard.data(forKey: Self.tilesKey),
+        guard let data = almacen.defaults.data(forKey: Self.tilesKey),
               let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
         return ids
     }
 
     private func idsOrdenGuardados() -> [UUID]? {
-        guard let data = UserDefaults.standard.data(forKey: Self.ordenKey),
+        guard let data = almacen.defaults.data(forKey: Self.ordenKey),
               let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
         return ids
     }
 
     func persistirOrden() {
+        guard !almacen.datosLocalesInvalidos else { return }
         let ids = tilesActuales.filter { !$0.esFijo }.map(\.id)
         if let data = try? JSONEncoder().encode(ids) {
-            UserDefaults.standard.set(data, forKey: Self.ordenKey)
+            almacen.defaults.set(data, forKey: Self.ordenKey)
         }
     }
 
     private func guardarTilesSeleccion(_ ids: Set<UUID>) {
+        guard !almacen.datosLocalesInvalidos else { return }
         // Se guarda en el ORDEN de `lugares`, no en el del `Set`.
         //
         // Un `Set` no tiene orden estable, así que persistir `Array(ids)` tal
@@ -123,7 +145,7 @@ final class SeguridadLugaresModel: ObservableObject {
         // destapó una prueba de la regla de orden (M-04), no un usuario.
         let ordenados = lugares.filter { ids.contains($0.id) }.map(\.id)
         if let data = try? JSONEncoder().encode(ordenados) {
-            UserDefaults.standard.set(data, forKey: Self.tilesKey)
+            almacen.defaults.set(data, forKey: Self.tilesKey)
         }
     }
 }

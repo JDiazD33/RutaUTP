@@ -21,9 +21,12 @@ import Foundation
 enum LugaresStore {
 
     static let key = "lugares.guardados.v2"
+    static let respaldoKey = "lugares.guardados.v2.respaldo"
 
-    private static let candado = NSLock()
-    private static var cache: [LugarGuardado]?
+    /// La app comparte una instancia; las pruebas usan un dominio aislado.
+    static let almacen = AlmacenLugares(defaults: .standard)
+
+    static var datosLocalesInvalidos: Bool { almacen.datosLocalesInvalidos }
 
     // MARK: - Lectura
 
@@ -31,25 +34,19 @@ enum LugaresStore {
     /// primero). La primera llamada del proceso lee de disco; el resto, de la
     /// caché.
     static func cargar() -> [LugarGuardado] {
-        candado.lock()
-        defer { candado.unlock() }
-        if let cache { return cache }
-        let cargados = leerYNormalizar()
-        cache = cargados
-        return cargados
+        almacen.cargar()
     }
 
     // MARK: - Escritura
 
-    static func guardar(_ lugares: [LugarGuardado]) {
-        candado.lock()
-        cache = lugares
-        candado.unlock()
-        escribirEnDisco(lugares)
+    @discardableResult
+    static func guardar(_ lugares: [LugarGuardado]) -> Bool {
+        almacen.guardar(lugares)
     }
 
-    static func eliminar(_ lugar: LugarGuardado) {
-        guardar(cargar().filter { $0.id != lugar.id })
+    @discardableResult
+    static func eliminar(_ lugar: LugarGuardado) -> Bool {
+        almacen.eliminar(lugar)
     }
 
     /// Descarta la caché para que la próxima lectura vuelva a disco.
@@ -58,9 +55,7 @@ enum LugaresStore {
     /// así que sin esto verían la lista que dejó la prueba anterior. En la app
     /// no hace falta, porque toda mutación pasa por `guardar` o `eliminar`.
     static func invalidarCache() {
-        candado.lock()
-        cache = nil
-        candado.unlock()
+        almacen.invalidarCache()
     }
 
     // MARK: - Sembrado
@@ -73,31 +68,92 @@ enum LugaresStore {
                       esFijo: true)
     }
 
-    // MARK: - Privado
+}
+
+/// Conserva los originales cuando no puede interpretarlos. Una carga fallida
+/// bloquea también las escrituras posteriores; devolver solo una lista vacía
+/// permitiría que una pantalla la guardara encima de los datos del usuario.
+final class AlmacenLugares {
+    let defaults: UserDefaults
+
+    private struct Carga {
+        let lugares: [LugarGuardado]
+        let datosInvalidos: Bool
+    }
+
+    private let candado = NSLock()
+    private var cache: Carga?
+
+    init(defaults: UserDefaults) {
+        self.defaults = defaults
+    }
+
+    var datosLocalesInvalidos: Bool {
+        candado.lock()
+        defer { candado.unlock() }
+        return cargarBajoCandado().datosInvalidos
+    }
+
+    func cargar() -> [LugarGuardado] {
+        candado.lock()
+        defer { candado.unlock() }
+        return cargarBajoCandado().lugares
+    }
+
+    @discardableResult
+    func guardar(_ lugares: [LugarGuardado]) -> Bool {
+        candado.lock()
+        defer { candado.unlock() }
+        guard !cargarBajoCandado().datosInvalidos else { return false }
+        return escribirBajoCandado(lugares)
+    }
+
+    @discardableResult
+    func eliminar(_ lugar: LugarGuardado) -> Bool {
+        candado.lock()
+        defer { candado.unlock() }
+        let carga = cargarBajoCandado()
+        guard !carga.datosInvalidos else { return false }
+        return escribirBajoCandado(carga.lugares.filter { $0.id != lugar.id })
+    }
+
+    func invalidarCache() {
+        candado.lock()
+        defer { candado.unlock() }
+        cache = nil
+    }
+
+    private func cargarBajoCandado() -> Carga {
+        if let cache { return cache }
+        let carga = leerYNormalizar()
+        cache = carga
+        return carga
+    }
 
     /// Lee de disco y aplica el sembrado y la normalización. Se ejecuta una
     /// sola vez por proceso, así que las escrituras de normalización de abajo
     /// tampoco se repiten.
     ///
-    /// OJO: no puede llamar a `guardar` —`cargar` ya tiene el candado tomado y
-    /// `NSLock` no es recursivo—, por eso escribe con `escribirEnDisco`.
-    private static func leerYNormalizar() -> [LugarGuardado] {
-        var resultado: [LugarGuardado]
-
-        if let data = UserDefaults.standard.data(forKey: key),
-           let decodificados = try? JSONDecoder().decode([LugarGuardado].self, from: data),
-           !decodificados.isEmpty {
-            resultado = decodificados
-        } else {
+    /// Se llama con el candado tomado: no debe invocar métodos públicos.
+    private func leerYNormalizar() -> Carga {
+        guard let objeto = defaults.object(forKey: LugaresStore.key) else {
             // Seed: UTP (fijo) + Plaza de Armas; el resto los agrega el usuario.
-            resultado = [lugarUTP(),
+            let semillas = [LugaresStore.lugarUTP(),
                          LugarGuardado(nombre: "Plaza de Armas",
                                        direccion: "Centro Histórico de Trujillo",
                                        categoria: .plaza,
                                        lat: -8.1096, lon: -79.0287)]
-            escribirEnDisco(resultado)
-            return resultado
+            _ = escribirBajoCandado(semillas)
+            return Carga(lugares: semillas, datosInvalidos: false)
         }
+
+        // Un tipo distinto de Data también es un dato existente, nunca una
+        // primera instalación. No escribir semillas ni borrar el original.
+        guard let data = objeto as? Data,
+              let decodificados = try? JSONDecoder().decode([LugarGuardado].self, from: data) else {
+            return Carga(lugares: [], datosInvalidos: true)
+        }
+        var resultado = decodificados
 
         // Migración: los lugares guardados antes de que `esFijo` se persistiera
         // no traen el campo, así que decodifican como false y el bloque de
@@ -106,9 +162,8 @@ enum LugaresStore {
         if !resultado.contains(where: { $0.esFijo }),
            let indice = resultado.firstIndex(where: {
                $0.nombre.caseInsensitiveCompare("UTP") == .orderedSame
-           }) {
+            }) {
             resultado[indice].esFijo = true
-            escribirEnDisco(resultado)
         }
 
         // El campus UTP es un lugar fijo de la app: siempre presente y primero.
@@ -116,19 +171,28 @@ enum LugaresStore {
             if indiceUTP != 0 {
                 let utp = resultado.remove(at: indiceUTP)
                 resultado.insert(utp, at: 0)
-                escribirEnDisco(resultado)
             }
         } else {
-            resultado.insert(lugarUTP(), at: 0)
-            escribirEnDisco(resultado)
+            resultado.insert(LugaresStore.lugarUTP(), at: 0)
         }
 
-        return resultado
+        if resultado != decodificados {
+            guard let normalizados = try? JSONEncoder().encode(resultado) else {
+                return Carga(lugares: decodificados, datosInvalidos: true)
+            }
+            // Una sola copia del original, antes de la normalización. No se
+            // acumulan versiones ni se reemplaza el respaldo al releer datos
+            // ya migrados. Los UUID y las referencias permanecen intactos.
+            defaults.set(data, forKey: LugaresStore.respaldoKey)
+            defaults.set(normalizados, forKey: LugaresStore.key)
+        }
+        return Carga(lugares: resultado, datosInvalidos: false)
     }
 
-    private static func escribirEnDisco(_ lugares: [LugarGuardado]) {
-        if let data = try? JSONEncoder().encode(lugares) {
-            UserDefaults.standard.set(data, forKey: key)
-        }
+    private func escribirBajoCandado(_ lugares: [LugarGuardado]) -> Bool {
+        guard let data = try? JSONEncoder().encode(lugares) else { return false }
+        defaults.set(data, forKey: LugaresStore.key)
+        cache = Carga(lugares: lugares, datosInvalidos: false)
+        return true
     }
 }

@@ -74,7 +74,9 @@ struct GuardadoView: View {
         .sheet(isPresented: $showAddLinea) {
             AddLineaSheet(
                 catalogo: vm.lineasGTFS,
-                cargando: !vm.catalogoCargado,
+                cargando: !vm.catalogoCargado || vm.cargandoCatalogo,
+                errorCatalogo: vm.errorCatalogo,
+                onRetry: { Task { await vm.cargarCatalogo(reintentar: true) } },
                 yaGuardadas: vm.idsLineasGuardadas
             ) { vm.añadirLinea($0) }
             .presentationDetents([.medium, .large])
@@ -202,6 +204,7 @@ struct GuardadoView: View {
             )
         }
         .buttonStyle(PressableCapsuleStyle())
+        .disabled(selectedTab == .lugares && vm.datosLugaresInvalidos)
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .accessibilityLabel(selectedTab == .lugares ? L.t("Añadir lugar guardado", "Add saved place") : L.t("Añadir línea guardada", "Add saved line"))
         .seniable(selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea", conGesto: false)
@@ -256,7 +259,20 @@ struct GuardadoView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
 
-            if vm.lugares.isEmpty {
+            if vm.datosLugaresInvalidos {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L.t("No se pudieron leer tus lugares. Los datos originales se conservaron; no se guardarán cambios hasta poder leerlos.",
+                             "Your places could not be read. The original data was preserved; changes will not be saved until it can be read."))
+                        .font(.bodyMd)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(L.t("Reintentar lectura", "Retry reading")) {
+                        vm.reintentarLecturaLugares()
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(20)
+            } else if vm.lugares.isEmpty {
                 emptyState(icono: "bookmark.slash",
                            titulo: L.t("Aún no tienes lugares guardados", "No saved places yet"),
                            subtitulo: L.t("Toca Añadir lugar para guardar tu primer lugar.", "Tap Add place to save your first place."))
@@ -344,10 +360,24 @@ struct GuardadoView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
 
-            if vm.lineasGuardadas.isEmpty {
+            if vm.cargandoCatalogo {
+                ProgressView(L.t("Cargando líneas…", "Loading routes…"))
+                    .frame(maxWidth: .infinity)
+                    .padding(20)
+            } else if let error = vm.errorCatalogo {
+                VStack(spacing: 12) {
+                    Text(error.mensajeUsuario)
+                        .font(.bodySm)
+                    Button(L.t("Reintentar", "Try again")) {
+                        Task { await vm.cargarCatalogo(reintentar: true) }
+                    }
+                    .disabled(vm.cargandoCatalogo)
+                }
+                .padding(20)
+            } else if vm.lineasGuardadas.isEmpty {
                 emptyState(icono: "bus.badge.clock",
                            titulo: L.t("No tienes líneas guardadas", "No saved lines"),
-                           subtitulo: L.t("Toca Añadir línea y elige una de las \(vm.lineasGTFS.isEmpty ? "102" : "\(vm.lineasGTFS.count)") líneas oficiales.", "Tap Add line and pick one of the \(vm.lineasGTFS.isEmpty ? "102" : "\(vm.lineasGTFS.count)") official lines."))
+                           subtitulo: L.t("Toca Añadir línea para consultar el catálogo oficial.", "Tap Add line to browse the official catalog."))
                     .padding(.top, 60)
             } else {
                 VStack(spacing: 12) {
@@ -541,7 +571,7 @@ struct MapaElegirLugar: UIViewRepresentable {
 // MARK: - Lugar Detail Sheet
 struct LugarDetailSheet: View {
     let lugar: LugarGuardado
-    var onEliminar: () -> Void
+    var onEliminar: () -> Bool
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var router: AppRouter
     @State private var lugarCoord: CLLocationCoordinate2D?
@@ -550,6 +580,7 @@ struct LugarDetailSheet: View {
     @State private var geocoder = CLGeocoder()
     @State private var navegando = false
     @State private var confirmarEliminar = false
+    @State private var errorAlEliminar = false
     @State private var camera: MapCameraPosition = .region(MKCoordinateRegion(
         center: GTFSRepository.coordenadaUTP,
         span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)))
@@ -657,10 +688,19 @@ struct LugarDetailSheet: View {
         .confirmationDialog(L.t("¿Quitar este lugar de guardados?", "Remove this saved place?"),
                             isPresented: $confirmarEliminar, titleVisibility: .visible) {
             Button(L.t("Quitar lugar", "Remove place"), role: .destructive) {
-                onEliminar()
-                dismiss()
+                if onEliminar() {
+                    dismiss()
+                } else {
+                    errorAlEliminar = true
+                }
             }
             Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
+        }
+        .alert(L.t("No se pudo quitar el lugar", "Unable to remove place"), isPresented: $errorAlEliminar) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) { }
+        } message: {
+            Text(L.t("Los datos guardados se conservaron. Revisa tus lugares en Guardado antes de volver a intentarlo.",
+                     "Your saved data was preserved. Check your places in Saved before trying again."))
         }
     }
 

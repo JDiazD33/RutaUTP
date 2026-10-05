@@ -26,6 +26,16 @@ final class GuardadoViewModel: ObservableObject {
     /// Lugares guardados. El campus siempre va primero: lo garantiza
     /// `LugaresStore` al cargar y se respeta al insertar.
     @Published private(set) var lugares: [LugarGuardado] = []
+    @Published private(set) var datosLugaresInvalidos = false
+
+    private let almacen: AlmacenLugares
+    private let repositorioGTFS: RutasGTFSProviding
+
+    init(almacen: AlmacenLugares = LugaresStore.almacen,
+         repositorioGTFS: RutasGTFSProviding = GTFSRepository.shared) {
+        self.almacen = almacen
+        self.repositorioGTFS = repositorioGTFS
+    }
 
     /// Catálogo completo del feed, necesario para resolver las líneas
     /// guardadas (que solo persistimos como `route_id`).
@@ -34,6 +44,8 @@ final class GuardadoViewModel: ObservableObject {
     /// true cuando el feed ya se intentó cargar. Distingue "cargando" de
     /// "el feed no llegó", que antes se veían igual en el selector de líneas.
     @Published private(set) var catalogoCargado = false
+    @Published private(set) var cargandoCatalogo = false
+    @Published private(set) var errorCatalogo: FalloCargaGTFS?
 
     /// Referencias persistidas a líneas del feed (solo el `route_id`).
     @Published private(set) var lineaRefs: [LineaGuardadaRef] = []
@@ -70,8 +82,8 @@ final class GuardadoViewModel: ObservableObject {
 
     /// Lugares y referencias de líneas desde el almacenamiento local.
     func cargar() {
-        lugares = LugaresStore.cargar()
-        if let data = UserDefaults.standard.data(forKey: Self.lineasKey),
+        cargarLugares()
+        if let data = almacen.defaults.data(forKey: Self.lineasKey),
            let refs = try? JSONDecoder().decode([LineaGuardadaRef].self, from: data) {
             lineaRefs = refs
         }
@@ -79,22 +91,52 @@ final class GuardadoViewModel: ObservableObject {
 
     /// Catálogo del feed. Marca `catalogoCargado` incluso si llega vacío, para
     /// que la vista pueda distinguir "cargando" de "no hay datos".
-    func cargarCatalogo() async {
-        let feed = await GTFSRepository.shared.rutas()
-        lineasGTFS = RutasViewModel.convertir(feed)
-        catalogoCargado = true
+    func cargarCatalogo(reintentar: Bool = false) async {
+        guard !cargandoCatalogo, reintentar || !catalogoCargado else { return }
+        cargandoCatalogo = true
+        errorCatalogo = nil
+        defer { cargandoCatalogo = false }
+        do {
+            let feed = try await repositorioGTFS.cargarRutas(reintentar: reintentar)
+            guard !Task.isCancelled else { return }
+            lineasGTFS = RutasViewModel.convertir(feed)
+            catalogoCargado = true
+        } catch {
+            guard !Task.isCancelled else { return }
+            errorCatalogo = (error as? FalloCargaGTFS) ?? FalloCargaGTFS(detalle: error.localizedDescription)
+            catalogoCargado = true
+        }
     }
 
     // MARK: - Lugares
 
-    func añadirLugar(_ nuevo: LugarGuardado) {
-        lugares.insert(nuevo, at: indiceInsercion)
-        LugaresStore.guardar(lugares)
+    @discardableResult
+    func añadirLugar(_ nuevo: LugarGuardado) -> Bool {
+        // Leer la fuente actual evita sobrescribir lugares añadidos desde
+        // otra pantalla mientras este ViewModel conservaba una lista vieja.
+        var actuales = almacen.cargar()
+        let primeroNoFijo = actuales.firstIndex { !$0.esFijo } ?? actuales.count
+        actuales.insert(nuevo, at: min(primeroNoFijo + 1, actuales.count))
+        let guardado = almacen.guardar(actuales)
+        cargarLugares()
+        return guardado
     }
 
-    func eliminarLugar(_ lugar: LugarGuardado) {
-        lugares.removeAll { $0.id == lugar.id }
-        LugaresStore.guardar(lugares)
+    @discardableResult
+    func eliminarLugar(_ lugar: LugarGuardado) -> Bool {
+        let eliminado = almacen.eliminar(lugar)
+        cargarLugares()
+        return eliminado
+    }
+
+    func reintentarLecturaLugares() {
+        almacen.invalidarCache()
+        cargarLugares()
+    }
+
+    private func cargarLugares() {
+        lugares = almacen.cargar()
+        datosLugaresInvalidos = almacen.datosLocalesInvalidos
     }
 
     // MARK: - Líneas
@@ -115,7 +157,7 @@ final class GuardadoViewModel: ObservableObject {
 
     private func persistirLineas() {
         if let data = try? JSONEncoder().encode(lineaRefs) {
-            UserDefaults.standard.set(data, forKey: Self.lineasKey)
+            almacen.defaults.set(data, forKey: Self.lineasKey)
         }
     }
 }
