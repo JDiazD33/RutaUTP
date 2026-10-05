@@ -170,6 +170,8 @@ class Config:
     #: techo de velocidad; este margen absorbe el ruido del GPS (que en la
     #: medida anterior puede ser de decenas de metros) para no rechazar
     #: observaciones legítimas.
+    #: Finito y no negativo. Cero elimina solo este margen adicional; conserva
+    #: la tolerancia de `max_accuracy_m` y el techo de velocidad.
     max_displacement_margin_m: float = 250.0
     dedupe_window_s: float = 120.0
 
@@ -293,7 +295,6 @@ class Config:
             "max_distance_to_route_m",
             "max_heading_diff_deg",
             "max_speed_ms",
-            "max_displacement_margin_m",
             "dedupe_window_s",
             "merge_radius_m",
             "merge_window_s",
@@ -306,6 +307,15 @@ class Config:
 
             if not math.isfinite(value) or value <= 0:
                 raise ConfigError(f"{name}={value} debe ser finito y positivo")
+
+        if (
+            not math.isfinite(self.max_displacement_margin_m)
+            or self.max_displacement_margin_m < 0
+        ):
+            raise ConfigError(
+                f"max_displacement_margin_m={self.max_displacement_margin_m} "
+                "debe ser finito y no negativo"
+            )
 
         if not math.isfinite(self.max_clock_skew_s) or self.max_clock_skew_s < 0:
             raise ConfigError(

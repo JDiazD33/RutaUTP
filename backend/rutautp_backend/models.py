@@ -37,6 +37,7 @@ class RejectReason(str, Enum):
     BAD_FIELD_TYPE = "bad_field_type"
     NON_FINITE_NUMBER = "non_finite_number"
     EMPTY_SESSION = "empty_session"
+    NON_CANONICAL_IDENTIFIER = "non_canonical_identifier"
     UNKNOWN_ROUTE = "unknown_route"
     LINE_MISMATCH = "line_mismatch"
     INVALID_COORDINATE = "invalid_coordinate"

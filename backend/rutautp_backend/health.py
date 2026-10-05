@@ -20,12 +20,18 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import time
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# El escritor y el supervisor usan el reloj del mismo host. Este margen fijo
+# admite pequeños retrocesos del reloj, sin aceptar fechas futuras arbitrarias.
+# Es independiente de la tolerancia de las observaciones de los teléfonos.
+HEALTH_CLOCK_SKEW_TOLERANCE_S = 5.0
 
 
 def write_heartbeat(path: str, payload: dict[str, Any]) -> None:
@@ -70,12 +76,13 @@ def read_heartbeat(path: str) -> dict[str, Any] | None:
 
     try:
         raw = Path(path).expanduser().read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
 
     try:
         payload = json.loads(raw)
-    except json.JSONDecodeError:
+    # Incluye JSONDecodeError y el límite de dígitos de enteros del parser.
+    except ValueError:
         return None
 
     return payload if isinstance(payload, dict) else None
@@ -110,7 +117,22 @@ def check_health(
     if isinstance(at, bool) or not isinstance(at, (int, float)):
         return False, f"el latido de {path} no tiene marca de tiempo utilizable"
 
-    age = now - float(at)
+    try:
+        timestamp = float(at)
+    except (OverflowError, ValueError):
+        return False, f"el latido de {path} no tiene marca de tiempo utilizable"
+
+    if not math.isfinite(timestamp):
+        return False, f"el latido de {path} no tiene marca de tiempo utilizable"
+
+    age = now - timestamp
+
+    if age < -HEALTH_CLOCK_SKEW_TOLERANCE_S:
+        return False, (
+            f"el latido de {path} está {-age:.1f} s en el futuro "
+            f"(tolerancia {HEALTH_CLOCK_SKEW_TOLERANCE_S:.0f} s): "
+            "comprueba el reloj del sistema"
+        )
 
     if age > max_age_s:
         return False, (

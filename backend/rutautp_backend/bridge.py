@@ -343,9 +343,12 @@ class Bridge:
         if not isinstance(body, dict):
             return None
 
-        session_id = str(body.get("sessionId", "")).strip()
+        session_id = body.get("sessionId")
 
-        if not session_id:
+        # Tipos incorrectos y sesiones vacías conservan el diagnóstico del
+        # validador. Una sesión presente debe coincidir exactamente, sin
+        # autorizar una identidad distinta mediante recorte de espacios.
+        if not isinstance(session_id, str) or not session_id.strip():
             return None
 
         if topic_session != session_id:

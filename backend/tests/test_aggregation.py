@@ -1,7 +1,9 @@
 """Pruebas de la agregación de observaciones en vehículos.
 
 Lo que se comprueba aquí es la parte que el teléfono no puede hacer: decidir
-cuándo varias observaciones anónimas pertenecen a la misma unidad.
+cuándo varias observaciones de sesión pueden agruparse en una unidad estimada.
+El agregador recibe además el principal MQTT; estas pruebas no acreditan
+anonimato ni existencia física del vehículo.
 """
 
 from __future__ import annotations

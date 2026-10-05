@@ -207,9 +207,14 @@ def segment_bearing_deg(
 def heading_difference_deg(device_heading: float, route_heading: float) -> float:
     """Diferencia angular mínima entre dos rumbos, en grados [0, 180].
 
-    Un rumbo desconocido (negativo) devuelve 180: no debe contar como alineado.
+    Normaliza ambos antes de restar, incluso si contienen varias vueltas.
+    Un rumbo desconocido (negativo o no finito) en cualquiera de los dos
+    argumentos devuelve 180: no debe contar como alineado.
     """
-    if not math.isfinite(device_heading) or device_heading < 0:
+    device_heading = sanitize_heading(device_heading)
+    route_heading = sanitize_heading(route_heading)
+
+    if device_heading < 0 or route_heading < 0:
         return 180.0
 
     raw_difference = abs(device_heading - route_heading)

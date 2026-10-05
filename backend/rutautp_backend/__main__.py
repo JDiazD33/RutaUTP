@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.gtfs_dir:
         config = dataclasses.replace(config, gtfs_dir=Path(args.gtfs_dir))
 
-    configure_logging(config.log_level, as_json=not args.plain_logs)
+    configure_logging(config.log_level, as_json=config.log_json and not args.plain_logs)
 
     # La comprobación de salud no necesita el feed: si el broker o el disco
     # fallan, el informe tiene que salir igual. Por eso va antes de cargarlo.

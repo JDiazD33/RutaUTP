@@ -1,8 +1,17 @@
 # Backend de RutaUTP — puente `observaciones` → `vehiculos`
 
-Servicio que convierte las observaciones anónimas de los pasajeros a bordo en
-**posiciones vehiculares estimadas** que el resto de usuarios ve moverse en el
-mapa.
+Servicio que convierte las observaciones de ubicación de los pasajeros a bordo
+en **posiciones vehiculares estimadas** que el resto de usuarios ve moverse en
+el mapa. Las observaciones están vinculadas a una sesión de viaje y a una cuenta
+MQTT autenticada; no son anónimas frente al broker y al backend.
+
+El JSON no incluye nombre ni correo del perfil, pero contiene sesión, ruta,
+línea, coordenadas, fecha, velocidad, rumbo, precisión y actividad. La cuenta
+llega mediante el tópico y la autenticación MQTT. El backend la usa en memoria
+para validación y corroboración entre instalaciones; SQLite conserva sesión y
+trayectoria sin una columna de principal. Esto no garantiza anonimato ni borra
+el histórico cuando termina el viaje. Ver la política configurable de
+`BACKEND_DB_RETENTION_DAYS` y la sección de persistencia.
 
 > **Qué significa «estimada», y qué no.** El servicio agrupa observaciones y
 > publica la posición resultante. La validación contra el GTFS comprueba que un
@@ -120,7 +129,7 @@ Los ajustes propios del servicio llevan el prefijo `BACKEND_`.
 | `BACKEND_MAX_SPEED_MS` | `30` | Techo de velocidad (108 km/h) |
 | `BACKEND_MAX_MSGS_PER_MINUTE` | `20` | Límite por principal MQTT autenticado. La baliza legítima envía 12 |
 | `BACKEND_MAX_MSGS_PER_MINUTE_GLOBAL` | `1800` | Techo de emergencia del servicio entero, aplicado únicamente después de validar la observación. Debe ser ≥ el límite por principal |
-| `BACKEND_MAX_DISPLACEMENT_MARGIN_M` | `250` | Margen tolerado al comprobar la continuidad de una sesión, para absorber el ruido del GPS |
+| `BACKEND_MAX_DISPLACEMENT_MARGIN_M` | `250` | Margen adicional de continuidad, finito y no negativo. `0` elimina solo ese margen; conserva la tolerancia de precisión GPS y el techo de velocidad |
 | `BACKEND_DEDUPE_WINDOW_S` | `120` | Ventana de deduplicación |
 
 ### Agregación
@@ -174,12 +183,27 @@ python -m rutautp_backend --health-check
 El latido se retira al cerrar el puente, así que un servicio detenido se
 delata de inmediato en lugar de parecer vivo hasta que venza el margen.
 
+La marca `at` debe ser un número finito representable. Una marca inválida,
+un latido ilegible o una fecha más de **5 segundos en el futuro** producen
+`salud FALLA` y salida 1. El margen futuro fijo admite pequeños ajustes del
+reloj del mismo host; es independiente de la tolerancia de observaciones MQTT.
+La edad exactamente igual a `BACKEND_HEALTH_MAX_AGE_S` sigue admitida; solo
+una edad mayor vence el latido. `connected: false` sigue indicando desconexión,
+y omitir ese campo conserva el estado desconocido. Con `BACKEND_HEALTH_FILE`
+vacío la comprobación sigue desactivada y devuelve 0. Comprobar salud solo lee
+el latido: no lo repara ni carga el feed, inicia MQTT o abre la base de datos.
+
 ### Registro
 
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `BACKEND_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
-| `BACKEND_LOG_JSON` | `1` | Una línea JSON por evento, apta para volcar a un archivo |
+| `BACKEND_LOG_JSON` | `1` | `1`: una línea JSON por evento; `0`: texto legible |
+
+Sin `BACKEND_LOG_JSON`, el registro usa JSON. `--plain-logs` fuerza texto
+independientemente del valor de esa variable. `BACKEND_LOG_LEVEL` se aplica
+en ambos formatos. El informe de `--health-check` conserva su salida en texto
+para los supervisores.
 
 ## Contrato
 
@@ -195,6 +219,15 @@ Corresponde a `PassengerObservationPayload`:
 schemaVersion, sessionId, routeId, linea, lat, lon, speed, heading,
 accuracy, motionActivity, timestamp
 ```
+
+`sessionId`, `routeId` y `linea` deben llegar sin espacios marginales: se
+rechazan con `non_canonical_identifier`, sin recortar el JSON silenciosamente.
+Se conservan espacios internos, mayúsculas y los identificadores válidos.
+La sesión del cuerpo debe coincidir exactamente con la del tópico; una
+discrepancia se rechaza como `session_mismatch`. Sesiones vacías o demasiado
+largas mantienen `empty_session`, y los tipos incorrectos su rechazo existente.
+El principal autenticado se usa exactamente como llega en el tópico, sin
+normalizarlo ni confundir cuentas distintas.
 
 **Salida** — `rutautp/vehiculos/{vehicleId}/posicion`, QoS 1, sin retención.
 Corresponde a `VehiclePositionMessage`:
@@ -317,7 +350,16 @@ Mosquitto** (`mosquitto`, `mosquitto_pub`, `mosquitto_sub`). Levantan su propio
 broker en un puerto de prueba y lo borran al terminar: **arrancar el Compose no
 los instala ni los sustituye**. En macOS, `brew install mosquitto`.
 
-Resultado de la última ejecución de esta revisión (20 de septiembre de 2026,
+Cada ejecución desactiva la persistencia SQLite y usa un archivo de salud
+exclusivo dentro de su directorio temporal, que se elimina al cerrar, también
+si falla o recibe SIGINT/SIGTERM. Fija conexión loopback sin TLS ni credenciales,
+un ID MQTT nuevo, el feed del repositorio y los tópicos utilizados por la
+prueba. Así no hereda rutas de datos/salud ni esa configuración de otra
+instancia. Conserva el quórum configurable con
+`BACKEND_MIN_PUBLISH_PRINCIPALS` (dos principales por defecto). El puerto
+elegido debe estar libre.
+
+Resultado histórico de esta revisión (20 de septiembre de 2026,
 Python 3.13, Xcode 27):
 
 | Comprobación | Resultado |
@@ -371,11 +413,18 @@ hacerlo por mensaje limitaría el caudal. El precio es que un corte abrupto
 pierde hasta un segundo de datos. Si el disco falla, el puente **sigue
 publicando**: un disco lleno no debe tumbar el mapa.
 
-El `sessionId` se guarda tal cual. Es un UUID anónimo que se genera en cada
-abordaje y muere al bajar del vehículo, y es lo que permite analizar cuántos
-viajes distintos aportaron a un mismo vehículo. Con `BACKEND_DB_RETENTION_DAYS`
-se acota cuánto se conserva; el valor por defecto (`0`) no borra nunca, así que
-conviene fijarlo antes de recoger datos de campo.
+El `sessionId` se guarda tal cual. Es un UUID generado para cada abordaje que
+permite analizar cuántos viajes distintos aportaron a un mismo vehículo.
+Descartarlo del estado local de la app al terminar el viaje no elimina el
+histórico: SQLite conserva sesión, fechas y trayectoria, aunque no tiene una
+columna de principal MQTT. El backend recibe ese principal en el tópico y
+puede correlacionar observaciones con la cuenta durante el procesamiento.
+
+`BACKEND_DB_RETENTION_DAYS` controla la conservación en SQLite; el valor por
+defecto (`0`) no borra nunca. La plantilla `mqtt/compose.prod.yaml` fija `30`,
+pero es una propuesta de despliegue y no acredita la configuración activa.
+No existe un plazo universal de borrado ni una solicitud de borrado remoto al
+finalizar el viaje.
 
 ### Descartado con datos: el suavizado de posición
 

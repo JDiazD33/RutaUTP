@@ -191,8 +191,8 @@ class ObservationValidator:
 
         self.deduplicator = Deduplicator(config.dedupe_window_s)
 
-        #: Última observación aceptada de cada sesión, para comprobar que la
-        #: siguiente es compatible con la trayectoria.
+        #: Observación aceptada con mayor timestamp de cada sesión, para
+        #: comprobar que la siguiente es compatible con la trayectoria.
         self._last_seen: dict[str, tuple[float, float, float]] = {}
 
     def validate(
@@ -214,7 +214,7 @@ class ObservationValidator:
 
         # A partir de aquí el mensaje tiene forma correcta. El límite de tasa se
         # aplica antes de cualquier geometría: es la defensa más barata.
-        session_id = str(payload["sessionId"]).strip()
+        session_id = payload["sessionId"]
 
         # En producción `principal` procede del segmento de tópico que la ACL
         # obliga a coincidir con el usuario MQTT autenticado. Por eso rotar un
@@ -348,12 +348,22 @@ class ObservationValidator:
                 f"schemaVersion={payload['schemaVersion']}",
             )
 
-        session_id = str(payload["sessionId"]).strip()
+        session_id = payload["sessionId"]
 
-        if not session_id or len(session_id) > MAX_SESSION_ID_LENGTH:
+        if not session_id.strip() or len(session_id) > MAX_SESSION_ID_LENGTH:
             return ValidationResult.reject(
                 RejectReason.EMPTY_SESSION, f"len={len(session_id)}"
             )
+
+        # Se validan y propagan las mismas cadenas. Recortar solo para buscar
+        # GTFS o deduplicar dejaba otra identidad en Observation y en el mapa.
+        # Los espacios internos de nombres públicos siguen siendo legítimos.
+        for field_name in ("sessionId", "routeId", "linea"):
+            value = payload[field_name]
+            if value != value.strip():
+                return ValidationResult.reject(
+                    RejectReason.NON_CANONICAL_IDENTIFIER, field_name
+                )
 
         return None
 
@@ -405,7 +415,7 @@ class ObservationValidator:
     def _check_against_route(
         self, payload: dict[str, Any], latitude: float, longitude: float
     ) -> None | ValidationResult:
-        route_id = str(payload["routeId"]).strip()
+        route_id = payload["routeId"]
 
         route = self.feed.get(route_id)
 
@@ -420,7 +430,7 @@ class ObservationValidator:
         # La línea que declara el cliente debe ser la de la ruta que dice usar.
         # Si no, el mapa de los demás mostraría un nombre y un color que no
         # corresponden al recorrido por el que va el vehículo.
-        claimed_line = str(payload["linea"]).strip()
+        claimed_line = payload["linea"]
 
         if claimed_line != route.linea:
             return ValidationResult.reject(
@@ -446,7 +456,10 @@ class ObservationValidator:
                 f"{match.distance_m:.1f} m de {route.linea}",
             )
 
-        heading = float(payload["heading"])
+        # Compara y propaga la misma representación canónica. Restar primero
+        # rumbos de varias vueltas podía producir una diferencia negativa y
+        # admitir un sentido contrario. Los negativos siguen siendo desconocidos.
+        heading = sanitize_heading(float(payload["heading"]))
 
         # Solo se comprueba el rumbo cuando viene informado. Un `-1` es el valor
         # de "desconocido" del contrato y ocurre de forma legítima con el
@@ -479,7 +492,7 @@ class ObservationValidator:
 
         # Normaliza al contrato de salida, que es más estricto que el de entrada.
         payload["speed"] = sanitize_speed(speed)
-        payload["heading"] = sanitize_heading(heading)
+        payload["heading"] = heading
 
         return None
 
@@ -541,9 +554,18 @@ class ObservationValidator:
         return None
 
     def _remember(self, session_id: str, payload: dict[str, Any]) -> None:
-        """Guarda la observación aceptada como referencia de continuidad."""
+        """Conserva la observación aceptada más reciente de cada sesión."""
+        timestamp = float(payload["timestamp"])
+        previous = self._last_seen.get(session_id)
+
+        # Una llegada atrasada puede aceptarse y guardarse en el histórico,
+        # pero no debe sustituir fecha ni coordenadas de la referencia vigente.
+        # Un igual tampoco aporta una medida posterior, aunque caduque dedupe.
+        if previous is not None and timestamp <= previous[0]:
+            return
+
         self._last_seen[session_id] = (
-            float(payload["timestamp"]),
+            timestamp,
             float(payload["lat"]),
             float(payload["lon"]),
         )
