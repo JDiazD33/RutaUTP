@@ -180,6 +180,15 @@ enum PolylineMatching {
 
     // MARK: - Distancias (haversine) y proyecciones
 
+    /// Reutiliza la proyección del matching sin calcular progreso ni decidir
+    /// un umbral. El repositorio conserva su propia escala de distancia al
+    /// medir desde este punto; detección y navegación mantienen su algoritmo.
+    static func projectedPoint(point: CLLocationCoordinate2D,
+                               onSegmentFrom a: CLLocationCoordinate2D,
+                               to b: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        closestPointOnSegment(p: point, a: a, b: b).point
+    }
+
     /// Distancia en metros entre dos coords (haversine, vía `CLLocation.distance`).
     static func distanceMeters(_ a: CLLocationCoordinate2D,
                                _ b: CLLocationCoordinate2D) -> Double {

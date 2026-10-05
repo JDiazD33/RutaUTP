@@ -5,7 +5,7 @@
 //  Carga el feed GTFS estático embebido (gtfs/*.txt) y lo convierte en
 //  modelos de dominio `RutaGTFS`.
 //
-//  - La carga es async e idempotente (se parsea una sola vez).
+//  - Comparte una carga async y conserva solo los catálogos válidos.
 //  - El feed es de Trujillo (coordenadas -8.04, -79.05).
 //  - NO incluye GPS en vivo: ver comentario en GTFSModels.swift.
 //
@@ -15,7 +15,48 @@ import CoreLocation
 import SwiftUI
 
 // MARK: - Repositorio
-actor GTFSRepository {
+/// Permite probar consultas del mapa con un catálogo local y controlar
+/// resultados tardíos sin cargar el feed ni consultar servicios externos.
+protocol RutasGTFSProviding {
+    func rutas() async -> [RutaGTFS]
+    func rutasQuePasanPor(_ punto: CLLocationCoordinate2D, radioMetros: Double) async -> [RutaGTFS]
+    func cargarRutas(reintentar: Bool) async throws -> [RutaGTFS]
+    func consultarRutasQuePasanPor(_ punto: CLLocationCoordinate2D,
+                                 radioMetros: Double, reintentar: Bool) async throws -> [RutaGTFS]
+}
+
+extension RutasGTFSProviding {
+    // Los proveedores locales existentes siguen controlando sus consultas;
+    // el repositorio productivo implementa estas versiones con diagnóstico.
+    func cargarRutas(reintentar: Bool = false) async throws -> [RutaGTFS] {
+        await rutas()
+    }
+
+    func consultarRutasQuePasanPor(_ punto: CLLocationCoordinate2D,
+                                 radioMetros: Double = 400,
+                                 reintentar: Bool = false) async throws -> [RutaGTFS] {
+        await rutasQuePasanPor(punto, radioMetros: radioMetros)
+    }
+}
+
+struct FalloCargaGTFS: LocalizedError, Equatable {
+    let detalle: String
+
+    var errorDescription: String? { detalle }
+    var mensajeUsuario: String {
+        L.t("No pudimos cargar las rutas. Puedes reintentar.",
+            "We couldn't load the routes. You can try again.")
+    }
+}
+
+enum EstadoCargaGTFS: Equatable {
+    case sinCargar
+    case cargando
+    case cargado
+    case fallido(FalloCargaGTFS)
+}
+
+actor GTFSRepository: RutasGTFSProviding {
 
     static let shared = GTFSRepository()
 
@@ -24,26 +65,66 @@ actor GTFSRepository {
                                                       longitude: -79.03818104755645)
 
     private var cache: [RutaGTFS]?
-    private var tareaCarga: Task<[RutaGTFS], Never>?
+    private var tareaCarga: Task<[RutaGTFS], Error>?
+    private var revisionCarga: UUID?
+    private let cargador: @Sendable () async throws -> [RutaGTFS]
+    private(set) var estadoCarga: EstadoCargaGTFS = .sinCargar
 
-    /// Devuelve todas las rutas del feed, ordenadas por cercanía a UTP.
-    func rutas() async -> [RutaGTFS] {
-        if let cache { return cache }
-        if let tareaCarga { return await tareaCarga.value }
-
-        let tarea = Task<[RutaGTFS], Never> { [weak self] in
-            let rutas = Self.parsearFeed()
-            await self?.guardar(rutas)
-            return rutas
-        }
-        tareaCarga = tarea
-        let resultado = await tarea.value
-        tareaCarga = nil
-        return resultado
+    init(cargador: @escaping @Sendable () async throws -> [RutaGTFS] = {
+        try GTFSRepository.parsearFeed()
+    }) {
+        self.cargador = cargador
     }
 
-    private func guardar(_ rutas: [RutaGTFS]) {
-        cache = rutas
+    /// Compatibilidad para consumidores sin presentación de errores. El fallo
+    /// queda en estadoCarga y no se convierte en un catálogo cacheado.
+    func rutas() async -> [RutaGTFS] {
+        (try? await cargarRutas()) ?? []
+    }
+
+    /// Un fallo requiere una acción explícita: renders y la ampliación del
+    /// radio no deben releer continuamente un archivo ausente. Un éxito vacío
+    /// sí es un catálogo válido y se conserva igual que cualquier otro éxito.
+    func cargarRutas(reintentar: Bool = false) async throws -> [RutaGTFS] {
+        if let cache { return cache }
+        let tarea: Task<[RutaGTFS], Error>
+        let revision: UUID
+        if let pendiente = tareaCarga, let actual = revisionCarga {
+            tarea = pendiente
+            revision = actual
+        } else {
+            if !reintentar, case .fallido(let fallo) = estadoCarga { throw fallo }
+            revision = UUID()
+            let cargar = cargador
+            // Parsear no bloquea el actor ni la UI. Cancelar un lector no debe
+            // cancelar esta carga que también esperan otras pantallas.
+            tarea = Task.detached(priority: .userInitiated) { try await cargar() }
+            tareaCarga = tarea
+            revisionCarga = revision
+            estadoCarga = .cargando
+        }
+
+        do {
+            let rutas = try await tarea.value
+            if revisionCarga == revision {
+                cache = rutas
+                estadoCarga = .cargado
+                tareaCarga = nil
+                revisionCarga = nil
+            }
+            return rutas
+        } catch {
+            let fallo = (error as? FalloCargaGTFS)
+                ?? FalloCargaGTFS(detalle: error.localizedDescription)
+            // Un lector de una tarea anterior no puede borrar un reintento
+            // que ya haya comenzado después de que otro lector vio el fallo.
+            if revisionCarga == revision {
+                estadoCarga = .fallido(fallo)
+                tareaCarga = nil
+                revisionCarga = nil
+            }
+            throw fallo
+        }
     }
 
     /// Las `n` rutas cuyo recorrido pasa más cerca del campus UTP.
@@ -61,37 +142,82 @@ actor GTFSRepository {
     /// infinito como única defensa es frágil.
     func rutasQuePasanPor(_ punto: CLLocationCoordinate2D,
                           radioMetros: Double = 400) async -> [RutaGTFS] {
-        await rutas()
+        (try? await consultarRutasQuePasanPor(punto, radioMetros: radioMetros)) ?? []
+    }
+
+    func consultarRutasQuePasanPor(_ punto: CLLocationCoordinate2D,
+                                 radioMetros: Double = 400,
+                                 reintentar: Bool = false) async throws -> [RutaGTFS] {
+        Self.rutasQuePasanPor(punto, en: try await cargarRutas(reintentar: reintentar),
+                             radioMetros: radioMetros)
+    }
+
+    /// La misma selección sobre un catálogo ya cargado. Separar la geometría
+    /// de la carga permite comprobar radios y orden sin modificar la caché.
+    static func rutasQuePasanPor(_ punto: CLLocationCoordinate2D,
+                                en rutas: [RutaGTFS],
+                                radioMetros: Double = 400) -> [RutaGTFS] {
+        rutas
             .filter { $0.shape.count >= 2 }
             .map { ($0, Self.distanciaMinima($0.shape, a: punto)) }
-            .filter { $0.1 <= radioMetros }
+            .filter { $0.1.isFinite && $0.1 <= radioMetros }
             .sorted { $0.1 < $1.1 }
             .map(\.0)
+    }
+
+    /// Mínimo al recorrido completo, no únicamente a sus vértices. Conserva
+    /// el haversine del repositorio para no cambiar la escala de 400/800 m.
+    /// Vacío o destino inválido devuelve infinito; un punto válido conserva
+    /// su distancia. La consulta de rutas sigue exigiendo al menos dos puntos.
+    static func distanciaMinima(_ puntos: [CLLocationCoordinate2D],
+                                a destino: CLLocationCoordinate2D) -> Double {
+        guard CLLocationCoordinate2DIsValid(destino) else { return .infinity }
+        var minima = Double.infinity
+        var anterior: CLLocationCoordinate2D?
+        for punto in puntos {
+            guard CLLocationCoordinate2DIsValid(punto) else {
+                // Un dato inválido corta el recorrido: no inventar un segmento
+                // entre dos vértices que no eran consecutivos en el shape.
+                anterior = nil
+                continue
+            }
+            // Conservar también los vértices evita perder una ruta ya cercana
+            // por redondeo o por la aproximación de la proyección local.
+            minima = min(minima, distanciaMetros(punto, destino))
+            if let origen = anterior {
+                let proyectado = PolylineMatching.projectedPoint(
+                    point: destino, onSegmentFrom: origen, to: punto)
+                if CLLocationCoordinate2DIsValid(proyectado) {
+                    minima = min(minima, distanciaMetros(proyectado, destino))
+                }
+            }
+            anterior = punto
+        }
+        return minima
     }
 }
 
 // MARK: - Parseo del feed
 extension GTFSRepository {
 
-    static func parsearFeed() -> [RutaGTFS] {
-        do {
-            return try parsear()
-        } catch {
-            #if DEBUG
-            print("[GTFS] Error parseando feed: \(error.localizedDescription)")
-            #endif
-            return []
+    static func parsearFeed(tabla: (String) throws -> GTFSTable = GTFSCSV.tabla) throws -> [RutaGTFS] {
+        func leer(_ nombre: String, requeridas: [String]) throws -> GTFSTable {
+            let datos = try tabla(nombre)
+            let ausentes = requeridas.filter { datos.columns[$0] == nil }
+            guard ausentes.isEmpty else {
+                throw GTFSCSV.GTFSError.encabezadosAusentes(nombre, ausentes)
+            }
+            return datos
         }
-    }
-
-    private static func parsear() throws -> [RutaGTFS] {
         // 1. Agencias
-        let agency = try GTFSCSV.tabla("agency")
+        // Una sola agencia ya se enlaza mediante la clave vacía cuando ambos
+        // archivos omiten agency_id. Conservar esa alternativa existente.
+        let agency = try leer("agency", requeridas: [])
         let nombresAgencia = diccionario(agency.columna("agency_id"),
                                          agency.columna("agency_name"))
 
         // 2. Rutas
-        let routes = try GTFSCSV.tabla("routes")
+        let routes = try leer("routes", requeridas: ["route_id"])
         let routeIds    = routes.columna("route_id")
         let routeAgency = routes.columna("agency_id")
         let routeShort  = routes.columna("route_short_name")
@@ -99,7 +225,7 @@ extension GTFSRepository {
         let routeColor  = routes.columna("route_color")
 
         // 3. Trips (en este feed: 1 trip por ruta, trip_id == route_id)
-        let trips = try GTFSCSV.tabla("trips")
+        let trips = try leer("trips", requeridas: ["trip_id", "route_id"])
         let tripRoute = diccionario(trips.columna("trip_id"), trips.columna("route_id"))
         let tripShape = diccionario(trips.columna("trip_id"), trips.columna("shape_id"))
         // route_id → trip_id
@@ -107,7 +233,7 @@ extension GTFSRepository {
         for (trip, route) in tripRoute { routeTrip[route] = trip }
 
         // 4. Shapes ordenados por secuencia
-        let shapes = try GTFSCSV.tabla("shapes")
+        let shapes = try leer("shapes", requeridas: ["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"])
         var shapesPorId: [String: [Int: CLLocationCoordinate2D]] = [:]
         let shapeIds  = shapes.columna("shape_id")
         let shapeLats = shapes.columna("shape_pt_lat")
@@ -121,7 +247,7 @@ extension GTFSRepository {
         }
 
         // 5. Paraderos
-        let stops = try GTFSCSV.tabla("stops")
+        let stops = try leer("stops", requeridas: ["stop_id", "stop_lat", "stop_lon"])
         var paraderosPorId: [String: ParaderoGTFS] = [:]
         let stopIds    = stops.columna("stop_id")
         let stopNames  = stops.columna("stop_name")
@@ -138,7 +264,7 @@ extension GTFSRepository {
         // Las columnas se resuelven UNA vez, fuera del bucle. Antes cada fila
         // hacía cuatro búsquedas en el diccionario de columnas — con 20 171
         // filas en este feed son unas 80 000 búsquedas evitables.
-        let stopTimes = try GTFSCSV.tabla("stop_times")
+        let stopTimes = try leer("stop_times", requeridas: ["trip_id", "stop_id", "stop_sequence"])
         let stTripId = stopTimes.columna("trip_id")
         let stSeq = stopTimes.columna("stop_sequence")
         let stStopId = stopTimes.columna("stop_id")
@@ -151,7 +277,7 @@ extension GTFSRepository {
         }
 
         // 7. Frecuencias (headway)
-        let frequencies = try GTFSCSV.tabla("frequencies")
+        let frequencies = try leer("frequencies", requeridas: ["trip_id"])
         var headwayPorTrip: [String: Int] = [:]
         let freqTrips = frequencies.columna("trip_id")
         let freqHeadways = frequencies.columna("headway_secs")
@@ -162,8 +288,8 @@ extension GTFSRepository {
 
         // 8. Tarifas: route_id → fare_id → precio
         // Columnas resueltas fuera del bucle, igual que en stop_times.
-        let fareRules = try GTFSCSV.tabla("fare_rules")
-        let fareAttr  = try GTFSCSV.tabla("fare_attributes")
+        let fareRules = try leer("fare_rules", requeridas: ["route_id", "fare_id"])
+        let fareAttr  = try leer("fare_attributes", requeridas: ["fare_id"])
         let precioPorFare = diccionario(fareAttr.columna("fare_id"),
                                         fareAttr.columna("price"))
         let frRouteId = fareRules.columna("route_id")
@@ -260,23 +386,6 @@ private extension GTFSRepository {
         let h = sin(dLat / 2) * sin(dLat / 2)
               + cos(latA) * cos(latB) * sin(dLon / 2) * sin(dLon / 2)
         return 2 * radioTierra * asin(min(1, sqrt(h)))
-    }
-
-    /// Distancia mínima del recorrido a un punto.
-    ///
-    /// Devuelve `.infinity` si la ruta no trae geometría. Antes devolvía 0 en
-    /// ese caso, y ese 0 tenía dos consecuencias silenciosas: una ruta sin
-    /// shape pasaba SIEMPRE el filtro de radio de `rutasQuePasanPor` (se
-    /// ofrecía como "línea que pasa por aquí") y quedaba la PRIMERA en el
-    /// catálogo, que se ordena por cercanía al campus.
-    static func distanciaMinima(_ puntos: [CLLocationCoordinate2D],
-                                a destino: CLLocationCoordinate2D) -> Double {
-        var minima = Double.infinity
-        for p in puntos {
-            let d = distanciaMetros(p, destino)
-            if d < minima { minima = d }
-        }
-        return minima
     }
 
     static func longitudTotalKm(_ puntos: [CLLocationCoordinate2D]) -> Double {
