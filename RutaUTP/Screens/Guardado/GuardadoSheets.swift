@@ -23,12 +23,16 @@ struct LineaDetailSheet: View {
     var onExplorar: () -> Void
     var onQuitar: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 // Header
-                HStack(alignment: .top, spacing: 16) {
+                let headerLayout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+                    : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+                headerLayout {
                     ZStack {
                         Circle().fill(linea.colorLinea.opacity(0.15)).frame(width: 64, height: 64)
                         Text(linea.linea)
@@ -70,16 +74,18 @@ struct LineaDetailSheet: View {
                 }
 
                 // Datos del feed GTFS
-                HStack(spacing: 0) {
-                    dato(icono: "clock.fill", valor: linea.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
-                    divisor
-                    dato(icono: "creditcard.fill", valor: linea.costo, etiqueta: L.t("Tarifa", "Fare"))
-                    divisor
-                    dato(icono: "mappin.and.ellipse", valor: "\(linea.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
-                    divisor
-                    dato(icono: "point.topleft.down.curvedto.point.bottomright.up",
-                         valor: String(format: "%.1f km", linea.distanciaKm), etiqueta: L.t("Longitud", "Length"))
+                ViewThatFits(in: .horizontal) {
+                    if dynamicTypeSize <= .large {
+                        HStack(alignment: .top, spacing: 12) {
+                            datosLinea
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
+                    }
+                    LazyVGrid(columns: columnasDatos, alignment: .center, spacing: 12) {
+                        datosLinea
+                    }
                 }
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
 
@@ -109,7 +115,9 @@ struct LineaDetailSheet: View {
                         HStack {
                             Image(systemName: "map.fill")
                             Text(L.t("Ver recorrido en el mapa", "View route on map"))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+                        .padding(8)
                         .frame(maxWidth: .infinity, minHeight: 52)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
                         .foregroundStyle(.white)
@@ -124,7 +132,9 @@ struct LineaDetailSheet: View {
                         HStack {
                             Image(systemName: "trash.fill")
                             Text(L.t("Quitar de guardados", "Remove from saved"))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+                        .padding(8)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
                         .foregroundStyle(.onErrorContainer)
@@ -139,10 +149,18 @@ struct LineaDetailSheet: View {
     }
 
 
-    private var divisor: some View {
-        Rectangle()
-            .fill(Color.outlineVariant.opacity(0.35))
-            .frame(width: 1, height: 34)
+    private var columnasDatos: [GridItem] {
+        let cantidad = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        return Array(repeating: GridItem(.flexible(), alignment: .top), count: cantidad)
+    }
+
+    @ViewBuilder
+    private var datosLinea: some View {
+        dato(icono: "clock.fill", valor: linea.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
+        dato(icono: "creditcard.fill", valor: linea.costo, etiqueta: L.t("Tarifa", "Fare"))
+        dato(icono: "mappin.and.ellipse", valor: "\(linea.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
+        dato(icono: "point.topleft.down.curvedto.point.bottomright.up",
+             valor: String(format: "%.1f km", linea.distanciaKm), etiqueta: L.t("Longitud", "Length"))
     }
 
     private func dato(icono: String, valor: String, etiqueta: String) -> some View {
@@ -151,20 +169,23 @@ struct LineaDetailSheet: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.appPrimary)
             Text(valor)
-                .font(.system(size: 14, weight: .bold))
+                .font(.headlineBody)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.onSurface)
             Text(etiqueta.uppercased())
-                .font(.system(size: 8, weight: .semibold))
+                .font(.labelCapsSm)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
         }
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
     }
 }
 
 // MARK: - Add Lugar sheet (con mapa en vivo)
 struct AddLugarSheet: View {
-    var onSave: (LugarGuardado) -> Void
+    var onSave: (LugarGuardado) -> Bool
     @Environment(\.dismiss) private var dismiss
 
     @State private var nombre: String = ""
@@ -187,6 +208,7 @@ struct AddLugarSheet: View {
     @State private var rellenoDesdeMapa = false
     @State private var ajusteManual = false
     @State private var mapaExpandido = false
+    @State private var errorAlGuardar = false
 
     var body: some View {
         NavigationStack {
@@ -225,6 +247,12 @@ struct AddLugarSheet: View {
             }
         }
         .onDisappear { cancelarGeocodificacion() }
+        .alert(L.t("No se pudo guardar el lugar", "Unable to save place"), isPresented: $errorAlGuardar) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) { }
+        } message: {
+            Text(L.t("Los datos anteriores se conservaron. Revisa tus lugares en Guardado antes de volver a intentarlo.",
+                     "Your previous data was preserved. Check your places in Saved before trying again."))
+        }
     }
 
     // MARK: Campos
@@ -401,14 +429,19 @@ struct AddLugarSheet: View {
                 // La seña retrasa el guardado: comprobar de nuevo que el
                 // punto pertenece a la dirección actual y la hoja sigue activa.
                 guard revision == revisionUbicacion, puedeGuardar, let coord = coordElegida else { return }
-                AppHaptics.success()
-                onSave(LugarGuardado(
+                let guardado = onSave(LugarGuardado(
                     nombre: nombre.trimmingCharacters(in: .whitespaces),
                     direccion: direccion.isEmpty ? L.t("Sin dirección", "No address") : direccion,
                     categoria: categoria,
                     lat: coord.latitude,
                     lon: coord.longitude
                 ))
+                guard guardado else {
+                    AppHaptics.warning()
+                    errorAlGuardar = true
+                    return
+                }
+                AppHaptics.success()
                 dismiss()
             }
         } label: {
@@ -665,6 +698,8 @@ struct AddLineaSheet: View {
     /// vacío se mostraba siempre como "Cargando…", también cuando el feed
     /// había fallado, sin salida ni explicación.
     let cargando: Bool
+    var errorCatalogo: FalloCargaGTFS? = nil
+    var onRetry: () -> Void = {}
     let yaGuardadas: Set<String>
     var onSave: (RutaOpcion) -> Void
 
@@ -716,25 +751,23 @@ struct AddLineaSheet: View {
                             .foregroundStyle(.onSurfaceVariant)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if catalogo.isEmpty {
-                    // El feed no llegó. Antes esta rama no existía y el usuario
-                    // se quedaba en un "Cargando…" eterno.
+                } else if let error = errorCatalogo {
                     VStack(spacing: 10) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 26))
                             .foregroundStyle(.onSurfaceVariant)
-                        Text(L.t("No se pudieron cargar las líneas del feed",
-                                 "Couldn't load routes from the feed"))
+                        Text(error.mensajeUsuario)
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                             .multilineTextAlignment(.center)
-                        Text(L.t("Cierra y vuelve a abrir esta pantalla para reintentar.",
-                                 "Close and reopen this screen to try again."))
-                            .font(.bodyXs)
-                            .foregroundStyle(.onSurfaceVariant.opacity(0.8))
-                            .multilineTextAlignment(.center)
+                        Button(L.t("Reintentar", "Try again"), action: onRetry)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if catalogo.isEmpty {
+                    Text(L.t("El catálogo no contiene líneas.", "The catalog contains no routes."))
+                        .font(.bodySm)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(20)
                 } else {
                     ScrollView(showsIndicators: false) {

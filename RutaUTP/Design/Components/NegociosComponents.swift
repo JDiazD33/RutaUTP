@@ -78,6 +78,7 @@ struct NegocioDetailCard: View {
     let ubicacion: CLLocationCoordinate2D?
     let onClose: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var cuponGuardado: Bool
     @State private var codigoCopiado: Bool = false
 
@@ -94,7 +95,9 @@ struct NegocioDetailCard: View {
         VStack(alignment: .leading, spacing: 12) {
             encabezado
             Text(L.t("NEGOCIO DEMO · PROMOCIÓN DE EJEMPLO", "DEMO BUSINESS · SAMPLE OFFER"))
-                .font(.system(size: 9, weight: .bold)).foregroundStyle(Color.onSurfaceVariant)
+                .font(.labelCapsSm)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
             infoLugar
             promo
             if let cupon = negocio.cupon {
@@ -119,55 +122,90 @@ struct NegocioDetailCard: View {
 
     // MARK: Encabezado (icono, nombre, rating, cerrar)
 
+    @ViewBuilder
     private var encabezado: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(negocio.categoria.color.opacity(0.20))
-                    .frame(width: 44, height: 44)
-                NegocioIcono(categoria: negocio.categoria, size: 23)
-                    .foregroundStyle(negocio.categoria.color)
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    iconoEncabezado
+                    Spacer()
+                    botonCerrar
+                }
+                nombreYMetadatos
             }
+        } else {
+            HStack(alignment: .top, spacing: 12) {
+                iconoEncabezado
+                nombreYMetadatos
+                botonCerrar
+            }
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(negocio.nombre)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.onSurface)
-                    .lineLimit(1)
+    private var iconoEncabezado: some View {
+        ZStack {
+            Circle()
+                .fill(negocio.categoria.color.opacity(0.20))
+                .frame(width: 44, height: 44)
+            NegocioIcono(categoria: negocio.categoria, size: 23)
+                .foregroundStyle(negocio.categoria.color)
+        }
+    }
+
+    private var nombreYMetadatos: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(negocio.nombre)
+                .font(.headlineBody)
+                .foregroundStyle(.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
+            ViewThatFits(in: .horizontal) {
                 HStack(spacing: 6) {
-                    Text(negocio.categoria.etiqueta)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.onSurfaceVariant)
-                    if let rating = negocio.calificacion {
-                        HStack(spacing: 2) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.yellow)
-                            Text(String(format: "%.1f", rating))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.onSurfaceVariant)
-                        }
-                    }
-                    if negocio.patrocinado {
-                        Text(L.t("Promocionado", "Sponsored"))
-                            .font(.system(size: 8, weight: .heavy))
-                            .foregroundStyle(Color.appPrimary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.appPrimary.opacity(0.14)))
-                    }
+                    metadatosEncabezado
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 4) {
+                    metadatosEncabezado
                 }
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            Spacer()
+    private var botonCerrar: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 22))
+                .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Cerrar", "Close"))
+    }
 
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+    @ViewBuilder
+    private var metadatosEncabezado: some View {
+        Text(negocio.categoria.etiqueta)
+            .font(.bodyXs)
+            .foregroundStyle(.onSurfaceVariant)
+            .fixedSize(horizontal: false, vertical: true)
+        if let rating = negocio.calificacion {
+            HStack(spacing: 2) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.yellow)
+                Text(String(format: "%.1f", rating))
+                    .font(.labelCapsMd)
+                    .foregroundStyle(.onSurfaceVariant)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Cerrar", "Close"))
+        }
+        if negocio.patrocinado {
+            Text(L.t("Promocionado", "Sponsored"))
+                .font(.labelCapsSm)
+                .foregroundStyle(Color.appPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.appPrimary.opacity(0.14)))
         }
     }
 
@@ -175,32 +213,38 @@ struct NegocioDetailCard: View {
 
     private var infoLugar: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 5) {
-                Image(systemName: "mappin")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.onSurfaceVariant)
-                Text("\(negocio.direccion) · \(negocio.distrito)")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.onSurfaceVariant)
-                    .lineLimit(1)
-                Spacer()
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 5))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 5))
+            layout {
+                HStack(alignment: .top, spacing: 5) {
+                    Image(systemName: "mappin")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.onSurfaceVariant)
+                    Text("\(negocio.direccion) · \(negocio.distrito)")
+                        .font(.bodyXs)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 if let distancia = distanciaTexto {
                     Text(distancia)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.labelCapsMd)
                         .foregroundStyle(Color.appPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(Color.appPrimary.opacity(0.14)))
                 }
             }
-            HStack(spacing: 5) {
+            HStack(alignment: .top, spacing: 5) {
                 Image(systemName: "clock")
                     .font(.system(size: 11))
                     .foregroundStyle(.onSurfaceVariant)
                 Text(negocio.horario.texto)
-                    .font(.system(size: 11))
+                    .font(.bodyXs)
                     .foregroundStyle(.onSurfaceVariant)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -220,8 +264,9 @@ struct NegocioDetailCard: View {
 
     private var promo: some View {
         Text(negocio.promoDetalle.texto)
-            .font(.system(size: 12))
+            .font(.bodySm)
             .foregroundStyle(.onSurface)
+            .fixedSize(horizontal: false, vertical: true)
             .lineSpacing(2)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
@@ -236,79 +281,37 @@ struct NegocioDetailCard: View {
     private func cuponView(_ cupon: CuponNegocio) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if cupon.vigente {
-                HStack(spacing: 6) {
+                HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "ticket.fill")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Color.appPrimary)
                     Text(cupon.detalle.texto)
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.headlineBody)
                         .foregroundStyle(.onSurface)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(cupon.condiciones.texto)
-                    .font(.system(size: 10))
+                    .font(.bodyXs)
                     .foregroundStyle(.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
                     .lineSpacing(1)
                 if let vence = textoVencimiento(cupon) {
                     Text(vence)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                HStack(spacing: 8) {
-                    // Código: tap copia al portapapeles (mostrarlo en el
-                    // local / mandarlo por WhatsApp).
-                    Button {
-                        UIPasteboard.general.string = cupon.codigo
-                        AppHaptics.impact(.light)
-                        codigoCopiado = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
-                            codigoCopiado = false
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: codigoCopiado ? "checkmark" : "doc.on.doc")
-                                .font(.system(size: 10, weight: .bold))
-                            Text(codigoCopiado ? L.t("Copiado", "Copied") : cupon.codigo)
-                                .font(.system(size: 12, weight: .heavy))
-                                .minimumScaleFactor(0.7)
-                        }
-                        .foregroundStyle(.onSurface)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .fill(Color.surfaceContainerLowest)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .stroke(Color.outlineVariant, style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
-                        )
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        botonCopiar(cupon)
+                        botonGuardar
                     }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-
-                    Button {
-                        AppHaptics.impact(.medium)
-                        cuponGuardado = NegociosService.shared.alternarCupon(negocio)
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: cuponGuardado ? "checkmark.circle.fill" : "bookmark.fill")
-                                .font(.system(size: 11, weight: .bold))
-                            Text(cuponGuardado ? L.t("Guardado", "Saved")
-                                               : L.t("Guardar cupón", "Save coupon"))
-                                .font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            Capsule().fill(cuponGuardado
-                                           ? Color.secondaryContainer.opacity(0.7)
-                                           : Color.appPrimary)
-                        )
+                    .fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 8) {
+                        botonCopiar(cupon)
+                        botonGuardar
                     }
-                    .buttonStyle(.plain)
                 }
             } else {
                 HStack(spacing: 6) {
@@ -316,8 +319,9 @@ struct NegocioDetailCard: View {
                         .font(.system(size: 12))
                         .foregroundStyle(.onSurfaceVariant)
                     Text(L.t("Cupón vencido", "Coupon expired"))
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.bodySmMedium)
                         .foregroundStyle(.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -327,6 +331,69 @@ struct NegocioDetailCard: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.secondaryContainer.opacity(0.30))
         )
+    }
+
+    private func botonCopiar(_ cupon: CuponNegocio) -> some View {
+        Button {
+            UIPasteboard.general.string = cupon.codigo
+            AppHaptics.impact(.light)
+            codigoCopiado = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                codigoCopiado = false
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: codigoCopiado ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 10, weight: .bold))
+                Text(codigoCopiado ? L.t("Copiado", "Copied") : cupon.codigo)
+                    .font(.headlineBody)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(.onSurface)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(minHeight: 44)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(Color.surfaceContainerLowest)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(Color.outlineVariant, style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var botonGuardar: some View {
+        Button {
+            AppHaptics.impact(.medium)
+            cuponGuardado = NegociosService.shared.alternarCupon(negocio)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: cuponGuardado ? "checkmark.circle.fill" : "bookmark.fill")
+                    .font(.system(size: 11, weight: .bold))
+                Text(cuponGuardado ? L.t("Guardado", "Saved")
+                                   : L.t("Guardar cupón", "Save coupon"))
+                    .font(.headlineBody)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(minHeight: 44)
+            .background {
+                let color = cuponGuardado
+                    ? Color.secondaryContainer.opacity(0.7)
+                    : Color.appPrimary
+                if dynamicTypeSize.isAccessibilitySize {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(color)
+                } else {
+                    Capsule().fill(color)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     /// "Válido hasta 31 dic. 2026" en el idioma activo.
