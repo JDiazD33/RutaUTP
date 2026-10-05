@@ -121,6 +121,7 @@
 		BB9900000000000000000112 /* QRPaymentEligibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000111 /* QRPaymentEligibilityTests.swift */; };
 		BB9900000000000000000122 /* QRSinglePaymentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000121 /* QRSinglePaymentTests.swift */; };
 		BB9900000000000000000132 /* QRCurrencyAndAmountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */; };
+		BB9900000000000000000142 /* TextoConsentimientoContribucion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000141 /* TextoConsentimientoContribucion.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -250,6 +251,7 @@
 		BB9900000000000000000111 /* QRPaymentEligibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRPaymentEligibilityTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000121 /* QRSinglePaymentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRSinglePaymentTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCurrencyAndAmountTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000141 /* TextoConsentimientoContribucion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextoConsentimientoContribucion.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -349,6 +351,7 @@
 				0A800427300AD9FE004E1676 /* ImagePicker.swift */,
 				AA7700000000000000000008 /* NegociosComponents.swift */,
 				AA6600000000000000000E09 /* ReportarSheet.swift */,
+				BB9900000000000000000141 /* TextoConsentimientoContribucion.swift */,
 				BB9900000000000000000011 /* BusOccupancyPanel.swift */,
 				BB9900000000000000000001 /* OccupancyService.swift */,
 				BA9900000000000000000011 /* RouteChangesSheet.swift */,
@@ -783,6 +786,7 @@
 				AA6600000000000000000E04 /* SeniasService.swift in Sources */,
 				AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */,
 				AA6600000000000000000E10 /* ReportarSheet.swift in Sources */,
+				BB9900000000000000000142 /* TextoConsentimientoContribucion.swift in Sources */,
 				BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */,
 				BB9900000000000000000002 /* OccupancyService.swift in Sources */,
 				BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */,

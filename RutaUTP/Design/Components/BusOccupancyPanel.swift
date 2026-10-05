@@ -78,6 +78,14 @@ struct TripContributionPanel: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
+            if coordinator.isEnabled, !coordinator.isRunning,
+               let fallo = coordinator.errorCargaRutas {
+                Text(fallo.mensajeUsuario).font(.caption).foregroundStyle(.secondary)
+                Button(L.t("Reintentar detección", "Retry detection")) {
+                    coordinator.setContributionEnabled(true)
+                }
+                .buttonStyle(.bordered)
+            }
             if let statusMessage {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Circle()
@@ -189,6 +197,8 @@ private struct TripSelectionSheet: View {
     @State private var boardingPoint: BoardingPoint?
     @State private var showBoardingMap = false
     @State private var loading = true
+    @State private var errorCargaRutas: String?
+    @State private var revisionCatalogo = 0
     /// Geocodificación inversa en curso. Se cancela al mover el punto otra vez:
     /// si no, la respuesta de un punto viejo landingaría después y pondría una
     /// calle que ya no corresponde al pin.
@@ -248,12 +258,22 @@ private struct TripSelectionSheet: View {
             Group {
                 if let route = selected {
                     Form {
+                        if coordinator.isEnabled, !coordinator.isRunning,
+                           let fallo = coordinator.errorCargaRutas {
+                            Section {
+                                Text(fallo.mensajeUsuario).font(.caption).foregroundStyle(.secondary)
+                                Button(L.t("Reintentar detección", "Retry detection")) {
+                                    coordinator.setContributionEnabled(true)
+                                }
+                            }
+                        }
                         if !coordinator.isEnabled {
                             Section {
                                 if coordinator.isPublisherConfigured {
                                     Button(L.t("Activar Ayudar con ubicaciones", "Turn on Help with locations")) {
                                         showConsent = true
                                     }
+                                    .accessibilityHint(TextoConsentimientoContribucion.pistaAccesibilidad)
                                     Text(L.t("Para contribuir con tu viaje, activa esta opción y concede los permisos de ubicación y movimiento.",
                                              "To contribute your trip, enable this option and grant location and motion permissions."))
                                         .font(.caption).foregroundStyle(.secondary)
@@ -326,8 +346,13 @@ private struct TripSelectionSheet: View {
                     List {
                         if loading {
                             ProgressView(L.t("Cargando líneas…", "Loading lines…"))
+                        } else if let errorCargaRutas {
+                            Text(errorCargaRutas).foregroundStyle(.secondary)
+                            Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
                         } else if filtered.isEmpty {
-                            Text(L.t("No encontramos esa línea.", "No matching line found."))
+                            Text(routes.isEmpty
+                                 ? L.t("El catálogo no contiene líneas.", "The catalog contains no lines.")
+                                 : L.t("No encontramos esa línea.", "No matching line found."))
                         }
                         Section(coordinator.latestLocation == nil
                                 ? L.t("Elige la línea que tomaste", "Choose your line")
@@ -373,12 +398,22 @@ private struct TripSelectionSheet: View {
                 }
                 Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
             } message: {
-                Text(L.t("Se enviarán observaciones anónimas de tu viaje al servidor de prueba. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
-                         "Anonymous observations of your trip will be sent to the test server. Contribution pauses while the app is in the background or the screen is locked."))
+                Text(TextoConsentimientoContribucion.confirmacion)
             }
-            .task {
-                guard loading else { return }
-                let feed = await GTFSRepository.shared.rutas()
+            .task(id: revisionCatalogo) {
+                loading = true
+                errorCargaRutas = nil
+                let feed: [RutaGTFS]
+                do {
+                    feed = try await GTFSRepository.shared.cargarRutas(reintentar: revisionCatalogo > 0)
+                    guard !Task.isCancelled else { return }
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    errorCargaRutas = (error as? FalloCargaGTFS)?.mensajeUsuario
+                        ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+                    loading = false
+                    return
+                }
                 if let location = coordinator.latestLocation {
                     let distances = Dictionary(uniqueKeysWithValues: feed.map { route in
                         (route.id, RouteCandidateMatcher.closestMatch(for: location,

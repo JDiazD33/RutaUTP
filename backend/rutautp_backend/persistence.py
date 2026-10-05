@@ -18,9 +18,12 @@ Tres decisiones que conviene conocer:
    disco. El precio es que un corte abrupto pierde hasta un segundo de datos.
 2. **Si la escritura falla, el puente sigue publicando.** Un disco lleno no debe
    tumbar el mapa. Los fallos se registran y se cuentan, pero nunca interrumpen.
-3. **El `sessionId` se guarda tal cual.** Es un UUID anónimo que se genera en cada
-   abordaje y muere al bajar del vehículo; no identifica a nadie y es lo que
-   permite analizar cuántos viajes distintos aportaron a un mismo vehículo.
+3. **El `sessionId` se guarda tal cual.** Es un UUID generado para cada abordaje
+   que permite analizar cuántos viajes distintos aportaron a un mismo vehículo.
+   Terminar la sesión local no borra el histórico de coordenadas y fechas.
+   SQLite no tiene una columna de principal MQTT, pero el broker y el backend
+   reciben esa cuenta asociada a la sesión y pueden correlacionar observaciones.
+   No se garantiza anonimato. La retención se configura; `0` no borra filas.
 """
 
 from __future__ import annotations

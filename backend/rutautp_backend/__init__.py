@@ -1,9 +1,11 @@
 """Puente `observaciones` -> `vehiculos` de RutaUTP.
 
-Los teléfonos a bordo publican observaciones anónimas de ubicación. Este
-servicio las valida contra el feed GTFS, agrupa las que corresponden a una misma
-unidad y publica la posición vehicular resultante, que es lo que consume el mapa
-del resto de usuarios.
+Los teléfonos a bordo publican observaciones de ubicación vinculadas a una
+sesión de viaje y a una cuenta MQTT autenticada. Este servicio las valida contra
+el feed GTFS, agrupa las que corresponden a una misma unidad y publica la
+posición vehicular resultante, que es lo que consume el mapa del resto de
+usuarios. La ausencia de nombres y correos en el JSON no garantiza anonimato
+frente al broker o al backend.
 
 Ver `README.md` en la raíz de `backend/` para el modelo de confianza y el
 significado de cada variable de entorno.

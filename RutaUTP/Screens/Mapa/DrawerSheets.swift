@@ -198,7 +198,7 @@ struct AjustesSheet: View {
                     }
                 }
 
-                // Contribución anónima (baliza del pasajero)
+                // Contribución asociada a la cuenta de instalación y al viaje.
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.t("CONTRIBUCIÓN", "CONTRIBUTION"))
                         .font(.labelCapsMd)
@@ -223,9 +223,7 @@ struct AjustesSheet: View {
                     .disabled(!trackingCoordinator.isPublisherConfigured)
                     .padding(16)
                     .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
-                    .accessibilityHint(L.t(
-                        "Envía observaciones anónimas de viaje para que otros usuarios vean los vehículos en el mapa",
-                        "Sends anonymous trip observations so other users see vehicles on the map"))
+                    .accessibilityHint(TextoConsentimientoContribucion.pistaAccesibilidad)
 
                     Text(!trackingCoordinator.isPublisherConfigured
                          ? L.t("La contribución no está disponible porque esta instalación no tiene configurado el canal MQTT.",
@@ -233,11 +231,23 @@ struct AjustesSheet: View {
                          : trackingCoordinator.isEnabled
                              ? L.t("Estás contribuyendo. El estado actual aparece en la tarjeta de tu viaje, en la parte inferior del mapa.",
                                    "You are contributing. The current status appears in your trip card at the bottom of the map.")
-                             : L.t("Si lo activas, la app analizará tu ubicación y tu actividad física para detectar si viajas en una línea de transporte. Solo tras confirmar un viaje enviará observaciones anónimas y temporales: no viaja ningún dato que te identifique. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
-                                   "If you turn this on, the app will analyse your location and motion activity to detect whether you are travelling on a transport line. Only after confirming a trip will it send anonymous, temporary observations: no identifying data is sent. Contribution pauses while the app is in the background or the screen is locked."))
-                        .font(.bodySm)
+                             : TextoConsentimientoContribucion.explicacion)
+                        .font(.bodyXs)
                         .foregroundStyle(.onSurfaceVariant)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+
+                    // El alcance también debe poder consultarse si el usuario
+                    // ya había activado la contribución en una versión anterior.
+                    if trackingCoordinator.isPublisherConfigured && trackingCoordinator.isEnabled {
+                        Text(TextoConsentimientoContribucion.explicacion)
+                            .font(.bodyXs)
+                            .foregroundStyle(.onSurfaceVariant)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
 
                 Spacer()
@@ -260,9 +270,7 @@ struct AjustesSheet: View {
             // después: la baliza solo transmite con la app abierta, y prometer
             // continuidad en segundo plano sería anunciar algo que el sistema
             // no hace con la configuración actual.
-            Text(L.t(
-                "Se enviarán observaciones anónimas de tu viaje al servidor de prueba. La contribución se pausa mientras la app está en segundo plano o con la pantalla bloqueada.",
-                "Anonymous observations of your trip will be sent to the test server. Contribution pauses while the app is in the background or the screen is locked."))
+            Text(TextoConsentimientoContribucion.confirmacion)
         }
     }
 

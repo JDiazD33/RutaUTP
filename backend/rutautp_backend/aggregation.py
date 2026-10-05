@@ -1,9 +1,12 @@
 """Agregación de observaciones en vehículos estimados.
 
 Varios pasajeros pueden ir en el mismo bus. Cada uno publica su propia
-observación anónima con un `sessionId` distinto y sin ningún identificador de
-unidad. Convertir ese montón de puntos en "un vehículo" es responsabilidad del
-servidor, y es justo lo que el cliente no puede hacer.
+observación con un `sessionId` de viaje y sin un identificador de unidad. El
+tópico vincula la observación a una cuenta MQTT autenticada, que el agregador
+conserva en memoria para exigir corroboración de instalaciones distintas. El
+UUID de sesión no garantiza anonimato. Convertir ese montón de puntos en "un
+vehículo" es responsabilidad del servidor, y es justo lo que el cliente no
+puede hacer.
 
 **Nada de esto demuestra que exista un vehículo.** Produce una *estimación*: el
 servidor agrupa observaciones y publica la posición resultante. Que un punto
