@@ -59,6 +59,8 @@ cleanup() {
     rm -rf "$WORK_DIR"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 for tool in mosquitto mosquitto_pub mosquitto_sub; do
     if ! command -v "$tool" >/dev/null 2>&1; then
@@ -93,11 +95,21 @@ echo "== 2. backend suscrito =="
     # ser el PID real del backend y el cierre de la prueba lo alcanza. Sin esto
     # se mataba la subshell y el hijo sobrevivía ciclando contra un broker ya
     # apagado, sin que el resultado de la prueba lo delatara.
+    # Datos y latido exclusivos de esta prueba; el broker local no usa TLS
+    # ni credenciales. El entorno de otra instancia no debe cambiar esto.
     exec env \
         MQTT_HOST=127.0.0.1 \
         MQTT_PORT="$PORT" \
         MQTT_USERNAME="" \
         MQTT_PASSWORD="" \
+        MQTT_TLS=0 \
+        MQTT_CA_CERT="" \
+        MQTT_CLIENT_ID="" \
+        GTFS_DIR="$REPO_DIR/gtfs" \
+        BACKEND_OBSERVATIONS_TOPIC='rutautp/observaciones/+/+/posicion' \
+        BACKEND_VEHICLES_TOPIC_PREFIX='rutautp/vehiculos' \
+        BACKEND_DB_PATH="" \
+        BACKEND_HEALTH_FILE="$WORK_DIR/health.json" \
         BACKEND_MIN_PUBLISH_PRINCIPALS="$MIN_PRINCIPALS" \
         BACKEND_LOG_LEVEL=INFO \
         "$PYTHON" -m rutautp_backend --plain-logs > "$WORK_DIR/backend.log" 2>&1

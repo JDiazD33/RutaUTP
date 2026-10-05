@@ -1,8 +1,19 @@
 # Broker MQTT de RutaUTP
 
 Mosquitto en Docker es el canal de la baliza: los teléfonos de los
-pasajeros a bordo publican observaciones anónimas y la app de los
-demás usuarios consume las posiciones vehiculares resultantes.
+pasajeros a bordo publican observaciones de ubicación vinculadas a una sesión
+de viaje y a una cuenta MQTT. La app de los demás usuarios consume las
+posiciones vehiculares estimadas resultantes.
+
+El JSON no incluye nombre ni correo del perfil, pero transmite sesión, ruta,
+línea, coordenadas, fecha, velocidad, rumbo, precisión y actividad. La cuenta
+`MQTT_USERNAME` autentica la conexión y aparece como `{principal}` en el tópico:
+el broker y el backend pueden asociar observaciones con esa cuenta entre viajes.
+La rotación del UUID de sesión no garantiza anonimato. Terminar la sesión en la
+app no borra observaciones ya recibidas. La conservación depende de la
+configuración del backend: el valor predeterminado de `BACKEND_DB_RETENTION_DAYS`
+es `0` (sin borrado); la plantilla `compose.prod.yaml` propone `30`, pero esto no
+acredita la configuración de un despliegue activo ni un plazo universal.
 
 ```
 Baliza (app a bordo)                    App de otros usuarios
@@ -195,19 +206,83 @@ verifica que sale la posición vehicular (`backend/tools/smoke_test.sh`).
 `puente-demo.sh` fue el puente mínimo viable de la primera etapa:
 republica todo lo que entra en `observaciones/#` sin validar nada. **El
 servicio de [`../backend/`](../backend/README.md) lo reemplaza.** Se
-conserva porque es una prueba de humo de 60 líneas que solo necesita
+conserva porque es una prueba de humo que solo necesita
 mosquitto y python3, sin dependencias que instalar.
 
 **No debe usarse con usuarios reales.** Al no validar ni agrupar, permite que
-cualquier cliente autenticado suplante vehículos ante los demás: la ACL impide
-que una identidad de la app publique en `vehiculos/#`, pero sí puede escribir
+un cliente autorizado a enviar observaciones suplante vehículos ante los demás:
+la ACL impide que una identidad de la app publique en `vehiculos/#`, pero sí puede escribir
 observaciones bajo su propio principal, y el script las republica sin validar.
 
-Por eso **exige una confirmación explícita** y se niega a arrancar sin ella:
+El mensaje de entrada debe incluir `routeId` con el ID canónico de GTFS. El
+puente lo reenvía tal cual: no lo deduce de `linea`, no inventa una ruta ni
+convierte tipos inválidos. Si falta, emite `null` y el contrato `String`
+obligatorio de iOS sigue descartando el frame. La demo no comprueba pertenencia
+al GTFS; el fixture de abajo usa la ruta real `17350695`.
+
+**Exige `PUENTE_DEMO_INSECURE=1`** y se niega a arrancar sin esa bandera. Para
+probarlo, preparar un broker independiente ligado a loopback. Desde `mqtt/`,
+elegir un puerto libre (por ejemplo, 18861) y guardar todo en una carpeta
+temporal; no usar `config/acl`, `config/passwords` ni las cuentas reales:
 
 ```bash
-PUENTE_DEMO_INSECURE=1 ./puente-demo.sh
+(
+set -e
+DEMO_DIR=$(mktemp -d)
+DEMO_PORT=18861
+cp config/acl-demo.example "$DEMO_DIR/acl"
+mosquitto_passwd -b -c "$DEMO_DIR/passwords" demo-device demo-only
+mosquitto_passwd -b "$DEMO_DIR/passwords" demo-bridge demo-only
+mosquitto_passwd -b "$DEMO_DIR/passwords" observer demo-only
+cat > "$DEMO_DIR/mosquitto.conf" <<EOF
+listener $DEMO_PORT 127.0.0.1
+allow_anonymous false
+password_file $DEMO_DIR/passwords
+acl_file $DEMO_DIR/acl
+persistence false
+EOF
+mosquitto -c "$DEMO_DIR/mosquitto.conf" > "$DEMO_DIR/broker.log" 2>&1 &
+DEMO_BROKER_PID=$!
+trap 'kill "$DEMO_BROKER_PID" 2>/dev/null || true; wait "$DEMO_BROKER_PID" 2>/dev/null || true; rm -rf "$DEMO_DIR"' EXIT
+DEMO_READY=0
+for DEMO_TRY in {1..40}; do
+  if ! kill -0 "$DEMO_BROKER_PID" 2>/dev/null; then
+    cat "$DEMO_DIR/broker.log" >&2
+    exit 1
+  fi
+  if mosquitto_pub -h 127.0.0.1 -p "$DEMO_PORT" -u demo-device -P demo-only \
+       -t 'rutautp/observaciones/demo-device/readiness/posicion' -m '{}' \
+       >/dev/null 2>&1; then
+    DEMO_READY=1
+    break
+  fi
+  sleep 0.25
+done
+[ "$DEMO_READY" = 1 ] || { cat "$DEMO_DIR/broker.log" >&2; exit 1; }
+PUENTE_DEMO_INSECURE=1 MQTT_USER=demo-bridge MQTT_PASS=demo-only \
+  ./puente-demo.sh 127.0.0.1 "$DEMO_PORT"
+)
 ```
+
+En otra terminal, usando el mismo puerto, observar la salida y publicar este
+fixture sintético. `linea` usa el nombre público `C-01`, como el publisher de la
+app; el nombre completo en GTFS es `C-01 "B"` y `routeId` identifica la ruta:
+
+```bash
+mosquitto_sub -h 127.0.0.1 -p 18861 -u demo-device -P demo-only \
+  -t 'rutautp/vehiculos/+/posicion' -v
+# En una tercera terminal:
+DEMO_PAYLOAD=$(python3 -c 'import json,time; print(json.dumps({"sessionId":"demo0001-fiction","routeId":"17350695","linea":"C-01","lat":-8.0477341,"lon":-79.0570924,"speed":11.4,"heading":90,"timestamp":time.time()}))')
+mosquitto_pub -h 127.0.0.1 -p 18861 -u demo-device -P demo-only \
+  -t 'rutautp/observaciones/demo-device/demo0001-fiction/posicion' -m "$DEMO_PAYLOAD"
+```
+
+`acl-demo.example` concede a `demo-device` escribir solo sus observaciones y
+leer vehículos; `demo-bridge` lee observaciones y escribe vehículos. `observer`
+continúa bloqueado. Esta plantilla no se monta en el servicio habitual ni
+amplía `acl.example`. Las contraseñas mostradas son ficticias y exclusivas de
+esta prueba. Al terminar el puente, el `trap` del bloque de preparación detiene
+su broker y borra la carpeta temporal.
 
 ## Archivos sensibles (gitignored)
 

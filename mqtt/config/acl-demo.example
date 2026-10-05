@@ -1,0 +1,14 @@
+# Solo para un broker demo aislado, con cuentas y observaciones ficticias.
+# No copiar sobre config/acl ni añadir a la ACL de producción.
+# Sin permisos pattern globales: cada rol recibe únicamente sus tópicos.
+
+user demo-device
+topic write rutautp/observaciones/demo-device/+/posicion
+topic read rutautp/vehiculos/+/posicion
+
+user demo-bridge
+topic read rutautp/observaciones/+/+/posicion
+topic write rutautp/vehiculos/+/posicion
+
+user observer
+topic deny rutautp/#

@@ -26,18 +26,19 @@ BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_DIR="$(cd "$BACKEND_DIR/.." && pwd)"
 PYTHON="${PYTHON:-python3}"
 
-WORK_DIR="$(mktemp -d)"
-MOSQUITTO_PID=""
-BACKEND_PID=""
-FAILED=0
-
 if ! [[ "$MIN_PRINCIPALS" =~ ^[1-9][0-9]*$ ]]; then
     echo "FALLO: BACKEND_MIN_PUBLISH_PRINCIPALS debe ser un entero >= 1" >&2
     exit 1
 fi
 
+WORK_DIR="$(mktemp -d)"
+MOSQUITTO_PID=""
+BACKEND_PID=""
+SUB_PID=""
+FAILED=0
+
 cleanup() {
-    for pid in "$BACKEND_PID" "$MOSQUITTO_PID"; do
+    for pid in "$SUB_PID" "$BACKEND_PID" "$MOSQUITTO_PID"; do
         [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
     done
 
@@ -46,7 +47,7 @@ cleanup() {
     # Red de seguridad: si algo sobreviviera, se avisa y se fuerza. Dejar el
     # backend huérfano ciclando contra un broker apagado era invisible desde el
     # resultado de la prueba, que salía en verde.
-    for pid in "$BACKEND_PID" "$MOSQUITTO_PID"; do
+    for pid in "$SUB_PID" "$BACKEND_PID" "$MOSQUITTO_PID"; do
         if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
             echo "AVISO: el proceso $pid sobrevivió al cierre; se fuerza" >&2
             kill -9 "$pid" 2>/dev/null || true
@@ -56,6 +57,8 @@ cleanup() {
     rm -rf "$WORK_DIR"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 ok()   { printf "  OK    %s\n" "$1"; }
 fail() { printf "  FALLA %s\n" "$1"; FAILED=1; }
@@ -178,12 +181,13 @@ esperar_vehiculo() {
     # Sin `2>/dev/null`: si el suscriptor falla, hay que verlo.
     mosquitto_sub -h 127.0.0.1 -p "$PORT" -t 'rutautp/vehiculos/#' \
         -C 1 -W "$timeout" -v > "$salida" 2> "$WORK_DIR/sub-$sesion.err" &
-    local sub=$!
+    SUB_PID=$!
 
     sleep 1
     publicar "$ruta" "$sesion"
 
-    wait $sub 2>/dev/null
+    wait "$SUB_PID" 2>/dev/null
+    SUB_PID=""
 
     if [ -s "$WORK_DIR/sub-$sesion.err" ]; then
         echo "      suscriptor: $(head -2 "$WORK_DIR/sub-$sesion.err")"
@@ -214,11 +218,22 @@ echo "== 1. backend arrancado SIN broker =="
     # `exec` sustituye la subshell por el proceso de Python: así `$!` es el PID
     # real del backend y el cierre de la prueba lo alcanza. Sin esto se mataba
     # la subshell y el hijo quedaba huérfano.
+    # Datos y latido exclusivos de esta prueba; el broker local no usa TLS
+    # ni credenciales. El entorno de otra instancia no debe cambiar esto.
     exec env \
         MQTT_HOST=127.0.0.1 \
         MQTT_PORT="$PORT" \
+        MQTT_USERNAME="" \
+        MQTT_PASSWORD="" \
+        MQTT_TLS=0 \
+        MQTT_CA_CERT="" \
+        MQTT_CLIENT_ID="" \
+        GTFS_DIR="$REPO_DIR/gtfs" \
+        BACKEND_OBSERVATIONS_TOPIC='rutautp/observaciones/+/+/posicion' \
+        BACKEND_VEHICLES_TOPIC_PREFIX='rutautp/vehiculos' \
         BACKEND_MIN_PUBLISH_PRINCIPALS="$MIN_PRINCIPALS" \
-        BACKEND_DB_PATH= \
+        BACKEND_DB_PATH="" \
+        BACKEND_HEALTH_FILE="$WORK_DIR/health.json" \
         BACKEND_LOG_LEVEL=INFO \
         "$PYTHON" -m rutautp_backend --plain-logs > "$WORK_DIR/backend.log" 2>&1
 ) &
