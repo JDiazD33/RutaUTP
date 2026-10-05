@@ -44,6 +44,13 @@ private struct OccupancyReceipt: Decodable {
 
 /// Canal independiente: no modifica posiciones, rutas ni estimaciones de buses.
 final class OccupancyService: ObservableObject {
+    private let configurationProvider: () -> MQTTConfiguration?
+
+    /// Permite comprobar reportes de viaje sin abrir un canal real en tests.
+    init(configurationProvider: @escaping () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment) {
+        self.configurationProvider = configurationProvider
+    }
+
     @Published private(set) var buses: [OccupancyReading] = []
     @Published private(set) var ready = false
     @Published private(set) var sending = false
@@ -83,7 +90,7 @@ final class OccupancyService: ObservableObject {
 
     func start() {
         guard !running else { return }
-        guard let config = MQTTConfiguration.fromEnvironment() else { return }
+        guard let config = configurationProvider() else { return }
         configured = true
         running = true
         principal = config.username

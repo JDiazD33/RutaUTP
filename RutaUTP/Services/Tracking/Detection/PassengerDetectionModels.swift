@@ -160,6 +160,17 @@ struct PassengerDetectionThresholds {
     /// para confirmar el descenso.
     let alightingEvidenceRequired: Int
 
+    /// Un hueco mayor corta la evidencia candidata, no un viaje confirmado.
+    /// Es una hipótesis local de continuidad que requiere pruebas de campo.
+    var maximumEvidenceInterval: TimeInterval = 30
+
+    /// Evita que la caché antigua del GPS participe en un viaje nuevo.
+    /// Coincide con el límite inicial de edad de las observaciones del backend.
+    var maximumSampleAge: TimeInterval = 45
+
+    /// Tolera un pequeño desfase de reloj sin aceptar fechas futuras arbitrarias.
+    var maximumFutureSkew: TimeInterval = 10
+
     /// Configuración inicial del MVP.
     ///
     /// Estos valores son hipótesis técnicas y deberán validarse

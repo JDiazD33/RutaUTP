@@ -4,8 +4,10 @@
 //
 //  Contrato utilizado para publicar observaciones de ubicación.
 //
-//  Una observación representa la ubicación anónima de un pasajero
-//  que probablemente está dentro de una unidad de transporte.
+//  Una observación representa la ubicación de un pasajero que probablemente
+//  está dentro de una unidad de transporte, vinculada a una sesión de viaje.
+//  La implementación MQTT la asocia además a una cuenta autenticada; la ausencia
+//  de nombre y correo en el JSON no garantiza anonimato.
 //  No representa por sí sola la posición confirmada de un bus.
 //
 //  El backend será responsable de validar y combinar observaciones
@@ -62,7 +64,7 @@ protocol ObservationPublishing: AnyObject {
     var onStateChange:
         (@MainActor (ObservationPublisherState) -> Void)? { get set }
 
-    /// Inicia una sesión anónima de contribución.
+    /// Inicia una sesión de contribución para el viaje actual.
     ///
     /// - Parameters:
     ///   - sessionID: Identificador temporal generado para el viaje.

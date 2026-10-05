@@ -2,9 +2,10 @@
 //  PassengerObservationPayloadTests.swift
 //  RutaUTPTests
 //
-//  Contrato JSON de la baliza. Lo que sale por el canal público debe
-//  tener exactamente las claves acordadas con el backend y, sobre
-//  todo, NO debe contener ningún identificador personal.
+//  Contrato JSON de la baliza: debe conservar las claves acordadas y excluir
+//  nombre, correo e identificadores explícitos del perfil o dispositivo.
+//  Estas pruebas no demuestran anonimato: el JSON contiene sesión y trayectoria;
+//  la cuenta MQTT va en el tópico y en la autenticación de la conexión.
 //
 
 import XCTest
@@ -66,8 +67,8 @@ final class PassengerObservationPayloadTests: XCTestCase {
         )
     }
 
-    /// El payload es anónimo por diseño: esta prueba lo deja clavado
-    /// para que nadie agregue un identificador sin darse cuenta.
+    /// Impide añadir las claves explícitas de perfil/dispositivo enumeradas.
+    /// No verifica anonimato ni la identidad que acompaña al tópico MQTT.
     func testNoContieneIdentificadoresPersonales() throws {
         let data = try JSONEncoder().encode(makePayload())
 

@@ -8,6 +8,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
 
     @Published private(set) var isEnabled: Bool
     @Published private(set) var isRunning = false
+    @Published private(set) var errorCargaRutas: FalloCargaGTFS?
 
     @Published private(set) var detectionState:
         PassengerDetectionState = .idle
@@ -42,7 +43,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var boardingPlace: String?
     @Published private(set) var boardingPoint: BoardingPoint?
     @Published private(set) var latestLocation: CLLocation?
-    let tripOccupancy = OccupancyService()
+    let tripOccupancy: OccupancyService
     private var waitingForNewTrip = false
 
     /// La declaración orienta el detector; nunca salta sus comprobaciones.
@@ -53,7 +54,6 @@ final class PassiveTrackingCoordinator: ObservableObject {
         detectionEngine.reset()
         detectionState = .idle
         confirmedLine = nil
-        boardingRouteID = nil
         shouldPublish = false
         selectedTripRoute = route
         tripStartedAt = Date()
@@ -82,7 +82,6 @@ final class PassiveTrackingCoordinator: ObservableObject {
         detectionState = .idle
         confirmedLine = nil
         candidateLine = nil
-        boardingRouteID = nil
         shouldPublish = false
         waitingForNewTrip = true
         statusMessage = "Viaje terminado. Indica tu próximo micro para volver a ayudar."
@@ -105,8 +104,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
         ObservationPublishing?
 
 
-    private var detectionEngine =
-        PassengerDetectionEngine()
+    private var detectionEngine: PassengerDetectionEngine
 
     private var routes:
         [DetectionRouteGeometry] = []
@@ -138,11 +136,17 @@ final class PassiveTrackingCoordinator: ObservableObject {
     private var backgroundObserver: NSObjectProtocol?
 
     private var foregroundObserver: NSObjectProtocol?
+    private var appEnSegundoPlano = false
+    /// La sesión sigue siendo del mismo viaje, pero el canal fue detenido.
+    /// Si foreground llega durante un posible descenso, una muestra posterior
+    /// puede volver a autorizar el envío sin confirmar otro abordaje.
+    private var sesionPausadaPorBackground = false
 
-    /// Identificador anónimo y temporal de la sesión de viaje.
+    /// UUID temporal de la sesión de viaje.
     ///
-    /// Se crea al confirmar el abordaje y se elimina al confirmar el descenso.
-    /// No identifica permanentemente al usuario ni al dispositivo.
+    /// Se crea al confirmar el abordaje y se descarta del estado local al terminar
+    /// la sesión. MQTT lo vincula a la cuenta autenticada; rotarlo no impide
+    /// correlacionar viajes ni elimina las observaciones ya enviadas al backend.
     private var observationSessionID: String?
 
     /// Identificador GTFS fijado al confirmar el abordaje.
@@ -151,16 +155,6 @@ final class PassiveTrackingCoordinator: ObservableObject {
     /// cambiar entre muestras. Todas las observaciones de una sesión deben
     /// seguir utilizando la ruta con la que se confirmó el viaje.
     private var confirmedRouteID: String?
-
-    /// Ruta con la que se está acumulando evidencia de abordaje.
-    ///
-    /// La confirmación exige tres muestras consecutivas, pero nada obligaba a
-    /// que fueran de la misma ruta: el candidato más cercano puede cambiar
-    /// entre muestras (calles paralelas, líneas superpuestas, un cruce) y el
-    /// viaje terminaba confirmándose con la última, no con la que había
-    /// acumulado la evidencia. Si la ruta cambia, la evidencia anterior deja de
-    /// valer y el motor se reinicia.
-    private var boardingRouteID: String?
 
 #if DEBUG
 /// Permite probar el transporte MQTT sin esperar un viaje real.
@@ -195,11 +189,15 @@ private let isForcedOnboardForMQTTTest =
         repository: GTFSRepository = .shared,
         initialRoutes: [DetectionRouteGeometry] = [],
         observationPublisher: ObservationPublishing? = nil,
+        tripOccupancy: OccupancyService = OccupancyService(),
+        detectionClock: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 },
         configurationProvider: () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment
     ) {
         self.locationService = locationService
         self.motionService = motionService
         self.repository = repository
+        self.tripOccupancy = tripOccupancy
+        self.detectionEngine = PassengerDetectionEngine(now: detectionClock)
 
         // En producción permanece vacío y las rutas se cargan desde GTFS.
         // Las pruebas pueden proporcionar geometrías pequeñas y deterministas.
@@ -269,7 +267,7 @@ private let isForcedOnboardForMQTTTest =
         isEnabled = enabled
 
         if enabled {
-            beginStart()
+            beginStart(reintentarGTFS: true)
         } else {
             stop()
         }
@@ -280,13 +278,13 @@ private let isForcedOnboardForMQTTTest =
     /// Iniciar dos veces no debe dejar dos observadores de ubicación ni dos de
     /// movimiento: el arranque previo se cancela y su testigo queda invalidado,
     /// así que aunque reanude no completará el trabajo.
-    private func beginStart() {
+    private func beginStart(reintentarGTFS: Bool = false) {
         startTask?.cancel()
 
         let token = startGuard.begin()
 
         startTask = Task { @MainActor [weak self] in
-            await self?.start(token: token)
+            await self?.start(token: token, reintentarGTFS: reintentarGTFS)
         }
     }
 
@@ -296,7 +294,7 @@ private let isForcedOnboardForMQTTTest =
     /// en cada una hay que volver a comprobar el testigo y el consentimiento:
     /// es justo la ventana en la que el usuario puede desactivar la
     /// contribución y quedar, sin estas comprobaciones, con la detección viva.
-    private func start(token: Int) async {
+    private func start(token: Int, reintentarGTFS: Bool = false) async {
         guard startGuard.isCurrent(token), isEnabled else {
             return
         }
@@ -305,6 +303,9 @@ private let isForcedOnboardForMQTTTest =
             return
         }
 
+        // El intento explícito ya está en curso; no ofrecer otro botón
+        // mientras el permiso o el catálogo siguen pendientes.
+        errorCargaRutas = nil
         statusMessage = "Preparando detección pasiva"
 
         let authorization =
@@ -331,10 +332,16 @@ private let isForcedOnboardForMQTTTest =
         // En producción las rutas se cargan desde GTFS. Si una prueba ya
         // proporcionó geometrías controladas, se conservan sin reemplazarlas.
         if routes.isEmpty {
-            let gtfsRoutes = await repository.rutas()
-
-            // La carga del feed también suspende: se vuelve a comprobar.
-            guard startGuard.isCurrent(token), isEnabled else {
+            let gtfsRoutes: [RutaGTFS]
+            do {
+                gtfsRoutes = try await repository.cargarRutas(reintentar: reintentarGTFS)
+                guard !Task.isCancelled, startGuard.isCurrent(token), isEnabled else { return }
+                errorCargaRutas = nil
+            } catch {
+                guard !Task.isCancelled, startGuard.isCurrent(token), isEnabled else { return }
+                errorCargaRutas = error as? FalloCargaGTFS
+                statusMessage = errorCargaRutas?.mensajeUsuario
+                    ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
                 return
             }
 
@@ -349,11 +356,12 @@ private let isForcedOnboardForMQTTTest =
 
         guard !routes.isEmpty else {
             statusMessage =
-                "No se pudieron cargar las rutas GTFS"
+                L.t("El catálogo GTFS no contiene rutas", "The GTFS catalog contains no routes")
             return
         }
 
         isRunning = true
+        appEnSegundoPlano = UIApplication.shared.applicationState == .background
         statusMessage = "Analizando movilidad"
 
         observeAppLifecycle()
@@ -439,6 +447,7 @@ private let isForcedOnboardForMQTTTest =
         activity: DetectedMotionActivity
     ) {
         latestLocation = location
+        guard isEnabled else { return }
         guard !waitingForNewTrip else { return }
         let candidateRoutes = selectedTripRoute.map { [$0] } ?? routes
         guard let candidate =
@@ -492,37 +501,26 @@ if isForcedOnboardForMQTTTest {
                 activity
         )
 
-        // La evidencia de abordaje debe proceder de una sola ruta. Si el
-        // candidato cambió, lo acumulado hasta ahora no acredita este viaje.
-        if detectionEngine.state == .boardingCandidate,
-           let boardingRouteID,
-           boardingRouteID != candidate.routeID {
-            detectionEngine.reset()
-            self.boardingRouteID = nil
-        }
-
         let decision =
-            detectionEngine.process(sample)
+            detectionEngine.process(sample, routeID: candidate.routeID)
 
         detectionState = decision.state
-        shouldPublish = decision.shouldPublish
+        shouldPublish = decision.shouldPublish && !appEnSegundoPlano
 
         if decision.didConfirmBoarding {
             confirmedLine = candidate.linea
             confirmedRouteID = candidate.routeID
-            boardingRouteID = nil
 
-            // Cada abordaje confirmado recibe una sesión nueva y anónima.
+            // Cada abordaje confirmado recibe un UUID de sesión nuevo.
             // lowercased() solo normaliza el formato enviado al backend.
             let sessionID =
                 UUID().uuidString.lowercased()
 
             observationSessionID = sessionID
-
-            observationPublisher?.start(
-                sessionID: sessionID,
-                linea: candidate.linea
-            )
+            sesionPausadaPorBackground = appEnSegundoPlano
+            if !appEnSegundoPlano {
+                observationPublisher?.start(sessionID: sessionID, linea: candidate.linea)
+            }
 
             statusMessage =
                 "Abordaje probable: línea " +
@@ -535,21 +533,15 @@ if isForcedOnboardForMQTTTest {
                 return
             }
             // El descenso confirmado finaliza inmediatamente la conexión
-            // correspondiente al viaje y elimina sus identificadores.
+            // correspondiente al viaje y descarta sus identificadores locales.
             stopObservationSession()
 
             confirmedLine = nil
-            boardingRouteID = nil
 
             statusMessage =
                 "Descenso detectado"
 
         } else {
-            // Se recuerda con qué ruta se está acumulando la evidencia.
-            boardingRouteID = decision.state == .boardingCandidate
-                ? candidate.routeID
-                : nil
-
             statusMessage = message(
                 for: decision.state,
                 candidateLine: candidate.linea
@@ -561,9 +553,11 @@ if isForcedOnboardForMQTTTest {
         // de la muestra actual, para conservar la identidad del viaje.
         if
             decision.shouldPublish,
+            !appEnSegundoPlano,
             observationSessionID != nil,
             let confirmedRouteID
         {
+            reanudarSesionPausadaSiSePuede()
             observationPublisher?.publish(
                 location: location,
                 routeID: confirmedRouteID,
@@ -618,7 +612,6 @@ if isForcedOnboardForMQTTTest {
         confirmedLine = nil
         distanceToRoute = nil
         shouldPublish = false
-        boardingRouteID = nil
         selectedTripRoute = nil
         tripStartedAt = nil
         boardingPlace = nil
@@ -649,6 +642,7 @@ private func processForcedOnboardForMQTTTest(
     candidate: RouteCandidateMatch,
     activity: DetectedMotionActivity
 ) {
+    guard !appEnSegundoPlano else { return }
     if observationSessionID == nil {
         let sessionID =
             UUID().uuidString.lowercased()
@@ -672,6 +666,7 @@ private func processForcedOnboardForMQTTTest(
 
     detectionState = .onboard
     shouldPublish = true
+    reanudarSesionPausadaSiSePuede()
 
     observationPublisher?.publish(
         location: location,
@@ -694,11 +689,13 @@ private func processForcedOnboardForMQTTTest(
 
 
 
-    /// Finaliza el envío del viaje actual y elimina sus identificadores.
+    /// Finaliza el envío y descarta los identificadores locales del viaje.
+    /// No solicita el borrado de observaciones ya recibidas por el backend.
     ///
     /// Se llama al confirmar el descenso, desactivar la contribución o detener
     /// completamente el coordinador. Ningún UUID se reutiliza entre viajes.
     private func stopObservationSession() {
+        sesionPausadaPorBackground = false
         tripOccupancy.stop()
         observationPublisher?.stop()
 
@@ -774,11 +771,14 @@ private func processForcedOnboardForMQTTTest(
     /// Visibilidad interna para que XCTest verifique la pausa/reanudación
     /// sin simular el ciclo de vida real de la app.
     func pauseObservationSessionForBackground() {
+        appEnSegundoPlano = true
+        shouldPublish = false
         tripOccupancy.stop()
-        guard observationSessionID != nil else {
+        guard observationSessionID != nil, !sesionPausadaPorBackground else {
             return
         }
 
+        sesionPausadaPorBackground = true
         observationPublisher?.stop()
 
         refreshObservationPublisherState()
@@ -790,21 +790,29 @@ private func processForcedOnboardForMQTTTest(
     /// Reanuda la publicación si el viaje detectado sigue vigente.
     ///
     /// Se reutiliza el mismo `sessionID`: la reanudación pertenece al
-    /// mismo viaje anónimo. La siguiente muestra GPS que apruebe el
+    /// mismo viaje y cuenta MQTT. La siguiente muestra GPS que apruebe el
     /// detector vuelve a transmitirse sin esperar un nuevo abordaje.
     ///
-    /// Tras `stop()` todo queda limpio (`idle`, sin sesión), así que
-    /// las condiciones de viaje bastan para decidir si corresponde
-    /// reanudar.
+    /// Un posible descenso no autoriza envío todavía. Se conserva la pausa
+    /// hasta que `process` reciba una decisión que vuelva a autorizarlo.
     func resumeObservationSessionIfNeeded() {
+        appEnSegundoPlano = false
+        reanudarSesionPausadaSiSePuede()
+    }
+
+    private func reanudarSesionPausadaSiSePuede() {
         guard
+            isEnabled, !appEnSegundoPlano, sesionPausadaPorBackground,
             detectionState == .onboard,
             let sessionID = observationSessionID,
-            let linea = confirmedLine
+            let linea = confirmedLine, confirmedRouteID != nil
         else {
             return
         }
 
+        // Consumir la pausa antes de start: ni foreground repetido ni las
+        // siguientes muestras deben duplicar conexiones o forzar un reenvío.
+        sesionPausadaPorBackground = false
         observationPublisher?.start(
             sessionID: sessionID,
             linea: linea

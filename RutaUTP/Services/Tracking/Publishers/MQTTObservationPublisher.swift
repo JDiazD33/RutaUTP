@@ -9,7 +9,7 @@
 //  - Recibir ubicaciones ya autorizadas por el detector.
 //  - Limitar la frecuencia de publicación.
 //  - Serializar las observaciones como JSON.
-//  - Publicarlas en un tópico asociado a una sesión anónima.
+//  - Publicarlas en un tópico asociado a la cuenta MQTT y a una sesión de viaje.
 //
 //  Este componente no decide si el usuario está dentro de un bus.
 //  Esa responsabilidad pertenece a PassengerDetectionEngine.
@@ -19,11 +19,13 @@ import Foundation
 import CoreLocation
 import CocoaMQTT
 
-/// Publica observaciones anónimas mediante MQTT.
+/// Publica observaciones de ubicación mediante MQTT.
 ///
-/// Cada abordaje confirmado utiliza un `sessionID` diferente.
-/// No se publican nombres, correos ni identificadores permanentes
-/// del usuario o del dispositivo.
+/// Cada abordaje confirmado utiliza un `sessionID` diferente. El JSON no incluye
+/// nombres ni correos; incluye sesión, ruta, ubicación y fecha. La cuenta MQTT
+/// autentica la conexión y forma parte del tópico, por lo que el broker y el
+/// backend pueden asociar observaciones con esa cuenta entre viajes. El UUID
+/// temporal no garantiza anonimato de la trayectoria.
 @MainActor
 final class MQTTObservationPublisher:
     ObservationPublishing {
@@ -114,7 +116,7 @@ final class MQTTObservationPublisher:
         configureCallbacks()
     }
 
-    /// Inicia una sesión anónima y conecta con Mosquitto.
+    /// Inicia una sesión de viaje vinculada a la cuenta MQTT y conecta con Mosquitto.
     ///
     /// Si el cliente ya está conectado, no crea una conexión duplicada.
     func start(
@@ -497,13 +499,15 @@ private struct PendingObservation {
 /// Contrato JSON enviado al broker MQTT.
 ///
 /// El modelo es interno para poder probar su codificación posteriormente.
-/// No contiene información personal ni un identificador permanente.
+/// No incluye nombre, correo ni cuenta MQTT en el JSON, pero sí una sesión y
+/// datos de trayectoria correlacionables. La cuenta se transmite en el tópico
+/// y en la autenticación de la conexión.
 struct PassengerObservationPayload: Codable, Equatable {
 
     /// Versión del formato del mensaje.
     let schemaVersion: Int
 
-    /// Identificador anónimo válido solamente durante el viaje actual.
+    /// UUID del viaje actual; puede permanecer en el histórico del backend.
     let sessionId: String
 
     /// Identificador interno de la ruta GTFS candidata.

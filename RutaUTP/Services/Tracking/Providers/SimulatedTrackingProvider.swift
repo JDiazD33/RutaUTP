@@ -8,6 +8,8 @@ import CoreLocation
 final class SimulatedTrackingProvider: VehicleTrackingProviding {
     let source: VehicleTrackingSource = .simulated
     private(set) var currentPositions: [VehiclePosition] = []
+    /// Diagnóstico local: un fallo de catálogo no inicia una flota vacía ni ticks.
+    private(set) var errorCargaRutas: String?
     private var continuation: AsyncStream<[VehiclePosition]>.Continuation?
     private var stream: AsyncStream<[VehiclePosition]>?
     private var tickTask: Task<Void, Never>?
@@ -38,14 +40,37 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         let token = UUID()
         generation = token
         loading = Task { @MainActor [weak self] in
-            let feed = await GTFSRepository.shared.rutas()
+            let feed: [RutaGTFS]
+            do {
+                feed = try await GTFSRepository.shared.cargarRutas(reintentar: false)
+            } catch {
+                guard let self, !Task.isCancelled, self.generation == token else { return }
+                self.errorCargaRutas = error.localizedDescription
+                self.loading = nil
+                return
+            }
             guard let self, !Task.isCancelled, self.generation == token else { return }
+            self.errorCargaRutas = nil
             self.routes = feed.filter { $0.shape.count >= 2 }
             self.rebuild()
             self.previousTick = Date()
             self.iniciarTicks()
             self.loading = nil
         }
+    }
+
+    /// Recuperación explícita desde un catálogo que otra acción ya cargó.
+    /// Conserva el stream: reiniciar todo el provider cerraría su lector activo.
+    func restaurarCatalogoTrasFallo(_ feed: [RutaGTFS]) {
+        guard errorCargaRutas != nil || routes.isEmpty else { return }
+        generation = UUID()
+        loading?.cancel()
+        loading = nil
+        errorCargaRutas = nil
+        routes = feed.filter { $0.shape.count >= 2 }
+        rebuild()
+        previousTick = Date()
+        if !routes.isEmpty { iniciarTicks() }
     }
 
     /// Bucle de simulación.

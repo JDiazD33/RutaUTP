@@ -7,24 +7,57 @@ struct PassengerDetectionEngine {
 
     private let thresholds:
         PassengerDetectionThresholds
+    private let now: () -> TimeInterval
 
     private var boardingEvidenceCount = 0
     private var alightingEvidenceCount = 0
+    private var ultimaFechaProcesada: TimeInterval?
+    private var rutaDeLaEvidencia: String?
 
     init(
-        thresholds: PassengerDetectionThresholds = .default
+        thresholds: PassengerDetectionThresholds = .default,
+        now: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 }
     ) {
         self.thresholds = thresholds
+        self.now = now
     }
 
     mutating func process(
-        _ sample: PassengerDetectionSample
+        _ sample: PassengerDetectionSample,
+        routeID: String? = nil
     ) -> PassengerDetectionDecision {
+        guard sample.timestamp.isFinite else {
+            return decision(shouldPublish: false)
+        }
+
+        // Una entrega repetida o atrasada no es evidencia nueva, aunque haya
+        // cambiado Core Motion o la ruta candidata. Tampoco rompe la secuencia.
+        if let ultimaFechaProcesada, sample.timestamp <= ultimaFechaProcesada {
+            return decision(shouldPublish: false)
+        }
+
+        let ahora = now()
+        guard ahora.isFinite,
+              ahora - sample.timestamp <= thresholds.maximumSampleAge,
+              sample.timestamp - ahora <= thresholds.maximumFutureSkew else {
+            // Una fecha corrupta no mueve la referencia ni altera evidencia
+            // reciente. El siguiente fix válido todavía comprueba el hueco.
+            return decision(shouldPublish: false)
+        }
+
+        if let ultimaFechaProcesada,
+           sample.timestamp - ultimaFechaProcesada > thresholds.maximumEvidenceInterval {
+            descartarEvidenciaCandidata()
+        }
+        // Una lectura nueva imprecisa interrumpe continuidad y queda consumida:
+        // otra entrega del mismo fix con distinta actividad no puede recuperarla.
+        ultimaFechaProcesada = sample.timestamp
         guard
             sample.horizontalAccuracy >= 0,
             sample.horizontalAccuracy <=
                 thresholds.maximumAccuracy
         else {
+            descartarEvidenciaCandidata()
             return decision(shouldPublish: false)
         }
 
@@ -74,6 +107,7 @@ struct PassengerDetectionEngine {
         case .idle:
             if hasVehicleEvidence {
                 boardingEvidenceCount = 1
+                rutaDeLaEvidencia = routeID
                 state = .boardingCandidate
             } else if isApproachingStop {
                 state = .approachingStop
@@ -82,6 +116,7 @@ struct PassengerDetectionEngine {
         case .approachingStop:
             if hasVehicleEvidence {
                 boardingEvidenceCount = 1
+                rutaDeLaEvidencia = routeID
                 state = .boardingCandidate
             } else if !isNearStop {
                 state = .idle
@@ -89,16 +124,25 @@ struct PassengerDetectionEngine {
 
         case .boardingCandidate:
             if hasVehicleEvidence {
-                boardingEvidenceCount += 1
+                // La identidad se comprueba después de aceptar el timestamp.
+                // Cambiar ruta no debe borrar la barrera contra lecturas viejas.
+                if rutaDeLaEvidencia == routeID {
+                    boardingEvidenceCount += 1
+                } else {
+                    boardingEvidenceCount = 1
+                    rutaDeLaEvidencia = routeID
+                }
 
                 if boardingEvidenceCount >=
                     thresholds.boardingEvidenceRequired {
                     state = .onboard
                     boardingEvidenceCount = 0
+                    rutaDeLaEvidencia = nil
                     confirmedBoarding = true
                 }
             } else {
                 boardingEvidenceCount = 0
+                rutaDeLaEvidencia = nil
                 state = isApproachingStop
                     ? .approachingStop
                     : .idle
@@ -141,6 +185,20 @@ struct PassengerDetectionEngine {
         state = .idle
         boardingEvidenceCount = 0
         alightingEvidenceCount = 0
+        ultimaFechaProcesada = nil
+        rutaDeLaEvidencia = nil
+    }
+
+    /// La falta de continuidad invalida contadores, sin inferir un descenso
+    /// ni perder el viaje confirmado. Un posible descenso sigue esperando
+    /// evidencia nueva antes de autorizar otra publicación.
+    private mutating func descartarEvidenciaCandidata() {
+        boardingEvidenceCount = 0
+        alightingEvidenceCount = 0
+        rutaDeLaEvidencia = nil
+        if state == .boardingCandidate {
+            state = .idle
+        }
     }
 
     private func decision(
