@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "señas": [
     { "clave": "bienvenida.comenzar",    "archivo": "comenzar.mp4",           "fuente": "pendiente" },
     { "clave": "bienvenida.saltar",      "archivo": "saltar.mp4",             "fuente": "pendiente" },
@@ -15,7 +15,7 @@
     { "clave": "rutas.costo",            "archivo": "costo.mp4",              "fuente": "pendiente" },
     { "clave": "rutas.paraderos",        "archivo": "paraderos.mp4",          "fuente": "pendiente" },
     { "clave": "rutas.recorrido",        "archivo": "recorrido.mp4",          "fuente": "pendiente" },
-    { "clave": "rutas.guia",             "archivo": "guia_paso_a_paso.mp4",   "fuente": "pendiente" },
+    { "clave": "rutas.guia",             "archivo": "guia_paso_a_paso.mp4",   "fuente": "local" },
     { "clave": "nav.iniciar",            "archivo": "iniciar_navegacion.mp4", "fuente": "pendiente" },
     { "clave": "guardado.titulo",        "archivo": "guardado.mp4",           "fuente": "pendiente" },
     { "clave": "guardado.lugares",       "archivo": "lugares.mp4",            "fuente": "pendiente" },

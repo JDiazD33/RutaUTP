@@ -398,7 +398,7 @@ struct PerfilView: View {
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "hand.raised.fill", iconColor: .purple,
                           label: L.signable("perfil.modo_senias", "Modo Señas", "Sign Language Mode"), isOn: $modoSenias)
-                    .seniable("perfil.modo_senias")
+            .seniable("perfil.modo_senias", conGesto: false)
                 Divider().padding(.leading, 56).accessibilityHidden(true)
                 chevronRow(icon: "pencil", iconColor: .onSurfaceVariant,
                            label: L.t("Editar perfil", "Edit profile")) {

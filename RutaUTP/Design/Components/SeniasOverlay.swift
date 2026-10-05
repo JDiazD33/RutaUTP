@@ -5,8 +5,8 @@
 //  Modo Señas: el texto señable se vuelve tocable y muestra la seña en LSP.
 //
 //  Tres piezas:
-//   1. SeniasPlayerView  -> reproduce el clip en bucle (AVPlayerLooper).
-//   2. SeniasOverlay     -> tarjeta del miniplayer.
+//   1. SeniasPlayerView  -> reproducción única al activar; bucle al consultar.
+//   2. SeniasOverlay     -> media pantalla al activar; miniplayer al consultar.
 //   3. .seniable(clave:) -> modificador que se aplica al texto.
 //
 //  La tarjeta vive en SU PROPIA UIWindow a nivel .alert (SeniasOverlayVentana),
@@ -21,14 +21,22 @@
 import SwiftUI
 import AVFoundation
 
-// MARK: - 1. Reproductor en bucle
+// MARK: - 1. Reproductor
 
-/// UIView que mantiene un clip en bucle continuo.
+/// Conserva el reproductor entre actualizaciones y descarta callbacks antiguos.
 final class SeniasPlayerUIView: UIView {
 
     private var queuePlayer: AVQueuePlayer?
     private var looper: AVPlayerLooper?
     private var urlActual: URL?
+    private var idActual: UUID?
+    private var repiteActual = true
+    private var encuadreCompletoActual = false
+    private var generacion = UUID()
+    private var observadorFin: NSObjectProtocol?
+    private var observadorError: NSObjectProtocol?
+    private var observadorEstado: NSKeyValueObservation?
+    private var resultadoEntregado = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -37,35 +45,86 @@ final class SeniasPlayerUIView: UIView {
 
     required init?(coder: NSCoder) { fatalError("no usado") }
 
-    func configurar(url: URL) {
-        // Evita reiniciar el bucle en cada updateUIView.
-        guard url != urlActual else { return }
+    func configurar(
+        url: URL, id: UUID, repetir: Bool, encuadreCompleto: Bool = false,
+        alFinalizar: (() -> Void)? = nil, alFallar: (() -> Void)? = nil
+    ) {
+        guard url != urlActual || id != idActual || repetir != repiteActual
+                || encuadreCompleto != encuadreCompletoActual else { return }
         limpiar()
         urlActual = url
+        idActual = id
+        repiteActual = repetir
+        encuadreCompletoActual = encuadreCompleto
+        let carga = generacion
 
         let item = AVPlayerItem(url: url)
         let queue = AVQueuePlayer()
-        queue.isMuted = true                 // las señas son mudas por definición
+        queue.isMuted = true
 
         let layer = AVPlayerLayer(player: queue)
-        layer.videoGravity = .resizeAspectFill
+        // La guía vertical debe caber completa en la tarjeta cuadrada.
+        // El encuadre es independiente del bucle o del cierre al terminar.
+        layer.videoGravity = encuadreCompleto || !repetir ? .resizeAspect : .resizeAspectFill
         layer.frame = bounds
         layer.cornerRadius = 16
         layer.masksToBounds = true
         self.layer.addSublayer(layer)
 
-        looper = AVPlayerLooper(player: queue, templateItem: item)
+        if repetir {
+            looper = AVPlayerLooper(player: queue, templateItem: item)
+        } else {
+            queue.insert(item, after: nil)
+            observadorFin = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
+            ) { [weak self] _ in
+                self?.entregarResultado(carga: carga, accion: alFinalizar)
+            }
+            observadorError = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main
+            ) { [weak self] _ in
+                self?.entregarResultado(carga: carga, accion: alFallar)
+            }
+            observadorEstado = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
+                guard item.status == .failed else { return }
+                DispatchQueue.main.async { [weak self] in
+                    self?.entregarResultado(carga: carga, accion: alFallar)
+                }
+            }
+        }
         queuePlayer = queue
         queue.play()
     }
 
     func limpiar() {
+        // Un fin ya encolado no puede cerrar otro idioma ni otra activación.
+        generacion = UUID()
+        resultadoEntregado = false
+        if let observadorFin { NotificationCenter.default.removeObserver(observadorFin) }
+        if let observadorError { NotificationCenter.default.removeObserver(observadorError) }
+        observadorFin = nil
+        observadorError = nil
+        observadorEstado?.invalidate()
+        observadorEstado = nil
         queuePlayer?.pause()
         looper?.disableLooping()
         looper = nil
         queuePlayer = nil
         layer.sublayers?.forEach { $0.removeFromSuperlayer() }
         urlActual = nil
+        idActual = nil
+    }
+
+    private func entregarResultado(carga: UUID, accion: (() -> Void)?) {
+        guard carga == generacion, !resultadoEntregado else { return }
+        resultadoEntregado = true
+        accion?()
+    }
+
+    deinit {
+        if let observadorFin { NotificationCenter.default.removeObserver(observadorFin) }
+        if let observadorError { NotificationCenter.default.removeObserver(observadorError) }
+        observadorEstado?.invalidate()
     }
 
     override func layoutSubviews() {
@@ -76,15 +135,22 @@ final class SeniasPlayerUIView: UIView {
 
 struct SeniasPlayerView: UIViewRepresentable {
     let url: URL
+    let id: UUID
+    var repetir = true
+    var encuadreCompleto = false
+    var alFinalizar: (() -> Void)? = nil
+    var alFallar: (() -> Void)? = nil
 
     func makeUIView(context: Context) -> SeniasPlayerUIView {
         let vista = SeniasPlayerUIView()
-        vista.configurar(url: url)
+        vista.configurar(url: url, id: id, repetir: repetir, encuadreCompleto: encuadreCompleto,
+                         alFinalizar: alFinalizar, alFallar: alFallar)
         return vista
     }
 
     func updateUIView(_ uiView: SeniasPlayerUIView, context: Context) {
-        uiView.configurar(url: url)
+        uiView.configurar(url: url, id: id, repetir: repetir, encuadreCompleto: encuadreCompleto,
+                            alFinalizar: alFinalizar, alFallar: alFallar)
     }
 
     static func dismantleUIView(_ uiView: SeniasPlayerUIView, coordinator: ()) {
@@ -100,31 +166,60 @@ struct SeniasOverlay: View {
 
     private let servicio = SeniasService.shared
 
-    // Mini-player flotante: esquina inferior derecha, por encima del
-    // BottomNavBar, sin tapar el contenido. Al tocar otro texto señable,
-    // el clip se reemplaza en el sitio.
     var body: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                if let clave = presenter.claveVisible {
-                    tarjeta(clave: clave)
-                        .onAppear { presenter.tarjetaPresentada(clave: clave) }
-                        .onChange(of: clave) { _, nueva in presenter.tarjetaPresentada(clave: nueva) }
+        GeometryReader { geometria in
+            if let clave = presenter.claveVisible {
+                let id = presenter.idPresentacion
+                VStack {
+                    Spacer(minLength: 0)
+                    if presenter.esActivacionDelModo {
+                        tarjetaActivacion(clave: clave, id: id)
+                            .frame(height: geometria.size.height / 2)
+                            .padding(.horizontal, 14)
+                        Spacer(minLength: 0)
+                    } else {
+                        HStack {
+                            Spacer()
+                            tarjeta(clave: clave, id: id)
+                        }
+                        .padding(.trailing, 14)
+                        .padding(.bottom, 104)
+                    }
                 }
+                .id(id)
+                .onAppear { presenter.tarjetaPresentada(clave: clave, id: id) }
             }
         }
-        .padding(.trailing, 14)
-        .padding(.bottom, 104) // justo encima del BottomNavBar flotante
         .animation(.easeOut(duration: 0.22), value: presenter.claveVisible)
-
     }
 
-    private func tarjeta(clave: String) -> some View {
+    private func tarjetaActivacion(clave: String, id: UUID) -> some View {
+        VStack(spacing: 8) {
+            HStack {
+                encabezado(clave: clave)
+                Spacer(minLength: 8)
+                botonCerrar
+            }
+            contenido(clave: clave, id: id, activacion: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("senias.activacion")
+    }
+
+    private func tarjeta(clave: String, id: UUID) -> some View {
         VStack(spacing: 8) {
             encabezado(clave: clave)
-            contenido(clave: clave)
+            contenido(clave: clave, id: id, activacion: false)
+                .frame(width: 156, height: 156)
         }
         .padding(12)
         .frame(width: 180)
@@ -151,13 +246,17 @@ struct SeniasOverlay: View {
     }
 
     @ViewBuilder
-    private func contenido(clave: String) -> some View {
+    private func contenido(clave: String, id: UUID, activacion: Bool) -> some View {
         switch servicio.estado(para: clave) {
 
         case .clip(let url, let senia):
             VStack(spacing: 6) {
-                SeniasPlayerView(url: url)
-                    .frame(width: 156, height: 156)
+                SeniasPlayerView(
+                    url: url, id: id, repetir: !activacion,
+                    encuadreCompleto: activacion || clave == "rutas.guia",
+                    alFinalizar: { presenter.videoFinalizado(id: id) },
+                    alFallar: { presenter.videoNoDisponible(id: id) }
+                )
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 if senia.esPlaceholder {
@@ -183,11 +282,14 @@ struct SeniasOverlay: View {
                     .lineLimit(3)
             }
             .padding(8)
-            .frame(width: 156, height: 156)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.surfaceContainerLow)
             )
+            .onAppear {
+                if activacion { presenter.videoNoDisponible(id: id) }
+            }
         }
     }
 

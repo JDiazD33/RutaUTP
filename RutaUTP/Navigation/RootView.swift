@@ -66,9 +66,9 @@ struct RootView: View {
             case .mapaPrincipal: MapaView(locationService: locationService)
             case .rutas:         RutasView()
             case .guardado:      GuardadoView()
-            case .seguridad:     SeguridadView()
+            case .seguridad:     SeguridadView(locationService: locationService)
             case .perfil:        PerfilView()
-            case .trackingDemo:  RouteTrackingDemoView()
+            case .trackingDemo:  RouteTrackingDemoView(locationService: locationService)
             }
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
@@ -80,7 +80,9 @@ struct RootView: View {
             aplicarTemaEnVentanas(nuevo)
         }
         .onChange(of: modoSenias) { _, activo in
-            if !activo {
+            if activo {
+                SeniasPresenter.shared.mostrarActivacionDelModo()
+            } else {
                 SeniasPresenter.shared.cancelarAccionPendiente()
                 SeniasPresenter.shared.ocultar()
             }

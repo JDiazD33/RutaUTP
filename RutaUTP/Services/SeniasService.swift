@@ -18,6 +18,7 @@ final class SeniasService {
 
     /// Llave de UserDefaults del interruptor "Modo Señas".
     static let llaveModo = "senias.modo.activado"
+    static let claveActivacionModo = "perfil.modo_senias"
 
     private let manifesto: ManifestoSenias?
     private let carpetaClips: URL?
@@ -83,7 +84,10 @@ final class SeniasService {
 
     /// Texto legible de la clave, en el idioma activo.
     func texto(clave: String) -> String {
-        CatalogoSenias.shared.texto(clave: clave) ?? clave
+        if clave == Self.claveActivacionModo {
+            return L.t("Modo Señas", "Sign Language Mode")
+        }
+        return CatalogoSenias.shared.texto(clave: clave) ?? clave
     }
 
     /// Todas las claves del manifiesto. Útil para depurar y para el checklist
@@ -103,27 +107,43 @@ final class SeniasPresenter: ObservableObject {
 
     static let shared = SeniasPresenter()
 
-    @Published var claveVisible: String? {
+    @Published private(set) var claveVisible: String? {
         didSet {
             // El miniplayer vive en su propia UIWindow (por encima de sheets
             // y covers): la ventana aparece con la seña y se esconde al cerrar.
-            SeniasOverlayVentana.shared.actualizar(hayClave: claveVisible != nil)
+            actualizarVentana(claveVisible != nil)
         }
     }
+
+    @Published private(set) var idPresentacion = UUID()
+    @Published private(set) var esActivacionDelModo = false
+
+    private let modoActivo: () -> Bool
+    private let actualizarVentana: (Bool) -> Void
+    private let programarEspera: (TimeInterval, DispatchWorkItem) -> Void
 
     private var accionPendiente: (() -> Void)?
     private var espera: DispatchWorkItem?
     private var esperandoPresentacion = false
     private var tarjetaVisible: String?
-    private var solicitud = UUID()
 
     /// Tiempo visible antes de continuar con la acción solicitada.
     static let pausaParaVerSenia: TimeInterval = 3.0
 
-    private init() {}
+    init(
+        modoActivo: @escaping () -> Bool = { SeniasService.shared.modoActivo },
+        actualizarVentana: @escaping (Bool) -> Void = { SeniasOverlayVentana.shared.actualizar(hayClave: $0) },
+        programarEspera: @escaping (TimeInterval, DispatchWorkItem) -> Void = {
+            DispatchQueue.main.asyncAfter(deadline: .now() + $0, execute: $1)
+        }
+    ) {
+        self.modoActivo = modoActivo
+        self.actualizarVentana = actualizarVentana
+        self.programarEspera = programarEspera
+    }
 
     func cancelarAccionPendiente() {
-        solicitud = UUID()
+        idPresentacion = UUID()
         espera?.cancel()
         espera = nil
         accionPendiente = nil
@@ -132,8 +152,29 @@ final class SeniasPresenter: ObservableObject {
 
     func mostrar(clave: String) {
         cancelarAccionPendiente()
-        guard SeniasService.shared.modoActivo else { return }
+        guard modoActivo() else { return }
+        esActivacionDelModo = false
         claveVisible = clave
+    }
+
+    /// La bienvenida al modo ocupa media pantalla y termina con el video.
+    /// Las señas consultadas desde textos y botones conservan su miniplayer.
+    func mostrarActivacionDelModo() {
+        cancelarAccionPendiente()
+        guard modoActivo() else { return }
+        esActivacionDelModo = true
+        claveVisible = SeniasService.claveActivacionModo
+    }
+
+    func videoFinalizado(id: UUID) {
+        guard id == idPresentacion, esActivacionDelModo, claveVisible != nil else { return }
+        ocultar()
+    }
+
+    /// Un clip ausente o ilegible no deja una tarjeta de bienvenida atascada.
+    func videoNoDisponible(id: UUID) {
+        guard id == idPresentacion, esActivacionDelModo, let clave = claveVisible else { return }
+        agendarCierre(clave: clave, id: id)
     }
 
     /// Cerrar permite continuar sin esperar el resto de la presentación.
@@ -141,6 +182,7 @@ final class SeniasPresenter: ObservableObject {
         let accion = accionPendiente
         cancelarAccionPendiente()
         tarjetaVisible = nil
+        esActivacionDelModo = false
         claveVisible = nil
         accion?()
     }
@@ -149,32 +191,39 @@ final class SeniasPresenter: ObservableObject {
     /// orden entre un TapGesture y la acción nativa de Button.
     func ejecutarTrasVerSenia(clave: String? = nil, _ accion: @escaping () -> Void) {
         // Un segundo toque al mismo botón no reinicia la espera ni lo duplica.
-        if SeniasService.shared.modoActivo, let clave,
+        if modoActivo(), let clave,
            claveVisible == clave, accionPendiente != nil { return }
         cancelarAccionPendiente()
-        guard SeniasService.shared.modoActivo, let clave else {
+        guard modoActivo(), let clave else {
             tarjetaVisible = nil
+            esActivacionDelModo = false
             claveVisible = nil
             accion()
             return
         }
         accionPendiente = accion
         esperandoPresentacion = true
+        esActivacionDelModo = false
         claveVisible = clave
         // Si la tarjeta ya estaba montada, su onAppear no se repetirá.
-        if tarjetaVisible == clave { tarjetaPresentada(clave: clave) }
+        if tarjetaVisible == clave { tarjetaPresentada(clave: clave, id: idPresentacion) }
     }
 
-    func tarjetaPresentada(clave: String) {
+    func tarjetaPresentada(clave: String, id: UUID) {
+        guard claveVisible == clave, id == idPresentacion else { return }
         tarjetaVisible = clave
-        guard claveVisible == clave, esperandoPresentacion else { return }
+        guard esperandoPresentacion else { return }
         esperandoPresentacion = false
-        let id = solicitud
+        agendarCierre(clave: clave, id: id)
+    }
+
+    private func agendarCierre(clave: String, id: UUID) {
+        guard espera == nil else { return }
         let trabajo = DispatchWorkItem { [weak self] in
-            guard let self, self.solicitud == id, self.claveVisible == clave else { return }
+            guard let self, self.idPresentacion == id, self.claveVisible == clave else { return }
             self.ocultar()
         }
         espera = trabajo
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.pausaParaVerSenia, execute: trabajo)
+        programarEspera(Self.pausaParaVerSenia, trabajo)
     }
 }

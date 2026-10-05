@@ -122,6 +122,8 @@
 		BB9900000000000000000122 /* QRSinglePaymentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000121 /* QRSinglePaymentTests.swift */; };
 		BB9900000000000000000132 /* QRCurrencyAndAmountTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */; };
 		BB9900000000000000000142 /* TextoConsentimientoContribucion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000141 /* TextoConsentimientoContribucion.swift */; };
+		BB9900000000000000000152 /* SeniasPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000151 /* SeniasPresentationTests.swift */; };
+		BB9900000000000000000162 /* SeniasPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000161 /* SeniasPlayerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -252,6 +254,8 @@
 		BB9900000000000000000121 /* QRSinglePaymentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRSinglePaymentTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCurrencyAndAmountTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000141 /* TextoConsentimientoContribucion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextoConsentimientoContribucion.swift; sourceTree = "<group>"; };
+		BB9900000000000000000151 /* SeniasPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeniasPresentationTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000161 /* SeniasPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeniasPlayerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -305,6 +309,8 @@
 		0A80041B300AD9FE004E1676 /* RutaUTPTests */ = {
 			isa = PBXGroup;
 			children = (
+				BB9900000000000000000161 /* SeniasPlayerTests.swift */,
+				BB9900000000000000000151 /* SeniasPresentationTests.swift */,
 				BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */,
 				BB9900000000000000000121 /* QRSinglePaymentTests.swift */,
 				BB9900000000000000000111 /* QRPaymentEligibilityTests.swift */,
@@ -867,6 +873,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB9900000000000000000162 /* SeniasPlayerTests.swift in Sources */,
+				BB9900000000000000000152 /* SeniasPresentationTests.swift in Sources */,
 				BB9900000000000000000132 /* QRCurrencyAndAmountTests.swift in Sources */,
 				BB9900000000000000000122 /* QRSinglePaymentTests.swift in Sources */,
 				BB9900000000000000000112 /* QRPaymentEligibilityTests.swift in Sources */,
