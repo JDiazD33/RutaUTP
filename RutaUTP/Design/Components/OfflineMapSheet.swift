@@ -17,6 +17,7 @@ struct OfflineMapSheet: View {
     @State private var comprobando = true
     @State private var numeroRutas = 0
     @State private var revision = 0
+    @State private var errorCarga: String?
 
     var body: some View {
         NavigationStack {
@@ -30,7 +31,9 @@ struct OfflineMapSheet: View {
                          ? L.t("Comprobando datos locales…", "Checking local data…")
                          : numeroRutas > 0
                             ? L.t("Rutas disponibles sin conexión", "Routes available offline")
-                            : L.t("No se pudieron cargar las rutas", "Couldn't load routes"))
+                            : errorCarga != nil
+                                ? L.t("No se pudieron cargar las rutas", "Couldn't load routes")
+                                : L.t("El catálogo no contiene rutas", "The catalog contains no routes"))
                         .font(.title2.bold())
                     if comprobando {
                         ProgressView().frame(maxWidth: .infinity)
@@ -39,10 +42,12 @@ struct OfflineMapSheet: View {
                         Text(L.t("Los recorridos y paraderos vienen incluidos en la app. No necesitas descargarlos ni activar un interruptor para consultarlos sin internet.", "Routes and stops are included in the app. No download or switch is needed to view them offline."))
                             .foregroundStyle(.secondary)
                     } else {
-                        Text(L.t("No podemos confirmar que los datos de rutas estén disponibles. Vuelve a intentarlo o actualiza la app.", "We couldn't confirm route data availability. Try again or update the app."))
+                        Text(errorCarga ?? L.t("El catálogo local se cargó correctamente, pero no incluye rutas.", "The local catalog loaded successfully but contains no routes."))
                             .foregroundStyle(.secondary)
-                        Button(L.t("Reintentar", "Retry")) { revision += 1 }
-                            .buttonStyle(.bordered)
+                        if errorCarga != nil {
+                            Button(L.t("Reintentar", "Retry")) { revision += 1 }
+                                .buttonStyle(.bordered)
+                        }
                     }
                     Divider()
                     Label(L.t("También se conserva", "Also kept on this device"), systemImage: "bookmark")
@@ -68,9 +73,16 @@ struct OfflineMapSheet: View {
         }
         .task(id: revision) {
             comprobando = true
-            let rutas = await GTFSRepository.shared.rutas()
-            guard !Task.isCancelled else { return }
-            numeroRutas = rutas.count
+            errorCarga = nil
+            do {
+                let rutas = try await GTFSRepository.shared.cargarRutas(reintentar: revision > 0)
+                guard !Task.isCancelled else { return }
+                numeroRutas = rutas.count
+            } catch {
+                guard !Task.isCancelled else { return }
+                errorCarga = (error as? FalloCargaGTFS)?.mensajeUsuario
+                    ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+            }
             comprobando = false
         }
     }

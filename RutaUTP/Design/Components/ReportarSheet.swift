@@ -18,7 +18,7 @@ struct ReportarSheet: View {
     var initialRouteID: String? = nil
     /// GPS compartido de la app, para que el formulario no abra un segundo
     /// `CLLocationManager` mientras está en pantalla.
-    var locationService: LocationServiceProtocol = LocationService()
+    var locationService: LocationServiceProtocol
 
     @Environment(\.dismiss) private var dismiss
     @State private var tipo: TipoReporte = .alerta

@@ -167,6 +167,8 @@ final class RouteTrackingViewModel: ObservableObject {
     private var routeRevision = UUID()
     private var lastRecalculation = Date.distantPast
     private var allStops: [ParaderoGTFS] = []
+    private var catalogoPendientePorFallo = false
+    private var mensajeErrorCatalogo: String?
     private var nearestAnchor: CLLocationCoordinate2D?
 
     enum JourneyLeg { case walkingToBoard, riding, transferring, ridingSecond, walkingToDestination }
@@ -231,6 +233,7 @@ final class RouteTrackingViewModel: ObservableObject {
     private let locationService: LocationServiceProtocol
     private let routeService: RouteCalculationService
     private let vehicleProvider: VehicleTrackingProviding
+    private let repositorioGTFS: RutasGTFSProviding
 
     // Shape completo: conserva todas las esquinas de la calle para matching y simulación.
     private var polyCoords: [CLLocationCoordinate2D] = []
@@ -248,15 +251,19 @@ final class RouteTrackingViewModel: ObservableObject {
     private var snapshotVehiculosAnterior: [String: (coord: CLLocationCoordinate2D, t: TimeInterval)] = [:]
 
     private var authCancellable: AnyCancellable?
+    /// Cerrar o volver a entrar invalida permisos y catálogos todavía pendientes.
+    private var startGuard = StartGuard()
 
     // MARK: - Init
 
-    init(locationService: LocationServiceProtocol = LocationService(),
+    init(locationService: LocationServiceProtocol,
          routeService: RouteCalculationService = RouteCalculationService(),
-         vehicleProvider: VehicleTrackingProviding = SimulatedTrackingProvider()) {
+         vehicleProvider: VehicleTrackingProviding = SimulatedTrackingProvider(),
+         repositorioGTFS: RutasGTFSProviding = GTFSRepository.shared) {
         self.locationService = locationService
         self.routeService = routeService
         self.vehicleProvider = vehicleProvider
+        self.repositorioGTFS = repositorioGTFS
         self.fuenteVehiculos = vehicleProvider.source
 
         authCancellable = locationService.authorizationPublisher
@@ -271,26 +278,56 @@ final class RouteTrackingViewModel: ObservableObject {
         vehiculoTask?.cancel()
         demoTask?.cancel()
         vehicleProvider.stop()
-        locationService.stopUpdating()
+        // Cancelar nuestro stream deja que onTermination libere solo este
+        // consumidor. No cambia la demanda global de Mapa o del rastreo.
     }
 
     // MARK: - Permisos y arranque
 
     func requestPermissionAndStart() async {
-        let status = await locationService.requestPermission()
         guard !Task.isCancelled else { return }
+        let token = startGuard.begin()
+        // Los proveedores conservan su stream hasta stop(). Una reentrada
+        // renueva nuestros lectores sin cancelar el viaje ni el GPS global.
+        liberarLectores()
+        defer {
+            // Cancelar la tarea de una entrada aún vigente también libera lo
+            // que ya arrancó antes de esperar el catálogo. Una entrada nueva
+            // conserva sus recursos aunque la tarea anterior termine después.
+            if Task.isCancelled, startGuard.isCurrent(token) { stop() }
+        }
+        let status = await locationService.requestPermission()
+        guard !Task.isCancelled, startGuard.isCurrent(token) else { return }
         authStatus = status
-        if status.isAuthorized {
-            startObservingLocation()
-            locationService.startUpdating()
+        if status.isAuthorized, locationService.authorizationStatus.isAuthorized {
+            startObservingLocation(token: token)
         } else {
+            locationTask?.cancel()
+            locationTask = nil
             estado = .sinPermiso
             errorMessage = L.t("Permiso de ubicación denegado. Actívalo en Ajustes para usar el tracking.",
                                "Location permission denied. Enable it in Settings to use tracking.")
         }
-        iniciarVehiculos()
-        let feed = await GTFSRepository.shared.rutas()
-        guard !Task.isCancelled else { return }
+        iniciarVehiculos(token: token)
+        let feed: [RutaGTFS]
+        do {
+            feed = try await repositorioGTFS.cargarRutas(reintentar: false)
+            guard !Task.isCancelled, startGuard.isCurrent(token) else { return }
+        } catch {
+            guard !Task.isCancelled, startGuard.isCurrent(token) else { return }
+            catalogoPendientePorFallo = true
+            errorMessage = (error as? FalloCargaGTFS)?.mensajeUsuario
+                ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+            mensajeErrorCatalogo = errorMessage
+            return
+        }
+        aplicarCatalogo(feed)
+    }
+
+    private func aplicarCatalogo(_ feed: [RutaGTFS]) {
+        catalogoPendientePorFallo = false
+        if let mensajeErrorCatalogo, errorMessage == mensajeErrorCatalogo { errorMessage = nil }
+        mensajeErrorCatalogo = nil
         var seen = Set<String>()
         allStops = feed.flatMap(\.paraderos).filter { seen.insert($0.id).inserted }
         // Varias rutas pueden compartir `linea`: en este feed 12 de los 90
@@ -307,16 +344,20 @@ final class RouteTrackingViewModel: ObservableObject {
         if let posicion { refreshNearestStop(at: posicion) }
     }
 
-    private func startObservingLocation() {
+    private func startObservingLocation(token: Int) {
         locationTask?.cancel()
+        // Registrar antes de iniciar evita perder una lectura inmediata.
+        let stream = locationService.currentLocation()
         locationTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            for await location in self.locationService.currentLocation() {
-                guard !Task.isCancelled else { break }
+            for await location in stream {
+                // No retener el modelo mientras el GPS espera otra lectura:
+                // así deinit también puede cancelar y liberar el consumidor.
+                guard !Task.isCancelled, let self, self.startGuard.isCurrent(token) else { break }
                 if self.modoDemo { continue }   // el demo simulado toma el control
                 self.procesar(coordenada: location.coordinate, rumbo: location.course)
             }
         }
+        locationService.startUpdating()
     }
 
     // MARK: - Procesamiento de fixes (mismos umbrales de NavegacionRutaView)
@@ -449,8 +490,26 @@ final class RouteTrackingViewModel: ObservableObject {
         let revision = UUID()
         routeRevision = revision
         let radio = radioParadero
-        let feed = await GTFSRepository.shared.rutas()
-        guard revision == routeRevision, !Task.isCancelled else { return }
+        let feed: [RutaGTFS]
+        do {
+            // Iniciar/recalcular es una acción concreta; no tratar el fallo
+            // de lectura como ausencia de paraderos dentro del radio.
+            feed = try await GTFSRepository.shared.cargarRutas(reintentar: true)
+            guard revision == routeRevision, !Task.isCancelled else { return }
+        } catch {
+            guard revision == routeRevision, !Task.isCancelled else { return }
+            catalogoPendientePorFallo = true
+            errorMessage = (error as? FalloCargaGTFS)?.mensajeUsuario
+                ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+            mensajeErrorCatalogo = errorMessage
+            return
+        }
+        if catalogoPendientePorFallo {
+            // Recuperar también las dependencias del inicio, conservando el
+            // lector de vehículos y su stream registrados en E07.
+            aplicarCatalogo(feed)
+            (vehicleProvider as? SimulatedTrackingProvider)?.restaurarCatalogoTrasFallo(feed)
+        }
         let candidates = await TransitPlanner.shared.candidates(in: feed, origin: origen,
                                                      destination: destino, radius: radio)
         var selected: TransitItinerary?
@@ -628,14 +687,13 @@ final class RouteTrackingViewModel: ObservableObject {
 
     // MARK: - Vehículos (VehicleTrackingProviding)
 
-    private func iniciarVehiculos() {
-        vehicleProvider.start()
+    private func iniciarVehiculos(token: Int) {
         vehiculoTask?.cancel()
+        let stream = vehicleProvider.positions()
         vehiculoTask = Task { @MainActor [weak self] in
-            guard let self else { return }
             var ultimaActualizacion = 0.0
-            for await positions in self.vehicleProvider.positions() {
-                guard !Task.isCancelled else { break }
+            for await positions in stream {
+                guard !Task.isCancelled, let self, self.startGuard.isCurrent(token) else { break }
                 // El provider ticka a 20 Hz: la UI se refresca a 4 Hz, de sobra
                 // para que los buses se muevan fluidos sin re-renderizar el
                 // mapa a cada instante.
@@ -658,6 +716,7 @@ final class RouteTrackingViewModel: ObservableObject {
                 self.vehiculos = positions
             }
         }
+        vehicleProvider.start()
     }
 
     // MARK: - Negocios en ruta
@@ -770,11 +829,18 @@ final class RouteTrackingViewModel: ObservableObject {
     }
 
     func stop() {
+        startGuard.invalidate()
         cancelTrip()
+        liberarLectores()
+        // El GPS compartido sigue activo si otro consumidor mantiene su stream.
+    }
+
+    private func liberarLectores() {
         locationTask?.cancel()
+        locationTask = nil
         vehiculoTask?.cancel()
+        vehiculoTask = nil
         vehicleProvider.stop()
-        locationService.stopUpdating()
     }
 }
 

@@ -246,8 +246,8 @@ struct MapaView: View {
                 }
 
                 // 5. Marcadores de Buses Animados en Tiempo Real.
-                // Tope de 8 en el mapa por rendimiento; las cards del panel
-                // muestran TODAS las líneas que pasan por el punto.
+                // Tope de 8 en el mapa por rendimiento. El canal real conserva
+                // la flota global; el panel filtra por rutas cercanas al destino.
                 //
                 // El marcador lleva el modelo 3D del bus y la etiqueta de la
                 // línea encima. El ancla no es el centro de la vista: con la
@@ -1090,7 +1090,7 @@ struct MapaView: View {
                             .font(.system(size: 15, weight: .heavy))
                             .foregroundStyle(.onSurface)
                             .seniable("mapa.cercanos")
-                        Text(textoEstadoLineas)
+                        Text(vm.textoEstadoLineas)
                             .font(.system(size: 11))
                             .foregroundStyle(.onSurfaceVariant)
                             .lineLimit(1)
@@ -1133,7 +1133,7 @@ struct MapaView: View {
             // Cards de buses con altura suficiente (rutas reales del feed GTFS)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    if vm.busesAnimados.isEmpty && vm.cargandoLineas {
+                    if vm.cargandoLineas {
                         ForEach(0..<2, id: \.self) { _ in
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .fill(Color.surfaceContainerLow)
@@ -1143,14 +1143,21 @@ struct MapaView: View {
                                         .tint(.onSurfaceVariant)
                                 )
                         }
-                    } else if vm.busesAnimados.isEmpty {
-                        // Consulta terminada y sin resultado: el feed no
-                        // tiene ninguna línea que pase por el punto.
+                    } else if let error = vm.errorLineas {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(error.mensajeUsuario)
+                                .font(.bodySm)
+                                .foregroundStyle(.onSurfaceVariant)
+                            Button(L.t("Reintentar", "Try again")) { vm.reintentarCatalogo() }
+                        }
+                        .padding(14)
+                        .frame(width: 256, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+                    } else if vm.busesDelPanel.isEmpty {
                         HStack(spacing: 8) {
                             Image(systemName: "bus")
                                 .foregroundStyle(.onSurfaceVariant)
-                            Text(L.t("Ninguna línea pasa por aquí todavía",
-                                     "No lines pass by here yet"))
+                            Text(vm.mensajePanelSinBuses)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(.onSurfaceVariant)
                         }
@@ -1161,7 +1168,7 @@ struct MapaView: View {
                                 .fill(Color.surfaceContainerLow)
                         )
                     } else {
-                        ForEach(vm.busesAnimados) { bus in
+                        ForEach(vm.busesDelPanel) { bus in
                             BusCard(
                                 linea: L.t("LÍNEA", "LINE") + " \(bus.linea)",
                                 empresa: bus.empresa,
@@ -1196,28 +1203,6 @@ struct MapaView: View {
             .ignoresSafeArea(edges: .bottom)
             .allowsHitTesting(false)
         )
-    }
-    /// Subtítulo del panel "Transportes cercanos": refleja las líneas del
-    /// feed GTFS que realmente pasan por el punto actual (destino elegido
-    /// o campus UTP si no hay destino).
-    private var textoEstadoLineas: String {
-        if vm.cargandoLineas {
-            return L.t("Buscando líneas…", "Finding lines…")
-        }
-        let cantidad = vm.busesAnimados.count
-        if cantidad == 0 {
-            return vm.busquedaResultado != nil
-                ? L.t("Ninguna línea pasa por aquí", "No lines pass by here")
-                : L.t("Buscando líneas cerca del campus…", "Finding lines near campus…")
-        }
-        if let destino = vm.busquedaResultado {
-            return cantidad == 1
-                ? String(format: L.t("1 línea pasa por %@", "1 line passes by %@"), destino.titulo)
-                : String(format: L.t("%d líneas pasan por %@", "%d lines pass by %@"), cantidad, destino.titulo)
-        }
-        return cantidad == 1
-            ? L.t("1 línea operando ahora", "1 line running now")
-            : String(format: L.t("%d líneas operando ahora", "%d lines running now"), cantidad)
     }
 }
 

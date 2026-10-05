@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import Combine
 
 struct RouteChangesSheet: View {
     @ObservedObject var service: RouteChangesService
@@ -7,9 +8,12 @@ struct RouteChangesSheet: View {
     /// GPS compartido de la app. Se inyecta en vez de crear uno aquí: una
     /// instancia propia sería un segundo `CLLocationManager` pidiendo precisión
     /// máxima mientras este sheet está abierto.
-    var locationService: LocationServiceProtocol = LocationService()
+    var locationService: LocationServiceProtocol
     @Environment(\.dismiss) private var dismiss
     @State private var routes: [RutaGTFS] = []
+    @State private var cargandoRutas = true
+    @State private var errorCargaRutas: String?
+    @State private var revisionCatalogo = 0
     @State private var routeID = ""
     @State private var reason = "works"
     @State private var place = ""
@@ -20,10 +24,12 @@ struct RouteChangesSheet: View {
     /// (no un stream GPS): el reporte es un hecho puntual y la pantalla está
     /// arriba, así que una ubicación arrastrada por el movimiento del micro no
     /// ayudaría.
-    @State private var puntoEnMiUbicacion: CLLocationCoordinate2D?
+    @StateObject private var ubicacion = RouteChangesLocationModel()
     /// `true` cuando el marcador actual NO es el que se puso automáticamente.
     /// Así "usar mi ubicación" sigue disponible para recolocar el pin.
     @State private var puntoEditadoAMano = false
+
+    private var puntoEnMiUbicacion: CLLocationCoordinate2D? { ubicacion.coordenada }
 
     private var route: RutaGTFS? { routes.first { $0.id == routeID } }
 
@@ -119,6 +125,15 @@ struct RouteChangesSheet: View {
                         }
                     }
                     Section {
+                        if cargandoRutas {
+                            ProgressView(L.t("Cargando rutas…", "Loading routes…"))
+                        } else if let errorCargaRutas {
+                            Text(errorCargaRutas).foregroundStyle(.secondary)
+                            Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
+                        } else if routes.isEmpty {
+                            Text(L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
+                                .foregroundStyle(.secondary)
+                        }
                         Picker(L.t("Línea y ramal", "Line and branch"), selection: Binding(get: { routeID }, set: { value in
                             routeID = value
                             // Al cambiar de línea el punto anterior ya no
@@ -241,35 +256,34 @@ struct RouteChangesSheet: View {
                     }
                 }
             }
-            .task {
-                routes = await GTFSRepository.shared.rutas()
+            .task(id: revisionCatalogo) {
+                cargandoRutas = true
+                errorCargaRutas = nil
+                do {
+                    let catalogo = try await GTFSRepository.shared.cargarRutas(reintentar: revisionCatalogo > 0)
+                    guard !Task.isCancelled else { return }
+                    routes = catalogo
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    errorCargaRutas = (error as? FalloCargaGTFS)?.mensajeUsuario
+                        ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+                    cargandoRutas = false
+                    return
+                }
+                cargandoRutas = false
                 // La ruta que el usuario tenía seleccionada en el mapa entra
                 // YA elegida. Solo se aplica si viene una y sigue existiendo
                 // en el feed: un `route_id` de una versión anterior del GTFS
                 // dejaría el Picker en un valor que no está en la lista y el
                 // formulario en un estado que no se puede enviar.
-                if let inicial = initialRouteID,
+                if routeID.isEmpty, let inicial = initialRouteID,
                    routes.contains(where: { $0.id == inicial }) {
                     routeID = inicial
                 }
-                await pedirUbicacion()
+                await ubicacion.cargar(desde: locationService)
+                guard !Task.isCancelled else { return }
                 colocarAutomaticamenteSiProcede()
             }
-        }
-    }
-
-    /// Una sola lectura de la posición, con permiso ya concedido.
-    ///
-    /// Usa el `LocationService` COMPARTIDO de la app (el mismo que el mapa y
-    /// el rastreo pasivo) y su stream, del que se sale al primer fix: pedir
-    /// una instancia propia aquí sería un segundo `CLLocationManager` pidiendo
-    /// precisión máxima mientras este sheet está abierto.
-    private func pedirUbicacion() async {
-        let estado = await locationService.requestPermission()
-        guard estado.isAuthorized else { return }
-        for await location in locationService.currentLocation() {
-            puntoEnMiUbicacion = location.coordinate
-            return
         }
     }
 
@@ -277,10 +291,9 @@ struct RouteChangesSheet: View {
     /// con la ruta elegida. Si no lo es, no se marca nada y el mapa queda
     /// esperando a que el usuario elija el punto sobre el recorrido.
     private func colocarAutomaticamenteSiProcede() {
-        guard !puntoEditadoAMano, point == nil,
-              let ruta = route, let aqui = puntoEnMiUbicacion else { return }
-        guard let veredicto = VerificadorCoherencia.evaluar(point: aqui, ruta: ruta),
-              veredicto.esValido else { return }
+        guard let aqui = ubicacion.puntoAutomatico(
+            para: route, puntoActual: point, editadoAMano: puntoEditadoAMano,
+            mapaAmpliadoAbierto: showExpandedMap) else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
             point = aqui
             camera = .region(Self.vecindad(alrededorDe: aqui))
@@ -290,6 +303,101 @@ struct RouteChangesSheet: View {
     private func routeTitle(_ id: String) -> String {
         guard let route = routes.first(where: { $0.id == id }) else { return L.t("Ruta ", "Route ") + id }
         return "\(route.linea) · \(route.variante) · \(route.empresa)"
+    }
+}
+
+/// Obtiene una posición puntual sin apropiarse del ciclo del GPS compartido.
+/// El fin del lector libera su stream; `LocationService.onTermination` apaga
+/// el gestor únicamente si no quedan consumidores. No se llama stopUpdating,
+/// porque también cambiaría la demanda global de los demás consumidores.
+@MainActor
+enum UbicacionPuntual {
+    static func obtener(
+        desde service: LocationServiceProtocol,
+        timeout: TimeInterval = 12,
+        ahora: @escaping () -> Date = Date.init
+    ) async -> CLLocation? {
+        guard !Task.isCancelled, timeout.isFinite, timeout > 0 else { return nil }
+        // La solicitud del permiso del sistema no es cancelable. Se comprueba
+        // cancelación al volver, antes de registrar un consumidor o iniciar GPS.
+        let permiso = await service.requestPermission()
+        guard !Task.isCancelled, permiso.isAuthorized,
+              service.authorizationStatus.isAuthorized else { return nil }
+
+        var suscripcion: AnyCancellable?
+        let permisos = AsyncStream<CLAuthorizationStatus> { continuation in
+            suscripcion = service.authorizationPublisher.sink { continuation.yield($0) }
+        }
+        defer { suscripcion?.cancel() }
+
+        let resultado = await withTaskGroup(of: CLLocation?.self) { grupo in
+            grupo.addTask { @MainActor in
+                guard !Task.isCancelled, service.authorizationStatus.isAuthorized else { return nil }
+                // El stream existe antes de startUpdating: el primer fix puede
+                // llegar inmediatamente, incluida la caché del servicio.
+                let lecturas = service.currentLocation()
+                guard !Task.isCancelled else { return nil }
+                service.startUpdating()
+                for await lectura in lecturas {
+                    guard !Task.isCancelled, service.authorizationStatus.isAuthorized else { return nil }
+                    if esValida(lectura, ahora: ahora()) { return lectura }
+                }
+                return nil
+            }
+            grupo.addTask {
+                // Acotar también la conversión a nanosegundos evita overflow.
+                let nanosegundos = UInt64(min(timeout, 60) * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: nanosegundos)
+                return nil
+            }
+            grupo.addTask { @MainActor in
+                for await estado in permisos {
+                    if !estado.isAuthorized { return nil }
+                }
+                return nil
+            }
+            let resultado = await grupo.next() ?? nil
+            grupo.cancelAll()
+            return Task.isCancelled ? nil : resultado
+        }
+        // El grupo drena sus hijos antes de volver. La autorización puede
+        // revocarse durante esa suspensión, después de aceptar el primer fix.
+        guard !Task.isCancelled, service.authorizationStatus.isAuthorized else { return nil }
+        return resultado
+    }
+
+    static func esValida(_ location: CLLocation, ahora: Date) -> Bool {
+        let edad = ahora.timeIntervalSince(location.timestamp)
+        return edad.isFinite && edad >= -10 && edad <= 45
+            && location.horizontalAccuracy.isFinite
+            && location.horizontalAccuracy >= 0 && location.horizontalAccuracy <= 50
+            && CLLocationCoordinate2DIsValid(location.coordinate)
+    }
+}
+
+/// La lectura tardía solo ofrece una ubicación: colocar el pin sigue sujeto
+/// a la selección actual y nunca sustituye un pin ni un borrador del mapa ampliado.
+@MainActor
+final class RouteChangesLocationModel: ObservableObject {
+    @Published private(set) var coordenada: CLLocationCoordinate2D?
+    private var revision = 0
+
+    func cargar(desde service: LocationServiceProtocol, timeout: TimeInterval = 12,
+                ahora: @escaping () -> Date = Date.init) async {
+        revision &+= 1
+        let solicitud = revision
+        let location = await UbicacionPuntual.obtener(desde: service, timeout: timeout, ahora: ahora)
+        guard !Task.isCancelled, revision == solicitud else { return }
+        coordenada = location?.coordinate
+    }
+
+    func puntoAutomatico(para ruta: RutaGTFS?, puntoActual: CLLocationCoordinate2D?,
+                         editadoAMano: Bool, mapaAmpliadoAbierto: Bool) -> CLLocationCoordinate2D? {
+        guard !editadoAMano, !mapaAmpliadoAbierto, puntoActual == nil,
+              let ruta, let aqui = coordenada,
+              let veredicto = VerificadorCoherencia.evaluar(point: aqui, ruta: ruta),
+              veredicto.esValido else { return nil }
+        return aqui
     }
 }
 

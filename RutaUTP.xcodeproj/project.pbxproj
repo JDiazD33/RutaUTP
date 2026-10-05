@@ -113,8 +113,11 @@
 		BB9900000000000000000002 /* OccupancyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000001 /* OccupancyService.swift */; };
 		BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000011 /* BusOccupancyPanel.swift */; };
 		BB9900000000000000000022 /* OccupancyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000021 /* OccupancyTests.swift */; };
+		BB9900000000000000000062 /* RouteChangesLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000061 /* RouteChangesLocationTests.swift */; };
+		BB9900000000000000000072 /* RouteTrackingSharedLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */; };
 		BB9900000000000000000082 /* GTFSCSVCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */; };
 		BB9900000000000000000092 /* GTFSDistanceToRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */; };
+		BB9900000000000000000102 /* GTFSLoadRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000101 /* GTFSLoadRecoveryTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -236,8 +239,11 @@
 		BB9900000000000000000001 /* OccupancyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyService.swift; sourceTree = "<group>"; };
 		BB9900000000000000000011 /* BusOccupancyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusOccupancyPanel.swift; sourceTree = "<group>"; };
 		BB9900000000000000000021 /* OccupancyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000061 /* RouteChangesLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesLocationTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTrackingSharedLocationTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSCSVCompatibilityTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSDistanceToRouteTests.swift; sourceTree = "<group>"; };
+		BB9900000000000000000101 /* GTFSLoadRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSLoadRecoveryTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -291,8 +297,11 @@
 		0A80041B300AD9FE004E1676 /* RutaUTPTests */ = {
 			isa = PBXGroup;
 			children = (
+				BB9900000000000000000101 /* GTFSLoadRecoveryTests.swift */,
 				BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */,
 				BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */,
+				BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */,
+				BB9900000000000000000061 /* RouteChangesLocationTests.swift */,
 				0A800416300AD9FE004E1676 /* RutaUTPTests.swift */,
 				0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */,
 				0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */,
@@ -845,8 +854,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB9900000000000000000102 /* GTFSLoadRecoveryTests.swift in Sources */,
 				BB9900000000000000000092 /* GTFSDistanceToRouteTests.swift in Sources */,
 				BB9900000000000000000082 /* GTFSCSVCompatibilityTests.swift in Sources */,
+				BB9900000000000000000072 /* RouteTrackingSharedLocationTests.swift in Sources */,
+				BB9900000000000000000062 /* RouteChangesLocationTests.swift in Sources */,
 				0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */,
 				0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */,
 				0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */,

@@ -1069,3 +1069,622 @@ final class LugaresStoreRecuperacionTests: XCTestCase {
         XCTAssertFalse(almacen.datosLocalesInvalidos)
     }
 }
+
+// MARK: - Destinos y fuentes de flota del mapa (E02)
+
+@MainActor
+final class MapaFuenteFlotaTests: XCTestCase {
+    private let campus = GTFSRepository.coordenadaUTP
+
+    private func ruta(_ id: String = "ruta-test") -> RutaGTFS {
+        let shape = (0...20).map {
+            CLLocationCoordinate2D(latitude: campus.latitude,
+                                   longitude: campus.longitude - 0.02 + Double($0) * 0.002)
+        }
+        return RutaGTFS(id: id, linea: "T", variante: "A", recorrido: "Inicio → Fin",
+                        empresa: "Prueba", colorHex: "00CC00", color: .green,
+                        shape: shape, paraderos: [], duracionMin: 10, headwayMin: 5,
+                        precio: 2, distanciaKm: 4.4, distanciaUTPMetros: 0)
+    }
+
+    private func posicion(_ id: String = "bus-test") -> VehiclePosition {
+        VehiclePosition(id: id, linea: "T", routeId: "ruta-test",
+                        lat: campus.latitude, lon: campus.longitude - 0.015,
+                        heading: 90, speed: 10)
+    }
+
+    private func modelo(_ repositorio: MapaGTFSPrueba,
+                        proveedor: @escaping () -> VehicleTrackingProviding? = { nil }) -> MapaViewModel {
+        MapaViewModel(locationService: MapaGPSPrueba(), repositorioGTFS: repositorio,
+                      crearProveedorReal: proveedor)
+    }
+
+    private func esperar(_ descripcion: String,
+                         condicion: () async -> Bool) async {
+        for _ in 0..<400 {
+            if await condicion() { return }
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTFail("No se completó: \(descripcion)")
+    }
+
+    private func cederATareasCanceladas() async {
+        for _ in 0..<20 { await Task.yield() }
+    }
+
+    func testChipLugarYLimpiarMantienenPosicionesRealesYRecalculanETA() async throws {
+        let ruta = ruta()
+        let posicion = posicion()
+        let repositorio = MapaGTFSPrueba(feed: [ruta])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion])
+        let vm = modelo(repositorio, proveedor: { proveedor })
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("primer snapshot") { vm.busesAnimados.count == 1 }
+
+        let destino = CLLocationCoordinate2D(latitude: campus.latitude, longitude: campus.longitude + 0.01)
+        vm.seleccionar(destino: DestinoChip(id: 900, label: "Destino de prueba", icon: "mappin",
+                                          lat: destino.latitude, lon: destino.longitude))
+        await cederATareasCanceladas()
+        XCTAssertEqual(vm.busesAnimados.first?.minutosLlegada,
+                       VehicleETAEstimator.minutes(position: posicion, route: ruta, target: destino))
+        XCTAssertEqual(vm.busesAnimados.first?.id, "real-bus-test")
+        XCTAssertTrue(vm.hayPosicionesRealesRecientes)
+
+        let cercano = CLLocationCoordinate2D(latitude: campus.latitude, longitude: campus.longitude - 0.014)
+        vm.seleccionarLugar(titulo: "Lugar", coordenada: cercano)
+        await cederATareasCanceladas()
+        XCTAssertEqual(vm.busesAnimados.first?.minutosLlegada, 1)
+        vm.limpiar()
+        await cederATareasCanceladas()
+        XCTAssertEqual(vm.busesAnimados.first?.minutosLlegada,
+                       VehicleETAEstimator.minutes(position: posicion, route: ruta, target: campus))
+        let bus = try XCTUnwrap(vm.busesAnimados.first)
+        XCTAssertEqual(bus.fuente, .real)
+        XCTAssertEqual(bus.lat, posicion.lat)
+        XCTAssertEqual(bus.lon, posicion.lon)
+        XCTAssertTrue(bus.rutaCoordenadas.isEmpty)
+        XCTAssertEqual(proveedor.inicios, 1)
+        XCTAssertEqual(proveedor.paradas, 0)
+        let consultas = await repositorio.consultasCercanas
+        XCTAssertFalse(consultas.isEmpty, "El catálogo filtra el panel sin generar vehículos")
+        XCTAssertTrue(vm.busesAnimados.allSatisfy { $0.fuente == .real })
+
+        proveedor.emitir([self.posicion("siguiente")])
+        await esperar("suscripción sigue activa") { vm.busesAnimados.first?.id == "real-siguiente" }
+    }
+
+    func testSnapshotRealVacioSigueEsperandoDatosAlCambiarDestino() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()])
+        let proveedor = MapaVehiculosPrueba(posiciones: [])
+        let vm = modelo(repositorio, proveedor: { proveedor })
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("snapshot vacío y catálogo") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        vm.seleccionar(destino: DestinoChip(id: 901, label: "Chip", icon: "mappin",
+                                          lat: campus.latitude, lon: campus.longitude + 0.01))
+        vm.seleccionarLugar(titulo: "Lugar", coordenada: campus)
+        vm.limpiar()
+        await esperar("catálogo del campus") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.fuenteFlota, .real)
+        XCTAssertTrue(vm.busesAnimados.isEmpty)
+        XCTAssertFalse(vm.hayPosicionesRealesRecientes)
+        XCTAssertEqual(proveedor.inicios, 1)
+        XCTAssertEqual(proveedor.paradas, 0)
+        let consultas = await repositorio.consultasCercanas
+        XCTAssertFalse(consultas.isEmpty)
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 0)
+    }
+
+    func testDestinoElegidoDuranteCargaRealSeUsaEnElPrimerSnapshot() async {
+        let ruta = ruta()
+        let posicion = posicion()
+        let repositorio = MapaGTFSPrueba(feed: [ruta], bloquearCatalogo: true)
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion])
+        var conectado = false
+        let vm = modelo(repositorio, proveedor: { conectado ? proveedor : nil })
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("demo antes de conectar") { vm.busesAnimados.first?.fuente == .simulated }
+        conectado = true
+        vm.iniciarSimulacionBuses()
+        XCTAssertTrue(vm.busesAnimados.isEmpty, "La demo se retira antes del primer snapshot real")
+        await esperar("catálogo pendiente") { await repositorio.numeroCatalogos == 1 }
+        let destino = CLLocationCoordinate2D(latitude: campus.latitude, longitude: campus.longitude + 0.01)
+        vm.seleccionarLugar(titulo: "Destino", coordenada: destino)
+        XCTAssertTrue(vm.busesAnimados.isEmpty)
+        XCTAssertFalse(vm.hayPosicionesRealesRecientes)
+        XCTAssertTrue(vm.esperandoPosicionesReales)
+        await repositorio.resolverCatalogo(0)
+        await esperar("snapshot con destino actual") { !vm.busesAnimados.isEmpty }
+        XCTAssertEqual(vm.busesAnimados.first?.minutosLlegada,
+                       VehicleETAEstimator.minutes(position: posicion, route: ruta, target: destino))
+    }
+
+    func testConsultaDemoTardiaNoPisaSnapshotReal() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()], bloquearCercanas: true)
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion()])
+        let vm = modelo(repositorio, proveedor: { proveedor })
+        defer { vm.detener() }
+        // Una selección puede consultar GTFS antes de iniciar el canal real.
+        vm.recargarLineas(cercaDe: campus)
+        await esperar("consulta demo pendiente") { await repositorio.consultasCercanas.count == 1 }
+        vm.iniciarSimulacionBuses()
+        await esperar("canal real") { vm.busesAnimados.first?.id == "real-bus-test" }
+        await esperar("filtro real pendiente") { await repositorio.consultasCercanas.count == 2 }
+        await repositorio.resolverCercanas(0, feed: [ruta("demo-tardia")])
+        await cederATareasCanceladas()
+        XCTAssertEqual(vm.busesAnimados.map(\.id), ["real-bus-test"])
+        XCTAssertTrue(vm.busesAnimados.allSatisfy { $0.fuente == .real })
+        XCTAssertTrue(vm.hayPosicionesRealesRecientes)
+        XCTAssertTrue(vm.cargandoLineas, "La consulta demo no termina la carga del filtro real")
+        await repositorio.resolverCercanas(1, feed: [ruta()])
+        await esperar("filtro real resuelto") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["real-bus-test"])
+    }
+
+    func testVolverAlMismoDestinoNoAceptaUnaConsultaAnterior() async {
+        let repositorio = MapaGTFSPrueba(feed: [], bloquearCercanas: true)
+        let vm = modelo(repositorio)
+        defer { vm.detener() }
+        let otro = CLLocationCoordinate2D(latitude: campus.latitude, longitude: campus.longitude + 0.01)
+        vm.recargarLineas(cercaDe: campus)
+        await esperar("consulta A") { await repositorio.consultasCercanas.count == 1 }
+        vm.recargarLineas(cercaDe: otro)
+        await esperar("consulta B") { await repositorio.consultasCercanas.count == 2 }
+        vm.recargarLineas(cercaDe: campus)
+        await esperar("consulta A nueva") { await repositorio.consultasCercanas.count == 3 }
+        await repositorio.resolverCercanas(2, feed: [ruta("vigente")])
+        await esperar("resultado vigente") { !vm.cargandoLineas }
+        await repositorio.resolverCercanas(0, feed: [ruta("anterior-A")])
+        await repositorio.resolverCercanas(1, feed: [ruta("anterior-B")])
+        await cederATareasCanceladas()
+        XCTAssertEqual(vm.busesAnimados.map(\.id), ["simulated-vigente"])
+    }
+
+    func testDetenerDescartaConsultaPendienteYPermiteRecargarElMismoPunto() async {
+        let repositorio = MapaGTFSPrueba(feed: [], bloquearCercanas: true)
+        let vm = modelo(repositorio)
+        defer { vm.detener() }
+        vm.recargarLineas(cercaDe: campus)
+        await esperar("consulta pendiente") { await repositorio.consultasCercanas.count == 1 }
+        vm.detener()
+        await repositorio.resolverCercanas(0, feed: [ruta("cancelada")])
+        await cederATareasCanceladas()
+        XCTAssertTrue(vm.busesAnimados.isEmpty)
+        XCTAssertFalse(vm.cargandoLineas)
+        vm.recargarLineas(cercaDe: campus)
+        await esperar("consulta al regresar") { await repositorio.consultasCercanas.count == 2 }
+        await repositorio.resolverCercanas(1, feed: [ruta("regreso")])
+        await esperar("flota al regresar") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.busesAnimados.map(\.id), ["simulated-regreso"])
+    }
+
+    func testCatalogoDeSesionRealCanceladaNoReiniciaElProveedorAnterior() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()], bloquearCatalogo: true)
+        let anterior = MapaVehiculosPrueba(posiciones: [posicion("anterior")])
+        let actual = MapaVehiculosPrueba(posiciones: [posicion("actual")])
+        var proveedores = [anterior, actual]
+        let vm = modelo(repositorio, proveedor: { proveedores.removeFirst() })
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("catálogo anterior") { await repositorio.numeroCatalogos == 1 }
+        vm.detener()
+        vm.iniciarSimulacionBuses()
+        await esperar("catálogo actual") { await repositorio.numeroCatalogos == 2 }
+        await repositorio.resolverCatalogo(1)
+        await esperar("sesión actual") { vm.busesAnimados.first?.id == "real-actual" }
+        await repositorio.resolverCatalogo(0)
+        await cederATareasCanceladas()
+        XCTAssertEqual(anterior.inicios, 0)
+        XCTAssertEqual(anterior.paradas, 1)
+        XCTAssertEqual(actual.inicios, 1)
+        XCTAssertEqual(vm.busesAnimados.map(\.id), ["real-actual"])
+    }
+
+    func testVolverDeRealADemoNoConservaVehiculosRealesNiSuIndicador() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion()])
+        var disponible = true
+        let vm = modelo(repositorio, proveedor: { disponible ? proveedor : nil })
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("snapshot real") { vm.hayPosicionesRealesRecientes }
+        vm.detener()
+        disponible = false
+        vm.iniciarSimulacionBuses()
+        await esperar("flota demo") { !vm.busesAnimados.isEmpty && !vm.cargandoLineas }
+        proveedor.emitir([posicion("tardia")])
+        await cederATareasCanceladas()
+        XCTAssertEqual(vm.fuenteFlota, .simulated)
+        XCTAssertEqual(vm.busesAnimados.map(\.id), ["simulated-ruta-test"])
+        XCTAssertTrue(vm.busesAnimados.allSatisfy { $0.fuente == .simulated })
+        XCTAssertFalse(vm.hayPosicionesRealesRecientes)
+        XCTAssertEqual(proveedor.paradas, 1)
+    }
+
+    func testDemoSinBrokerSigueAnimandoLaFlota() async throws {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()])
+        let vm = modelo(repositorio)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("flota simulada") { !vm.cargandoLineas }
+        let inicial = try XCTUnwrap(vm.busesAnimados.first)
+        await esperar("movimiento simulado") { vm.busesAnimados.first != inicial }
+        XCTAssertEqual(vm.busesAnimados.first?.id, inicial.id)
+        XCTAssertEqual(vm.busesAnimados.first?.fuente, .simulated)
+        XCTAssertFalse(vm.hayPosicionesRealesRecientes)
+    }
+
+    func testDemoConservaAmpliacionDeRadioYCargaUnicaPorAncla() async {
+        let repositorio = MapaGTFSPrueba(feed: [], bloquearCercanas: true)
+        let vm = modelo(repositorio)
+        defer { vm.detener() }
+        vm.recargarLineas(cercaDe: nil)
+        await esperar("radio inicial") { await repositorio.consultasCercanas.count == 1 }
+        await repositorio.resolverCercanas(0, feed: [])
+        await esperar("radio ampliado") { await repositorio.consultasCercanas.count == 2 }
+        await repositorio.resolverCercanas(1, feed: [ruta()])
+        await esperar("resultado ampliado") { !vm.cargandoLineas }
+        vm.recargarLineas(cercaDe: nil)
+        let consultas = await repositorio.consultasCercanas
+        XCTAssertEqual(consultas.map(\.radio), [400, 800])
+        XCTAssertEqual(vm.busesAnimados.map(\.id), ["simulated-ruta-test"])
+    }
+
+    func testCambioDeAnclaActualizaPopupRealSinMoverElVehiculo() async throws {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion()])
+        let vm = modelo(repositorio, proveedor: { proveedor })
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("snapshot") { !vm.busesAnimados.isEmpty }
+        let anterior = try XCTUnwrap(vm.busesAnimados.first)
+        vm.busSeleccionado = anterior
+        vm.recargarLineas(cercaDe: CLLocationCoordinate2D(latitude: campus.latitude,
+                                                         longitude: campus.longitude - 0.014))
+        XCTAssertEqual(vm.busSeleccionado?.id, anterior.id)
+        XCTAssertEqual(vm.busSeleccionado?.minutosLlegada, 1)
+        XCTAssertNotEqual(vm.busSeleccionado?.minutosLlegada, anterior.minutosLlegada)
+        XCTAssertEqual(vm.busSeleccionado?.coordinate.latitude, anterior.lat)
+        XCTAssertEqual(vm.busSeleccionado?.coordinate.longitude, anterior.lon)
+    }
+}
+
+/// Las continuaciones ignoran deliberadamente la cancelación para demostrar
+/// que el consumidor rechaza resultados tardíos por su propia cuenta.
+private actor MapaGTFSPrueba: RutasGTFSProviding {
+    struct Consulta { let punto: CLLocationCoordinate2D; let radio: Double }
+    private let feed: [RutaGTFS]
+    private let feedCercano: [RutaGTFS]
+    private let bloquearCercanas: Bool
+    private let bloquearCatalogo: Bool
+    private var pendientesCercanas: [Int: CheckedContinuation<[RutaGTFS], Never>] = [:]
+    private var pendientesCatalogo: [Int: CheckedContinuation<[RutaGTFS], Never>] = [:]
+    private(set) var consultasCercanas: [Consulta] = []
+    private(set) var numeroCatalogos = 0
+
+    init(feed: [RutaGTFS], rutasCercanas: [RutaGTFS]? = nil,
+         bloquearCercanas: Bool = false, bloquearCatalogo: Bool = false) {
+        self.feed = feed
+        self.feedCercano = rutasCercanas ?? feed
+        self.bloquearCercanas = bloquearCercanas
+        self.bloquearCatalogo = bloquearCatalogo
+    }
+
+    func rutas() async -> [RutaGTFS] {
+        let indice = numeroCatalogos
+        numeroCatalogos += 1
+        guard bloquearCatalogo else { return feed }
+        return await withCheckedContinuation { pendientesCatalogo[indice] = $0 }
+    }
+
+    func rutasQuePasanPor(_ punto: CLLocationCoordinate2D, radioMetros: Double) async -> [RutaGTFS] {
+        let indice = consultasCercanas.count
+        consultasCercanas.append(Consulta(punto: punto, radio: radioMetros))
+        guard bloquearCercanas else { return feedCercano }
+        return await withCheckedContinuation { pendientesCercanas[indice] = $0 }
+    }
+
+    func resolverCercanas(_ indice: Int, feed: [RutaGTFS]) {
+        pendientesCercanas.removeValue(forKey: indice)?.resume(returning: feed)
+    }
+
+    func resolverCatalogo(_ indice: Int) {
+        pendientesCatalogo.removeValue(forKey: indice)?.resume(returning: feed)
+    }
+}
+
+private final class MapaVehiculosPrueba: VehicleTrackingProviding {
+    let source: VehicleTrackingSource = .real
+    private(set) var currentPositions: [VehiclePosition]
+    private var continuacion: AsyncStream<[VehiclePosition]>.Continuation!
+    private var stream: AsyncStream<[VehiclePosition]>!
+    private(set) var inicios = 0
+    private(set) var paradas = 0
+
+    init(posiciones: [VehiclePosition]) {
+        currentPositions = posiciones
+        stream = AsyncStream { continuacion = $0 }
+    }
+
+    func start() { inicios += 1 }
+    func stop() { paradas += 1; continuacion.finish() }
+    func positions() -> AsyncStream<[VehiclePosition]> {
+        continuacion.yield(currentPositions)
+        return stream
+    }
+    func emitir(_ posiciones: [VehiclePosition]) {
+        currentPositions = posiciones
+        continuacion.yield(posiciones)
+    }
+}
+
+private final class MapaGPSPrueba: LocationServiceProtocol {
+    let authorizationStatus: CLAuthorizationStatus = .denied
+    var authorizationPublisher: AnyPublisher<CLAuthorizationStatus, Never> {
+        Just(authorizationStatus).eraseToAnyPublisher()
+    }
+    func currentLocation() -> AsyncStream<CLLocation> { AsyncStream { $0.finish() } }
+    func requestPermission() async -> CLAuthorizationStatus { authorizationStatus }
+    func startUpdating() { }
+    func stopUpdating() { }
+}
+
+// MARK: - Líneas y vehículos del panel por destino (E03)
+
+@MainActor
+final class MapaPanelLineasTests: XCTestCase {
+    private let campus = GTFSRepository.coordenadaUTP
+
+    private func ruta(_ id: String = "cercana", variante: String = "A", conShape: Bool = true) -> RutaGTFS {
+        let lat = campus.latitude + (id == "lejana" ? 0.05 : 0)
+        let shape = conShape ? (0...20).map {
+            CLLocationCoordinate2D(latitude: lat, longitude: campus.longitude - 0.02 + Double($0) * 0.002)
+        } : []
+        return RutaGTFS(id: id, linea: "T", variante: variante, recorrido: "Inicio → Fin",
+                        empresa: "Prueba", colorHex: "00CC00", color: .green,
+                        shape: shape, paraderos: [], duracionMin: 10, headwayMin: 5,
+                        precio: 2, distanciaKm: 4.4, distanciaUTPMetros: id == "lejana" ? 5500 : 0)
+    }
+
+    private func posicion(_ id: String, ruta: String = "cercana", velocidad: Double = 10,
+                          rumbo: Double = 90) -> VehiclePosition {
+        VehiclePosition(id: id, linea: "T", routeId: ruta,
+                        lat: campus.latitude + (ruta == "lejana" ? 0.05 : 0),
+                        lon: campus.longitude - 0.015, heading: rumbo, speed: velocidad)
+    }
+
+    private func modelo(_ repositorio: MapaGTFSPrueba, proveedor: MapaVehiculosPrueba? = nil) -> MapaViewModel {
+        MapaViewModel(locationService: MapaGPSPrueba(), repositorioGTFS: repositorio,
+                      crearProveedorReal: { proveedor })
+    }
+
+    private func esperar(_ descripcion: String, condicion: () async -> Bool) async {
+        for _ in 0..<400 {
+            if await condicion() { return }
+            try? await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTFail("No se completó: \(descripcion)")
+    }
+
+    private func cederATareasCanceladas() async {
+        for _ in 0..<20 { await Task.yield() }
+    }
+
+    func testDosVehiculosDeUnaRutaCuentanUnaLineaYElSnapshotActualizaElPanel() async {
+        let cercanas = [ruta(), ruta("sin-vehiculos")]
+        let repositorio = MapaGTFSPrueba(feed: cercanas)
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("uno"), posicion("dos")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("panel") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        XCTAssertEqual(vm.busesDelPanel.count, 2)
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 1)
+        XCTAssertEqual(vm.rutasCercanas.count, 2, "Una ruta sin vehículos no cuenta como observada")
+        XCTAssertEqual(vm.textoEstadoLineas, L.t("1 línea cerca del campus", "1 line near campus"))
+        proveedor.emitir([])
+        await esperar("caducidad de vehículos") { vm.busesAnimados.isEmpty }
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 0)
+        XCTAssertEqual(vm.rutasCercanas.count, 2)
+        XCTAssertEqual(vm.textoEstadoLineas,
+                       L.t("Aún no hay buses confirmados para estas líneas", "There are no confirmed buses for these lines yet"))
+        XCTAssertFalse(vm.hayPosicionesRealesRecientes)
+    }
+
+    func testRamalesConIgualNombreDeLineaSeDistinguenPorRouteID() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta("ida", variante: "A"), ruta("vuelta", variante: "B")])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("uno", ruta: "ida"), posicion("dos", ruta: "vuelta")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.seleccionarLugar(titulo: "Destino", coordenada: campus)
+        vm.iniciarSimulacionBuses()
+        await esperar("dos ramales") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 2)
+        XCTAssertEqual(Set(vm.busesDelPanel.map(\.variante)), ["A", "B"])
+        XCTAssertEqual(vm.textoEstadoLineas,
+                       String(format: L.t("%d líneas pasan por %@", "%d lines pass by %@"), 2, "Destino"))
+    }
+
+    func testRutasLejanasYDesconocidasSiguenEnMapaPeroNoEnElPanel() async throws {
+        let repositorio = MapaGTFSPrueba(feed: [ruta(), ruta("lejana")], rutasCercanas: [ruta()])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("cerca"), posicion("lejos", ruta: "lejana"),
+                                                        posicion("sin-catalogo", ruta: "desconocida"), posicion("sin-id", ruta: "")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("flota y filtro") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        XCTAssertEqual(vm.busesAnimados.count, 4)
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["real-cerca"])
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 1)
+        XCTAssertTrue(vm.hayPosicionesRealesRecientes)
+        vm.busSeleccionado = try XCTUnwrap(vm.busesAnimados.first { $0.id == "real-lejos" })
+        vm.recargarLineas(cercaDe: CLLocationCoordinate2D(latitude: campus.latitude, longitude: campus.longitude + 0.01))
+        await esperar("nuevo filtro") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.busSeleccionado?.id, "real-lejos", "Salir del panel no elimina el popup global")
+        XCTAssertEqual(vm.busesAnimados.count, 4)
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["real-cerca"])
+        XCTAssertEqual(proveedor.inicios, 1)
+        XCTAssertEqual(proveedor.paradas, 0)
+    }
+
+    func testETAausenteNoExcluyeUnBusDeUnaRutaCercana() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("detenido", velocidad: 0),
+                                                        posicion("alejandose", rumbo: 270), posicion("sin-rumbo", rumbo: -1)])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("buses sin ETA") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        XCTAssertEqual(vm.busesDelPanel.count, 3)
+        XCTAssertTrue(vm.busesDelPanel.allSatisfy { $0.minutosLlegada == nil && $0.fuente == .real })
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 1)
+    }
+
+    func testRutasSinVehiculosConfirmadosNoSePresentanComoAusenciaDeLineas() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta(), ruta("lejana")], rutasCercanas: [ruta()])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("lejos", ruta: "lejana")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("solo posiciones globales") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        XCTAssertTrue(vm.busesDelPanel.isEmpty)
+        XCTAssertFalse(vm.rutasCercanas.isEmpty)
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 0)
+        XCTAssertEqual(vm.mensajePanelSinBuses,
+                       L.t("Aún no hay buses confirmados para estas líneas", "There are no confirmed buses for these lines yet"))
+        XCTAssertTrue(vm.hayPosicionesRealesRecientes)
+    }
+
+    func testCatalogoSinRutasCercanasNoAtribuyeLaFlotaGlobalAlDestino() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta("lejana")], rutasCercanas: [])
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("lejos", ruta: "lejana")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("consulta vacía y flota real") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        XCTAssertEqual(vm.busesAnimados.count, 1)
+        XCTAssertTrue(vm.busesDelPanel.isEmpty)
+        XCTAssertEqual(vm.textoEstadoLineas,
+                       L.t("No encontramos líneas cerca de este punto", "No lines were found near this point"))
+        let consultas = await repositorio.consultasCercanas
+        XCTAssertEqual(consultas.map(\.radio), [400, 800])
+    }
+
+    func testSnapshotNoTerminaPrematuramenteLaConsultaCercana() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta()], bloquearCercanas: true)
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("uno")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("snapshot mientras consulta") { !vm.esperandoPosicionesReales && vm.busesAnimados.count == 1 }
+        await esperar("consulta pendiente") { await repositorio.consultasCercanas.count == 1 }
+        XCTAssertTrue(vm.cargandoLineas)
+        XCTAssertTrue(vm.busesDelPanel.isEmpty)
+        XCTAssertEqual(vm.textoEstadoLineas, L.t("Buscando líneas…", "Finding lines…"))
+        await repositorio.resolverCercanas(0, feed: [ruta()])
+        await esperar("consulta resuelta") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["real-uno"])
+    }
+
+    func testCambiarAnclaRetiraFiltroAnteriorYConservaSnapshotNuevoYPopup() async throws {
+        let repositorio = MapaGTFSPrueba(feed: [ruta(), ruta("lejana")], bloquearCercanas: true)
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("cerca"), posicion("lejos", ruta: "lejana")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("consulta inicial") { await repositorio.consultasCercanas.count == 1 }
+        await repositorio.resolverCercanas(0, feed: [ruta()])
+        await esperar("panel inicial") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        vm.busSeleccionado = try XCTUnwrap(vm.busesAnimados.first { $0.id == "real-cerca" })
+        vm.recargarLineas(cercaDe: CLLocationCoordinate2D(latitude: campus.latitude + 0.05, longitude: campus.longitude))
+        await esperar("consulta nueva") { await repositorio.consultasCercanas.count == 2 }
+        XCTAssertTrue(vm.rutasCercanas.isEmpty)
+        XCTAssertTrue(vm.busesDelPanel.isEmpty)
+        XCTAssertEqual(vm.busesAnimados.count, 2)
+        var actualizado = posicion("cerca")
+        actualizado.lon += 0.001
+        proveedor.emitir([actualizado, posicion("lejos", ruta: "lejana")])
+        await esperar("snapshot actualizado") { vm.busSeleccionado?.lon == actualizado.lon }
+        XCTAssertTrue(vm.cargandoLineas)
+        await repositorio.resolverCercanas(1, feed: [ruta("lejana")])
+        await esperar("filtro nuevo") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["real-lejos"])
+        XCTAssertEqual(vm.busSeleccionado?.id, "real-cerca")
+        XCTAssertEqual(vm.busSeleccionado?.lon, actualizado.lon)
+        XCTAssertEqual(vm.busesAnimados.count, 2)
+        XCTAssertEqual(proveedor.inicios, 1)
+        XCTAssertEqual(proveedor.paradas, 0)
+    }
+
+    func testFiltroRealTardioNoPisaElAnclaVigenteNiLaFlota() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta(), ruta("lejana")], bloquearCercanas: true)
+        let proveedor = MapaVehiculosPrueba(posiciones: [posicion("cerca"), posicion("lejos", ruta: "lejana")])
+        let vm = modelo(repositorio, proveedor: proveedor)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("consulta A") { await repositorio.consultasCercanas.count == 1 }
+        vm.recargarLineas(cercaDe: CLLocationCoordinate2D(latitude: campus.latitude + 0.05, longitude: campus.longitude))
+        await esperar("consulta B") { await repositorio.consultasCercanas.count == 2 }
+        vm.recargarLineas(cercaDe: campus)
+        await esperar("consulta A vigente") { await repositorio.consultasCercanas.count == 3 }
+        await repositorio.resolverCercanas(2, feed: [ruta()])
+        await esperar("panel vigente") { !vm.cargandoLineas && !vm.esperandoPosicionesReales }
+        let flota = vm.busesAnimados
+        await repositorio.resolverCercanas(0, feed: [ruta("lejana")])
+        await repositorio.resolverCercanas(1, feed: [ruta("lejana")])
+        await cederATareasCanceladas()
+        XCTAssertEqual(vm.busesAnimados, flota)
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["real-cerca"])
+        XCTAssertEqual(vm.rutasCercanas.map(\.id), ["cercana"])
+    }
+
+    func testFiltroDeSesionCanceladaNoAfectaElPanelAlRegresar() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta(), ruta("lejana")], bloquearCercanas: true)
+        let anterior = MapaVehiculosPrueba(posiciones: [posicion("anterior", ruta: "lejana")])
+        let actual = MapaVehiculosPrueba(posiciones: [posicion("actual")])
+        var proveedores = [anterior, actual]
+        let vm = MapaViewModel(locationService: MapaGPSPrueba(), repositorioGTFS: repositorio,
+                               crearProveedorReal: { proveedores.removeFirst() })
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("consulta anterior") { await repositorio.consultasCercanas.count == 1 }
+        vm.detener()
+        vm.iniciarSimulacionBuses()
+        await esperar("consulta actual") { await repositorio.consultasCercanas.count == 2 }
+        await esperar("flota actual") { vm.busesAnimados.first?.id == "real-actual" }
+        await repositorio.resolverCercanas(0, feed: [ruta("lejana")])
+        await cederATareasCanceladas()
+        XCTAssertTrue(vm.cargandoLineas)
+        XCTAssertTrue(vm.rutasCercanas.isEmpty)
+        await repositorio.resolverCercanas(1, feed: [ruta()])
+        await esperar("panel actual") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["real-actual"])
+    }
+
+    func testDemoNoDuplicaRutasNiIncluyeIdentidadesOGeometriasAusentes() async {
+        let repositorio = MapaGTFSPrueba(feed: [ruta(), ruta(), ruta(""), ruta("sin-shape", conShape: false)])
+        let vm = modelo(repositorio)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("demo") { !vm.cargandoLineas }
+        XCTAssertEqual(vm.rutasCercanas.map(\.id), ["cercana"])
+        XCTAssertEqual(vm.cantidadLineasDelPanel, 1)
+        XCTAssertEqual(vm.busesDelPanel.map(\.id), ["simulated-cercana"])
+        XCTAssertEqual(vm.textoEstadoLineas, L.t("1 línea cerca del campus", "1 line near campus"))
+    }
+
+    func testDemoSinRutasCercanasTerminaLaBusquedaYExplicaElResultado() async {
+        let repositorio = MapaGTFSPrueba(feed: [])
+        let vm = modelo(repositorio)
+        defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await esperar("búsqueda terminada") { !vm.cargandoLineas }
+        XCTAssertTrue(vm.busesDelPanel.isEmpty)
+        XCTAssertEqual(vm.textoEstadoLineas,
+                       L.t("No encontramos líneas cerca de este punto", "No lines were found near this point"))
+        let consultas = await repositorio.consultasCercanas
+        XCTAssertEqual(consultas.map(\.radio), [400, 800])
+    }
+}

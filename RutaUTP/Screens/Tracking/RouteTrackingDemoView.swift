@@ -43,7 +43,8 @@ struct RouteTrackingDemoView: View {
     @State private var destinationSearchError: String?
     @State private var destinationSearchTask: Task<Void, Never>?
 
-    init(locationService: LocationServiceProtocol = LocationService()) {
+    /// Producción recibe el GPS de la app; solo la preview crea uno propio.
+    init(locationService: LocationServiceProtocol) {
         _vm = StateObject(wrappedValue: RouteTrackingViewModel(locationService: locationService))
     }
 
@@ -85,17 +86,23 @@ struct RouteTrackingDemoView: View {
                 // el panel inferior, sin taparlo nunca. La de negocio sigue el
                 // tema elegido en Ajustes (la pantalla fuerza oscuro; esa no).
                 if let negocio = vm.negocioSeleccionado {
-                    NegocioDetailCard(
-                        negocio: negocio,
-                        ubicacion: vm.posicion,
-                        onClose: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                vm.negocioSeleccionado = nil
+                    // La tarjeta puede crecer con Dynamic Type. Comparte el
+                    // espacio disponible con el panel y permite leerla completa.
+                    ScrollView {
+                        NegocioDetailCard(
+                            negocio: negocio,
+                            ubicacion: vm.posicion,
+                            onClose: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    vm.negocioSeleccionado = nil
+                                }
                             }
-                        }
-                    )
-                    .environment(\.colorScheme, isDarkMode ? .dark : .light)
-                    .padding(.horizontal, 14)
+                        )
+                        .environment(\.colorScheme, isDarkMode ? .dark : .light)
+                        .padding(.horizontal, 14)
+                    }
+                    .frame(maxHeight: 360)
+                    .scrollBounceBehavior(.basedOnSize)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if let vehiculo = vehiculoSeleccionado {
@@ -1066,6 +1073,6 @@ struct RouteTrackingDemoView: View {
 }
 
 #Preview {
-    RouteTrackingDemoView()
+    RouteTrackingDemoView(locationService: LocationService())
         .environmentObject(AppRouter())
 }

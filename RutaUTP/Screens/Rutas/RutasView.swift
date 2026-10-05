@@ -47,12 +47,18 @@ struct RutaOpcion: Identifiable, Equatable {
 final class RutasViewModel: ObservableObject {
     @Published private(set) var rutas: [RutaOpcion] = []
     @Published private(set) var cargando: Bool = true
-    /// true si el feed se intentó cargar y llegó vacío. No es lo mismo que
-    /// "no hay resultados para tu búsqueda": antes ambos casos mostraban el
-    /// mismo mensaje, así que un fallo del feed se leía como una búsqueda sin
-    /// coincidencias.
+    /// Vacío válido, separado tanto de un fallo de lectura como de una
+    /// búsqueda sin coincidencias dentro de un catálogo cargado.
     @Published private(set) var feedVacio: Bool = false
+    @Published private(set) var errorCarga: FalloCargaGTFS?
     @Published var textoBusqueda: String = ""
+    private let repositorioGTFS: RutasGTFSProviding
+    private var cargaEnCurso = false
+    private var catalogoSolicitado = false
+
+    init(repositorioGTFS: RutasGTFSProviding = GTFSRepository.shared) {
+        self.repositorioGTFS = repositorioGTFS
+    }
 
     /// Filtro "rutas que pasan cerca de X" (activado desde Guardado).
     @Published var filtroCerca: DestinoPendiente?
@@ -84,13 +90,25 @@ final class RutasViewModel: ObservableObject {
                              String(format: "%.1f km from place", d / 1000))
     }
 
-    func cargar() async {
-        guard cargando else { return }
-        let feed = await GTFSRepository.shared.rutas()
-        rutas = Self.convertir(feed)
-        feedVacio = rutas.isEmpty
-        cargando = false
-        if let destino = filtroCerca { activarFiltroCerca(destino: destino) }
+    func cargar(reintentar: Bool = false) async {
+        guard !cargaEnCurso, reintentar || !catalogoSolicitado else { return }
+        cargaEnCurso = true
+        cargando = true
+        errorCarga = nil
+        defer { cargando = false; cargaEnCurso = false }
+        do {
+            let feed = try await repositorioGTFS.cargarRutas(reintentar: reintentar)
+            guard !Task.isCancelled else { return }
+            rutas = Self.convertir(feed)
+            feedVacio = rutas.isEmpty
+            catalogoSolicitado = true
+            if let destino = filtroCerca { activarFiltroCerca(destino: destino) }
+        } catch {
+            guard !Task.isCancelled else { return }
+            errorCarga = (error as? FalloCargaGTFS) ?? FalloCargaGTFS(detalle: error.localizedDescription)
+            feedVacio = false
+            catalogoSolicitado = true
+        }
     }
 
     /// Convierte el feed GTFS en el modelo de lista. Reutilizado por
@@ -283,25 +301,27 @@ struct RutasView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 32)
-                        } else if viewModel.feedVacio {
-                            // El feed no llegó: mensaje propio, no el de
-                            // "ninguna ruta coincide con tu búsqueda".
+                        } else if let error = viewModel.errorCarga {
                             VStack(spacing: 10) {
                                 Image(systemName: "exclamationmark.triangle")
                                     .font(.system(size: 26))
                                     .foregroundStyle(.onSurfaceVariant)
-                                Text(L.t("No se pudieron cargar las rutas del feed",
-                                         "Couldn't load routes from the feed"))
+                                Text(error.mensajeUsuario)
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
-                                Text(L.t("Vuelve a abrir la pestaña Rutas para reintentar.",
-                                         "Reopen the Routes tab to try again."))
-                                    .font(.bodyXs)
-                                    .foregroundStyle(.onSurfaceVariant.opacity(0.8))
+                                Button(L.t("Reintentar", "Try again")) {
+                                    Task { await viewModel.cargar(reintentar: true) }
+                                }
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 32)
                             .multilineTextAlignment(.center)
+                        } else if viewModel.feedVacio {
+                            Text(L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
+                                .font(.bodySm)
+                                .foregroundStyle(.onSurfaceVariant)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 32)
                         } else if viewModel.rutasFiltradas.isEmpty {
                             Text(viewModel.filtroCerca != nil
                                  ? L.t("Ninguna línea tiene paradero a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar", "No route has a stop within \(Int(RutasViewModel.radioCercaMetros)) m of this place")
