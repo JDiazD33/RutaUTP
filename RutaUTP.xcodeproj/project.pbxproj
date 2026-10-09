@@ -28,11 +28,9 @@
 		0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800440300AD9FE004E1676 /* MonederoView.swift */; };
 		0A8004F7300AD9FE004E1676 /* BottomNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */; };
 		0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004B9300AD9FE004E1676 /* Colors.swift */; };
-		0A8004FB300AD9FE004E1676 /* Spacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BA300AD9FE004E1676 /* Spacing.swift */; };
 		0A8004FC300AD9FE004E1676 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BB300AD9FE004E1676 /* Typography.swift */; };
 		0A8004FD300AD9FE004E1676 /* LugarGuardado.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BD300AD9FE004E1676 /* LugarGuardado.swift */; };
 		0A8004FE300AD9FE004E1676 /* ReporteComunidad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BE300AD9FE004E1676 /* ReporteComunidad.swift */; };
-		0A8004FF300AD9FE004E1676 /* Ruta.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BF300AD9FE004E1676 /* Ruta.swift */; };
 		0A800500300AD9FE004E1676 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C1300AD9FE004E1676 /* AppRouter.swift */; };
 		0A800501300AD9FE004E1676 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C2300AD9FE004E1676 /* RootView.swift */; };
 		0A800502300AD9FE004E1676 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A8004C4300AD9FE004E1676 /* Preview Assets.xcassets */; };
@@ -168,11 +166,9 @@
 		0A800440300AD9FE004E1676 /* MonederoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoView.swift; sourceTree = "<group>"; };
 		0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BottomNavBar.swift; sourceTree = "<group>"; };
 		0A8004B9300AD9FE004E1676 /* Colors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
-		0A8004BA300AD9FE004E1676 /* Spacing.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Spacing.swift; sourceTree = "<group>"; };
 		0A8004BB300AD9FE004E1676 /* Typography.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		0A8004BD300AD9FE004E1676 /* LugarGuardado.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugarGuardado.swift; sourceTree = "<group>"; };
 		0A8004BE300AD9FE004E1676 /* ReporteComunidad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReporteComunidad.swift; sourceTree = "<group>"; };
-		0A8004BF300AD9FE004E1676 /* Ruta.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Ruta.swift; sourceTree = "<group>"; };
 		0A8004C1300AD9FE004E1676 /* AppRouter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		0A8004C2300AD9FE004E1676 /* RootView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		0A8004C4300AD9FE004E1676 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -376,7 +372,6 @@
 			children = (
 				0A8004B8300AD9FE004E1676 /* Components */,
 				0A8004B9300AD9FE004E1676 /* Colors.swift */,
-				0A8004BA300AD9FE004E1676 /* Spacing.swift */,
 				0A800410300AD9FE004E1676 /* AppHaptics.swift */,
 				0A8004BB300AD9FE004E1676 /* Typography.swift */,
 			);
@@ -389,7 +384,6 @@
 				0A8004BD300AD9FE004E1676 /* LugarGuardado.swift */,
 				AA7700000000000000000001 /* Negocio.swift */,
 				0A8004BE300AD9FE004E1676 /* ReporteComunidad.swift */,
-				0A8004BF300AD9FE004E1676 /* Ruta.swift */,
 				AA6600000000000000000E01 /* Senia.swift */,
 			);
 			path = Models;
@@ -827,7 +821,6 @@
 				0A800517300AD9FE004E1676 /* TripSession.swift in Sources */,
 				0A800513300AD9FE004E1676 /* LocationService.swift in Sources */,
 				0A800500300AD9FE004E1676 /* AppRouter.swift in Sources */,
-				0A8004FB300AD9FE004E1676 /* Spacing.swift in Sources */,
 				0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */,
 				0AC4E0A120260907004E1676 /* CarneDigitalView.swift in Sources */,
 				0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */,
@@ -840,7 +833,6 @@
 				0A800428300AD9FE004E1676 /* ImagePicker.swift in Sources */,
 				0A800426300AD9FE004E1676 /* DatosPersonalesSheet.swift in Sources */,
 				0A800424300AD9FE004E1676 /* DrawerSheets.swift in Sources */,
-				0A8004FF300AD9FE004E1676 /* Ruta.swift in Sources */,
 				0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */,
 				0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */,
 				0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */,

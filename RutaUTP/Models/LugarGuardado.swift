@@ -3,7 +3,6 @@
 //
 
 import Foundation
-import SwiftUI
 import CoreLocation
 
 enum CategoriaLugar: String, CaseIterable, Identifiable, Codable {
@@ -63,9 +62,6 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
     /// nombre es un dato del prototipo y va a cambiar.
     var esFijo: Bool
 
-    // No se persiste: los badges siempre usan el color primario.
-    var colorBadge: Color { .appPrimary }
-
     var coordinate: CLLocationCoordinate2D? {
         guard let lat, let lon else { return nil }
         return CLLocationCoordinate2D(latitude: lat, longitude: lon)
@@ -99,7 +95,7 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
         } == true
     }
 
-    // MARK: - Codable (colorBadge fuera de la persistencia)
+    // MARK: - Codable
     private enum CodingKeys: String, CodingKey {
         case id, nombre, direccion, categoria, esFrecuente, lat, lon, esFijo, paraderoID
     }

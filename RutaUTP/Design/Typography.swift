@@ -39,7 +39,6 @@ enum AppTracking {
     static let wideLabel: CGFloat = 1.5      // 0.1em aprox sobre 14px
     static let wideLabelMd: CGFloat = 1.8    // 0.15em aprox sobre 12px
     static let wideLabelCaps: CGFloat = 2.4  // 0.2em aprox sobre 11px
-    static let displayTight: CGFloat = -0.6  // -0.02em aprox sobre 32px
 }
 
 // MARK: - ViewModifier: tracking rápido

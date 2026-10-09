@@ -11,9 +11,9 @@
 //  QUÉ versión de esquema tiene instalada el dispositivo, ni en qué orden se
 //  aplicaron los cambios, ni dónde escribir la siguiente migración.
 //
-//  Este módulo centraliza las tres cosas: una versión de esquema única y
-//  explícita, una lista ordenada de migraciones idempotentes y el inventario
-//  de llaves que la app considera suyas.
+//  Este módulo centraliza una versión de esquema única y explícita y una lista
+//  ordenada de migraciones idempotentes. El inventario de llaves se documenta
+//  en PERSISTENCIA.md, en la raíz del repositorio.
 //
 //  Reglas:
 //   - Una migración NUNCA borra datos del usuario. Si algo no se puede
@@ -41,12 +41,6 @@ enum Persistencia {
     /// Llave donde se guarda la versión instalada. Va SIN número en el nombre
     /// a propósito: es la que permite versionar a todas las demás.
     private static let llaveVersion = "persistencia.esquema.version"
-
-    /// Versión instalada en este dispositivo. 0 = instalación nueva o
-    /// anterior a que existiera el versionado.
-    static var versionInstalada: Int {
-        UserDefaults.standard.integer(forKey: llaveVersion)
-    }
 
     // MARK: - Migración
 
@@ -94,37 +88,6 @@ enum Persistencia {
         )
     ]
 
-    // MARK: - Inventario
-
-    /// Llaves de `UserDefaults` que la app considera suyas.
-    ///
-    /// Documentadas aquí para que una migración futura sepa qué tocar sin
-    /// recorrer el proyecto entero. Es un inventario de lectura: no se usa
-    /// para borrar ni para recorrer nada en ejecución.
-    static let llavesConocidas: [String] = [
-        llaveVersion,
-        LugaresStore.key,
-        LugaresStore.respaldoKey,
-        "lineas.guardadas.v1",
-        "negocios.cupones.guardados",
-        "seguridad.tiles.v1",
-        "seguridad.tiles.orden.v1",
-        "idioma.app",
-        "isDarkMode",
-        "ciudadSeleccionada",
-        "senias.modo.activado",
-        PreferenciasApp.notificaciones,
-        PreferenciasApp.compartirUbicacion,
-        "perfil_telefono",
-        "perfil_correoPersonal",
-        "emergencia_nombre",
-        "emergencia_parentesco",
-        "emergencia_numero",
-        "monedero.saldo.v1",
-        "monedero.movimientos.v1",
-        "tracking.radioParadero",
-        "tracking.velocidadDemo"
-    ]
 }
 
 /// Claves compartidas por Perfil y el menú. Conservan los valores ya guardados.

@@ -63,16 +63,6 @@ final class GuardadoViewModel: ObservableObject {
         return lineaRefs.compactMap { porId[$0.routeId] }
     }
 
-    /// Índice donde insertar un lugar nuevo: justo después del primer lugar no
-    /// fijo, con el tope del final de la lista.
-    ///
-    /// Se conserva la regla original para que un lugar nuevo no se adelante al
-    /// campus, que es el único fijo.
-    var indiceInsercion: Int {
-        let primeroNoFijo = lugares.firstIndex { !$0.esFijo } ?? lugares.count
-        return min(primeroNoFijo + 1, lugares.count)
-    }
-
     /// Ids de las líneas ya guardadas, para marcarlas en el selector.
     var idsLineasGuardadas: Set<String> {
         Set(lineaRefs.map(\.routeId))

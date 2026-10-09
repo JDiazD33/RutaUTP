@@ -17,10 +17,8 @@ extension Color {
     // MARK: - Primarios (Rojo UTP)
     static let appPrimary          = Color(hex: "#a80033")
     static let primaryContainer    = Color(hex: "#d31245")
-    static let onPrimary           = Color.white
     static let onPrimaryContainer  = Color(hex: "#ffe8e8")
     static let primaryFixed        = Color(hex: "#ffdadb")
-    static let primaryFixedDim     = Color(hex: "#ffb2b7")
     static let inversePrimary      = Color(hex: "#ffb2b7")
 
     // MARK: - Secundarios (Azul)
@@ -34,8 +32,6 @@ extension Color {
     static let tertiaryContainer   = Color(hex: "#00758d")
     static let onTertiary          = Color.white
     static let onTertiaryContainer = Color(hex: "#d1f2ff")
-    static let tertiaryFixed       = Color(hex: "#b3ebff")
-    static let tertiaryFixedDim    = Color(hex: "#4cd6fb")
 
     // MARK: - Superficie (adaptativas)
     static let appBackground             = Color(light: "#f7f9fb", dark: "#101314")
@@ -45,15 +41,10 @@ extension Color {
     static let surfaceContainerHigh      = Color(light: "#e6e8ea", dark: "#26292c")
     static let surfaceContainerHighest   = Color(light: "#e0e3e5", dark: "#313537")
     static let surfaceContainerLowest    = Color(light: "#ffffff", dark: "#0b0d0e")
-    static let surfaceDim                = Color(light: "#d8dadc", dark: "#3c4143")
-    static let surfaceBright             = Color(light: "#f7f9fb", dark: "#2a2e30")
-    static let surfaceVariant            = Color(light: "#e4bdbf", dark: "#4a3537")
 
     // MARK: - On-Surface (adaptativos)
     static let onSurface           = Color(light: "#191c1e", dark: "#e4e8ea")
     static let onSurfaceVariant    = Color(light: "#5c3f41", dark: "#c9adaf")
-    static let inverseSurface      = Color(light: "#2d3133", dark: "#e3e6e8")
-    static let inverseOnSurface    = Color(light: "#eff1f3", dark: "#1c2022")
 
     // MARK: - Outline (adaptativos)
     static let outline             = Color(light: "#906f70", dark: "#a98b8c")
@@ -121,18 +112,14 @@ extension ShapeStyle where Self == Color {
     // Primarios
     static var appPrimary:           Color { .appPrimary }
     static var primaryContainer:     Color { .primaryContainer }
-    static var onPrimary:            Color { .onPrimary }
     static var onPrimaryContainer:   Color { .onPrimaryContainer }
     static var primaryFixed:         Color { .primaryFixed }
-    static var primaryFixedDim:      Color { .primaryFixedDim }
     static var inversePrimary:       Color { .inversePrimary }
 
     // Terciarios (los "container" no colisionan con el sistema)
     static var tertiaryContainer:    Color { .tertiaryContainer }
     static var onTertiary:           Color { .onTertiary }
     static var onTertiaryContainer:  Color { .onTertiaryContainer }
-    static var tertiaryFixed:        Color { .tertiaryFixed }
-    static var tertiaryFixedDim:     Color { .tertiaryFixedDim }
 
     // Secundarios container
     static var secondaryContainer:   Color { .secondaryContainer }
@@ -147,15 +134,10 @@ extension ShapeStyle where Self == Color {
     static var surfaceContainerHigh:      Color { .surfaceContainerHigh }
     static var surfaceContainerHighest:   Color { .surfaceContainerHighest }
     static var surfaceContainerLowest:    Color { .surfaceContainerLowest }
-    static var surfaceDim:                Color { .surfaceDim }
-    static var surfaceBright:             Color { .surfaceBright }
-    static var surfaceVariant:            Color { .surfaceVariant }
 
     // On-Surface
     static var onSurface:          Color { .onSurface }
     static var onSurfaceVariant:   Color { .onSurfaceVariant }
-    static var inverseSurface:     Color { .inverseSurface }
-    static var inverseOnSurface:   Color { .inverseOnSurface }
 
     // Outline
     static var outline:            Color { .outline }

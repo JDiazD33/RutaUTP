@@ -33,18 +33,6 @@ enum ObservationPublisherState: Equatable {
     case failed(String)
 }
 
-extension ObservationPublisherState {
-
-    /// Indica si el canal terminó en error, para colorear la UI.
-    var isFailure: Bool {
-        if case .failed = self {
-            return true
-        }
-
-        return false
-    }
-}
-
 /// Contrato de un componente capaz de publicar observaciones.
 ///
 /// Está aislado en el actor principal porque será controlado por

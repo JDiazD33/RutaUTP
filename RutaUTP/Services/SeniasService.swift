@@ -49,7 +49,9 @@ final class SeniasService {
         UserDefaults.standard.bool(forKey: SeniasService.llaveModo)
     }
 
+    #if DEBUG
     var manifiestoCargado: Bool { manifesto != nil }
+    #endif
 
     // MARK: - Resolución
 
@@ -90,11 +92,13 @@ final class SeniasService {
         return CatalogoSenias.shared.texto(clave: clave) ?? clave
     }
 
+    #if DEBUG
     /// Todas las claves del manifiesto. Útil para depurar y para el checklist
     /// de grabación.
     func clavesEnManifiesto() -> [String] {
         manifesto?.señas.map(\.clave).sorted() ?? []
     }
+    #endif
 }
 
 // MARK: - Presentador (controla qué seña se muestra en pantalla)
