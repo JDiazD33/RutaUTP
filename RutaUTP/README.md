@@ -176,13 +176,13 @@ Se usa `UserDefaults` para lugares, referencias de líneas, cupones, idioma, tem
 
 Los lugares guardados marcan el campus UTP con un campo `esFijo` persistido, no derivado del nombre: así la invariante «no se puede eliminar» sobrevive a cambios de texto. `LugaresStore` migra al cargar los datos guardados por versiones anteriores, que no traían ese campo.
 
-El esquema de datos locales está versionado en `Services/Persistencia/Persistencia.swift`: una versión única y explícita, una lista ordenada de migraciones idempotentes y el inventario de llaves que la app considera suyas. `Persistencia.migrarSiHaceFalta()` se ejecuta una sola vez al arrancar, antes de que ninguna vista lea datos persistidos. Las llaves existentes **no** se renombran: renombrarlas perdería los datos ya guardados, así que el versionado se añade por encima.
+El esquema de datos locales está versionado en `Services/Persistencia/Persistencia.swift`: una versión única y explícita y una lista ordenada de migraciones idempotentes. El inventario de llaves se conserva como documentación en `PERSISTENCIA.md`, en la raíz del repositorio. `Persistencia.migrarSiHaceFalta()` se ejecuta una sola vez al arrancar, antes de que ninguna vista lea datos persistidos. Las llaves existentes **no** se renombran: renombrarlas perdería los datos ya guardados, así que el versionado se añade por encima.
 
 No todo lo visible se persiste: parte del estado del perfil y de las pantallas sigue en `@State`; las reacciones comunitarias y sesiones de seguimiento permanecen en memoria. No hay autenticación ni sincronización entre dispositivos.
 
 ### Diseño, idiomas y señas
 
-Los tokens visuales están en `Design/Colors.swift`, `Typography.swift` y `Spacing.swift`. Se utilizan SF Symbols.
+Los tokens visuales están en `Design/Colors.swift` y `Typography.swift`. Se utilizan SF Symbols.
 
 La aplicación usa la **fuente del sistema**. Antes `Info.plist` declaraba Hanken Grotesk, Be Vietnam Pro y JetBrains Mono bajo `UIAppFonts`, pero sus `.ttf` nunca estuvieron en el repositorio: no había un solo archivo de fuente en el bundle compilado, así que la interfaz ya se veía con la fuente del sistema. Esa declaración se eliminó y los tokens de `Typography.swift` ahora usan `.system(size:weight:)` con los mismos tamaños y pesos, de modo que el aspecto no cambia. Los tokens son de tamaño fijo: recuperar el escalado de Dynamic Type requiere migrarlos a `@ScaledMetric`.
 
