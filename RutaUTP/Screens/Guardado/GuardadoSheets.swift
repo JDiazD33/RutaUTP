@@ -332,6 +332,7 @@ struct AddLugarSheet: View {
     private var mapaElegir: some View {
         ZStack(alignment: .bottom) {
             MapaElegirLugar(
+                colorPin: .appPrimary,
                 coordenada: coordElegida,
                 onTocar: { coord in
                     AppHaptics.impact(.light)
@@ -600,6 +601,7 @@ struct MapaElegirExpandido: View {
     var body: some View {
         ZStack(alignment: .top) {
             MapaElegirLugar(
+                colorPin: .appPrimary,
                 coordenada: coordenada,
                 onTocar: { coord in
                     withAnimation(.easeInOut(duration: 0.2)) {

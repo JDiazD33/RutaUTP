@@ -472,7 +472,7 @@ private struct RouteIncidentMap: View {
     var body: some View {
         MapReader { proxy in
             Map(position: $camera) {
-                MapPolyline(coordinates: route.shape).stroke(.blue, lineWidth: 4)
+                MapPolyline(coordinates: route.shape).stroke(route.color, lineWidth: 4)
                 if let point {
                     Marker(L.t("Lugar afectado", "Affected location"), coordinate: point)
                         .tint(.orange)

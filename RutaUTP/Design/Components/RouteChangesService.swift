@@ -27,6 +27,14 @@ private struct RouteChangeReceipt: Decodable {
 
 /// Canal independiente: no modifica posiciones, rutas ni estimaciones de buses.
 final class RouteChangesService: ObservableObject {
+    private let clock: () -> TimeInterval
+    private let deadlineScheduler: ServiceDeadlineScheduler
+
+    init(clock: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 }) {
+        self.clock = clock
+        deadlineScheduler = ServiceDeadlineScheduler(clock: clock)
+    }
+
     @Published private(set) var alerts: [RouteChangeAlert] = []
     @Published private(set) var ready = false
     @Published private(set) var sending = false
@@ -40,7 +48,6 @@ final class RouteChangesService: ObservableObject {
     private var lastSnapshot: TimeInterval?
     private var pendingID: String?
     private var sentAt: TimeInterval = 0
-    private var timer: Timer?
 
     func start() {
         guard !running else { return }
@@ -63,6 +70,7 @@ final class RouteChangesService: ObservableObject {
         client.didConnectAck = { [weak self] client, ack in
             guard let self, self.running, self.mqtt === client, ack == .accept else { return }
             self.subscribed = false
+            self.refresh()
             client.subscribe([( "rutautp/cambios/estado", .qos1),
                               ("rutautp/cambios/\(self.principal)/recibo", .qos1)])
         }
@@ -83,9 +91,8 @@ final class RouteChangesService: ObservableObject {
             self.refresh()
         }
         mqtt = client
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.refresh()
-        }
+        deadlineScheduler.start { [weak self] in self?.refresh() }
+        refresh()
         _ = client.connect()
     }
 
@@ -94,8 +101,7 @@ final class RouteChangesService: ObservableObject {
         mqtt?.autoReconnect = false
         mqtt?.disconnect()
         mqtt = nil
-        timer?.invalidate()
-        timer = nil
+        deadlineScheduler.stop()
         subscribed = false
         lastSnapshot = nil
         pendingID = nil
@@ -104,24 +110,33 @@ final class RouteChangesService: ObservableObject {
     }
 
     func send(routeID: String, reason: String, lat: Double, lon: Double, place: String) {
+        refresh()
+        defer { reprogramarVencimiento() }
         guard ready, !sending, let mqtt else { return }
         let id = UUID().uuidString
         let body: [String: Any] = ["schemaVersion": 1, "requestId": id,
                                   "routeId": routeID, "reason": reason,
                                   "lat": lat, "lon": lon, "place": place,
-                                  "timestamp": Date().timeIntervalSince1970]
+                                  "timestamp": clock()]
         guard let data = try? JSONSerialization.data(withJSONObject: body),
               let json = String(data: data, encoding: .utf8) else { return }
+        let now = clock()
+        guard isAvailable(at: now) else { return }
         pendingID = id
         sending = true
         result = nil
-        sentAt = Date().timeIntervalSince1970
+        sentAt = now
         mqtt.publish("rutautp/cambios/\(principal)/reporte", withString: json, qos: .qos1, retained: false)
     }
 
+    private func isAvailable(at now: TimeInterval) -> Bool {
+        running && subscribed && lastSnapshot.map { now - $0 < 20 } == true
+    }
+
     private func refresh() {
-        let now = Date().timeIntervalSince1970
-        let available = running && subscribed && lastSnapshot.map { now - $0 < 20 } == true
+        defer { reprogramarVencimiento() }
+        let now = clock()
+        let available = isAvailable(at: now)
         if ready != available { ready = available }
         let current = available ? alerts.filter { $0.expiresAt > now } : []
         if alerts != current { alerts = current }
@@ -133,8 +148,24 @@ final class RouteChangesService: ObservableObject {
         }
     }
 
+    private func reprogramarVencimiento() {
+        guard running else { deadlineScheduler.cancel(); return }
+        var next: TimeInterval?
+        func include(_ deadline: TimeInterval) {
+            guard deadline.isFinite else { return }
+            next = next.map { min($0, deadline) } ?? deadline
+        }
+        if ready, let lastSnapshot {
+            include(lastSnapshot + 20)
+            for alert in alerts { include(alert.expiresAt) }
+        }
+        if sending { include(sentAt + 12) }
+        deadlineScheduler.schedule(at: next)
+    }
+
     private func receive(_ data: Data, topic: String) {
-        let now = Date().timeIntervalSince1970
+        defer { refresh() }
+        let now = clock()
         if topic == "rutautp/cambios/estado",
            data.count <= 300_000,
            let snapshot = try? JSONDecoder().decode(RouteChangeSnapshot.self, from: data),
@@ -152,10 +183,9 @@ final class RouteChangesService: ObservableObject {
                 && seen.insert($0.id).inserted
             }
             if alerts != current { alerts = current }
-            refresh()
         } else if topic == "rutautp/cambios/\(principal)/recibo",
                   let receipt = try? JSONDecoder().decode(RouteChangeReceipt.self, from: data),
-                  receipt.requestId == pendingID {
+                  receipt.requestId == pendingID, now - sentAt < 12 {
             sending = false
             pendingID = nil
             if receipt.accepted {

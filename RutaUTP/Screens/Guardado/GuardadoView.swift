@@ -477,6 +477,8 @@ struct PressableCapsuleStyle: ButtonStyle {
 /// Mapa para elegir un punto con un tap. Compartido por Guardado (elegir
 /// ubicación del lugar) y Mapa (elegir destino en el mapa).
 struct MapaElegirLugar: UIViewRepresentable {
+    /// Se recibe desde el body SwiftUI para actualizar también el pin existente.
+    let colorPin: Color
     /// Coordenada actual del pin (nil = sin pin todavía).
     let coordenada: CLLocationCoordinate2D?
     /// Avisa cuando el usuario toca el mapa para mover el pin.
@@ -485,7 +487,7 @@ struct MapaElegirLugar: UIViewRepresentable {
     var recentrarTrigger: Int = 0
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onTocar: onTocar)
+        Coordinator(onTocar: onTocar, colorPin: UIColor(colorPin))
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -507,11 +509,13 @@ struct MapaElegirLugar: UIViewRepresentable {
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         let coordinator = context.coordinator
+        coordinator.colorPin = UIColor(colorPin)
 
         // Pin
         if let coordenada {
             if let pin = coordinator.pin {
                 pin.coordinate = coordenada
+                (mapView.view(for: pin) as? MKMarkerAnnotationView)?.markerTintColor = coordinator.colorPin
             } else {
                 let pin = MKPointAnnotation()
                 pin.coordinate = coordenada
@@ -541,9 +545,11 @@ struct MapaElegirLugar: UIViewRepresentable {
         var pin: MKPointAnnotation?
         var ultimoRecentrado = 0
         var onTocar: (CLLocationCoordinate2D) -> Void
+        var colorPin: UIColor
 
-        init(onTocar: @escaping (CLLocationCoordinate2D) -> Void) {
+        init(onTocar: @escaping (CLLocationCoordinate2D) -> Void, colorPin: UIColor) {
             self.onTocar = onTocar
+            self.colorPin = colorPin
         }
 
         @objc func mapaTocado(_ gesture: UITapGestureRecognizer) {
@@ -559,7 +565,7 @@ struct MapaElegirLugar: UIViewRepresentable {
             let view = (mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView)
                         ?? MKMarkerAnnotationView(annotation: nil, reuseIdentifier: id)
             view.annotation = annotation
-            view.markerTintColor = UIColor(Color.appPrimary)
+            view.markerTintColor = colorPin
             view.glyphImage = UIImage(systemName: "mappin.circle.fill")
             view.glyphTintColor = .white
             view.canShowCallout = false

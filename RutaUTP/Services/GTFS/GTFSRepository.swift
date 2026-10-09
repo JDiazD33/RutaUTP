@@ -23,6 +23,8 @@ protocol RutasGTFSProviding {
     func cargarRutas(reintentar: Bool) async throws -> [RutaGTFS]
     func consultarRutasQuePasanPor(_ punto: CLLocationCoordinate2D,
                                  radioMetros: Double, reintentar: Bool) async throws -> [RutaGTFS]
+    func consultarRutasQuePasanPorConAmpliacion(_ punto: CLLocationCoordinate2D,
+                                              reintentar: Bool) async throws -> [RutaGTFS]
 }
 
 extension RutasGTFSProviding {
@@ -36,6 +38,18 @@ extension RutasGTFSProviding {
                                  radioMetros: Double = 400,
                                  reintentar: Bool = false) async throws -> [RutaGTFS] {
         await rutasQuePasanPor(punto, radioMetros: radioMetros)
+    }
+
+    /// Conserva las consultas controladas por proveedores alternativos.
+    /// GTFSRepository resuelve ambos radios con una sola medición por ruta.
+    func consultarRutasQuePasanPorConAmpliacion(_ punto: CLLocationCoordinate2D,
+                                              reintentar: Bool = false) async throws -> [RutaGTFS] {
+        let cercanas = try await consultarRutasQuePasanPor(
+            punto, radioMetros: 400, reintentar: reintentar)
+        try Task.checkCancellation()
+        if !cercanas.isEmpty { return cercanas }
+        return try await consultarRutasQuePasanPor(
+            punto, radioMetros: 800, reintentar: false)
     }
 }
 
@@ -64,7 +78,8 @@ actor GTFSRepository: RutasGTFSProviding {
     static let coordenadaUTP = CLLocationCoordinate2D(latitude: -8.098247879173792,
                                                       longitude: -79.03818104755645)
 
-    private var cache: [RutaGTFS]?
+    private var cache: GTFSRouteCatalog?
+    private var indiceRutasCercanas: GTFSNearbyRouteIndex?
     private var tareaCarga: Task<[RutaGTFS], Error>?
     private var revisionCarga: UUID?
     private let cargador: @Sendable () async throws -> [RutaGTFS]
@@ -82,10 +97,15 @@ actor GTFSRepository: RutasGTFSProviding {
         (try? await cargarRutas()) ?? []
     }
 
+    /// Los consumidores existentes conservan la misma API de rutas.
+    func cargarRutas(reintentar: Bool = false) async throws -> [RutaGTFS] {
+        (try await cargarCatalogo(reintentar: reintentar)).routes
+    }
+
     /// Un fallo requiere una acción explícita: renders y la ampliación del
     /// radio no deben releer continuamente un archivo ausente. Un éxito vacío
     /// sí es un catálogo válido y se conserva igual que cualquier otro éxito.
-    func cargarRutas(reintentar: Bool = false) async throws -> [RutaGTFS] {
+    func cargarCatalogo(reintentar: Bool = false) async throws -> GTFSRouteCatalog {
         if let cache { return cache }
         let tarea: Task<[RutaGTFS], Error>
         let revision: UUID
@@ -106,13 +126,20 @@ actor GTFSRepository: RutasGTFSProviding {
 
         do {
             let rutas = try await tarea.value
+            let catalogo: GTFSRouteCatalog
             if revisionCarga == revision {
-                cache = rutas
+                catalogo = GTFSRouteCatalog(routes: rutas)
+                cache = catalogo
+                indiceRutasCercanas = GTFSNearbyRouteIndex(rutas: rutas)
                 estadoCarga = .cargado
                 tareaCarga = nil
                 revisionCarga = nil
+            } else {
+                // Otro lector de la misma carga ya instaló el snapshot.
+                // Reutilizar su identidad también para lectores tardíos.
+                catalogo = cache ?? GTFSRouteCatalog(routes: rutas)
             }
-            return rutas
+            return catalogo
         } catch {
             let fallo = (error as? FalloCargaGTFS)
                 ?? FalloCargaGTFS(detalle: error.localizedDescription)
@@ -152,17 +179,12 @@ actor GTFSRepository: RutasGTFSProviding {
                              radioMetros: radioMetros)
     }
 
-    /// La misma selección sobre un catálogo ya cargado. Separar la geometría
-    /// de la carga permite comprobar radios y orden sin modificar la caché.
-    static func rutasQuePasanPor(_ punto: CLLocationCoordinate2D,
-                                en rutas: [RutaGTFS],
-                                radioMetros: Double = 400) -> [RutaGTFS] {
-        rutas
-            .filter { $0.shape.count >= 2 }
-            .map { ($0, Self.distanciaMinima($0.shape, a: punto)) }
-            .filter { $0.1.isFinite && $0.1 <= radioMetros }
-            .sorted { $0.1 < $1.1 }
-            .map(\.0)
+    func consultarRutasQuePasanPorConAmpliacion(_ punto: CLLocationCoordinate2D,
+                                              reintentar: Bool = false) async throws -> [RutaGTFS] {
+        let rutas = try await cargarRutas(reintentar: reintentar)
+        try Task.checkCancellation()
+        let candidatas = indiceRutasCercanas?.rutasCandidatas(cercaDe: punto, radioMetros: 800) ?? rutas
+        return Self.rutasQuePasanPorConAmpliacion(punto, en: candidatas)
     }
 
     /// Mínimo al recorrido completo, no únicamente a sus vértices. Conserva

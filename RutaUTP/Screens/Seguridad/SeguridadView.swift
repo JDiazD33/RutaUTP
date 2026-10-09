@@ -119,10 +119,8 @@ struct SeguridadView: View {
         ]
         let tiempos = ["HACE 3 MIN", "HACE 8 MIN", "HACE 12 MIN", "HACE 20 MIN",
                        "HACE 35 MIN", "HACE 1 HORA", "HACE 2 HORAS"]
-        let avatares: [(Color, Color)] = [
-            (.primaryContainer, .onPrimaryContainer),
-            (.secondaryContainer, .onSecondaryContainer),
-            (.tertiaryContainer, .onTertiaryContainer)
+        let avatares: [EstiloAvatarReporte] = [
+            .primario, .secundario, .terciario
         ]
 
         let originales = cuerpos.enumerated().map { i, par in
@@ -139,8 +137,7 @@ struct SeguridadView: View {
                 dislikes: 1 + (i * 7) % 9,
                 comentarios: (i * 5) % 11,
                 utilMarcado: i % 6 == 0,
-                avatarColor: avatar.0,
-                avatarForeground: avatar.1
+                estiloAvatar: avatar
             )
         }
         let ilustrados: [(String, String, TipoReporte, FotoComunidad, String, String)] = [
@@ -171,7 +168,7 @@ struct SeguridadView: View {
             let nuevo = ReporteComunidad(iniciales: dato.1, nombre: dato.0,
                 hace: "HACE 3 MIN", tipo: dato.2, cuerpo: dato.4, cuerpoIngles: dato.5,
                 foto: dato.3, utiles: 8 + index * 3, comentarios: 2,
-                avatarColor: .secondaryContainer, avatarForeground: .onSecondaryContainer)
+                estiloAvatar: .secundario)
             resultado.append(nuevo)
             let grupo = restantes.prefix(3)
             resultado.append(contentsOf: grupo)
@@ -443,7 +440,7 @@ struct SeguridadView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color(hex: "#ffdadb"))
+                        .fill(Color.primaryFixed)
                         .frame(width: 48, height: 48)
                     Image(systemName: "lock.fill")
                         .font(.system(size: 22, weight: .bold))

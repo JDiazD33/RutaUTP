@@ -24,7 +24,8 @@ struct CalculatedRoute: Equatable {
     }
 }
 
-/// Caché por extremos exactos y modo; nunca reutiliza una caminata para otro punto.
+/// Caché y peticiones compartidas por extremos exactos y modo, por instancia.
+/// Cancelar un consumidor no interrumpe una caminata que otro sigue esperando.
 actor RouteCalculationService {
     typealias Loader = @Sendable (MKDirections.Request) async throws -> CalculatedRoute
     private struct Key: Hashable {
@@ -38,10 +39,16 @@ actor RouteCalculationService {
         let route: CalculatedRoute
         let date: Date
     }
+    private struct InFlightRequest {
+        let generation: UUID
+        let task: Task<Void, Never>
+        let startedAt: Date
+        var consumers: [UUID: CheckedContinuation<CalculatedRoute, Error>]
+    }
     private let loader: Loader
     private let now: @Sendable () -> Date
     private var cache: [Key: Entry] = [:]
-    private var active: [UUID: Task<CalculatedRoute, Error>] = [:]
+    private var inFlight: [Key: InFlightRequest] = [:]
 
     init(loader: @escaping Loader = { request in
         try await PendingDirections(request: request).run()
@@ -61,31 +68,91 @@ actor RouteCalculationService {
                       lat2: destination.latitude, lon2: destination.longitude, transport: transportType.rawValue)
         let date = now()
         if let entry = cache[key], date.timeIntervalSince(entry.date) < 300 { return entry.route }
+        let consumerID = UUID()
+        let route: CalculatedRoute = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                // onCancel también se invoca si la tarea ya estaba cancelada.
+                guard !Task.isCancelled else {
+                    continuation.resume(throwing: CancellationError())
+                    return
+                }
+                register(continuation, consumerID: consumerID, key: key, date: date,
+                         origin: origin, destination: destination, transportType: transportType)
+            }
+        } onCancel: {
+            Task { await self.cancelConsumer(consumerID, key: key) }
+        }
+        try Task.checkCancellation()
+        return route
+    }
+
+    private func register(_ continuation: CheckedContinuation<CalculatedRoute, Error>,
+                          consumerID: UUID, key: Key, date: Date,
+                          origin: CLLocationCoordinate2D, destination: CLLocationCoordinate2D,
+                          transportType: MKDirectionsTransportType) {
+        if var request = inFlight[key] {
+            request.consumers[consumerID] = continuation
+            inFlight[key] = request
+            return
+        }
         let request = MKDirections.Request()
         request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
         request.transportType = transportType
         request.requestsAlternateRoutes = false
-        let id = UUID()
-        let task = Task { try await loader(request) }
-        active[id] = task
-        defer { active[id] = nil }
-        let route = try await withTaskCancellationHandler {
-            try await task.value
-        } onCancel: {
-            task.cancel()
+        let generation = UUID()
+        let task = Task {
+            let result: Result<CalculatedRoute, Error>
+            do {
+                try Task.checkCancellation()
+                let route = try await loader(request)
+                try Task.checkCancellation()
+                result = .success(route)
+            } catch {
+                result = .failure(error)
+            }
+            finishRequest(key: key, generation: generation, result: result)
         }
-        try Task.checkCancellation()
-        cache = cache.filter { date.timeIntervalSince($0.value.date) < 300 }
-        if cache.count >= 128, let oldest = cache.min(by: { $0.value.date < $1.value.date })?.key {
-            cache[oldest] = nil
-        }
-        cache[key] = Entry(route: route, date: now())
-        return route
+        inFlight[key] = InFlightRequest(generation: generation, task: task, startedAt: date,
+                                       consumers: [consumerID: continuation])
     }
 
+    private func finishRequest(key: Key, generation: UUID, result: Result<CalculatedRoute, Error>) {
+        // Una respuesta antigua no puede retirar ni completar un reintento.
+        guard let request = inFlight[key], request.generation == generation else { return }
+        inFlight[key] = nil
+        if case .success(let route) = result {
+            cache = cache.filter { request.startedAt.timeIntervalSince($0.value.date) < 300 }
+            if cache.count >= 128, let oldest = cache.min(by: { $0.value.date < $1.value.date })?.key {
+                cache[oldest] = nil
+            }
+            cache[key] = Entry(route: route, date: now())
+        }
+        for continuation in request.consumers.values { continuation.resume(with: result) }
+    }
+
+    private func cancelConsumer(_ consumerID: UUID, key: Key) {
+        guard var request = inFlight[key],
+              let continuation = request.consumers.removeValue(forKey: consumerID) else { return }
+        if request.consumers.isEmpty {
+            inFlight[key] = nil
+            request.task.cancel()
+        } else {
+            inFlight[key] = request
+        }
+        continuation.resume(throwing: CancellationError())
+    }
+
+    /// Cancela todas las esperas de esta instancia; conserva las rutas cacheadas.
     func cancel() {
-        for task in active.values { task.cancel() }
+        let requests = inFlight
+        inFlight.removeAll()
+        for request in requests.values {
+            request.task.cancel()
+            for continuation in request.consumers.values {
+                continuation.resume(throwing: CancellationError())
+            }
+        }
     }
 }
 

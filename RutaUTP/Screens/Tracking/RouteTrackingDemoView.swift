@@ -8,8 +8,29 @@ import CoreLocation
 import UIKit
 
 struct RouteTrackingDemoView: View {
+    @StateObject private var store: ScreenModelStore<RouteTrackingViewModel>
+
+    init(locationService: LocationServiceProtocol) {
+        _store = StateObject(wrappedValue: ScreenModelStore(
+            RouteTrackingViewModel(locationService: locationService)
+        ))
+    }
+
+    /// RootView retiene el mismo modelo cuando esta vista deja de existir.
+    init(model: RouteTrackingViewModel) {
+        _store = StateObject(wrappedValue: ScreenModelStore(model))
+    }
+
+    var body: some View {
+        TrackingScreenContent(vm: store.model)
+    }
+}
+
+private struct TrackingScreenContent: View {
     @EnvironmentObject private var router: AppRouter
-    @StateObject private var vm: RouteTrackingViewModel
+    @Bindable var vm: RouteTrackingViewModel
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var pantallaVisible = false
     @Environment(\.dismiss) private var dismiss
 
     // Las anotaciones cambian durante la simulación: nunca usar encuadre automático.
@@ -20,7 +41,7 @@ struct RouteTrackingDemoView: View {
     @State private var ultimoCentroCamara: CLLocationCoordinate2D?
     @State private var rumboCamara: Double?
     @State private var ultimaActualizacionCamara: Date = .distantPast
-    /// Chip tocado; nil = el primero del selector (UTP).
+    /// Chip tocado; nil conserva el destino del viaje o usa UTP por defecto.
     @State private var destinoElegido: RouteTrackingViewModel.DestinoDemo?
 
     /// Tema elegido en Ajustes. La pantalla de tracking está estilizada en
@@ -43,14 +64,9 @@ struct RouteTrackingDemoView: View {
     @State private var destinationSearchError: String?
     @State private var destinationSearchTask: Task<Void, Never>?
 
-    /// Producción recibe el GPS de la app; solo la preview crea uno propio.
-    init(locationService: LocationServiceProtocol) {
-        _vm = StateObject(wrappedValue: RouteTrackingViewModel(locationService: locationService))
-    }
-
-    /// Destino activo: el chip tocado o el primero por defecto.
+    /// Al recrear la pantalla, el destino del viaje sigue siendo el seleccionado.
     private var destinoActual: RouteTrackingViewModel.DestinoDemo {
-        destinoElegido ?? vm.destinos[0]
+        destinoElegido ?? vm.destinoSeleccionado ?? vm.destinos[0]
     }
 
     /// Color de la ruta activa: el oficial de la línea GTFS o el del tema.
@@ -68,7 +84,9 @@ struct RouteTrackingDemoView: View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
 
-            mapa
+            TrackingMapCanvas(vm: vm, cameraPosition: $cameraPosition,
+                              vehiculoSeleccionadoID: $vehiculoSeleccionadoID,
+                              destinoActual: destinoActual)
 
             VStack(spacing: 0) {
                 topBar
@@ -153,10 +171,19 @@ struct RouteTrackingDemoView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            vm.actualizarActividadVisual(pantallaVisible && scenePhase == .active)
             await vm.requestPermissionAndStart()
         }
+        .onAppear {
+            pantallaVisible = true
+            vm.actualizarActividadVisual(scenePhase == .active)
+        }
         .onDisappear {
-            vm.stop()
+            pantallaVisible = false
+            vm.suspenderPantalla()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            vm.actualizarActividadVisual(pantallaVisible && phase == .active)
         }
         .onChange(of: vm.posicionTick) { _, _ in
             vm.refrescarNegocios()
@@ -194,137 +221,6 @@ struct RouteTrackingDemoView: View {
             }
             Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
         }
-    }
-
-    // MARK: - Mapa (iOS 17+)
-
-    private var mapa: some View {
-        Map(position: $cameraPosition) {
-            // Destinos del demo = chips fijos del Mapa.
-            ForEach(vm.destinos) { destino in
-                Annotation(destino.label, coordinate: destino.coordinate) {
-                    if destino.label == "UTP" {
-                        MarcadorUTP()
-                    } else {
-                        MarcadorDestinoBuscado(titulo: destino.label)
-                    }
-                }
-            }
-
-            // Posición actual (GPS real o simulada por el modo demo) con
-            // cono de rumbo estilo navegación.
-            if let pos = vm.posicion {
-                Annotation(L.t("Mi posición", "My position"), coordinate: pos) {
-                    UserNavMarker(heading: vm.rumbo)
-                }
-            }
-
-            if let plan = vm.itinerary {
-                MapPolyline(coordinates: plan.walkToBoard)
-                    .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                MapPolyline(coordinates: plan.busDibujo)
-                    .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round))
-                MapPolyline(coordinates: plan.busDibujo)
-                    .stroke(colorRuta, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                if let transfer = plan.transfer {
-                    MapPolyline(coordinates: transfer.walk)
-                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                    MapPolyline(coordinates: transfer.busDibujo)
-                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                    MapPolyline(coordinates: transfer.busDibujo)
-                        .stroke(transfer.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                    Annotation(plan.firstAlight.nombre, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
-                        TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .orange)
-                    }
-                    Annotation(transfer.board.nombre, coordinate: transfer.board.coordinate, anchor: .bottom) {
-                        TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
-                    }
-                }
-                MapPolyline(coordinates: plan.walkToDestination)
-                    .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                Annotation(L.t("Sube aquí", "Board here"), coordinate: plan.board.coordinate, anchor: .bottom) {
-                    TransitStopMarker(number: "1", title: L.t("SUBE", "BOARD"), color: .secondary)
-                }
-                Annotation(L.t("Baja aquí", "Get off here"), coordinate: plan.alight.coordinate, anchor: .bottom) {
-                    TransitStopMarker(number: plan.transfer == nil ? "2" : "4", title: L.t("BAJA", "EXIT"), color: .appPrimary)
-                }
-            } else if let stop = vm.nearestStop {
-                Annotation(stop.nombre, coordinate: stop.coordinate, anchor: .bottom) {
-                    TransitStopMarker(number: "", title: L.t("PARADERO", "STOP"), color: .secondary)
-                }
-            }
-            if destinoActual.id == 999 {
-                Annotation(destinoActual.label, coordinate: destinoActual.coordinate) {
-                    Image(systemName: "flag.checkered.circle.fill")
-                        .font(.system(size: 30)).foregroundStyle(Color.appPrimary)
-                        .background(Circle().fill(Color.appSurface))
-                }
-            }
-
-            // Vehículos en tiempo real vía provider: tap → popup en vivo.
-            ForEach(vm.vehiculos) { vehiculo in
-                Annotation(L.t("Línea", "Line") + " \(vehiculo.linea)", coordinate: vehiculo.coordinate) {
-                    AnimatedBusMarker(
-                        linea: vehiculo.linea,
-                        color: colorDeLinea(vehiculo.linea),
-                        heading: vehiculo.heading
-                    )
-                    .scaleEffect(vehiculoSeleccionadoID == vehiculo.id ? 1.15 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7),
-                               value: vehiculoSeleccionadoID)
-                    .onTapGesture {
-                        AppHaptics.impact(.light)
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            // Toggle: segundo tap sobre el mismo bus cierra.
-                            vehiculoSeleccionadoID = (vehiculoSeleccionadoID == vehiculo.id)
-                                ? nil : vehiculo.id
-                            vm.negocioSeleccionado = nil
-                        }
-                    }
-                }
-            }
-
-            // Catálogo demo espaciado según el área visible, también al explorar la ciudad.
-            ForEach(vm.negociosCerca) { negocio in
-                Annotation(negocio.nombre, coordinate: negocio.coordinate, anchor: .bottom) {
-                    NegocioBubbleMarker(
-                        negocio: negocio,
-                        seleccionado: vm.negocioSeleccionado?.id == negocio.id
-                    )
-                    .onTapGesture {
-                        AppHaptics.impact(.light)
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            vm.negocioSeleccionado = negocio
-                            vehiculoSeleccionadoID = nil
-                        }
-                    }
-                }
-            }
-        }
-        .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .excludingAll))
-        .onMapCameraChange(frequency: .onEnd) { context in
-            // El cálculo de si el movimiento «cuenta» vive en el ViewModel.
-            vm.actualizarViewport(
-                center: context.region.center,
-                radius: max(500, min(16000, context.region.span.latitudeDelta * 111_320 * 0.6))
-            )
-        }
-        // Publicar anotaciones fuera del callback de MapKit; agrupar movimientos rápidos.
-        .task(id: vm.businessViewportRevision) {
-            do { try await Task.sleep(for: .milliseconds(180)) }
-            catch { return }
-            guard !Task.isCancelled else { return }
-            vm.refrescarNegocios(force: true)
-        }
-        .mapControls {
-            MapCompass()
-            MapScaleView()
-            MapPitchToggle()
-        }
-        .ignoresSafeArea()
-        // SIN .onTapGesture aquí: un gesto de tap sobre el Map entero compite
-        // con los taps de las Annotations y las burbujas dejaban de responder.
-        // Las cards se cierran con su botón X o tocando otra burbuja.
     }
 
     // MARK: - Cámara: seguimiento suave con rumbo
@@ -493,26 +389,7 @@ struct RouteTrackingDemoView: View {
 
     private var panelInferior: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Instrucción principal según estado
-            HStack(spacing: 12) {
-                Image(systemName: iconoEstado)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(colorEstado)
-                    .frame(width: 44, height: 44)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(colorEstado.opacity(0.15)))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(instruccion)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.onSurface)
-                        .lineLimit(2)
-                    Text(subtitulo)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.onSurface.opacity(0.6))
-                        .lineLimit(1)
-                }
-                Spacer()
-            }
+            TrackingInstructionPanel(vm: vm)
 
             if let err = vm.errorMessage {
                 Text(err)
@@ -560,11 +437,10 @@ struct RouteTrackingDemoView: View {
                     AvisoRutaAproximada(motivo: .rutaSinDatos)
                 }
 
-                if let plan = vm.itinerary {
-                    itinerarySummary(plan)
+                if let installed = vm.installedItinerary {
+                    itinerarySummary(installed)
                 }
-                barraProgreso
-                statsRow
+                TrackingProgressPanel(vm: vm)
                 controlesViaje
             } else {
                 if let stop = vm.nearestStop, let meters = vm.nearestStopMeters {
@@ -586,10 +462,10 @@ struct RouteTrackingDemoView: View {
                 } label: {
                     Label(L.t("Abrir Ajustes", "Open Settings"), systemImage: "gearshape.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(isDarkMode ? Color.black : Color.white)
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(Color(light: "#087C55", dark: "#8affc1")))
+                        .background(Capsule().fill(Color.appPrimary))
                 }
                 .buttonStyle(.plain)
             }
@@ -608,83 +484,6 @@ struct RouteTrackingDemoView: View {
         .padding(.bottom, 8)
     }
 
-    // MARK: - Progreso + stats del viaje
-
-    private var barraProgreso: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.onSurface.opacity(0.15))
-                    Capsule()
-                        .fill(colorRuta)
-                        .frame(width: max(8, geo.size.width * vm.progreso))
-                }
-            }
-            .frame(height: 6)
-            .animation(.linear(duration: 0.3), value: vm.progreso)
-
-            HStack {
-                Text(L.t("Avance del recorrido", "Trip progress"))
-                    .font(.system(size: 9))
-                    .foregroundStyle(Color.onSurface.opacity(0.5))
-                Spacer()
-                Text("\(Int(vm.progreso * 100))%")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(colorRuta)
-                    .monospacedDigit()
-            }
-        }
-    }
-
-    private var statsRow: some View {
-        HStack(spacing: 0) {
-            stat(icono: "clock.badge.checkmark",
-                 valor: horaLlegadaTexto,
-                 etiqueta: L.t("Llegada", "Arrival"))
-                .frame(maxWidth: .infinity)
-            Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
-            stat(icono: "clock.fill",
-                 valor: "\(vm.minutosRestantes) min",
-                 etiqueta: L.t("Restante", "Remaining"))
-                .frame(maxWidth: .infinity)
-            Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
-            stat(icono: "point.topleft.down.curvedto.point.bottomright.up",
-                 valor: vm.distanciaRestanteTexto,
-                 etiqueta: L.t("Por recorrer", "To go"))
-                .frame(maxWidth: .infinity)
-            Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
-            stat(icono: "record.circle",
-                 valor: "\(vm.sesion?.puntosRecorridos.count ?? 0)",
-                 etiqueta: L.t("Puntos GPS", "GPS points"))
-                .frame(maxWidth: .infinity)
-        }
-    }
-
-    /// Hora de llegada estimada al ritmo de la ruta calculada.
-    private var horaLlegadaTexto: String {
-        guard vm.etaTotalSeg != nil else { return "—" }
-        let fecha = Date().addingTimeInterval(vm.remainingSeconds)
-        return FormatoFecha.formateador(patron: "HH:mm", locale: .current)
-            .string(from: fecha)
-    }
-
-    private func stat(icono: String, valor: String, etiqueta: String) -> some View {
-        VStack(spacing: 3) {
-            Image(systemName: icono)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.onSurface.opacity(0.55))
-            Text(valor)
-                .font(.system(size: 15, weight: .heavy))
-                .foregroundStyle(Color.onSurface)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(etiqueta.uppercased())
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(Color.onSurface.opacity(0.5))
-                .appTracking(AppTracking.wideLabel)
-        }
-    }
-
     // MARK: - Selección de destino (chips = chips fijos del Mapa)
 
     private var selectorDestino: some View {
@@ -700,7 +499,7 @@ struct RouteTrackingDemoView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
-                    Text(destinoElegido?.id == 999 ? destinoActual.label : L.t("Busca una dirección o lugar", "Search an address or place"))
+                    Text(destinoActual.id == 999 ? destinoActual.label : L.t("Busca una dirección o lugar", "Search an address or place"))
                         .lineLimit(2)
                     Spacer(minLength: 0)
                 }
@@ -737,10 +536,10 @@ struct RouteTrackingDemoView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .lineLimit(1)
                         }
-                        .foregroundStyle(seleccionado ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
+                        .foregroundStyle(seleccionado ? Color.white : Color.onSurface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(seleccionado ? Color(light: "#087C55", dark: "#8affc1")
+                        .background(Capsule().fill(seleccionado ? Color.appPrimary
                                                                 : Color.onSurface.opacity(0.12)))
                     }
                     .buttonStyle(.plain)
@@ -793,10 +592,10 @@ struct RouteTrackingDemoView: View {
                                       : L.t("Simular avance", "Simulate progress"),
                           systemImage: vm.modoDemo ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(vm.modoDemo ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
+                        .foregroundStyle(vm.modoDemo ? Color.white : Color.onSurface)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(vm.modoDemo ? Color(light: "#087C55", dark: "#8affc1")
+                        .background(Capsule().fill(vm.modoDemo ? Color.appPrimary
                                                                : Color.onSurface.opacity(0.12)))
                 }
                 .buttonStyle(.plain)
@@ -828,10 +627,10 @@ struct RouteTrackingDemoView: View {
                             } label: {
                                 Text("\(Int(factor))×")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(activo ? (isDarkMode ? Color.black : Color.white) : Color.onSurface.opacity(0.8))
+                                    .foregroundStyle(activo ? Color.white : Color.onSurface.opacity(0.8))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 7)
-                                    .background(Capsule().fill(activo ? Color(light: "#087C55", dark: "#8affc1") : .clear))
+                                    .background(Capsule().fill(activo ? Color.appPrimary : .clear))
                             }
                             .buttonStyle(.plain)
                         }
@@ -847,85 +646,6 @@ struct RouteTrackingDemoView: View {
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
-        }
-    }
-
-    // MARK: - Estado → UI
-
-    private var iconoEstado: String {
-        switch vm.estado {
-        case .esperandoGPS:  return "antenna.radiowaves.left.and.right"
-        case .sinPermiso:    return "location.slash.fill"
-        case .listo:         return "location.fill"
-        case .enRuta:        return (vm.journeyLeg == .riding || vm.journeyLeg == .ridingSecond) ? "bus.fill" : "figure.walk"
-        case .fueraDeRuta:   return "exclamationmark.triangle.fill"
-        case .cercaDestino:  return "bell.badge.fill"
-        case .finalizado:    return "checkmark.circle.fill"
-        }
-    }
-
-    private var colorEstado: Color {
-        switch vm.estado {
-        case .esperandoGPS:  return Color.onSurface
-        case .sinPermiso:    return .red
-        case .listo:         return Color(light: "#087C55", dark: "#8affc1")
-        case .enRuta:        return Color.primaryContainer
-        case .fueraDeRuta:   return .orange
-        case .cercaDestino:  return Color(light: "#946200", dark: "#FFD166")
-        case .finalizado:    return Color(light: "#087C55", dark: "#8affc1")
-        }
-    }
-
-    private var instruccion: String {
-        switch vm.estado {
-        case .esperandoGPS:
-            return L.t("Buscando señal GPS…", "Looking for GPS signal…")
-        case .sinPermiso:
-            return L.t("Activa la ubicación para navegar", "Enable location to navigate")
-        case .listo:
-            return L.t("GPS listo · elige un destino", "GPS ready · pick a destination")
-        case .enRuta:
-            switch vm.journeyLeg {
-            case .walkingToBoard: return L.t("Camina al paradero de subida", "Walk to your boarding stop")
-            case .riding: return L.t("Toma el micro \(vm.rutaGTFS?.linea ?? "")", "Take bus \(vm.rutaGTFS?.linea ?? "")")
-            case .transferring: return L.t("Camina al segundo micro", "Walk to the second bus")
-            case .ridingSecond: return L.t("Toma el micro ", "Take bus ") + (vm.itinerary?.transfer?.route.linea ?? "")
-            case .walkingToDestination: return L.t("Baja y camina a tu destino", "Get off and walk to your destination")
-            }
-        case .fueraDeRuta(let metros):
-            return L.t("Te alejaste de la ruta (\(Int(metros)) m)",
-                       "You went off route (\(Int(metros)) m)")
-        case .cercaDestino:
-            return L.t("Prepárate para llegar", "Get ready to arrive")
-        case .finalizado:
-            return L.t("¡Llegaste a tu destino!", "You arrived at your destination!")
-        }
-    }
-
-    private var subtitulo: String {
-        switch vm.estado {
-        case .esperandoGPS:
-            return L.t("Esperando el primer fix del GPS", "Waiting for the first GPS fix")
-        case .sinPermiso:
-            return L.t("Ajustes → Privacidad → Ubicación", "Settings → Privacy → Location")
-        case .listo:
-            return L.t("Inicia el viaje para probar el tracking", "Start the trip to test tracking")
-        case .enRuta:
-            guard let plan = vm.itinerary else { return "" }
-            switch vm.journeyLeg {
-            case .walkingToBoard: return plan.board.nombre
-            case .riding: return L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre
-            case .transferring: return plan.transfer?.board.nombre ?? ""
-            case .ridingSecond: return L.t("Baja en ", "Get off at ") + plan.alight.nombre
-            case .walkingToDestination: return vm.destinoSeleccionado?.label ?? ""
-            }
-        case .fueraDeRuta:
-            return L.t("Recalculando automáticamente", "Recalculating automatically")
-        case .cercaDestino:
-            return L.t("Llegando a \(vm.destinoSeleccionado?.label ?? "…")",
-                       "Arriving at \(vm.destinoSeleccionado?.label ?? "…")")
-        case .finalizado:
-            return vm.destinoSeleccionado?.label ?? L.t("Destino", "Destination")
         }
     }
 
@@ -1028,16 +748,18 @@ struct RouteTrackingDemoView: View {
         }
     }
 
-    private func itinerarySummary(_ plan: TransitItinerary) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("1 · " + plan.board.nombre + " · \(Int(plan.walkToBoardMeters)) m " + L.t("a pie", "walk"),
+    private func itinerarySummary(_ installed: InstalledTransitItinerary) -> some View {
+        let plan = installed.plan
+        let metrics = installed.metrics
+        return VStack(alignment: .leading, spacing: 8) {
+            Label("1 · " + plan.board.nombre + " · \(Int(metrics.walkToBoardMeters)) m " + L.t("a pie", "walk"),
                   systemImage: "figure.walk")
             Label(L.t("Micro ", "Bus ") + plan.route.linea + " · " + plan.route.precioTexto,
                   systemImage: "bus.fill")
             if let transfer = plan.transfer {
                 Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
                 Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
-                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(transfer.walkMeters))) m · " + transfer.board.nombre,
+                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.transferWalkMeters))) m · " + transfer.board.nombre,
                       systemImage: "figure.walk")
                 Label(L.t("Luego toma ", "Then take ") + transfer.route.linea + " · " + transfer.route.precioTexto,
                       systemImage: "arrow.triangle.swap")
@@ -1045,7 +767,7 @@ struct RouteTrackingDemoView: View {
                          "Time includes an estimated wait for the second bus."))
                     .foregroundStyle(Color.onSurfaceVariant)
             }
-            Label((plan.transfer == nil ? "2 · " : "4 · ") + plan.alight.nombre + " · \(Int(plan.walkToDestinationMeters)) m " + L.t("al destino", "to destination"),
+            Label((plan.transfer == nil ? "2 · " : "4 · ") + plan.alight.nombre + " · \(Int(metrics.walkToDestinationMeters)) m " + L.t("al destino", "to destination"),
                   systemImage: "flag.checkered")
             Text(L.t("··· Caminata     ━ Recorrido del micro", "··· Walk     ━ Bus route"))
                 .font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)
@@ -1060,16 +782,7 @@ struct RouteTrackingDemoView: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerHigh))
     }
 
-    /// Color de la línea, tomado del `route_color` del feed GTFS.
-    ///
-    /// Antes se derivaba de un hash del nombre de la línea, así que la misma
-    /// línea aparecía con un color en Rutas y en el Mapa y con otro aquí. El
-    /// gris neutro solo salta si la línea no está en el feed, que no debería
-    /// ocurrir: los vehículos se generan a partir de rutas del propio feed.
-    private func colorDeLinea(_ linea: String) -> Color {
-        guard let hex = vm.coloresPorLinea[linea] else { return .secondary }
-        return Color.colorRuta(hex: hex)
-    }
+
 }
 
 #Preview {

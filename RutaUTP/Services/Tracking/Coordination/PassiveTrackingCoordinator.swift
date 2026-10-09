@@ -410,7 +410,7 @@ private let isForcedOnboardForMQTTTest =
         locationTask?.cancel()
 
         let locationStream =
-            locationService.currentLocation()
+            locationService.currentLocation(requirement: .navigation)
 
         locationService.startUpdating()
 

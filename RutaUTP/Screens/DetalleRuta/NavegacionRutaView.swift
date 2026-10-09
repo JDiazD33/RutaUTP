@@ -58,6 +58,7 @@ final class NavegacionRutaViewModel: ObservableObject {
     private let locationService: LocationServiceProtocol
     private var locationTask: Task<Void, Never>?
     private var demoTask: Task<Void, Never>?
+    private var actividadVisual = true
     private var demoProgreso: Double = 0
     private var fraccionesParaderos: [(paradero: ParaderoGTFS, fraccion: Double)] = []
     private var distanciasAcumuladas: [Double] = []
@@ -121,6 +122,10 @@ final class NavegacionRutaViewModel: ObservableObject {
             estado = .sinRecorrido
             return
         }
+        if modoDemo {
+            reanudarDemo()
+            return
+        }
         estado = .esperandoGPS
         locationTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -134,8 +139,9 @@ final class NavegacionRutaViewModel: ObservableObject {
                 return
             }
             if status.isAuthorized {
+                let stream = self.locationService.currentLocation(requirement: .navigation)
                 self.locationService.startUpdating()
-                for await location in self.locationService.currentLocation() {
+                for await location in stream {
                     guard !Task.isCancelled else { break }
                     if self.modoDemo { continue }   // el demo toma el control
                     guard location.horizontalAccuracy >= 0, location.horizontalAccuracy <= 65,
@@ -233,13 +239,25 @@ final class NavegacionRutaViewModel: ObservableObject {
         detenerDemo()
         guard shape.count >= 2, distanciaTotalM > 0 else { return }
         demoProgreso = 0
+        reanudarDemo()
+    }
+
+    /// Pausa la demo sin reiniciar el recorrido ni detener el GPS real.
+    func actualizarActividadVisual(_ activa: Bool) {
+        actividadVisual = activa
+        if activa { reanudarDemo() } else { detenerDemo() }
+    }
+
+    private func reanudarDemo() {
+        guard actividadVisual, modoDemo, estado != .finalizado,
+              shape.count >= 2, distanciaTotalM > 0, demoTask == nil else { return }
         // Una sola tarea que duerme entre pasos. Antes era un `Timer` que
         // creaba un `Task` nuevo por tick — doce por segundo — solo para saltar
         // al hilo principal.
         demoTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 80_000_000)
-                guard !Task.isCancelled, let self else { return }
+                guard !Task.isCancelled, let self, self.actividadVisual else { return }
                 self.demoProgreso = min(1.0, self.demoProgreso + 1.0 / 900.0)  // ~72 s todo el viaje
                 let coord = self.coordenadaEnFraccion(self.demoProgreso)
                 let siguiente = self.coordenadaEnFraccion(min(1.0, self.demoProgreso + 0.002))
@@ -279,12 +297,13 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
     let shape: [CLLocationCoordinate2D]
     let paraderos: [ParaderoGTFS]
     let colorLinea: UIColor
+    let colorPosicion: UIColor
     let posicion: CLLocationCoordinate2D?
     @Binding var seguir: Bool
     let modoDemo: Bool
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(color: colorLinea)
+        Coordinator(color: colorLinea, colorPosicion: colorPosicion)
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -317,6 +336,8 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         let coordinator = context.coordinator
+        coordinator.colorPosicion = colorPosicion
+        (mapView.view(for: coordinator.demoPin) as? MKMarkerAnnotationView)?.markerTintColor = colorPosicion
         coordinator.onPan = { seguir = false }
         mapView.showsUserLocation = !modoDemo
         if modoDemo, let posicion {
@@ -349,6 +370,7 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
 
     final class Coordinator: NSObject, MKMapViewDelegate {
         let color: UIColor
+        var colorPosicion: UIColor
         let demoPin = MKPointAnnotation()
         var wasFollowing = true
         var lastCenter: CLLocationCoordinate2D?
@@ -363,7 +385,10 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
             }
         }
 
-        init(color: UIColor) { self.color = color }
+        init(color: UIColor, colorPosicion: UIColor) {
+            self.color = color
+            self.colorPosicion = colorPosicion
+        }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polyline = overlay as? MKPolyline {
@@ -383,7 +408,7 @@ private struct MapaNavegacionRepresentable: UIViewRepresentable {
                 let view = (mapView.dequeueReusableAnnotationView(withIdentifier: "demo") as? MKMarkerAnnotationView)
                     ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: "demo")
                 view.annotation = annotation
-                view.markerTintColor = .systemBlue
+                view.markerTintColor = colorPosicion
                 view.glyphImage = UIImage(systemName: "location.fill")
                 view.displayPriority = .required
                 return view
@@ -420,6 +445,7 @@ struct NavegacionRutaView: View {
 
     @StateObject private var viewModel: NavegacionRutaViewModel
     @State private var seguir: Bool = true
+    @State private var pantallaVisible = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
 
@@ -437,6 +463,7 @@ struct NavegacionRutaView: View {
                 shape: viewModel.shape,
                 paraderos: ruta.paraderos,
                 colorLinea: UIColor(ruta.colorLinea),
+                colorPosicion: UIColor(Color.appPrimary),
                 posicion: viewModel.posicion,
                 seguir: $seguir,
                 modoDemo: viewModel.modoDemo
@@ -454,10 +481,19 @@ struct NavegacionRutaView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear { viewModel.iniciar() }
-        .onDisappear { viewModel.terminar() }
+        .onAppear {
+            pantallaVisible = true
+            viewModel.actualizarActividadVisual(scenePhase == .active)
+            viewModel.iniciar()
+        }
+        .onDisappear {
+            pantallaVisible = false
+            viewModel.actualizarActividadVisual(false)
+            viewModel.terminar()
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active && !viewModel.modoDemo && viewModel.estado != .finalizado {
+            viewModel.actualizarActividadVisual(pantallaVisible && phase == .active)
+            if pantallaVisible && phase == .active && !viewModel.modoDemo && viewModel.estado != .finalizado {
                 viewModel.iniciar()
             }
         }
@@ -484,10 +520,10 @@ struct NavegacionRutaView: View {
                 Label(viewModel.modoDemo ? "Demo ON" : "Demo",
                       systemImage: viewModel.modoDemo ? "stop.fill" : "play.circle.fill")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(viewModel.modoDemo ? .black : .white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
-                    .background(Capsule().fill(viewModel.modoDemo ? Color(hex: "#8affc1") : Color.white.opacity(0.14)))
+                    .background(Capsule().fill(viewModel.modoDemo ? Color.appPrimary : Color.white.opacity(0.14)))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Simular recorrido", "Simulate route"))
@@ -543,7 +579,7 @@ struct NavegacionRutaView: View {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .tint(.appPrimary)
             }
 
             HStack(spacing: 8) {
@@ -725,10 +761,10 @@ struct NavegacionRutaView: View {
             } label: {
                 Text(L.t("Terminar", "Done"))
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Capsule().fill(Color(hex: "#8affc1")))
+                    .background(Capsule().fill(Color.appPrimary))
             }
             .buttonStyle(.plain)
         }

@@ -7,6 +7,43 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BC1900000000000000000002 /* CarnetImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1900000000000000000001 /* CarnetImageStore.swift */; };
+		BC1800000000000000000002 /* TripRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1800000000000000000001 /* TripRecorder.swift */; };
+		BC1300000000000000000002 /* LocationRequirement.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1300000000000000000001 /* LocationRequirement.swift */; };
+		BC1200000000000000000002 /* ServiceDeadlineScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1200000000000000000001 /* ServiceDeadlineScheduler.swift */; };
+		BC1100000000000000000002 /* GTFSRouteCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1100000000000000000001 /* GTFSRouteCatalog.swift */; };
+		BC1000000000000000000002 /* GTFSNearbyRouteIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1000000000000000000001 /* GTFSNearbyRouteIndex.swift */; };
+		BC0900000000000000000002 /* GTFSNearbyRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0900000000000000000001 /* GTFSNearbyRoutes.swift */; };
+		BC0800000000000000000002 /* ItineraryMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0800000000000000000001 /* ItineraryMetrics.swift */; };
+		BC0700000000000000000002 /* VehicleETACache.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0700000000000000000001 /* VehicleETACache.swift */; };
+		BC0600000000000000000002 /* DecorativeAnimationScope.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0600000000000000000001 /* DecorativeAnimationScope.swift */; };
+		BC0300000000000000000002 /* ScreenModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000001 /* ScreenModelStore.swift */; };
+		BC0300000000000000000004 /* RouteSummaryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000003 /* RouteSummaryPanel.swift */; };
+		BC0300000000000000000006 /* TransitMapCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000005 /* TransitMapCanvas.swift */; };
+		BC0300000000000000000008 /* MapHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000007 /* MapHeaderView.swift */; };
+		BC030000000000000000000A /* MapSearchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000009 /* MapSearchPanel.swift */; };
+		BC030000000000000000000C /* MarkerPlacementOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC030000000000000000000B /* MarkerPlacementOverlay.swift */; };
+		BC030000000000000000000E /* MapBusSelectionOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC030000000000000000000D /* MapBusSelectionOverlay.swift */; };
+		BC0300000000000000000010 /* NearbyTransportPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC030000000000000000000F /* NearbyTransportPanel.swift */; };
+		BC0300000000000000000012 /* TrackingMapCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000011 /* TrackingMapCanvas.swift */; };
+		BC0300000000000000000014 /* TrackingProgressPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000013 /* TrackingProgressPanel.swift */; };
+		BC0300000000000000000016 /* TrackingInstructionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000015 /* TrackingInstructionPanel.swift */; };
+		BC0300000000000000000018 /* BusPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000017 /* BusPanelItem.swift */; };
+		BC0200000000000000000002 /* BusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000001 /* BusCard.swift */; };
+		BC0200000000000000000004 /* ElegirDestinoEnMapa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000003 /* ElegirDestinoEnMapa.swift */; };
+		BC0200000000000000000006 /* BusDetailPopup.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000005 /* BusDetailPopup.swift */; };
+		BC0200000000000000000008 /* RutaOpcion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000007 /* RutaOpcion.swift */; };
+		BC020000000000000000000A /* RutasViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000009 /* RutasViewModel.swift */; };
+		BC020000000000000000000C /* RutaOpcionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC020000000000000000000B /* RutaOpcionCard.swift */; };
+		BC020000000000000000000E /* RutasMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC020000000000000000000D /* RutasMapView.swift */; };
+		BC0200000000000000000010 /* DetalleRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC020000000000000000000F /* DetalleRutaView.swift */; };
+		BC0200000000000000000012 /* VoiceOverHelpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000011 /* VoiceOverHelpSheet.swift */; };
+		BC0200000000000000000014 /* PerfilCuponesGuardados.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000013 /* PerfilCuponesGuardados.swift */; };
+		BC0100000000000000000002 /* BusAnimado.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000001 /* BusAnimado.swift */; };
+		BC0100000000000000000004 /* DestinoChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000003 /* DestinoChip.swift */; };
+		BC0100000000000000000006 /* MapaAnotacion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000005 /* MapaAnotacion.swift */; };
+		BC0100000000000000000008 /* VehicleETAEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000007 /* VehicleETAEstimator.swift */; };
+		BC010000000000000000000A /* TransitPlanning.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000009 /* TransitPlanning.swift */; };
 		0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800400300AD9FE004E1676 /* DestinosFijos.swift */; };
 		0A800411300AD9FE004E1676 /* AppHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800410300AD9FE004E1676 /* AppHaptics.swift */; };
 		0A800413300AD9FE004E1676 /* Persistencia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800412300AD9FE004E1676 /* Persistencia.swift */; };
@@ -135,6 +172,43 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BC1900000000000000000001 /* CarnetImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarnetImageStore.swift; sourceTree = "<group>"; };
+		BC1800000000000000000001 /* TripRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRecorder.swift; sourceTree = "<group>"; };
+		BC1300000000000000000001 /* LocationRequirement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRequirement.swift; sourceTree = "<group>"; };
+		BC1200000000000000000001 /* ServiceDeadlineScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDeadlineScheduler.swift; sourceTree = "<group>"; };
+		BC1100000000000000000001 /* GTFSRouteCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSRouteCatalog.swift; sourceTree = "<group>"; };
+		BC1000000000000000000001 /* GTFSNearbyRouteIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSNearbyRouteIndex.swift; sourceTree = "<group>"; };
+		BC0900000000000000000001 /* GTFSNearbyRoutes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSNearbyRoutes.swift; sourceTree = "<group>"; };
+		BC0800000000000000000001 /* ItineraryMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryMetrics.swift; sourceTree = "<group>"; };
+		BC0700000000000000000001 /* VehicleETACache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleETACache.swift; sourceTree = "<group>"; };
+		BC0600000000000000000001 /* DecorativeAnimationScope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecorativeAnimationScope.swift; sourceTree = "<group>"; };
+		BC0300000000000000000001 /* ScreenModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenModelStore.swift; sourceTree = "<group>"; };
+		BC0300000000000000000003 /* RouteSummaryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteSummaryPanel.swift; sourceTree = "<group>"; };
+		BC0300000000000000000005 /* TransitMapCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitMapCanvas.swift; sourceTree = "<group>"; };
+		BC0300000000000000000007 /* MapHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHeaderView.swift; sourceTree = "<group>"; };
+		BC0300000000000000000009 /* MapSearchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapSearchPanel.swift; sourceTree = "<group>"; };
+		BC030000000000000000000B /* MarkerPlacementOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkerPlacementOverlay.swift; sourceTree = "<group>"; };
+		BC030000000000000000000D /* MapBusSelectionOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBusSelectionOverlay.swift; sourceTree = "<group>"; };
+		BC030000000000000000000F /* NearbyTransportPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbyTransportPanel.swift; sourceTree = "<group>"; };
+		BC0300000000000000000011 /* TrackingMapCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingMapCanvas.swift; sourceTree = "<group>"; };
+		BC0300000000000000000013 /* TrackingProgressPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingProgressPanel.swift; sourceTree = "<group>"; };
+		BC0300000000000000000015 /* TrackingInstructionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackingInstructionPanel.swift; sourceTree = "<group>"; };
+		BC0300000000000000000017 /* BusPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusPanelItem.swift; sourceTree = "<group>"; };
+		BC0200000000000000000001 /* BusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusCard.swift; sourceTree = "<group>"; };
+		BC0200000000000000000003 /* ElegirDestinoEnMapa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElegirDestinoEnMapa.swift; sourceTree = "<group>"; };
+		BC0200000000000000000005 /* BusDetailPopup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusDetailPopup.swift; sourceTree = "<group>"; };
+		BC0200000000000000000007 /* RutaOpcion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutaOpcion.swift; sourceTree = "<group>"; };
+		BC0200000000000000000009 /* RutasViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutasViewModel.swift; sourceTree = "<group>"; };
+		BC020000000000000000000B /* RutaOpcionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutaOpcionCard.swift; sourceTree = "<group>"; };
+		BC020000000000000000000D /* RutasMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutasMapView.swift; sourceTree = "<group>"; };
+		BC020000000000000000000F /* DetalleRutaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetalleRutaView.swift; sourceTree = "<group>"; };
+		BC0200000000000000000011 /* VoiceOverHelpSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOverHelpSheet.swift; sourceTree = "<group>"; };
+		BC0200000000000000000013 /* PerfilCuponesGuardados.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfilCuponesGuardados.swift; sourceTree = "<group>"; };
+		BC0100000000000000000001 /* BusAnimado.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusAnimado.swift; sourceTree = "<group>"; };
+		BC0100000000000000000003 /* DestinoChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DestinoChip.swift; sourceTree = "<group>"; };
+		BC0100000000000000000005 /* MapaAnotacion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapaAnotacion.swift; sourceTree = "<group>"; };
+		BC0100000000000000000007 /* VehicleETAEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleETAEstimator.swift; sourceTree = "<group>"; };
+		BC0100000000000000000009 /* TransitPlanning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitPlanning.swift; sourceTree = "<group>"; };
 		0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RutaUTP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A800400300AD9FE004E1676 /* DestinosFijos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DestinosFijos.swift; sourceTree = "<group>"; };
 		0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTConfigurationTests.swift; sourceTree = "<group>"; };
@@ -273,6 +347,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		BC010000000000000000000B /* Mapa */ = {
+			isa = PBXGroup;
+			children = (
+				BC0300000000000000000017 /* BusPanelItem.swift */,
+				BC0100000000000000000001 /* BusAnimado.swift */,
+				BC0100000000000000000003 /* DestinoChip.swift */,
+				BC0100000000000000000005 /* MapaAnotacion.swift */,
+			);
+			path = Mapa;
+			sourceTree = "<group>";
+		};
 		0A40D90B2FDE5E7D00F79FBC = {
 			isa = PBXGroup;
 			children = (
@@ -332,6 +417,7 @@
 		0A800422300AD9FE004E1676 /* Imagenes */ = {
 			isa = PBXGroup;
 			children = (
+				BC1900000000000000000001 /* CarnetImageStore.swift */,
 				0A800429300AD9FE004E1676 /* ProfileImageStore.swift */,
 			);
 			path = Imagenes;
@@ -349,6 +435,8 @@
 		0A8004B8300AD9FE004E1676 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				BC1200000000000000000001 /* ServiceDeadlineScheduler.swift */,
+				BC0600000000000000000001 /* DecorativeAnimationScope.swift */,
 				0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */,
 				0A800427300AD9FE004E1676 /* ImagePicker.swift */,
 				AA7700000000000000000008 /* NegociosComponents.swift */,
@@ -381,6 +469,9 @@
 		0A8004C0300AD9FE004E1676 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				BC0300000000000000000001 /* ScreenModelStore.swift */,
+				BC0200000000000000000007 /* RutaOpcion.swift */,
+				BC010000000000000000000B /* Mapa */,
 				0A8004BD300AD9FE004E1676 /* LugarGuardado.swift */,
 				AA7700000000000000000001 /* Negocio.swift */,
 				0A8004BE300AD9FE004E1676 /* ReporteComunidad.swift */,
@@ -437,6 +528,16 @@
 		0A8004D2300AD9FE004E1676 /* Mapa */ = {
 			isa = PBXGroup;
 			children = (
+				BC0300000000000000000003 /* RouteSummaryPanel.swift */,
+				BC0300000000000000000005 /* TransitMapCanvas.swift */,
+				BC0300000000000000000007 /* MapHeaderView.swift */,
+				BC0300000000000000000009 /* MapSearchPanel.swift */,
+				BC030000000000000000000B /* MarkerPlacementOverlay.swift */,
+				BC030000000000000000000D /* MapBusSelectionOverlay.swift */,
+				BC030000000000000000000F /* NearbyTransportPanel.swift */,
+				BC0200000000000000000001 /* BusCard.swift */,
+				BC0200000000000000000003 /* ElegirDestinoEnMapa.swift */,
+				BC0200000000000000000005 /* BusDetailPopup.swift */,
 				0A8004CE300AD9FE004E1676 /* MapaView.swift */,
 				0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */,
 				0A8004D0300AD9FE004E1676 /* MapMarkers.swift */,
@@ -451,6 +552,8 @@
 		0A8004D8300AD9FE004E1676 /* Perfil */ = {
 			isa = PBXGroup;
 			children = (
+				BC0200000000000000000011 /* VoiceOverHelpSheet.swift */,
+				BC0200000000000000000013 /* PerfilCuponesGuardados.swift */,
 				0AC4E0A220260907004E1676 /* CarneDigitalView.swift */,
 				0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */,
 				0A8004D6300AD9FE004E1676 /* PerfilView.swift */,
@@ -464,6 +567,10 @@
 		0A8004DA300AD9FE004E1676 /* Rutas */ = {
 			isa = PBXGroup;
 			children = (
+				BC0200000000000000000009 /* RutasViewModel.swift */,
+				BC020000000000000000000B /* RutaOpcionCard.swift */,
+				BC020000000000000000000D /* RutasMapView.swift */,
+				BC020000000000000000000F /* DetalleRutaView.swift */,
 				0A8004D9300AD9FE004E1676 /* RutasView.swift */,
 			);
 			path = Rutas;
@@ -485,6 +592,9 @@
 		0A8004DF300AD9FE004E1676 /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				BC0300000000000000000011 /* TrackingMapCanvas.swift */,
+				BC0300000000000000000013 /* TrackingProgressPanel.swift */,
+				BC0300000000000000000015 /* TrackingInstructionPanel.swift */,
 				0A8004DD300AD9FE004E1676 /* RouteTrackingDemoView.swift */,
 				0A8004DE300AD9FE004E1676 /* RouteTrackingViewModel.swift */,
 				0A8005AB300AD9FE004E1676 /* TrackingDemoComponents.swift */,
@@ -510,6 +620,7 @@
 		0A8004E3300AD9FE004E1676 /* Location */ = {
 			isa = PBXGroup;
 			children = (
+				BC1300000000000000000001 /* LocationRequirement.swift */,
 				0A8004E1300AD9FE004E1676 /* LocationService.swift */,
 				0A8004E2300AD9FE004E1676 /* LocationServiceProtocol.swift */,
 			);
@@ -519,7 +630,11 @@
 		0A8004E5300AD9FE004E1676 /* Routing */ = {
 			isa = PBXGroup;
 			children = (
+				BC0800000000000000000001 /* ItineraryMetrics.swift */,
+				BC0700000000000000000001 /* VehicleETACache.swift */,
 				0A8004E4300AD9FE004E1676 /* RouteCalculationService.swift */,
+				BC0100000000000000000009 /* TransitPlanning.swift */,
+				BC0100000000000000000007 /* VehicleETAEstimator.swift */,
 			);
 			path = Routing;
 			sourceTree = "<group>";
@@ -548,6 +663,7 @@
 		0A8004EE300AD9FE004E1676 /* Tracking */ = {
 			isa = PBXGroup;
 			children = (
+				BC1800000000000000000001 /* TripRecorder.swift */,
 				0A8004E9300AD9FE004E1676 /* Models */,
 				0A8004ED300AD9FE004E1676 /* Providers */,
 				2F53143C304F16B600AC2B66 /* Publishers */,
@@ -644,6 +760,9 @@
 		AA6600000000000000000C01 /* GTFS */ = {
 			isa = PBXGroup;
 			children = (
+				BC1100000000000000000001 /* GTFSRouteCatalog.swift */,
+				BC1000000000000000000001 /* GTFSNearbyRouteIndex.swift */,
+				BC0900000000000000000001 /* GTFSNearbyRoutes.swift */,
 				AA6600000000000000000A01 /* GTFSModels.swift */,
 				AA6600000000000000000A02 /* GTFSCSV.swift */,
 				AA6600000000000000000A03 /* GTFSRepository.swift */,
@@ -769,6 +888,43 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BC1900000000000000000002 /* CarnetImageStore.swift in Sources */,
+				BC1800000000000000000002 /* TripRecorder.swift in Sources */,
+				BC1300000000000000000002 /* LocationRequirement.swift in Sources */,
+				BC1200000000000000000002 /* ServiceDeadlineScheduler.swift in Sources */,
+				BC1100000000000000000002 /* GTFSRouteCatalog.swift in Sources */,
+				BC1000000000000000000002 /* GTFSNearbyRouteIndex.swift in Sources */,
+				BC0900000000000000000002 /* GTFSNearbyRoutes.swift in Sources */,
+				BC0800000000000000000002 /* ItineraryMetrics.swift in Sources */,
+				BC0700000000000000000002 /* VehicleETACache.swift in Sources */,
+				BC0600000000000000000002 /* DecorativeAnimationScope.swift in Sources */,
+				BC0300000000000000000002 /* ScreenModelStore.swift in Sources */,
+				BC0300000000000000000004 /* RouteSummaryPanel.swift in Sources */,
+				BC0300000000000000000006 /* TransitMapCanvas.swift in Sources */,
+				BC0300000000000000000008 /* MapHeaderView.swift in Sources */,
+				BC030000000000000000000A /* MapSearchPanel.swift in Sources */,
+				BC030000000000000000000C /* MarkerPlacementOverlay.swift in Sources */,
+				BC030000000000000000000E /* MapBusSelectionOverlay.swift in Sources */,
+				BC0300000000000000000010 /* NearbyTransportPanel.swift in Sources */,
+				BC0300000000000000000012 /* TrackingMapCanvas.swift in Sources */,
+				BC0300000000000000000014 /* TrackingProgressPanel.swift in Sources */,
+				BC0300000000000000000016 /* TrackingInstructionPanel.swift in Sources */,
+				BC0300000000000000000018 /* BusPanelItem.swift in Sources */,
+				BC0200000000000000000002 /* BusCard.swift in Sources */,
+				BC0200000000000000000004 /* ElegirDestinoEnMapa.swift in Sources */,
+				BC0200000000000000000006 /* BusDetailPopup.swift in Sources */,
+				BC0200000000000000000008 /* RutaOpcion.swift in Sources */,
+				BC020000000000000000000A /* RutasViewModel.swift in Sources */,
+				BC020000000000000000000C /* RutaOpcionCard.swift in Sources */,
+				BC020000000000000000000E /* RutasMapView.swift in Sources */,
+				BC0200000000000000000010 /* DetalleRutaView.swift in Sources */,
+				BC0200000000000000000012 /* VoiceOverHelpSheet.swift in Sources */,
+				BC0200000000000000000014 /* PerfilCuponesGuardados.swift in Sources */,
+				BC0100000000000000000002 /* BusAnimado.swift in Sources */,
+				BC0100000000000000000004 /* DestinoChip.swift in Sources */,
+				BC0100000000000000000006 /* MapaAnotacion.swift in Sources */,
+				BC0100000000000000000008 /* VehicleETAEstimator.swift in Sources */,
+				BC010000000000000000000A /* TransitPlanning.swift in Sources */,
 				2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */,
 				2F87EE26304E0F2000E2F5F2 /* PassiveTrackingCoordinator.swift in Sources */,
 				2F87EE28304E0F2000E2F5F2 /* StartGuard.swift in Sources */,

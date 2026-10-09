@@ -38,6 +38,29 @@ enum TipoReporte: String, CaseIterable, Identifiable {
     }
 }
 
+/// El feed conserva un rol, no una copia del Color de la primera temática.
+enum EstiloAvatarReporte: Equatable {
+    case primario, secundario, terciario, neutro
+
+    var fondo: Color {
+        switch self {
+        case .primario: return .primaryContainer
+        case .secundario: return .secondaryContainer
+        case .terciario: return .tertiaryContainer
+        case .neutro: return .surfaceContainerHigh
+        }
+    }
+
+    var texto: Color {
+        switch self {
+        case .primario: return .onPrimaryContainer
+        case .secundario: return .onSecondaryContainer
+        case .terciario: return .onTertiaryContainer
+        case .neutro: return .onSurfaceVariant
+        }
+    }
+}
+
 struct ReporteComunidad: Identifiable, Equatable {
     let id: UUID
     let iniciales: String
@@ -53,8 +76,9 @@ struct ReporteComunidad: Identifiable, Equatable {
     let dislikes: Int
     let comentarios: Int
     let utilMarcado: Bool
-    let avatarColor: Color
-    let avatarForeground: Color
+    let estiloAvatar: EstiloAvatarReporte
+    var avatarColor: Color { estiloAvatar.fondo }
+    var avatarForeground: Color { estiloAvatar.texto }
 
     var cuerpoLocalizado: String { L.esIngles ? (cuerpoIngles ?? cuerpo) : cuerpo }
     var tiempoLocalizado: String {
@@ -78,8 +102,7 @@ struct ReporteComunidad: Identifiable, Equatable {
          dislikes: Int = 0,
          comentarios: Int,
          utilMarcado: Bool = false,
-         avatarColor: Color = .surfaceContainerHigh,
-         avatarForeground: Color = .onSurfaceVariant) {
+         estiloAvatar: EstiloAvatarReporte = .neutro) {
         self.id = id
         self.iniciales = iniciales
         self.nombre = nombre
@@ -92,8 +115,7 @@ struct ReporteComunidad: Identifiable, Equatable {
         self.dislikes = dislikes
         self.comentarios = comentarios
         self.utilMarcado = utilMarcado
-        self.avatarColor = avatarColor
-        self.avatarForeground = avatarForeground
+        self.estiloAvatar = estiloAvatar
     }
 }
 

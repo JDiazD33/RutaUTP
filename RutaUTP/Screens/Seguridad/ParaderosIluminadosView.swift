@@ -64,7 +64,7 @@ struct ParaderosIluminadosView: View {
     @State private var satellite = false
     @FocusState private var searchFocused: Bool
 
-    private let accent = Color(light: "#1669A8", dark: "#78C9FF")
+    private var accent: Color { .appPrimary }
     private var anchor: CLLocationCoordinate2D { location ?? GTFSRepository.coordenadaUTP }
     private var stops: [ParaderoGTFS] { loadedStops.isEmpty ? paraderos : loadedStops }
     private var visible: [ParaderoGTFS] {

@@ -9,33 +9,32 @@ import SwiftUI
 
 // MARK: - User marker (pulso azul con icono de caminante)
 struct PulsingUserMarker: View {
-    @State private var pulsando = false
     /// Con «reducir movimiento» activado el halo no late. El pulso es
     /// decorativo —llama la atención sobre el marcador, no informa de nada—,
     /// así que es lo primero que debe apagarse.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.secondaryContainer.opacity(0.35))
-                .frame(width: pulsando ? 32 : 20, height: pulsando ? 32 : 20)
-                .animation(
-                    reduceMotion
-                    ? nil
-                    : .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
-                    value: pulsando
-                )
-            Circle()
-                .fill(Color.secondary)
-                .frame(width: 18, height: 18)
-                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                .shadow(color: .black.opacity(0.25), radius: 3)
-            Image(systemName: "figure.walk")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white)
+        DecorativeAnimationScope { animar in
+            ZStack {
+                Circle()
+                    .fill(Color.secondaryContainer.opacity(0.35))
+                    .frame(width: animar ? 32 : 20, height: animar ? 32 : 20)
+                    .animation(
+                        !animar
+                        ? nil
+                        : .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
+                        value: animar
+                    )
+                Circle()
+                    .fill(Color.secondary)
+                    .frame(width: 18, height: 18)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                    .shadow(color: .black.opacity(0.25), radius: 3)
+                Image(systemName: "figure.walk")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+            }
         }
-        .onAppear { pulsando = !reduceMotion }
     }
 }
 
@@ -125,7 +124,7 @@ struct FormaPinGota: Shape {
 /// Distinto del marcador del usuario (el punto pulsante): aquel dice "aquí
 /// estoy", este dice "estoy mirando esto". Toca para quitarlo.
 struct MarcadorPin: View {
-    var color: Color = .appPrimary
+    var color: Color? = nil
     var onTap: (() -> Void)?
 
     /// Punto que se ancla en la coordenada: la punta de la gota.
@@ -133,7 +132,7 @@ struct MarcadorPin: View {
 
     var body: some View {
         FormaPinGota()
-            .fill(color)
+            .fill(color ?? Color.appPrimary)
             .frame(width: 34, height: 46)
             .overlay {
                 // El hueco interior: sin él la gota es una mancha sólida y no
@@ -167,39 +166,38 @@ struct MarcadorPin: View {
 /// marca dónde va a caer, para que quede claro que la posición aún no está
 /// fijada.
 struct PinEnColocacion: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var latiendo = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            FormaPinGota()
-                .fill(Color.appPrimary)
-                .frame(width: 30, height: 40)
-                .overlay {
-                    FormaPinGota()
-                        .fill(Color.surfaceContainerLowest)
-                        .frame(width: 10, height: 14)
-                        .offset(y: -9)
-                }
-                .overlay {
-                    FormaPinGota()
-                        .stroke(Color.white, lineWidth: 2.5)
-                }
-                .shadow(color: .black.opacity(0.22), radius: 4, x: 0, y: 2)
+        DecorativeAnimationScope { animar in
+            VStack(spacing: 0) {
+                FormaPinGota()
+                    .fill(Color.appPrimary)
+                    .frame(width: 30, height: 40)
+                    .overlay {
+                        FormaPinGota()
+                            .fill(Color.surfaceContainerLowest)
+                            .frame(width: 10, height: 14)
+                            .offset(y: -9)
+                    }
+                    .overlay {
+                        FormaPinGota()
+                            .stroke(Color.white, lineWidth: 2.5)
+                    }
+                    .shadow(color: .black.opacity(0.22), radius: 4, x: 0, y: 2)
 
-            // Anillo en el suelo: el punto exacto donde caerá el pin.
-            Circle()
-                .stroke(Color.appPrimary.opacity(0.35), lineWidth: 2)
-                .frame(width: latiendo ? 26 : 16, height: latiendo ? 26 : 16)
-                .animation(
-                    reduceMotion
-                    ? nil
-                    : .easeOut(duration: 0.9).repeatForever(autoreverses: true),
-                    value: latiendo
-                )
+                // Anillo en el suelo: el punto exacto donde caerá el pin.
+                Circle()
+                    .stroke(Color.appPrimary.opacity(0.35), lineWidth: 2)
+                    .frame(width: animar ? 26 : 16, height: animar ? 26 : 16)
+                    .animation(
+                        !animar
+                        ? nil
+                        : .easeOut(duration: 0.9).repeatForever(autoreverses: true),
+                        value: animar
+                    )
+            }
+            .allowsHitTesting(false)
         }
-        .allowsHitTesting(false)
-        .onAppear { latiendo = !reduceMotion }
     }
 }
 

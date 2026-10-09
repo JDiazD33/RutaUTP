@@ -178,7 +178,9 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             return
         }
 
-        stream = AsyncStream { [weak self] continuation in
+        // Cada emisión contiene toda la flota actual: un lector retrasado
+        // necesita el último snapshot, sin acumular estados intermedios.
+        stream = AsyncStream<[VehiclePosition]>(bufferingPolicy: .bufferingNewest(1)) { [weak self] continuation in
             guard let self else {
                 continuation.finish()
                 return

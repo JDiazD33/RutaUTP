@@ -45,10 +45,15 @@ private struct OccupancyReceipt: Decodable {
 /// Canal independiente: no modifica posiciones, rutas ni estimaciones de buses.
 final class OccupancyService: ObservableObject {
     private let configurationProvider: () -> MQTTConfiguration?
+    private let clock: () -> TimeInterval
+    private let deadlineScheduler: ServiceDeadlineScheduler
 
     /// Permite comprobar reportes de viaje sin abrir un canal real en tests.
-    init(configurationProvider: @escaping () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment) {
+    init(configurationProvider: @escaping () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment,
+         clock: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 }) {
         self.configurationProvider = configurationProvider
+        self.clock = clock
+        deadlineScheduler = ServiceDeadlineScheduler(clock: clock)
     }
 
     @Published private(set) var buses: [OccupancyReading] = []
@@ -63,7 +68,7 @@ final class OccupancyService: ObservableObject {
 
     /// Conserva solo la elección actual; nunca renueva automáticamente su edad.
     func prepareTripReport(routeID: String, state: BusOccupancyState) {
-        tripReport = (routeID, state, Date().timeIntervalSince1970)
+        tripReport = (routeID, state, clock())
         pendingID = nil
         sending = false
         result = L.t("Se enviará al detectar tu viaje y tener conexión.",
@@ -77,6 +82,7 @@ final class OccupancyService: ObservableObject {
         sending = false
         result = nil
         lastTripAttempt = -.infinity
+        reprogramarVencimiento()
     }
 
     private var mqtt: CocoaMQTT?
@@ -86,10 +92,10 @@ final class OccupancyService: ObservableObject {
     private var lastSnapshot: TimeInterval?
     private var pendingID: String?
     private var sentAt: TimeInterval = 0
-    private var timer: Timer?
 
     func start() {
         guard !running else { return }
+        refresh(allowTripAttempt: false)
         guard let config = configurationProvider() else { return }
         configured = true
         running = true
@@ -109,6 +115,7 @@ final class OccupancyService: ObservableObject {
         client.didConnectAck = { [weak self] client, ack in
             guard let self, self.running, self.mqtt === client, ack == .accept else { return }
             self.subscribed = false
+            self.refresh()
             client.subscribe([( "rutautp/ocupacion/estado", .qos1),
                               ("rutautp/ocupacion/\(self.principal)/recibo", .qos1)])
         }
@@ -129,9 +136,8 @@ final class OccupancyService: ObservableObject {
             self.refresh()
         }
         mqtt = client
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.refresh()
-        }
+        deadlineScheduler.start { [weak self] in self?.refresh() }
+        refresh()
         _ = client.connect()
     }
 
@@ -140,8 +146,7 @@ final class OccupancyService: ObservableObject {
         mqtt?.autoReconnect = false
         mqtt?.disconnect()
         mqtt = nil
-        timer?.invalidate()
-        timer = nil
+        deadlineScheduler.stop()
         subscribed = false
         lastSnapshot = nil
         pendingID = nil
@@ -150,12 +155,14 @@ final class OccupancyService: ObservableObject {
     }
 
     func send(vehicleID: String, state: BusOccupancyState) {
+        refresh(allowTripAttempt: false)
         guard ready, !sending else { return }
         publishReport(target: ["vehicleId": vehicleID], state: state,
-                      timestamp: Date().timeIntervalSince1970)
+                      timestamp: clock())
     }
 
     private func publishReport(target: [String: String], state: BusOccupancyState, timestamp: TimeInterval) {
+        defer { reprogramarVencimiento() }
         guard ready, !sending, let mqtt else { return }
         let id = UUID().uuidString
         var body: [String: Any] = ["schemaVersion": 1, "requestId": id,
@@ -163,16 +170,23 @@ final class OccupancyService: ObservableObject {
         target.forEach { body[$0.key] = $0.value }
         guard let data = try? JSONSerialization.data(withJSONObject: body),
               let json = String(data: data, encoding: .utf8) else { return }
+        let now = clock()
+        guard isAvailable(at: now), target["routeId"] == nil || now - timestamp < 180 else { return }
         pendingID = id
         sending = true
         result = nil
-        sentAt = Date().timeIntervalSince1970
+        sentAt = now
         mqtt.publish("rutautp/ocupacion/\(principal)/reporte", withString: json, qos: .qos1, retained: false)
     }
 
-    private func refresh() {
-        let now = Date().timeIntervalSince1970
-        let available = running && subscribed && lastSnapshot.map { now - $0 < 20 } == true
+    private func isAvailable(at now: TimeInterval) -> Bool {
+        running && subscribed && lastSnapshot.map { now - $0 < 20 } == true
+    }
+
+    private func refresh(allowTripAttempt: Bool = true) {
+        defer { reprogramarVencimiento() }
+        let now = clock()
+        let available = isAvailable(at: now)
         if ready != available { ready = available }
         let current = available ? buses.filter { $0.expiresAt > now } : []
         if buses != current { buses = current }
@@ -181,7 +195,7 @@ final class OccupancyService: ObservableObject {
             result = L.t("Actualiza qué tan lleno va el micro; tu elección venció.",
                          "Update how full your bus is; your selection expired.")
         }
-        if let trip = tripReport, ready, !sending, now - lastTripAttempt >= 30 {
+        if allowTripAttempt, let trip = tripReport, ready, !sending, now - lastTripAttempt >= 30 {
             lastTripAttempt = now
             publishReport(target: ["routeId": trip.routeID], state: trip.state, timestamp: trip.at)
         }
@@ -193,8 +207,33 @@ final class OccupancyService: ObservableObject {
         }
     }
 
+    private func reprogramarVencimiento() {
+        guard running else { deadlineScheduler.cancel(); return }
+        let now = clock()
+        var next: TimeInterval?
+        func include(_ deadline: TimeInterval) {
+            guard deadline.isFinite else { return }
+            next = next.map { min($0, deadline) } ?? deadline
+        }
+        if ready, let lastSnapshot {
+            include(lastSnapshot + 20)
+            for bus in buses { include(bus.expiresAt) }
+        }
+        if sending { include(sentAt + 12) }
+        if let trip = tripReport {
+            include(trip.at + 180)
+            if ready, !sending {
+                // Si el timeout se procesó tarde, el siguiente callback puede
+                // intentar el reporte sin esperar un tick periódico adicional.
+                include(lastTripAttempt.isFinite ? max(now, lastTripAttempt + 30) : now)
+            }
+        }
+        deadlineScheduler.schedule(at: next)
+    }
+
     private func receive(_ data: Data, topic: String) {
-        let now = Date().timeIntervalSince1970
+        defer { refresh() }
+        let now = clock()
         if topic == "rutautp/ocupacion/estado",
            data.count <= 300_000,
            let snapshot = try? JSONDecoder().decode(OccupancySnapshot.self, from: data),
@@ -208,10 +247,10 @@ final class OccupancyService: ObservableObject {
                 $0.isValid(at: now) && seen.insert($0.id).inserted
             }
             if buses != current { buses = current }
-            refresh()
         } else if topic == "rutautp/ocupacion/\(principal)/recibo",
                   let receipt = try? JSONDecoder().decode(OccupancyReceipt.self, from: data),
-                  receipt.requestId == pendingID {
+                  receipt.requestId == pendingID, now - sentAt < 12,
+                  tripReport.map({ now - $0.at < 180 }) ?? true {
             sending = false
             pendingID = nil
             if receipt.accepted {

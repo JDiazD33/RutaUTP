@@ -59,7 +59,13 @@ enum GTFSCSV {
 
     /// Parsea texto CSV a GTFSTable.
     static func parsear(texto: String) -> GTFSTable {
-        let bytes = Array(texto.utf8)
+        var texto = texto
+        // El buffer solo vive durante esta llamada síncrona; los campos
+        // emitidos conservan su almacenamiento propio.
+        return texto.withUTF8 { parsear(bytes: $0) }
+    }
+
+    private static func parsear(bytes: UnsafeBufferPointer<UInt8>) -> GTFSTable {
         // Reserva aproximada: los saltos dentro de campos citados pueden
         // sobreestimarla, pero no cambian la cantidad de registros emitidos.
         let capacidad = bytes.reduce(into: 0) { if $1 == 10 { $0 += 1 } }
@@ -88,7 +94,7 @@ enum GTFSCSV {
     /// Emite registros completos, sin partir un salto que pertenece al dato.
     /// Los delimitadores son ASCII: leer UTF-8 evita que Swift agrupe CRLF
     /// en un solo Character y conserva los bytes de Unicode y saltos citados.
-    private static func leerRegistros(_ bytes: [UInt8], procesar: ([String]) -> Void) {
+    private static func leerRegistros(_ bytes: UnsafeBufferPointer<UInt8>, procesar: ([String]) -> Void) {
         var indice = 0
         // Quitar únicamente la firma UTF-8 inicial; otro BOM es parte del dato.
         if bytes.starts(with: [0xEF, 0xBB, 0xBF]) { indice = 3 }

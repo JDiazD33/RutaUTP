@@ -26,7 +26,12 @@ protocol LocationServiceProtocol: AnyObject {
     var authorizationPublisher: AnyPublisher<CLAuthorizationStatus, Never> { get }
 
     /// Stream async de ubicaciones a medida que llegan del CLLocationManager.
+    /// Conserva el requisito de precisión alta para consumidores existentes.
     func currentLocation() -> AsyncStream<CLLocation>
+
+    /// El requisito pertenece a este stream y se libera con su terminación.
+    @MainActor
+    func currentLocation(requirement: LocationRequirement) -> AsyncStream<CLLocation>
 
     /// Solicita permiso al usuario (solo si el status es .notDetermined).
     func requestPermission() async -> CLAuthorizationStatus
@@ -34,8 +39,16 @@ protocol LocationServiceProtocol: AnyObject {
     /// Comienza a recibir updates. Idempotente.
     func startUpdating()
 
-    /// Detiene los updates y cierra el stream activo.
+    /// Solicita detener updates; cada consumidor libera su stream al terminar.
     func stopUpdating()
+}
+
+extension LocationServiceProtocol {
+    /// Los proveedores alternativos conservan su implementación anterior.
+    @MainActor
+    func currentLocation(requirement: LocationRequirement) -> AsyncStream<CLLocation> {
+        currentLocation()
+    }
 }
 
 // MARK: - Helpers de permiso (libres de UIColor/UIKit)

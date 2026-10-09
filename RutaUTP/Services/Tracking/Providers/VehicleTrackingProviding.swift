@@ -23,7 +23,8 @@ protocol VehicleTrackingProviding: AnyObject {
     /// Detiene la emisión de posiciones. Libera timers/sockets.
     func stop()
 
-    /// Stream de posiciones de vehículos en tiempo real.
+    /// Snapshots completos de la flota actual; los pendientes pueden reemplazarse.
+    /// Cada instancia mantiene un lector; el stream no difunde a varios lectores.
     /// Se renueva en cada start/stop. El consumidor debe iterar con `for await`.
     func positions() -> AsyncStream<[VehiclePosition]>
 

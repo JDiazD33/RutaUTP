@@ -14,10 +14,25 @@ import SwiftUI
 import MapKit
 
 struct MapaView: View {
+    @StateObject private var store: ScreenModelStore<MapaViewModel>
+
+    init(locationService: LocationServiceProtocol = LocationService()) {
+        _store = StateObject(wrappedValue: ScreenModelStore(
+            MapaViewModel(locationService: locationService)
+        ))
+    }
+
+    var body: some View {
+        MapaScreenContent(vm: store.model)
+    }
+}
+
+private struct MapaScreenContent: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
-    @StateObject private var vm: MapaViewModel
+    @Bindable var vm: MapaViewModel
+    @State private var pantallaVisible = false
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     @State private var showBoardingConfirmation = false
@@ -36,9 +51,9 @@ struct MapaView: View {
     /// ViewModel: no lo lee nadie más y no debe sobrevivir a la navegación
     /// hacia atrás, donde volvería a aparecer sin que se haya pedido.
     @State private var marcadorUsuario: CLLocationCoordinate2D?
-    /// Centro de lo que se está viendo. Lo mantiene MapKit, no se deduce: es
-    /// el punto exacto que caerá el marcador.
-    @State private var centroMapa: CLLocationCoordinate2D?
+    /// Último centro que comunica MapKit. State conserva la referencia;
+    /// su coordenada no es observable ni se usa para dibujar la interfaz.
+    @State private var centroMapa = CentroMapaVisible()
     @FocusState private var campoEnfocado: Bool
 
     @State private var cameraPosition: MapCameraPosition = .region(
@@ -76,213 +91,22 @@ struct MapaView: View {
 
     private var mostrandoRuta: Bool { vm.itinerario != nil }
 
-    /// El servicio de ubicación se inyecta para compartirlo con el rastreo
-    /// pasivo: una sola instancia para toda la app (ver `RutaUTPApp`).
-    init(locationService: LocationServiceProtocol = LocationService()) {
-        _vm = StateObject(
-            wrappedValue: MapaViewModel(locationService: locationService)
-        )
-    }
-
-    private var resumenItinerario: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                if vm.calculandoItinerario {
-                    ProgressView().controlSize(.small)
-                    Text(L.t("Buscando paradero y transporte…", "Finding stops and transit…"))
-                } else {
-                    Text(vm.busquedaResultado.map { L.t("Hacia ", "To ") + $0.titulo } ?? "")
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 4)
-                Button { vm.limpiar() } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Color.onSurfaceVariant)
-                        .frame(width: 32, height: 32)
-                }
-                .accessibilityLabel(L.t("Quitar ruta", "Clear route"))
-            }
-            .font(.system(size: 13, weight: .semibold))
-            if let plan = vm.itinerario {
-                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(plan.walkToBoardMeters))) m · " + plan.board.nombre,
-                      systemImage: "figure.walk")
-                Label(L.t("Toma la línea ", "Take line ") + plan.route.linea + " · " + plan.route.precioTexto,
-                      systemImage: "bus.fill")
-                if let transfer = plan.transfer {
-                    Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
-                    Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
-                    Label(L.t("Camina ", "Walk ") + "\(Int(ceil(transfer.walkMeters))) m · " + transfer.board.nombre,
-                          systemImage: "figure.walk")
-                    Label(L.t("Luego toma ", "Then take ") + transfer.route.linea + " · " + transfer.route.precioTexto,
-                          systemImage: "arrow.triangle.swap")
-                    Text(L.t("El tiempo incluye una espera estimada para el segundo micro.",
-                             "Time includes an estimated wait for the second bus."))
-                        .foregroundStyle(Color.onSurfaceVariant)
-                }
-                Label(L.t("Baja en ", "Get off at ") + plan.alight.nombre,
-                      systemImage: "mappin.and.ellipse")
-                Text(L.t("Luego camina \(Int(ceil(plan.walkToDestinationMeters))) m hasta tu destino.",
-                         "Then walk \(Int(ceil(plan.walkToDestinationMeters))) m to your destination."))
-                    .foregroundStyle(Color.onSurfaceVariant)
-                Text(L.t("··· A pie   ━ En bus", "··· Walk   ━ Bus") + " · ~\(vm.etaMinutos ?? 0) min")
-                    .foregroundStyle(Color.onSurfaceVariant)
-                if plan.walkingApproximate {
-                    AvisoRutaAproximada()
-                }
-                if trackingCoordinator.selectedTripRoute == nil {
-                    invitacionConfirmarViaje
-                }
-            } else if let mensaje = vm.mensajeRuta {
-                Text(mensaje).foregroundStyle(Color.onSurfaceVariant)
-            }
-        }
-        .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(Color.onSurface)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-    }
-
-    /// Acceso voluntario que permanece disponible aunque se cierre el aviso.
-    private var invitacionConfirmarViaje: some View {
-        Button {
-            cancelarPreguntaDeViaje()
-            showBoardingConfirmation = true
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "bus.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(Color.appPrimary)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L.t("¿Ya subiste?", "Already on board?"))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.onSurface)
-                    Text(L.t("Confirma tu línea", "Confirm your line"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.onSurfaceVariant)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.onSurfaceVariant)
-            }
-            .frame(minHeight: 44)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
-            .contentShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .padding(.top, 4)
-        .accessibilityLabel(L.t("¿Ya subiste? Confirma tu línea", "Already on board? Confirm your line"))
-    }
-
     var body: some View {
         ZStack(alignment: .bottom) {
 
             // ── MAPA DE FONDO (iOS 17+ MapKit con MapPolyline) ──
-            Map(position: $cameraPosition) {
-
-                // 1. Marcador UTP Trujillo (Av. Nicolás de Piérola 1221)
-                Annotation("UTP Trujillo", coordinate: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645)) {
-                    MarcadorUTP()
-                }
-
-                // 2. Marcador del Usuario (GPS Real o Peatón)
-                if let userCoord = vm.userRealCoordinate {
-                    Annotation(L.t("Mi Ubicación", "My Location"), coordinate: userCoord) {
-                        PulsingUserMarker()
-                    }
-                }
-
-                // Caminatas punteadas y recorrido del transporte en línea continua.
-                if let plan = vm.itinerario {
-                    MapPolyline(coordinates: plan.walkToBoard)
-                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                    MapPolyline(coordinates: plan.busDibujo)
-                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                    MapPolyline(coordinates: plan.busDibujo)
-                        .stroke(plan.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                    if let transfer = plan.transfer {
-                        MapPolyline(coordinates: transfer.walk)
-                            .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                        MapPolyline(coordinates: transfer.busDibujo)
-                            .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                        MapPolyline(coordinates: transfer.busDibujo)
-                            .stroke(transfer.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                        Annotation(plan.firstAlight.nombre, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
-                            TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .orange)
-                        }
-                        Annotation(transfer.board.nombre, coordinate: transfer.board.coordinate, anchor: .bottom) {
-                            TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
-                        }
-                    }
-                    MapPolyline(coordinates: plan.walkToDestination)
-                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                    Annotation(L.t("Sube aquí", "Board here"), coordinate: plan.board.coordinate, anchor: .bottom) {
-                        TransitStopMarker(number: "1", title: L.t("SUBE", "BOARD"), color: .secondary)
-                    }
-                    Annotation(L.t("Baja aquí", "Get off here"), coordinate: plan.alight.coordinate, anchor: .bottom) {
-                        TransitStopMarker(number: plan.transfer == nil ? "2" : "4", title: L.t("BAJA", "EXIT"), color: .appPrimary)
-                    }
-                }
-
-                // 4. Marcador del Destino Buscado (ej. UPAO, Casa, Mall Plaza)
-                if let res = vm.busquedaResultado, res.titulo != "UTP", !marcadorEsDestinoActual {
-                    Annotation(res.titulo, coordinate: res.coordenada) {
-                        MarcadorDestinoBuscado(titulo: res.titulo)
-                    }
-                }
-
-                // 4b. Marcador dejado por el usuario. Va POR ENCIMA del
-                // marcador pulsante de su posición, que es decorativo: si
-                // coinciden, el pin es el que informa.
-                if let marcador = marcadorUsuario {
-                    Annotation(L.t("Mi punto", "My point"),
-                               coordinate: marcador,
-                               anchor: MarcadorPin.ancla) {
-                        MarcadorPin { despejarMarcador() }
-                    }
-                }
-
-                // 5. Marcadores de Buses Animados en Tiempo Real.
-                // Tope de 8 en el mapa por rendimiento. El canal real conserva
-                // la flota global; el panel filtra por rutas cercanas al destino.
-                //
-                // El marcador lleva el modelo 3D del bus y la etiqueta de la
-                // línea encima. El ancla no es el centro de la vista: con la
-                // etiqueta arriba, centrarla dejaría el vehículo dibujado por
-                // debajo del punto real.
-                ForEach(vm.busesAnimados.prefix(8)) { bus in
-                    Annotation(L.t("Línea", "Line") + " \(bus.linea)",
-                               coordinate: bus.coordinate,
-                               anchor: BusMarker3D.ancla) {
-                        Button {
-                            campoEnfocado = false
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                vm.busSeleccionado = bus
-                            }
-                        } label: {
-                            BusMarker3D(
-                                linea: bus.linea,
-                                color: bus.color,
-                                heading: bus.heading,
-                                seleccionado: vm.busSeleccionado?.id == bus.id
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            .ignoresSafeArea()
-            // Cada movimiento reinicia la espera, incluido el deslizamiento
-            // por inercia: nunca confirmar el centro anterior mientras se arrastra.
-            .onMapCameraChange(frequency: .continuous) { context in
-                centroMapa = context.region.center
-                if modoColocarMarcador { programarConfirmacionMarcador() }
-            }
-            // Las anotaciones gestionan sus toques; la ficha se cierra con su X.
-            // Un gesto en el Map padre competía con la selección del micro.
+            TransitMapCanvas(
+                vm: vm,
+                cameraPosition: $cameraPosition,
+                marcadorUsuario: marcadorUsuario,
+                marcadorEsDestinoActual: marcadorEsDestinoActual,
+                campoEnfocado: $campoEnfocado,
+                onCameraChange: { center in
+                    centroMapa.coordenada = center
+                    if modoColocarMarcador { programarConfirmacionMarcador() }
+                },
+                onClearMarker: despejarMarcador
+            )
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
@@ -290,7 +114,7 @@ struct MapaView: View {
                 // así se retira hacia arriba de un tirón y no pieza a pieza.
                 VStack(spacing: 0) {
                     if !mostrandoRuta {
-                        header
+                        MapHeaderView(vm: vm, mostrarDrawer: $mostrarDrawer)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
@@ -299,14 +123,18 @@ struct MapaView: View {
                     // panel de transportes y los accesos al mapa. El buscador
                     // vuelve al limpiar la ruta (la X de la guía).
                     if vm.itinerario == nil {
-                        searchPanel
+                        MapSearchPanel(vm: vm, campoEnfocado: $campoEnfocado,
+                                       showElegirEnMapa: $showElegirEnMapa)
                             .padding(.horizontal, 16)
                             .padding(.top, 12)
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
 
                     if vm.busquedaResultado != nil {
-                        resumenItinerario
+                        RouteSummaryPanel(vm: vm, onConfirmBoarding: {
+                            cancelarPreguntaDeViaje()
+                            showBoardingConfirmation = true
+                        })
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
                     }
@@ -360,7 +188,8 @@ struct MapaView: View {
                         .padding(.bottom, 56)
                         .transition(.opacity)
                     } else {
-                        bottomPanel
+                        NearbyTransportPanel(vm: vm, panelColapsado: $panelColapsado,
+                                             reportButton: botonReportar)
                             .padding(.bottom, tabBarHeight + 8)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
@@ -379,30 +208,8 @@ struct MapaView: View {
             .animation(.easeInOut(duration: 0.28), value: vm.itinerario != nil)
 
             // ── POPUP DETALLE DE BUS ANIMADO ──
-            if let bus = vm.busSeleccionado {
-                VStack {
-                    Spacer()
-                    BusDetailPopup(
-                        bus: bus,
-                        onClose: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                vm.busSeleccionado = nil
-                            }
-                        },
-                        onVerRuta: {
-                            vm.busSeleccionado = nil
-                            // Abre el detalle de ESA línea en Rutas, no la
-                            // lista genérica.
-                            router.rutaPendiente = bus.rutaId
-                            router.navigate(to: .rutas)
-                        }
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, tabBarHeight + 16)
-                }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+            MapBusSelectionOverlay(vm: vm, tabBarHeight: tabBarHeight)
                 .zIndex(10)
-            }
 
             // ── DRAWER OVERLAY ──
             if mostrarDrawer {
@@ -414,7 +221,8 @@ struct MapaView: View {
             // ── OVERLAY DE COLOCACIÓN DEL MARCADOR ──
             // Encima de la UI flotante: el botón de cancelar debe recibir el
             // toque aunque los paneles se estén retirando.
-            overlayColocandoMarcador
+            MarkerPlacementOverlay(modoColocarMarcador: modoColocarMarcador,
+                                   tabBarHeight: tabBarHeight, cancelarMarcador: cancelarMarcador)
                 .zIndex(20)
 
             // ── VENTANA DE CARGA DEL ITINERARIO ──
@@ -432,6 +240,8 @@ struct MapaView: View {
         .ignoresSafeArea(edges: .bottom)
         .animation(.easeInOut(duration: 0.3), value: mostrandoRuta)
         .onAppear {
+            pantallaVisible = true
+            vm.actualizarActividadVisual(scenePhase == .active)
             vm.iniciarGPS()
             vm.refrescarDestinos() // chips: refleja lo guardado en Guardado
             consumirDestinoPendiente()
@@ -442,12 +252,15 @@ struct MapaView: View {
             #endif
         }
         .onDisappear {
+            pantallaVisible = false
+            vm.actualizarActividadVisual(false)
             cancelarPreguntaDeViaje()
             confirmacionMarcador?.cancel()
             modoColocarMarcador = false
             vm.detener()
         }
         .onChange(of: scenePhase) { _, phase in
+            vm.actualizarActividadVisual(pantallaVisible && phase == .active)
             if phase != .active {
                 confirmacionMarcador?.cancel()
                 modoColocarMarcador = false
@@ -589,244 +402,6 @@ struct MapaView: View {
         }
     }
 
-    // MARK: - Header
-    private var header: some View {
-        HStack(spacing: 12) {
-            Button {
-                withAnimation { mostrarDrawer = true }
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.onSurface)
-                    .frame(width: 40, height: 40)
-                    .background(Color.surfaceContainerLow)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: .black.opacity(0.08), radius: 4)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Abrir menú", "Open menu"))
-
-            Text(L.t("Mapa", "Map"))
-                .font(.headlineLgMobile)
-                .foregroundStyle(.appPrimary)
-
-            if vm.fuenteFlota == .real {
-                // Tener credenciales no demuestra que hayan llegado posiciones.
-                // El proveedor elimina los vehículos cuando sus datos caducan.
-                let hayDatosRecientes = vm.hayPosicionesRealesRecientes
-                Text(hayDatosRecientes
-                     ? L.t("DATOS RECIENTES", "RECENT DATA")
-                     : L.t("ESPERANDO DATOS", "WAITING FOR DATA"))
-                    .font(.system(size: 9, weight: .bold))
-                    .appTracking(AppTracking.wideLabel)
-                    .foregroundStyle(hayDatosRecientes ? Color.green : Color.secondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(
-                        (hayDatosRecientes ? Color.green : Color.secondary).opacity(0.14)
-                    ))
-                    .accessibilityLabel(hayDatosRecientes
-                        ? L.t("Posiciones recientes de vehículos", "Recent vehicle positions")
-                        : L.t("Esperando posiciones de vehículos confirmados", "Waiting for confirmed vehicle positions"))
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .frame(height: 56)
-        .background(Color.appSurface.opacity(0.95))
-        .overlay(
-            Rectangle()
-                .fill(Color.outlineVariant.opacity(0.25))
-                .frame(height: 1),
-            alignment: .bottom
-        )
-    }
-
-    /// Botón al final del buscador: abre el mapa para elegir el destino
-    /// con un tap (ícono de flecha tipo Google Maps, gris claro).
-    private var botonElegirEnMapa: some View {
-        Button {
-            AppHaptics.impact(.light)
-            campoEnfocado = false
-            showElegirEnMapa = true
-        } label: {
-            Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color(.systemGray2))
-                .frame(width: 34, height: 34)
-                .background(
-                    Circle().fill(Color.surfaceContainerHighest)
-                )
-                .overlay(
-                    Circle().stroke(Color.outlineVariant.opacity(0.5), lineWidth: 0.5)
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(L.t("Elegir destino en el mapa", "Pick destination on map"))
-    }
-
-    // MARK: - Search panel
-    private var searchPanel: some View {
-        VStack(spacing: 10) {
-            // TextField
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.onSurfaceVariant)
-                    .font(.system(size: 16))
-                TextField(L.t("¿A dónde vas hoy?", "Where to today?"), text: $vm.textoBusqueda)
-                    .font(.system(size: 15))
-                    .foregroundStyle(.onSurface)
-                    .focused($campoEnfocado)
-                    .submitLabel(.search)
-                    .onSubmit {
-                        campoEnfocado = false
-                        vm.buscarTexto(vm.textoBusqueda)
-                    }
-                    .onChange(of: vm.textoBusqueda) { _, nuevo in
-                        // Solo se autocompleta mientras el usuario escribe en
-                        // el campo. Cuando el texto lo pone el código (al
-                        // elegir un chip, un resultado o un lugar guardado) el
-                        // campo no está enfocado y no hay que consultar nada.
-                        guard campoEnfocado else { return }
-                        vm.actualizarTextoBusqueda(nuevo)
-                    }
-                if vm.buscando {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else if !vm.textoBusqueda.isEmpty {
-                    Button {
-                        vm.limpiar()
-                        campoEnfocado = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.onSurfaceVariant.opacity(0.5))
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                // Elegir destino tocando el mapa (ícono tipo Google Maps).
-                botonElegirEnMapa
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.surfaceContainerLow))
-
-            // Lista de Sugerencias Autocompletadas (ej. UPAO)
-            if !vm.sugerenciasBusqueda.isEmpty && campoEnfocado {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(vm.sugerenciasBusqueda.prefix(5), id: \.self) { sug in
-                        Button {
-                            campoEnfocado = false
-                            vm.seleccionarSugerencia(sug)
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "mappin.circle.fill")
-                                    .foregroundStyle(Color.appPrimary)
-                                    .font(.system(size: 16))
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(sug.title)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.onSurface)
-                                        .lineLimit(1)
-                                    if !sug.subtitle.isEmpty {
-                                        Text(sug.subtitle)
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.onSurfaceVariant)
-                                            .lineLimit(1)
-                                    }
-                                }
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                        }
-                        .buttonStyle(.plain)
-
-                        if sug != vm.sugerenciasBusqueda.prefix(5).last {
-                            Divider()
-                        }
-                    }
-                }
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.surfaceContainerLowest))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
-                )
-            }
-
-            // Chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(vm.destinos) { destino in
-                        chip(destino)
-                    }
-                }
-                // Respiración para la manita del distintivo: el ScrollView
-                // recorta todo lo que sale del contenido y la parte de arriba
-                // (y la derecha del último chip) se veía a la mitad.
-                .padding(.leading, 2)
-                .padding(.trailing, 10)
-                .padding(.top, 8)
-            }
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 2)
-    }
-
-    private func chip(_ destino: DestinoChip) -> some View {
-        let activo = vm.destinoSeleccionado?.id == destino.id
-        let acento: Color = {
-            switch destino.id {
-            case 1: return Color(light: "#A80033", dark: "#FF91AD")
-            case 2: return Color(light: "#796000", dark: "#F4D35E")
-            case 3: return Color(light: "#006779", dark: "#65CCD8")
-            default: return Color(light: "#3C5D9C", dark: "#99B8FE")
-            }
-        }()
-        return Button {
-            SeniasPresenter.shared.ejecutarTrasVerSenia(clave: destino.claveSenia) {
-                campoEnfocado = false
-                vm.seleccionar(destino: destino)
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: destino.icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(acento)
-                    .frame(width: 20)
-                Text(destino.label)
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(1)
-                if activo {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(acento)
-                }
-            }
-            .foregroundStyle(Color.onSurface)
-            .padding(.horizontal, 10)
-            .frame(height: 34)
-            .background(acento.opacity(activo ? 0.22 : 0.10), in: Capsule())
-            .overlay(Capsule().stroke(acento.opacity(activo ? 0.8 : 0.25), lineWidth: 1))
-            // Compacto a la vista, con un área cómoda para tocar.
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityValue(activo ? L.t("Seleccionado", "Selected") : "")
-        .accessibilityHint(L.t("Mostrar este destino en el mapa", "Show this destination on the map"))
-        .seniable(destino.claveSenia, conGesto: false)
-    }
-
     // MARK: - Destino pendiente (desde Guardado u otras pantallas)
     private func consumirDestinoPendiente() {
         guard let destino = router.destinoPendiente else { return }
@@ -907,7 +482,7 @@ struct MapaView: View {
         confirmacionMarcador?.cancel()
         confirmacionMarcador = nil
         guard modoColocarMarcador else { return }
-        let centro = centroMapa ?? vm.region.center
+        let centro = centroMapa.coordenada ?? vm.region.center
         guard CLLocationCoordinate2DIsValid(centro) else { return }
         AppHaptics.impact(.medium)
         withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
@@ -927,62 +502,6 @@ struct MapaView: View {
         withAnimation {
             marcadorUsuario = nil
             modoColocarMarcador = false
-        }
-    }
-
-    /// Lo que se ve mientras se elige el punto: el pin clavado en el centro y
-    /// una barra con la instrucción y la salida.
-    @ViewBuilder
-    private var overlayColocandoMarcador: some View {
-        if modoColocarMarcador {
-            ZStack {
-                // El pin va en el centro geométrico de la pantalla, que es
-                // justo lo que se está viendo. Se posiciona con el `ZStack`
-                // y no con `UIScreen.main.bounds`: esa API está deprecada y
-                // en iPad multitasking mide la pantalla, no la ventana.
-                PinEnColocacion()
-                    .allowsHitTesting(false)
-
-                VStack {
-                    Spacer()
-                    HStack(spacing: 6) {
-                        Image(systemName: "hand.draw.fill")
-                            .font(.system(size: 12, weight: .bold))
-                        Text(L.t("Mueve el mapa. Al parar 1 s, se calcula la ruta",
-                                 "Move the map. Pause for 1 s to calculate the route"))
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .allowsHitTesting(false)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(Color.black.opacity(0.55)))
-
-                    Button(action: cancelarMarcador) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .bold))
-                            Text(L.t("Cancelar", "Cancel"))
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(.onSurface)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(
-                            Capsule().fill(.ultraThinMaterial)
-                        )
-                    }
-                    .buttonStyle(PressableCapsuleStyle())
-                    .accessibilityLabel(L.t("Cancelar el marcador", "Cancel the marker"))
-                    // Único punto del overlay que debe recibir toques: el resto
-                    // deja pasar el gesto hasta el mapa, que es quien coloca
-                    // el marcador.
-                    .allowsHitTesting(true)
-
-                    Spacer().frame(height: tabBarHeight + 16)
-                }
-            }
-            .transition(.opacity)
         }
     }
 
@@ -1075,411 +594,13 @@ struct MapaView: View {
         .seniable("mapa.reportar", conGesto: false)
     }
 
-    // MARK: - Bottom panel
-    // CORREGIDO V3: frame explicito de 168pt para que las cards no se corten
-    private var bottomPanel: some View {
-        VStack(spacing: 10) {
-            HStack(alignment: .center) {
-                botonReportar
-
-                Spacer()
-
-                if !panelColapsado {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(L.signable("mapa.cercanos", "Transportes cercanos", "Nearby transport"))
-                            .font(.system(size: 15, weight: .heavy))
-                            .foregroundStyle(.onSurface)
-                            .seniable("mapa.cercanos")
-                        Text(vm.textoEstadoLineas)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.onSurfaceVariant)
-                            .lineLimit(1)
-                    }
-                    // Al colapsar el texto se desliza a la derecha, hacia el
-                    // ícono de bus (su ancla fija), y se funde detrás de él.
-                    // Al expandir aparece ya en su sitio, sin arrastre.
-                    .transition(.asymmetric(
-                        insertion: .opacity,
-                        removal:   .move(edge: .trailing).combined(with: .opacity)
-                    ))
-                }
-
-                // Ícono de bus: fijo en el borde derecho, centrado bajo el
-                // botón de Mi Ubicación. Los 4pt extra de padding cuadran
-                // centros (36 vs 44pt de ancho) con los 20pt del botón GPS.
-                Button {
-                    AppHaptics.impact(.light)
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        panelColapsado.toggle()
-                    }
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.primaryContainer)
-                            .frame(width: 36, height: 36)
-                        Image(systemName: "bus.fill")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.onPrimaryContainer)
-                    }
-                }
-                .buttonStyle(PressableCapsuleStyle())
-                .padding(.trailing, 4)
-                .accessibilityLabel(panelColapsado
-                                    ? L.t("Mostrar transportes cercanos", "Show nearby transport")
-                                    : L.t("Ocultar transportes cercanos", "Hide nearby transport"))
-            }
-            .padding(.horizontal, 20)
-
-            // Cards de buses con altura suficiente (rutas reales del feed GTFS)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    if vm.cargandoLineas {
-                        ForEach(0..<2, id: \.self) { _ in
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.surfaceContainerLow)
-                                .frame(width: 180, height: 100)
-                                .overlay(
-                                    ProgressView()
-                                        .tint(.onSurfaceVariant)
-                                )
-                        }
-                    } else if let error = vm.errorLineas {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(error.mensajeUsuario)
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurfaceVariant)
-                            Button(L.t("Reintentar", "Try again")) { vm.reintentarCatalogo() }
-                        }
-                        .padding(14)
-                        .frame(width: 256, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-                    } else if vm.busesDelPanel.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "bus")
-                                .foregroundStyle(.onSurfaceVariant)
-                            Text(vm.mensajePanelSinBuses)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.onSurfaceVariant)
-                        }
-                        .padding(14)
-                        .frame(width: 256, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.surfaceContainerLow)
-                        )
-                    } else {
-                        ForEach(vm.busesDelPanel) { bus in
-                            BusCard(
-                                linea: L.t("LÍNEA", "LINE") + " \(bus.linea)",
-                                empresa: bus.empresa,
-                                minutos: bus.etiquetaLlegada,
-                                tipo: bus.tipo,
-                                placa: bus.ramalTexto,
-                                colorLinea: bus.color
-                            )
-                            .frame(height: 100)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    vm.busSeleccionado = bus
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-            .frame(height: 112)
-        }
-        .frame(height: 168)
-        // Fondo con degradado para separar el panel de las etiquetas del mapa
-        .background(
-            LinearGradient(
-                colors: [Color.appBackground.opacity(0.0),
-                         Color.appBackground.opacity(0.92),
-                         Color.appBackground],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea(edges: .bottom)
-            .allowsHitTesting(false)
-        )
-    }
 }
 
-// MARK: - Bus card
-private struct BusCard: View {
-    let linea: String
-    let empresa: String
-    let minutos: String
-    let tipo: String
-    let placa: String
-    let colorLinea: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(linea)
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-            Text(empresa)
-                .font(.headlineSm)
-                .foregroundStyle(.onSurface)
-                .lineLimit(1)
-            HStack(spacing: 6) {
-                Text(minutos)
-                    .font(.labelCapsMd)
-                    .foregroundStyle(colorLinea == .appPrimary ? Color.onPrimaryContainer : Color.onSecondaryContainer)
-                    .appTracking(AppTracking.wideLabel)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(colorLinea == .appPrimary ? Color.primaryContainer : Color.secondaryContainer)
-                    )
-                Text("\(tipo) • \(placa)")
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .lineLimit(1)
-            }
-        }
-        .padding(14)
-        .frame(width: 256, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.appSurface.opacity(0.55))
-                )
-        )
-        .overlay(
-            HStack {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(colorLinea)
-                    .frame(width: 4, height: 56)
-                Spacer()
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-}
-
-// MARK: - Elegir destino tocando el mapa
-/// Mapa a pantalla completa lanzado desde el buscador: el usuario toca el
-/// punto exacto y se convierte en el destino (con dirección real vía
-/// geocodificación inversa).
-private struct ElegirDestinoEnMapa: View {
-    /// Destino ya elegido antes de abrir (si existe): centra el mapa ahí.
-    let coordenadaInicial: CLLocationCoordinate2D?
-    /// Devuelve (título, coordenada) del punto elegido.
-    var onElegir: (String, CLLocationCoordinate2D) -> Void
-    var onCerrar: () -> Void
-
-    @State private var coordenada: CLLocationCoordinate2D? = nil
-    @State private var resolviendoDireccion = false
-
-    var body: some View {
-        ZStack {
-            MapaElegirLugar(
-                coordenada: coordenada ?? coordenadaInicial,
-                onTocar: { coord in
-                    AppHaptics.impact(.light)
-                    coordenada = coord
-                }
-            )
-            .ignoresSafeArea()
-
-            VStack {
-                barraSuperior
-                Spacer()
-                pie
-            }
-        }
-    }
-
-    private var barraSuperior: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 13, weight: .bold))
-                Text(L.t("¿A dónde vas hoy?", "Where to today?"))
-                    .font(.system(size: 14, weight: .semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(Capsule().fill(Color.black.opacity(0.55)))
-
-            Spacer()
-
-            Button(action: onCerrar) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.onSurface)
-                    .frame(width: 38, height: 38)
-                    .background(Circle().fill(.ultraThinMaterial))
-                    .overlay(
-                        Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Cerrar", "Close"))
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-    }
-
-    /// Abajo: instrucción mientras no haya pin; confirmar cuando sí.
-    @ViewBuilder
-    private var pie: some View {
-        if coordenada != nil {
-            Button(action: confirmar) {
-                HStack(spacing: 8) {
-                    if resolviendoDireccion {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .bold))
-                    }
-                    Text(resolviendoDireccion
-                         ? L.t("Buscando dirección…", "Looking up address…")
-                         : L.t("Usar este destino", "Use this destination"))
-                        .font(.headlineSm)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: 54)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.appPrimary)
-                        .shadow(color: .appPrimary.opacity(0.35), radius: 12, x: 0, y: 6)
-                )
-            }
-            .buttonStyle(PressableCapsuleStyle())
-            .disabled(resolviendoDireccion)
-            .padding(.horizontal, 20)
-        } else {
-            HStack(spacing: 6) {
-                Image(systemName: "hand.tap.fill")
-                    .font(.system(size: 12, weight: .bold))
-                Text(L.t("Toca el mapa donde quieres ir", "Tap the map where you want to go"))
-                    .font(.system(size: 12, weight: .semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(Color.black.opacity(0.55)))
-        }
-    }
-
-    /// Convierte el punto en el destino: resuelve su dirección real (con
-    /// respaldo si el geocoder no responde) y lo entrega al Mapa.
-    private func confirmar() {
-        guard let coordenada, !resolviendoDireccion else { return }
-        resolviendoDireccion = true
-        Task { @MainActor in
-            let titulo = await Self.nombreDelLugar(coordenada)
-            resolviendoDireccion = false
-            onElegir(titulo, coordenada)
-        }
-    }
-
-    /// Delega en el helper compartido: la misma resolución la usan el guardado
-    /// de lugares y el punto de subida.
-    static func nombreDelLugar(_ coord: CLLocationCoordinate2D) async -> String {
-        await Geocodificacion.nombreDelLugar(coord)
-    }
-}
-
-// MARK: - Popup de Detalle de Bus Animado
-private struct BusDetailPopup: View {
-    let bus: BusAnimado
-    let onClose: () -> Void
-    let onVerRuta: () -> Void
-
-    var body: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(bus.color.opacity(0.18))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "bus.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(bus.color)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(L.t("LÍNEA", "LINE") + " \(bus.linea)")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.onSurface)
-                        Text(bus.etiquetaLlegada)
-                            .font(.labelCapsSm)
-                            .foregroundStyle(.white)
-                            .appTracking(AppTracking.wideLabel)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(bus.color))
-                    }
-                    Text("\(bus.empresa) • \(bus.tipo) (\(bus.ramalTexto))")
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(.onSurfaceVariant.opacity(0.6))
-                }
-                .buttonStyle(.plain)
-            }
-
-            if bus.fuente == .real {
-                Text(bus.minutosLlegada == nil
-                     ? L.t("Llegada no disponible: faltan datos suficientes para estimarla.",
-                           "Arrival unavailable: not enough data to estimate it.")
-                     : L.t("Llegada aproximada al punto consultado de la ruta. Puede variar por tráfico y paradas.",
-                           "Approximate arrival at the queried point on the route. Traffic and stops may change it."))
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            BusOccupancyPanel(vehicleID: bus.fuente == .real && bus.id.hasPrefix("real-")
-                              ? String(bus.id.dropFirst(5)) : nil)
-                .id(bus.id)
-
-            Button(action: onVerRuta) {
-                HStack(spacing: 8) {
-                    Image(systemName: "map.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text(L.t("Ver Ruta Completa", "View full route"))
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: 42)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(bus.color)
-                )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(bus.color.opacity(0.35), lineWidth: 1)
-        )
-    }
+/// Memoria del centro visible para callbacks y confirmación, sin publicaciones.
+/// El aislamiento conserva lectura y escritura en el mismo actor que la UI.
+@MainActor
+private final class CentroMapaVisible {
+    var coordenada: CLLocationCoordinate2D?
 }
 
 // MARK: - Reportar sheet

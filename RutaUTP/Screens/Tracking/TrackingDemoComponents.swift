@@ -23,31 +23,31 @@ import CoreLocation
 struct UserNavMarker: View {
     /// Rumbo en grados; -1 = desconocido (sin cono).
     let heading: Double
-    @State private var pulsando = false
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color(hex: "#8affc1").opacity(0.28))
-                .frame(width: pulsando ? 38 : 26, height: pulsando ? 38 : 26)
-                .animation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true),
-                           value: pulsando)
+        DecorativeAnimationScope { animar in
+            ZStack {
+                Circle()
+                    .fill(Color.secondary.opacity(0.28))
+                    .frame(width: animar ? 38 : 26, height: animar ? 38 : 26)
+                    .animation(animar ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true) : nil,
+                               value: animar)
 
-            if heading >= 0 {
-                ConoDireccion()
-                    .fill(Color(hex: "#8affc1").opacity(0.40))
-                    .frame(width: 48, height: 48)
-                    .rotationEffect(.degrees(heading))
-                    .allowsHitTesting(false)
+                if heading >= 0 {
+                    ConoDireccion()
+                        .fill(Color.secondary.opacity(0.40))
+                        .frame(width: 48, height: 48)
+                        .rotationEffect(.degrees(heading))
+                        .allowsHitTesting(false)
+                }
+
+                Circle()
+                    .fill(Color.secondary)
+                    .frame(width: 16, height: 16)
+                    .overlay(Circle().stroke(.white, lineWidth: 2.5))
+                    .shadow(color: .black.opacity(0.35), radius: 3)
             }
-
-            Circle()
-                .fill(Color(hex: "#8affc1"))
-                .frame(width: 16, height: 16)
-                .overlay(Circle().stroke(.white, lineWidth: 2.5))
-                .shadow(color: .black.opacity(0.35), radius: 3)
         }
-        .onAppear { pulsando = true }
     }
 }
 
@@ -81,7 +81,6 @@ struct BotonFlotanteMapa: View {
     var pulsante: Bool = false
     let action: () -> Void
 
-    @State private var latiendo = false
 
     var body: some View {
         Button {
@@ -90,20 +89,22 @@ struct BotonFlotanteMapa: View {
         } label: {
             ZStack {
                 if pulsante {
-                    Circle()
-                        .stroke(Color(hex: "#8affc1").opacity(0.7), lineWidth: 2)
-                        .frame(width: 52, height: 52)
-                        .scaleEffect(latiendo ? 1.3 : 0.9)
-                        .opacity(latiendo ? 0 : 1)
-                        .animation(.easeInOut(duration: 1.3).repeatForever(autoreverses: false),
-                                   value: latiendo)
+                    DecorativeAnimationScope { animar in
+                        Circle()
+                            .stroke(Color.appPrimary.opacity(0.7), lineWidth: 2)
+                            .frame(width: 52, height: 52)
+                            .scaleEffect(animar ? 1.3 : 0.9)
+                            .opacity(animar ? 0 : 1)
+                            .animation(animar ? .easeInOut(duration: 1.3).repeatForever(autoreverses: false) : nil,
+                                       value: animar)
+                    }
                 }
 
                 Image(systemName: icono)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(destacado ? Color.black : Color.onSurface)
+                    .foregroundStyle(destacado ? Color.white : Color.onSurface)
                     .frame(width: 46, height: 46)
-                    .background(Circle().fill(destacado ? Color(hex: "#8affc1")
+                    .background(Circle().fill(destacado ? Color.appPrimary
                                                         : Color.surfaceContainerLowest.opacity(0.92)))
                     .overlay(Circle().stroke(Color.onSurface.opacity(0.12), lineWidth: 1))
                     .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 2)
@@ -111,9 +112,6 @@ struct BotonFlotanteMapa: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(etiqueta)
-        .onAppear {
-            if pulsante { latiendo = true }
-        }
     }
 }
 
@@ -253,7 +251,7 @@ struct ResumenLlegadaCard: View {
                     .foregroundStyle(Color.onSurface)
                 Text(destino)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color(light: "#087C55", dark: "#8affc1"))
+                    .foregroundStyle(Color.appPrimary)
             }
 
             HStack(spacing: 8) {
@@ -273,10 +271,10 @@ struct ResumenLlegadaCard: View {
             Button(action: onCerrar) {
                 Text(L.t("Terminar", "Done"))
                     .font(.system(size: 15, weight: .heavy))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Capsule().fill(Color(hex: "#8affc1")))
+                    .background(Capsule().fill(Color.appPrimary))
             }
             .buttonStyle(.plain)
         }

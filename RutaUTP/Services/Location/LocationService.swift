@@ -6,8 +6,8 @@
 //
 //  Diseño:
 //   - NSObject + ObservableObject para usar @Published y CLLocationManagerDelegate.
-//   - distanceFilter = 5m (suficiente para tracking de bus a velocidad urbana).
-//   - desiredAccuracy = kCLLocationAccuracyBest.
+//   - Best/5m si hay navegación, detección o un consumidor sin requisito explícito.
+//   - NearestTenMeters/15m solo cuando todos los lectores son de mapa.
 //   - NO fuerza unwrap ni crashea si el permiso es denegado: solo actualiza
 //     `authorizationStatus` y deja de emitir ubicación.
 //   - El AsyncStream se crea perezosamente por llamada a currentLocation():
@@ -57,12 +57,14 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     /// Protege `continuations`: se lee desde el run loop y se escribe desde
     /// `onTermination`, que puede llegar de otro contexto.
     private let continuationsLock = NSLock()
-    private var continuations: [UUID: AsyncStream<CLLocation>.Continuation] = [:]
+    private struct Consumer {
+        let continuation: AsyncStream<CLLocation>.Continuation
+        let requirement: LocationRequirement
+    }
+    private var continuations: [UUID: Consumer] = [:]
     private(set) var lastKnownLocation: CLLocation?
 
-    // Tunables
-    private let distanceFilter: CLLocationDistance = 5    // metros para respuesta rápida
-    private let desiredAccuracy: CLLocationAccuracy = kCLLocationAccuracyBest
+    private var appliedRequirement: LocationRequirement = .navigation
 
     // Avoid duplicate start
     private var isUpdating: Bool = false
@@ -74,8 +76,8 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         self.authorizationStatus = manager.authorizationStatus
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = desiredAccuracy
-        manager.distanceFilter = distanceFilter
+        manager.desiredAccuracy = appliedRequirement.desiredAccuracy
+        manager.distanceFilter = appliedRequirement.distanceFilter
         manager.activityType = .automotiveNavigation
 
         // Cargar ubicación almacenada en el manager si está disponible
@@ -107,18 +109,12 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     }
 
     func currentLocation() -> AsyncStream<CLLocation> {
+        currentLocation(requirement: .navigation)
+    }
+
+    nonisolated func currentLocation(requirement: LocationRequirement) -> AsyncStream<CLLocation> {
         let id = UUID()
         return AsyncStream { continuation in
-            self.continuationsLock.lock()
-            self.continuations[id] = continuation
-            self.continuationsLock.unlock()
-
-            // Emitir la última ubicación conocida o la actual del manager de inmediato
-            if let loc = self.lastKnownLocation ?? self.manager.location {
-                self.lastKnownLocation = loc
-                continuation.yield(loc)
-            }
-
             continuation.onTermination = { [weak self] _ in
                 // AsyncStream puede ejecutar esta clausura desde un contexto
                 // distinto. El gestor y el registro de consumidores se
@@ -132,6 +128,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
                     self.continuationsLock.lock()
                     self.continuations.removeValue(forKey: id)
                     self.continuationsLock.unlock()
+                    self.applyActiveRequirements()
 
                     // El GPS solo se apaga cuando terminó el último consumidor.
                     // Si el coordinador pasivo todavía escucha ubicaciones,
@@ -139,12 +136,53 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
                     self.stopManagerIfUnused()
                 }
             }
+
+            // Los consumidores reales se registran en main antes de iniciar
+            // el gestor. La API anterior también admite un llamador externo
+            // fuera de main sin tocar CLLocationManager desde ese contexto.
+            if Thread.isMainThread {
+                self.register(continuation, id: id, requirement: requirement)
+            } else {
+                DispatchQueue.main.async {
+                    self.register(continuation, id: id, requirement: requirement)
+                }
+            }
         }
+    }
+
+    private func register(_ continuation: AsyncStream<CLLocation>.Continuation,
+                          id: UUID, requirement: LocationRequirement) {
+        continuationsLock.lock()
+        continuations[id] = Consumer(continuation: continuation, requirement: requirement)
+        continuationsLock.unlock()
+        applyActiveRequirements()
+
+        // Conservar el replay de la última lectura, sin esperar un nuevo fix.
+        if let loc = lastKnownLocation ?? manager.location {
+            lastKnownLocation = loc
+            continuation.yield(loc)
+        }
+    }
+
+    /// Solo los lectores de mapa pueden bajar la exigencia. La API anterior
+    /// y cualquier consumidor de navegación mantienen Best/5m.
+    private func applyActiveRequirements() {
+        continuationsLock.lock()
+        let requirement: LocationRequirement = continuations.isEmpty
+            || continuations.values.contains { $0.requirement == .navigation }
+            ? .navigation : .mapDisplay
+        continuationsLock.unlock()
+
+        guard requirement != appliedRequirement else { return }
+        manager.desiredAccuracy = requirement.desiredAccuracy
+        manager.distanceFilter = requirement.distanceFilter
+        appliedRequirement = requirement
     }
 
     func startUpdating() {
         updatesRequested = true
         guard authorizationStatus.isAuthorized else { return }
+        applyActiveRequirements()
 
         // Emitir ubicación previa a los consumidores existentes si la tenemos
         if let loc = manager.location ?? lastKnownLocation {
@@ -172,7 +210,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     private var activeContinuations: [AsyncStream<CLLocation>.Continuation] {
         continuationsLock.lock()
         defer { continuationsLock.unlock() }
-        return Array(continuations.values)
+        return continuations.values.map(\.continuation)
     }
 
     /// Detiene CLLocationManager únicamente cuando ningún componente mantiene
@@ -218,9 +256,10 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         isUpdating = false
 
         continuationsLock.lock()
-        let activos = Array(continuations.values)
+        let activos = continuations.values.map(\.continuation)
         continuations.removeAll()
         continuationsLock.unlock()
+        applyActiveRequirements()
 
         // `finish()` puede disparar `onTermination`; se llama fuera del candado
         // para no mutar el diccionario mientras se itera.

@@ -2,39 +2,6 @@ import SwiftUI
 import AVFoundation
 import UIKit
 
-/// Foto del carné físico, independiente de la foto de perfil.
-enum CarnetImageStore {
-    private static var url: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("utp-card.jpg")
-    }
-
-    static func load() -> UIImage? {
-        UIImage(contentsOfFile: url.path)
-    }
-
-    static func save(_ image: UIImage) throws -> UIImage {
-        guard image.size.width > 0, image.size.height > 0 else {
-            throw CocoaError(.fileWriteUnknown)
-        }
-        // Normaliza la orientación y limita el peso sin recortar el documento.
-        let factor = min(1, 2400 / max(image.size.width, image.size.height))
-        let size = CGSize(width: image.size.width * factor, height: image.size.height * factor)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        format.opaque = true
-        let normalized = UIGraphicsImageRenderer(size: size, format: format).image { context in
-            UIColor.white.setFill()
-            context.fill(CGRect(origin: .zero, size: size))
-            image.draw(in: CGRect(origin: .zero, size: size))
-        }
-        guard let data = normalized.jpegData(compressionQuality: 0.9),
-              let stored = UIImage(data: data) else { throw CocoaError(.fileWriteUnknown) }
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
-        return stored
-    }
-}
-
 struct CarnetScannerView: View {
     @Environment(\.dismiss) private var dismiss
     var onCapture: () -> Void
@@ -129,7 +96,12 @@ struct CarnetScannerView: View {
                 }
             }
         }
-        .onAppear { if foto == nil { foto = CarnetImageStore.load() } }
+        .task {
+            guard foto == nil else { return }
+            let stored = await CarnetImageStore.load()
+            guard !Task.isCancelled, foto == nil else { return }
+            foto = stored
+        }
         .fullScreenCover(item: $picker, onDismiss: {
             selectorCerrado = true
             presentarEditor()
@@ -535,10 +507,12 @@ struct EditorFotoPerfilModifier: ViewModifier {
                 GaleriaPicker(onImagePicked: recibir)
                     .onAppear { selectorCerrado = false }
             }
-            .onChange(of: ajustar) { _, valor in
-                guard valor else { return }
+            .task(id: ajustar) {
+                guard ajustar else { return }
+                let foto = await ProfileImageStore.load()
+                guard !Task.isCancelled, ajustar else { return }
                 ajustar = false
-                if let foto = ProfileImageStore.load() { editor = FotoParaEncuadrar(image: foto) }
+                if let foto { editor = FotoParaEncuadrar(image: foto) }
             }
             .fullScreenCover(item: $editor) { seleccion in
                 EncuadreFotoView(image: seleccion.image, esPerfil: true) { imagen in

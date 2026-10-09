@@ -35,6 +35,7 @@ struct SideDrawer: View {
     /// Foto del header: la misma que el usuario sube en Datos Personales
     /// (ProfileImageStore). Se recarga al abrir el drawer y al cerrar el sheet.
     @State private var fotoPerfil: UIImage? = nil
+    @State private var revisionFoto = UUID()
 
     private let drawerWidth: CGFloat = 300
 
@@ -82,12 +83,16 @@ struct SideDrawer: View {
         }
         // La foto pudo cambiar en Datos Personales: recargar al abrir el
         // drawer y cuando vuelve de un sheet.
-        .onAppear { fotoPerfil = ProfileImageStore.load() }
+        .task(id: revisionFoto) {
+            let foto = await ProfileImageStore.load()
+            guard !Task.isCancelled else { return }
+            fotoPerfil = foto
+        }
         .onChange(of: isOpen) { _, abierto in
-            if abierto { fotoPerfil = ProfileImageStore.load() }
+            if abierto { revisionFoto = UUID() }
         }
         .onChange(of: activeSheet) { _, sheet in
-            if sheet == nil { fotoPerfil = ProfileImageStore.load() }
+            if sheet == nil { revisionFoto = UUID() }
         }
         // La confirmación de cierre de sesión vive DENTRO de CerrarSesionSheet:
         // un alert declarado aquí se disparaba desde detrás de la hoja, donde
@@ -289,4 +294,3 @@ private struct DrawerItemRow: View {
         .accessibilityHint(L.t("Doble toque para abrir ", "Double tap to open ") + label)
     }
 }
-

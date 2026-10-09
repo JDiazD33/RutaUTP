@@ -19,6 +19,8 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
     private var rebuildGeneration = UUID()
     private var generation = UUID()
     private var previousTick: Date?
+    private var actividadVisual = true
+    private var iniciado = false
     private var center = GTFSRepository.coordenadaUTP
     private var routes: [RutaGTFS] = []
     private var preferredRouteID: String?
@@ -37,6 +39,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
 
     func start() {
         guard tickTask == nil, loading == nil else { return }
+        iniciado = true
         let token = UUID()
         generation = token
         loading = Task { @MainActor [weak self] in
@@ -73,24 +76,33 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         if !routes.isEmpty { iniciarTicks() }
     }
 
-    /// Bucle de simulación.
-    ///
-    /// Antes era un `Timer` cuya closure no estaba aislada al hilo principal:
-    /// el compilador no podía verificar que `tick()` tocara estado de UI. Ahora
-    /// es una única `Task` con `Task.sleep` entre ticks: aislada a
-    /// `@MainActor`, cancelable de verdad y sin crear una tarea nueva por tick.
+    /// Conserva la flota y el stream; solo pausa su reloj de movimiento.
+    func actualizarActividadVisual(_ activa: Bool) {
+        actividadVisual = activa
+        if activa {
+            iniciarTicks()
+        } else {
+            tickTask?.cancel()
+            tickTask = nil
+            previousTick = nil
+        }
+    }
+
+    /// Una sola tarea, aislada al actor principal y con el reloj reiniciado al volver.
     private func iniciarTicks() {
-        tickTask?.cancel()
+        guard iniciado, actividadVisual, !routes.isEmpty, tickTask == nil else { return }
+        previousTick = Date()
         tickTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 250_000_000)
-                guard !Task.isCancelled, let self else { return }
+                guard !Task.isCancelled, let self, self.actividadVisual else { return }
                 self.tick()
             }
         }
     }
 
     func stop() {
+        iniciado = false
         generation = UUID()
         loading?.cancel()
         loading = nil

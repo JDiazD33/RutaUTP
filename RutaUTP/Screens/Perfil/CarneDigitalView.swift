@@ -43,10 +43,14 @@ struct CarneDigitalView: View {
         .background(Color.appSurface)
         .presentationDragIndicator(.visible)
         .onAppear {
-            fotoPerfil = ProfileImageStore.load()
             if codigoBarras == nil {
                 codigoBarras = generarCodigoBarras(desde: codigoUTP)
             }
+        }
+        .task {
+            let foto = await ProfileImageStore.load()
+            guard !Task.isCancelled else { return }
+            fotoPerfil = foto
         }
         .confirmationDialog(L.t("Foto de perfil", "Profile photo"), isPresented: $showFuente, titleVisibility: .visible) {
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -180,11 +184,11 @@ struct CarneDigitalView: View {
         .accessibilityLabel(L.t("Carné digital de muestra de ", "Sample digital ID of ") + "\(nombre)" + L.t(", código ficticio ", ", sample code ") + codigoUTP)
     }
 
-    // MARK: - Foto circular con insignia de cámara morada
+    // MARK: - Foto circular con acento de la temática
     private var fotoConCamara: some View {
         ZStack {
             Circle()
-                .fill(Color.inversePrimary)
+                .fill(Color.appPrimary)
                 .frame(width: 84, height: 84)
                 .overlay(Circle().stroke(Color.white, lineWidth: 3))
             if let foto = fotoPerfil {
@@ -198,7 +202,7 @@ struct CarneDigitalView: View {
             } else {
                 Text(iniciales(nombre))
                     .font(.headlineMd)
-                    .foregroundStyle(.appPrimary)
+                    .foregroundStyle(.white)
                     .accessibilityHidden(true)
             }
         }
@@ -211,11 +215,11 @@ struct CarneDigitalView: View {
                     Circle()
                         .fill(Color.white)
                         .frame(width: 28, height: 28)
-                        .overlay(Circle().stroke(Color.purple, lineWidth: 1.5))
+                        .overlay(Circle().stroke(Color.appPrimary, lineWidth: 1.5))
                         .accessibilityHidden(true)
                     Image(systemName: "camera.fill")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.purple)
+                        .foregroundStyle(Color.appPrimary)
                         .accessibilityHidden(true)
                 }
             }

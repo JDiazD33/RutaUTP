@@ -209,11 +209,11 @@ struct DatosPersonalesSheet: View {
                                     Circle()
                                         .fill(Color.white)
                                         .frame(width: 26, height: 26)
-                                        .overlay(Circle().stroke(Color.purple, lineWidth: 1.5))
+                                        .overlay(Circle().stroke(Color.appPrimary, lineWidth: 1.5))
                                         .accessibilityHidden(true)
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(Color.purple)
+                                        .foregroundStyle(Color.appPrimary)
                                         .accessibilityHidden(true)
                                 }
                             }
@@ -299,7 +299,7 @@ struct DatosPersonalesSheet: View {
                                 .font(.labelCapsSm)
                                 .appTracking(AppTracking.wideLabel)
                         }
-                        .foregroundStyle(Color.purple)
+                        .foregroundStyle(Color.appPrimary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(editandoDatos ? L.t("Listo", "Done") : L.t("Editar datos personales", "Edit personal details"))
@@ -373,7 +373,7 @@ struct DatosPersonalesSheet: View {
                     } label: {
                         Image(systemName: "exclamationmark.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundStyle(Color.purple.opacity(0.85))
+                            .foregroundStyle(Color.appPrimary.opacity(0.85))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L.t("Información sobre el correo personal", "Information about the personal email"))
@@ -391,7 +391,7 @@ struct DatosPersonalesSheet: View {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle.fill")
                             .font(.system(size: 12))
-                            .foregroundStyle(Color.purple)
+                            .foregroundStyle(Color.appPrimary)
                             .accessibilityHidden(true)
                         Text(L.t("Correo personal utilizado para recuperar contraseña del correo institucional",
                                  "Personal email used to recover your institutional email password"))
@@ -403,10 +403,10 @@ struct DatosPersonalesSheet: View {
                     .padding(10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.purple.opacity(0.08))
+                            .fill(Color.appPrimary.opacity(0.08))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.purple.opacity(0.25), lineWidth: 0.5)
+                                    .stroke(Color.appPrimary.opacity(0.25), lineWidth: 0.5)
                             )
                     )
                     .transition(.opacity)
@@ -433,7 +433,7 @@ struct DatosPersonalesSheet: View {
                                 .font(.labelCapsSm)
                                 .appTracking(AppTracking.wideLabel)
                         }
-                        .foregroundStyle(Color.purple)
+                        .foregroundStyle(Color.appPrimary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(editandoEmergencia ? L.t("Listo", "Done") : L.t("Editar contacto de emergencia", "Edit emergency contact"))
@@ -483,13 +483,13 @@ struct DatosPersonalesSheet: View {
                                     Spacer()
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(Color.purple)
+                                        .foregroundStyle(Color.appPrimary)
                                         .accessibilityHidden(true)
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 12)
                                 .background(boxShape.fill(Color.surfaceContainerLow))
-                                .overlay(boxShape.stroke(Color.purple.opacity(0.5), lineWidth: 1))
+                                .overlay(boxShape.stroke(Color.appPrimary.opacity(0.5), lineWidth: 1))
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(L.t("Parentesco del contacto", "Relationship of the contact"))
@@ -530,7 +530,7 @@ struct DatosPersonalesSheet: View {
                                 .font(.bodyMdMedium)
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity, minHeight: 48)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.purple))
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(L.t("Guardar contacto de emergencia", "Save emergency contact"))
@@ -542,10 +542,10 @@ struct DatosPersonalesSheet: View {
                         } label: {
                             Text(L.t("Cancelar", "Cancel"))
                                 .font(.bodyMdMedium)
-                                .foregroundStyle(Color.purple)
+                                .foregroundStyle(Color.appPrimary)
                                 .frame(maxWidth: .infinity, minHeight: 48)
                                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.purple, lineWidth: 1.5))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appPrimary, lineWidth: 1.5))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(L.t("Cancelar edición del contacto", "Cancel contact editing"))
@@ -588,9 +588,12 @@ struct DatosPersonalesSheet: View {
             emergenciaNombreInput = emergenciaNombre
             emergenciaParentescoInput = emergenciaParentesco
             emergenciaNumeroInput = emergenciaNumero
-            if perfilImage == nil {
-                perfilImage = ProfileImageStore.load()
-            }
+        }
+        .task {
+            guard perfilImage == nil else { return }
+            let foto = await ProfileImageStore.load()
+            guard !Task.isCancelled, perfilImage == nil else { return }
+            perfilImage = foto
         }
         .confirmationDialog(L.t("Foto de perfil", "Profile photo"),
                             isPresented: $showFuenteFoto,

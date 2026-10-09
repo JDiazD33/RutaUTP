@@ -11,6 +11,8 @@ import UIKit
 
 struct RootView: View {
     @StateObject private var router = AppRouter()
+    /// El router recrea la vista al cambiar de pantalla; el viaje conserva su modelo.
+    @StateObject private var trackingStore: ScreenModelStore<RouteTrackingViewModel>
     @AppStorage(SeniasService.llaveModo) private var modoSenias = false
     @Environment(\.scenePhase) private var scenePhase
 
@@ -40,6 +42,9 @@ struct RootView: View {
 
     init(locationService: LocationServiceProtocol = LocationService()) {
         self.locationService = locationService
+        _trackingStore = StateObject(wrappedValue: ScreenModelStore(
+            RouteTrackingViewModel(locationService: locationService)
+        ))
 
         // Solo DEBUG: permite abrir directo en una pantalla desde consola,
         // p.ej. xcrun simctl launch ... apolito.RutaUTP --pantalla rutas
@@ -68,7 +73,7 @@ struct RootView: View {
             case .guardado:      GuardadoView()
             case .seguridad:     SeguridadView(locationService: locationService)
             case .perfil:        PerfilView()
-            case .trackingDemo:  RouteTrackingDemoView(locationService: locationService)
+            case .trackingDemo:  RouteTrackingDemoView(model: trackingStore.model)
             }
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
