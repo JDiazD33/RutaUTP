@@ -59,7 +59,6 @@ struct RutaUTPApp: App {
                 // El tema claro/oscuro se aplica en RootView (ver comentario
                 // ahí): @AppStorage dentro del App no invalida la escena de
                 // forma confiable y dejaba el tema "pegado" al volver a claro.
-                .tint(.appPrimary)
                 .background(Color.appBackground.ignoresSafeArea())
         }
     }

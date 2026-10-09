@@ -78,6 +78,7 @@ struct RootView: View {
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
         .environmentObject(router)
+        .tint(.appPrimary)
         .animation(.easeInOut(duration: 0.25), value: router.currentScreen)
         .onAppear { aplicarTemaEnVentanas(isDarkMode) }
         .onChange(of: isDarkMode) { _, nuevo in

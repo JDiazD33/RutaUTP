@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BD0500000000000000000002 /* TematicaEmpresa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0500000000000000000001 /* TematicaEmpresa.swift */; };
+		BD0500000000000000000004 /* PaletaEmpresa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0500000000000000000003 /* PaletaEmpresa.swift */; };
+		BD0500000000000000000006 /* SelectorTematicaEmpresa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */; };
 		BC1900000000000000000002 /* CarnetImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1900000000000000000001 /* CarnetImageStore.swift */; };
 		BC1800000000000000000002 /* TripRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1800000000000000000001 /* TripRecorder.swift */; };
 		BC1300000000000000000002 /* LocationRequirement.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1300000000000000000001 /* LocationRequirement.swift */; };
@@ -172,6 +175,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BD0500000000000000000001 /* TematicaEmpresa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TematicaEmpresa.swift; sourceTree = "<group>"; };
+		BD0500000000000000000003 /* PaletaEmpresa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletaEmpresa.swift; sourceTree = "<group>"; };
+		BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectorTematicaEmpresa.swift; sourceTree = "<group>"; };
 		BC1900000000000000000001 /* CarnetImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarnetImageStore.swift; sourceTree = "<group>"; };
 		BC1800000000000000000001 /* TripRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRecorder.swift; sourceTree = "<group>"; };
 		BC1300000000000000000001 /* LocationRequirement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRequirement.swift; sourceTree = "<group>"; };
@@ -435,6 +441,7 @@
 		0A8004B8300AD9FE004E1676 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */,
 				BC1200000000000000000001 /* ServiceDeadlineScheduler.swift */,
 				BC0600000000000000000001 /* DecorativeAnimationScope.swift */,
 				0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */,
@@ -455,9 +462,19 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		BD0500000000000000000007 /* Themes */ = {
+			isa = PBXGroup;
+			children = (
+				BD0500000000000000000001 /* TematicaEmpresa.swift */,
+				BD0500000000000000000003 /* PaletaEmpresa.swift */,
+			);
+			path = Themes;
+			sourceTree = "<group>";
+		};
 		0A8004BC300AD9FE004E1676 /* Design */ = {
 			isa = PBXGroup;
 			children = (
+				BD0500000000000000000007 /* Themes */,
 				0A8004B8300AD9FE004E1676 /* Components */,
 				0A8004B9300AD9FE004E1676 /* Colors.swift */,
 				0A800410300AD9FE004E1676 /* AppHaptics.swift */,
@@ -888,6 +905,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD0500000000000000000002 /* TematicaEmpresa.swift in Sources */,
+				BD0500000000000000000004 /* PaletaEmpresa.swift in Sources */,
+				BD0500000000000000000006 /* SelectorTematicaEmpresa.swift in Sources */,
 				BC1900000000000000000002 /* CarnetImageStore.swift in Sources */,
 				BC1800000000000000000002 /* TripRecorder.swift in Sources */,
 				BC1300000000000000000002 /* LocationRequirement.swift in Sources */,

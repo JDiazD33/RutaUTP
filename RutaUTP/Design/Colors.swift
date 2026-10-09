@@ -2,36 +2,33 @@
 //  Colors.swift
 //  RutaUTP
 //
-//  Paleta de colores oficial del Design System RutaUTP.
-//  Fuente de verdad: NO modificar hexes CLAROS — heredados del prototipo HTML.
-//  Los tokens de superficie/texto son adaptativos claro/oscuro: el override
-//  de overrideUserInterfaceStyle que aplica RootView (desde Ajustes) los
-//  voltea solos.
-//  Los colores de marca (rojo UTP, azul, teal) se mantienen en ambos modos.
+//  Tokens del Design System. Los acentos leen la temática observable de
+//  PaletasEmpresa; su opción UTP conserva los valores del prototipo.
+//  Las superficies y errores conservan su adaptación claro/oscuro.
 //
 
 import SwiftUI
 
 extension Color {
 
-    // MARK: - Primarios (Rojo UTP)
-    static let appPrimary          = Color(hex: "#a80033")
-    static let primaryContainer    = Color(hex: "#d31245")
-    static let onPrimaryContainer  = Color(hex: "#ffe8e8")
-    static let primaryFixed        = Color(hex: "#ffdadb")
-    static let inversePrimary      = Color(hex: "#ffb2b7")
+    // MARK: - Primarios (temática elegida)
+    static var appPrimary: Color { PaletasEmpresa.actual.appPrimary }
+    static var primaryContainer: Color { PaletasEmpresa.actual.primaryContainer }
+    static var onPrimaryContainer: Color { PaletasEmpresa.actual.onPrimaryContainer }
+    static var primaryFixed: Color { PaletasEmpresa.actual.primaryFixed }
+    static var inversePrimary: Color { PaletasEmpresa.actual.inversePrimary }
 
-    // MARK: - Secundarios (Azul)
-    static let secondary           = Color(hex: "#3c5d9c")
-    static let secondaryContainer  = Color(hex: "#99b8fe")
-    static let onSecondary         = Color.white
-    static let onSecondaryContainer = Color(hex: "#244885")
+    // MARK: - Secundarios
+    static var secondary: Color { PaletasEmpresa.actual.secondary }
+    static var secondaryContainer: Color { PaletasEmpresa.actual.secondaryContainer }
+    static var onSecondary: Color { PaletasEmpresa.actual.onSecondary }
+    static var onSecondaryContainer: Color { PaletasEmpresa.actual.onSecondaryContainer }
 
-    // MARK: - Terciarios (Teal)
-    static let tertiary            = Color(hex: "#005b6e")
-    static let tertiaryContainer   = Color(hex: "#00758d")
-    static let onTertiary          = Color.white
-    static let onTertiaryContainer = Color(hex: "#d1f2ff")
+    // MARK: - Terciarios
+    static var tertiary: Color { PaletasEmpresa.actual.tertiary }
+    static var tertiaryContainer: Color { PaletasEmpresa.actual.tertiaryContainer }
+    static var onTertiary: Color { PaletasEmpresa.actual.onTertiary }
+    static var onTertiaryContainer: Color { PaletasEmpresa.actual.onTertiaryContainer }
 
     // MARK: - Superficie (adaptativas)
     static let appBackground             = Color(light: "#f7f9fb", dark: "#101314")
@@ -44,11 +41,11 @@ extension Color {
 
     // MARK: - On-Surface (adaptativos)
     static let onSurface           = Color(light: "#191c1e", dark: "#e4e8ea")
-    static let onSurfaceVariant    = Color(light: "#5c3f41", dark: "#c9adaf")
+    static var onSurfaceVariant: Color { PaletasEmpresa.actual.onSurfaceVariant }
 
     // MARK: - Outline (adaptativos)
-    static let outline             = Color(light: "#906f70", dark: "#a98b8c")
-    static let outlineVariant      = Color(light: "#e4bdbf", dark: "#4a3f40")
+    static var outline: Color { PaletasEmpresa.actual.outline }
+    static var outlineVariant: Color { PaletasEmpresa.actual.outlineVariant }
 
     // MARK: - Error
     static let appError            = Color(light: "#ba1a1a", dark: "#ff6b6b")

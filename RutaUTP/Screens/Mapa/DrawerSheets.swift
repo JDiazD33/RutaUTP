@@ -198,6 +198,9 @@ struct AjustesSheet: View {
                     }
                 }
 
+                // La temática es independiente del modo claro/oscuro.
+                SelectorTematicaEmpresa()
+
                 // Contribución asociada a la cuenta de instalación y al viaje.
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L.t("CONTRIBUCIÓN", "CONTRIBUTION"))
