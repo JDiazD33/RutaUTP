@@ -4,19 +4,19 @@ import MapKit
 struct MapSearchPanel: View {
     @Bindable var vm: MapaViewModel
     @FocusState.Binding var campoEnfocado: Bool
-    @Binding var showElegirEnMapa: Bool
+    @Binding var showDestinosGuardados: Bool
+    @AccessibilityFocusState private var guardadosEnfocados: Bool
 
-    /// Botón al final del buscador: abre el mapa para elegir el destino
-    /// con un tap (ícono de flecha tipo Google Maps, gris claro).
-    private var botonElegirEnMapa: some View {
+    /// Abre los mismos paraderos que se guardan desde Seguridad.
+    private var botonDestinosGuardados: some View {
         Button {
             AppHaptics.impact(.light)
             campoEnfocado = false
-            showElegirEnMapa = true
+            showDestinosGuardados = true
         } label: {
-            Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+            Image(systemName: "bookmark.fill")
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color(.systemGray2))
+                .foregroundStyle(Color.appPrimary)
                 .frame(width: 34, height: 34)
                 .background(
                     Circle().fill(Color.surfaceContainerHighest)
@@ -24,9 +24,14 @@ struct MapSearchPanel: View {
                 .overlay(
                     Circle().stroke(Color.outlineVariant.opacity(0.5), lineWidth: 0.5)
                 )
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(L.t("Elegir destino en el mapa", "Pick destination on map"))
+        .accessibilityLabel(L.t("Paraderos y lugares guardados", "Saved stops and places"))
+        .accessibilityFocused($guardadosEnfocados)
+        .accessibilityHint(L.t("Elige un destino guardado para calcular cómo llegar.",
+                              "Choose a saved destination to find directions."))
     }
 
     // MARK: - Search panel
@@ -71,8 +76,7 @@ struct MapSearchPanel: View {
                     .frame(minWidth: 44, minHeight: 44)
                 }
 
-                // Elegir destino tocando el mapa (ícono tipo Google Maps).
-                botonElegirEnMapa
+                botonDestinosGuardados
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -150,6 +154,9 @@ struct MapSearchPanel: View {
                 .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 2)
+        .onChange(of: showDestinosGuardados) { _, abierto in
+            if !abierto && vm.busquedaResultado == nil { guardadosEnfocados = true }
+        }
     }
 
     private func chip(_ destino: DestinoChip) -> some View {

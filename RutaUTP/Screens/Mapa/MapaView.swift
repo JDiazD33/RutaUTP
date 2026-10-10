@@ -29,6 +29,7 @@ struct MapaView: View {
 
 private struct MapaScreenContent: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
@@ -37,11 +38,13 @@ private struct MapaScreenContent: View {
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     @State private var showBoardingConfirmation = false
+    @State private var mostrarAvisoViaje = false
     @State private var boardingReminderTask: Task<Void, Never>?
     @State private var boardingReminderDate: Date?
     @State private var boardingReminderRoute = 0
-    /// Selector de destino tocando el mapa (botón del buscador).
+    /// Selector de destino en el mapa para el acceso con VoiceOver.
     @State private var showElegirEnMapa = false
+    @State private var showDestinosGuardados = false
     /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
     /// debajo del botón de mi ubicación.
     @State private var panelColapsado = false
@@ -52,16 +55,12 @@ private struct MapaScreenContent: View {
     /// ViewModel: no lo lee nadie más y no debe sobrevivir a la navegación
     /// hacia atrás, donde volvería a aparecer sin que se haya pedido.
     @State private var marcadorUsuario: CLLocationCoordinate2D?
-    /// Último centro que comunica MapKit. State conserva la referencia;
-    /// su coordenada no es observable ni se usa para dibujar la interfaz.
+    /// Punto bajo el círculo y cámara visible, sin publicar cada movimiento.
     @State private var centroMapa = CentroMapaVisible()
     @FocusState private var campoEnfocado: Bool
 
     @State private var cameraPosition: MapCameraPosition = .region(
-        MKCoordinateRegion(
-            center: TransporteApp.referenciaInicio,
-            span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
-        )
+        MapaViewModel.regionDeReferencia(TransporteApp.referenciaInicio)
     )
 
     private let tabBarHeight: CGFloat = 64
@@ -77,20 +76,24 @@ private struct MapaScreenContent: View {
 
     /// Paneles flotantes retirados del mapa.
     ///
-    /// Dos situaciones comparten el mismo gesto visual, y por eso una sola
+    /// Estas situaciones comparten el mismo gesto visual, y por eso una sola
     /// bandera las gobierna:
     ///  - **Colocar un marcador**: el mapa debe quedar libre para elegir
     ///    el punto central sin taparlo.
     ///  - **Buscar el recorrido**: mientras se resuelve el itinerario, el
     ///    buscador y las líneas se apartan y solo queda la ventana de carga.
+    ///  - **Viajar en un micro**: quedan la ficha compacta y los controles del viaje.
     ///
     /// Reutilizar el mecanismo evita tener dos animaciones distintas para el
     /// mismo movimiento; lo único que cambia es la causa.
     private var panelesRetirados: Bool {
-        modoColocarMarcador || vm.calculandoItinerario
+        modoColocarMarcador || vm.calculandoItinerario || viajeActivo
     }
 
     private var mostrandoRuta: Bool { vm.itinerario != nil }
+    private var viajeActivo: Bool {
+        trackingCoordinator.isEnabled && trackingCoordinator.selectedTripRoute != nil
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -98,17 +101,20 @@ private struct MapaScreenContent: View {
             // ── MAPA DE FONDO (iOS 17+ MapKit con MapPolyline) ──
             TransitMapCanvas(
                 vm: vm,
+                rutaViaje: viajeActivo ? trackingCoordinator.selectedTripRoute : nil,
                 cameraPosition: $cameraPosition,
                 marcadorUsuario: marcadorUsuario,
                 marcadorEsDestinoActual: marcadorEsDestinoActual,
+                modoColocarMarcador: modoColocarMarcador,
                 campoEnfocado: $campoEnfocado,
-                onCameraChange: { center in
-                    centroMapa.coordenada = center
+                onCameraChange: actualizarCamaraVisible,
+                onPlacementPointChange: actualizarPuntoVisible,
+                onCameraEnd: {
                     if modoColocarMarcador { programarConfirmacionMarcador() }
                 },
                 onClearMarker: despejarMarcador
             )
-            .accessibilityHidden(mostrarDrawer || vm.calculandoItinerario)
+            .accessibilityHidden(mostrarDrawer || (vm.calculandoItinerario && !viajeActivo))
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
@@ -126,7 +132,7 @@ private struct MapaScreenContent: View {
                     // vuelve al limpiar la ruta (la X de la guía).
                     if vm.itinerario == nil {
                         MapSearchPanel(vm: vm, campoEnfocado: $campoEnfocado,
-                                       showElegirEnMapa: $showElegirEnMapa)
+                                       showDestinosGuardados: $showDestinosGuardados)
                             .padding(.horizontal, 16)
                             .padding(.top, 12)
                             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -152,7 +158,7 @@ private struct MapaScreenContent: View {
 
                 // Todo lo de ABAJO se va por abajo, por el mismo motivo.
                 VStack(spacing: 0) {
-                    // Antes de elegir ruta se ofrecen ambos accesos al mapa.
+                    // Accesos originales del mapa: marcador arriba, ubicación debajo.
                     if !mostrandoRuta {
                         HStack {
                             Spacer()
@@ -166,21 +172,6 @@ private struct MapaScreenContent: View {
                         .transition(.opacity)
                     }
 
-                    // El inicio del viaje se ofrece al resolver una ruta.
-                    // Aquí solo se muestran los controles de un viaje confirmado.
-                    if !mostrandoRuta, trackingCoordinator.isEnabled, trackingCoordinator.selectedTripRoute != nil {
-                        TripContributionPanel(
-                            coordinator: trackingCoordinator,
-                            locationService: vm.sharedLocationService,
-                            statusMessage: trackingCoordinator.statusMessage,
-                            statusColor: colorEstadoContribucion
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
-                    }
-
-                    // Bottom panel: REPORTAR + cards siempre visibles; solo el
-                    // encabezado "Transportes cercanos" se desliza al colapsar.
                     if mostrandoRuta {
                         HStack(alignment: .center) {
                             botonReportar
@@ -204,19 +195,35 @@ private struct MapaScreenContent: View {
                 .accessibilityHidden(panelesRetirados)
             }
             .animation(
-                panelesRetirados
+                reduceMotion ? nil : panelesRetirados
                 ? .easeIn(duration: 0.26)
                 : .spring(response: 0.42, dampingFraction: 0.86),
                 value: panelesRetirados
             )
             // Entrada/salida del buscador según haya o no itinerario resuelto.
-            .animation(.easeInOut(duration: 0.28), value: vm.itinerario != nil)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: vm.itinerario != nil)
             .accessibilityHidden(mostrarDrawer)
 
+            if viajeActivo {
+                MapaViajeOverlay(coordinator: trackingCoordinator,
+                                 locationService: vm.sharedLocationService,
+                                 destino: vm.busquedaResultado?.titulo,
+                                 mostrarAviso: $mostrarAvisoViaje,
+                                 mostrarDrawer: $mostrarDrawer,
+                                 statusColor: colorEstadoContribucion,
+                                 onEndTrip: finalizarVistaDeViaje,
+                                 reportButton: botonReportar,
+                                 locationButton: botonMiUbicacion)
+                    .transition(.opacity)
+                    .accessibilityHidden(mostrarDrawer)
+            }
+
             // ── POPUP DETALLE DE BUS ANIMADO ──
-            MapBusSelectionOverlay(vm: vm, tabBarHeight: tabBarHeight)
-                .zIndex(10)
-                .accessibilityHidden(mostrarDrawer)
+            if !viajeActivo {
+                MapBusSelectionOverlay(vm: vm, tabBarHeight: tabBarHeight)
+                    .zIndex(10)
+                    .accessibilityHidden(mostrarDrawer)
+            }
 
             // ── DRAWER OVERLAY ──
             if mostrarDrawer {
@@ -239,17 +246,18 @@ private struct MapaScreenContent: View {
                 .zIndex(15)
 
             // La X de la guía devuelve todos los paneles y la navegación.
-            if !mostrandoRuta {
+            if !mostrandoRuta && !viajeActivo {
                 BottomNavBar()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .accessibilityHidden(mostrarDrawer || modoColocarMarcador || vm.calculandoItinerario)
             }
         }
         .ignoresSafeArea(edges: .bottom)
-        .animation(.easeInOut(duration: 0.3), value: mostrandoRuta)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: mostrandoRuta)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: viajeActivo)
         .onAppear {
             pantallaVisible = true
-            vm.actualizarActividadVisual(scenePhase == .active)
+            vm.actualizarActividadVisual(scenePhase == .active && !viajeActivo)
             vm.actualizarSedeTrabajo()
             vm.iniciarGPS()
             vm.refrescarDestinos() // chips: refleja lo guardado en Guardado
@@ -269,7 +277,7 @@ private struct MapaScreenContent: View {
             vm.detener()
         }
         .onChange(of: scenePhase) { _, phase in
-            vm.actualizarActividadVisual(pantallaVisible && phase == .active)
+            vm.actualizarActividadVisual(pantallaVisible && phase == .active && !viajeActivo)
             if phase != .active {
                 confirmacionMarcador?.cancel()
                 modoColocarMarcador = false
@@ -282,6 +290,13 @@ private struct MapaScreenContent: View {
         .onChange(of: router.destinoPendiente) { _, _ in
             consumirDestinoPendiente()
         }
+        .onChange(of: trackingCoordinator.tripStartedAt, initial: true) { _, _ in
+            prepararVistaDeViaje()
+        }
+        .onChange(of: viajeActivo) { _, active in
+            vm.actualizarActividadVisual(pantallaVisible && scenePhase == .active && !active)
+            if !active { mostrarAvisoViaje = false }
+        }
         .onChange(of: SedeTrabajoStore.shared.sede?.id) { _, _ in
             vm.actualizarSedeTrabajo()
         }
@@ -289,6 +304,7 @@ private struct MapaScreenContent: View {
             vm.actualizarSedeTrabajo()
         }
         .onChange(of: vm.itinerarioFocusTick) { _, _ in
+            guard !viajeActivo else { return }
             guard let polyline = vm.routePolyline else { return }
             programarPreguntaDeViaje(en: 30)
             // Acercar el inicio del viaje; el usuario conserva el zoom y arrastre manual.
@@ -296,8 +312,7 @@ private struct MapaScreenContent: View {
             withAnimation(.easeInOut(duration: 0.4)) {
                 panelColapsado = true
                 if let origin = vm.userRealCoordinate {
-                    cameraPosition = .region(MKCoordinateRegion(center: origin,
-                        latitudinalMeters: 1000, longitudinalMeters: 1000))
+                    cameraPosition = .region(MapaViewModel.regionDePersona(origin, duranteViaje: true))
                 } else {
                     cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
                                                        dy: -max(rect.height * 0.65, 1800)))
@@ -306,6 +321,7 @@ private struct MapaScreenContent: View {
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
             cancelarPreguntaDeViaje()
+            guard !viajeActivo else { return }
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
             withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }
         }
@@ -317,11 +333,13 @@ private struct MapaScreenContent: View {
             if calculating { cancelarPreguntaDeViaje() }
         }
         .onChange(of: vm.region.center.latitude) { _, _ in
+            guard !viajeActivo else { return }
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
         }
         .onChange(of: vm.region.center.longitude) { _, _ in
+            guard !viajeActivo else { return }
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
@@ -345,9 +363,21 @@ private struct MapaScreenContent: View {
             // usuario acaba de buscar cómo llegar y luego reporta un cambio,
             // es casi siempre de ESA línea, y elegirla otra vez a mano es
             // un paso que soloServía para equivocarse.
-            ReportarSheet(initialRouteID: vm.itinerario?.route.id,
+            ReportarSheet(initialRouteID: trackingCoordinator.selectedTripRoute?.id ?? vm.itinerario?.route.id,
                           locationService: vm.sharedLocationService)
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showDestinosGuardados, onDismiss: { vm.refrescarDestinos() }) {
+            DestinosGuardadosSheet(onSeleccionar: { lugar in
+                guard let coordenada = lugar.coordinate, CLLocationCoordinate2DIsValid(coordenada) else { return }
+                showDestinosGuardados = false
+                campoEnfocado = false
+                marcadorUsuario = nil
+                vm.seleccionarLugar(titulo: lugar.nombre, coordenada: coordenada)
+            }, onAdministrarParaderos: {
+                showDestinosGuardados = false
+                router.navigate(to: .seguridad)
+            })
         }
         .fullScreenCover(isPresented: $showElegirEnMapa) {
             ElegirDestinoEnMapa(
@@ -360,6 +390,28 @@ private struct MapaScreenContent: View {
                 onCerrar: { showElegirEnMapa = false }
             )
         }
+    }
+
+    private func prepararVistaDeViaje() {
+        guard viajeActivo, let inicio = trackingCoordinator.tripStartedAt else {
+            mostrarAvisoViaje = false
+            return
+        }
+        cancelarPreguntaDeViaje()
+        confirmacionMarcador?.cancel()
+        modoColocarMarcador = false
+        campoEnfocado = false
+        vm.busSeleccionado = nil
+        // No repetir el aviso cuando se vuelve al mapa durante un viaje existente.
+        mostrarAvisoViaje = Date().timeIntervalSince(inicio) < 6
+        vm.actualizarActividadVisual(false)
+    }
+
+    private func finalizarVistaDeViaje() {
+        cancelarPreguntaDeViaje()
+        mostrarAvisoViaje = false
+        marcadorUsuario = nil
+        vm.limpiar()
     }
 
     private func cancelarPreguntaDeViaje() {
@@ -393,7 +445,7 @@ private struct MapaScreenContent: View {
                     }
                     // Mantener el recordatorio pendiente sin interrumpir otras pantallas.
                     guard scenePhase == .active else { return }
-                    if !showReportarSheet && !showElegirEnMapa && !mostrarDrawer && !modoColocarMarcador
+                    if !showReportarSheet && !showElegirEnMapa && !showDestinosGuardados && !mostrarDrawer && !modoColocarMarcador
                         && vm.busSeleccionado == nil && !campoEnfocado {
                         boardingReminderDate = nil
                         showBoardingConfirmation = true
@@ -432,10 +484,9 @@ private struct MapaScreenContent: View {
     // MARK: - Botón Mi Ubicación (centra el mapa en el GPS real)
     private var botonMiUbicacion: some View {
         BotonMiUbicacion(tieneUbicacion: vm.userRealCoordinate != nil) {
-            if mostrandoRuta, let origin = vm.userRealCoordinate {
+            if mostrandoRuta || viajeActivo, let origin = vm.userRealCoordinate {
                 withAnimation(.easeInOut(duration: 0.4)) {
-                    cameraPosition = .region(MKCoordinateRegion(center: origin,
-                        latitudinalMeters: 1000, longitudinalMeters: 1000))
+                    cameraPosition = .region(MapaViewModel.regionDePersona(origin, duranteViaje: true))
                 }
             } else {
                 vm.recenterOnUser()
@@ -454,10 +505,19 @@ private struct MapaScreenContent: View {
                 showElegirEnMapa = true
                 return
             }
-            withAnimation {
+            let regionActual = centroMapa.region ?? cameraPosition.region ?? vm.region
+            let centro = centroMapa.coordenada ?? regionActual.center
+            let cercana = MKCoordinateRegion(center: centro,
+                                            latitudinalMeters: 350, longitudinalMeters: 350)
+            // Acercar a las calles sin alejar un mapa que ya estuviera más cerca.
+            let enfoque = MKCoordinateRegion(center: centro, span: MKCoordinateSpan(
+                latitudeDelta: min(regionActual.span.latitudeDelta, cercana.span.latitudeDelta),
+                longitudeDelta: min(regionActual.span.longitudeDelta, cercana.span.longitudeDelta)
+            ))
+            withAnimation(.easeInOut(duration: 0.3)) {
                 modoColocarMarcador = true
+                cameraPosition = .region(enfoque)
             }
-            programarConfirmacionMarcador()
             AppHaptics.impact(.light)
         } label: {
             Image(systemName: "mappin.and.ellipse")
@@ -485,8 +545,28 @@ private struct MapaScreenContent: View {
         return marcador.latitude == destino.coordenada.latitude && marcador.longitude == destino.coordenada.longitude
     }
 
+    private func actualizarCamaraVisible(_ context: MapCameraUpdateContext) {
+        if centroMapa.camara != context.camera, modoColocarMarcador {
+            confirmacionMarcador?.cancel()
+            confirmacionMarcador = nil
+        }
+        centroMapa.camara = context.camera
+        centroMapa.region = context.region
+    }
+
+    private func actualizarPuntoVisible(_ punto: CLLocationCoordinate2D?) {
+        let cambio = centroMapa.coordenada?.latitude != punto?.latitude
+            || centroMapa.coordenada?.longitude != punto?.longitude
+        if cambio, modoColocarMarcador {
+            confirmacionMarcador?.cancel()
+            confirmacionMarcador = nil
+        }
+        centroMapa.coordenada = punto
+    }
+
     private func programarConfirmacionMarcador() {
         confirmacionMarcador?.cancel()
+        guard let punto = centroMapa.coordenada, CLLocationCoordinate2DIsValid(punto) else { return }
         confirmacionMarcador = Task { @MainActor in
             do {
                 try await Task.sleep(for: .seconds(1))
@@ -496,15 +576,14 @@ private struct MapaScreenContent: View {
         }
     }
 
-    /// Fija el marcador en el centro del mapa.
+    /// Fija el marcador en la coordenada que queda bajo el círculo visible.
     ///
-    /// Usa el último centro visible cuando termina la espera automática.
+    /// La conversión viene del mismo espacio donde se dibuja el círculo.
     private func fijarMarcadorEnCentro() {
         confirmacionMarcador?.cancel()
         confirmacionMarcador = nil
         guard modoColocarMarcador else { return }
-        let centro = centroMapa.coordenada ?? vm.region.center
-        guard CLLocationCoordinate2DIsValid(centro) else { return }
+        guard let centro = centroMapa.coordenada, CLLocationCoordinate2DIsValid(centro) else { return }
         AppHaptics.impact(.medium)
         withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
             marcadorUsuario = centro
@@ -530,7 +609,7 @@ private struct MapaScreenContent: View {
     /// Conserva el aviso y su cancelación arriba, y los controles alineados abajo.
     @ViewBuilder
     private var ventanaCargaItinerario: some View {
-        if vm.calculandoItinerario && !modoColocarMarcador {
+        if vm.calculandoItinerario && !modoColocarMarcador && !viajeActivo {
             VStack {
                 HStack(spacing: 10) {
                     ProgressView()
@@ -617,11 +696,13 @@ private struct MapaScreenContent: View {
 
 }
 
-/// Memoria del centro visible para callbacks y confirmación, sin publicaciones.
+/// Memoria del punto de selección y cámara, sin publicaciones por fotograma.
 /// El aislamiento conserva lectura y escritura en el mismo actor que la UI.
 @MainActor
 private final class CentroMapaVisible {
     var coordenada: CLLocationCoordinate2D?
+    var region: MKCoordinateRegion?
+    var camara: MapCamera?
 }
 
 // MARK: - Reportar sheet

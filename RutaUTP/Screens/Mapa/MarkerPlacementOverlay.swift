@@ -5,27 +5,21 @@ struct MarkerPlacementOverlay: View {
     let tabBarHeight: CGFloat
     let cancelarMarcador: () -> Void
 
-    /// Lo que se ve mientras se elige el punto: el pin clavado en el centro y
-    /// una barra con la instrucción y la salida.
+    /// Instrucción y salida; el objetivo se dibuja dentro del mapa para
+    /// compartir su espacio de coordenadas y sus áreas seguras.
     @ViewBuilder
     var body: some View {
         if modoColocarMarcador {
             ZStack {
-                // El pin va en el centro geométrico de la pantalla, que es
-                // justo lo que se está viendo. Se posiciona con el `ZStack`
-                // y no con `UIScreen.main.bounds`: esa API está deprecada y
-                // en iPad multitasking mide la pantalla, no la ventana.
-                PinEnColocacion()
-                    .allowsHitTesting(false)
-
                 VStack {
                     Spacer()
                     HStack(spacing: 6) {
                         Image(systemName: "hand.draw.fill")
                             .font(.system(size: 12, weight: .bold))
-                        Text(L.t("Mueve el mapa. Al parar 1 s, se calcula la ruta",
-                                 "Move the map. Pause for 1 s to calculate the route"))
+                        Text(L.t("Pon el círculo sobre tu destino. Al parar 1 s, se calcula la ruta",
+                                 "Place the circle over your destination. Pause for 1 s to calculate the route"))
                             .font(.system(size: 12, weight: .semibold))
+                            .multilineTextAlignment(.center)
                     }
                     .allowsHitTesting(false)
                     .foregroundStyle(.white)

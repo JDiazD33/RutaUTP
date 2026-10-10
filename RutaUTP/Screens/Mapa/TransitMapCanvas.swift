@@ -3,11 +3,15 @@ import MapKit
 
 struct TransitMapCanvas: View {
     let vm: MapaViewModel
+    let rutaViaje: DetectionRouteGeometry?
     @Binding var cameraPosition: MapCameraPosition
     let marcadorUsuario: CLLocationCoordinate2D?
     let marcadorEsDestinoActual: Bool
+    let modoColocarMarcador: Bool
     @FocusState.Binding var campoEnfocado: Bool
-    let onCameraChange: (CLLocationCoordinate2D) -> Void
+    let onCameraChange: (MapCameraUpdateContext) -> Void
+    let onPlacementPointChange: (CLLocationCoordinate2D?) -> Void
+    let onCameraEnd: () -> Void
     let onClearMarker: () -> Void
 
     private var destinoCoincideConReferencia: Bool {
@@ -19,6 +23,40 @@ struct TransitMapCanvas: View {
     }
 
     var body: some View {
+        GeometryReader { geometry in
+            let punto = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            MapReader { proxy in
+                mapa
+                    .overlay {
+                        if modoColocarMarcador {
+                            PinEnColocacion().position(punto)
+                        }
+                    }
+                    .onMapCameraChange(frequency: .continuous) { context in
+                        onCameraChange(context)
+                        onPlacementPointChange(proxy.convert(punto, from: .local))
+                    }
+                    .onMapCameraChange(frequency: .onEnd) { context in
+                        onCameraChange(context)
+                        onPlacementPointChange(proxy.convert(punto, from: .local))
+                        onCameraEnd()
+                    }
+                    .onChange(of: modoColocarMarcador) { _, colocando in
+                        if colocando {
+                            onPlacementPointChange(proxy.convert(punto, from: .local))
+                            onCameraEnd()
+                        }
+                    }
+                    .onChange(of: geometry.size) { _, _ in
+                        onPlacementPointChange(proxy.convert(punto, from: .local))
+                        onCameraEnd()
+                    }
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    private var mapa: some View {
         Map(position: $cameraPosition) {
 
             if vm.utpComoReferencia {
@@ -40,7 +78,12 @@ struct TransitMapCanvas: View {
             }
 
             // Caminatas punteadas y recorrido del transporte en línea continua.
-            if let plan = vm.itinerario {
+            if let rutaViaje {
+                MapPolyline(coordinates: rutaViaje.shape)
+                    .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                MapPolyline(coordinates: rutaViaje.shape)
+                    .stroke(Color.appPrimary, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+            } else if let plan = vm.itinerario {
                 MapPolyline(coordinates: plan.walkToBoard)
                     .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
                 MapPolyline(coordinates: plan.busDibujo)
@@ -87,6 +130,8 @@ struct TransitMapCanvas: View {
                            coordinate: marcador,
                            anchor: MarcadorPin.ancla) {
                     MarcadorPin { onClearMarker() }
+                        .allowsHitTesting(rutaViaje == nil)
+                        .accessibilityHidden(rutaViaje != nil)
                 }
             }
 
@@ -98,7 +143,7 @@ struct TransitMapCanvas: View {
             // línea encima. El ancla no es el centro de la vista: con la
             // etiqueta arriba, centrarla dejaría el vehículo dibujado por
             // debajo del punto real.
-            ForEach(vm.busesAnimados.prefix(8)) { bus in
+            ForEach(vm.busesAnimados.prefix(rutaViaje == nil ? 8 : 0)) { bus in
                 Annotation(L.t("Línea", "Line") + " \(bus.linea)",
                            coordinate: bus.coordinate,
                            anchor: BusMarker3D.ancla) {
@@ -121,13 +166,7 @@ struct TransitMapCanvas: View {
         }
         .mapControls {
             MapCompass().mapControlVisibility(.hidden)
-            MapScaleView()
-        }
-        .ignoresSafeArea()
-        // Cada movimiento reinicia la espera, incluido el deslizamiento
-        // por inercia: nunca confirmar el centro anterior mientras se arrastra.
-        .onMapCameraChange(frequency: .continuous) { context in
-            onCameraChange(context.region.center)
+            if rutaViaje == nil { MapScaleView() }
         }
         // Las anotaciones gestionan sus toques; la ficha se cierra con su X.
         // Un gesto en el Map padre competía con la selección del micro.

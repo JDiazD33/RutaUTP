@@ -200,7 +200,7 @@ struct MarcadorPin: View {
 
 // MARK: El pin flotante mientras se está colocando
 
-/// La versión "en vuelo" del pin: aparece clavada en el centro de la pantalla
+/// La versión "en vuelo" del pin: aparece sobre el centro del mapa
 /// mientras el usuario desplaza el mapa para elegir el punto.
 ///
 /// Es la misma silueta pero sin sombra de mapa y con un anillo en el suelo que
@@ -209,36 +209,35 @@ struct MarcadorPin: View {
 struct PinEnColocacion: View {
 
     var body: some View {
-        DecorativeAnimationScope { animar in
-            VStack(spacing: 0) {
-                FormaPinGota()
-                    .fill(Color.appPrimary)
-                    .frame(width: 30, height: 40)
-                    .overlay {
-                        FormaPinGota()
-                            .fill(Color.surfaceContainerLowest)
-                            .frame(width: 10, height: 14)
-                            .offset(y: -9)
-                    }
-                    .overlay {
-                        FormaPinGota()
-                            .stroke(Color.white, lineWidth: 2.5)
-                    }
-                    .shadow(color: .black.opacity(0.22), radius: 4, x: 0, y: 2)
+        ZStack {
+            FormaPinGota()
+                .fill(Color.appPrimary)
+                .frame(width: 30, height: 40)
+                .overlay {
+                    FormaPinGota()
+                        .fill(Color.surfaceContainerLowest)
+                        .frame(width: 10, height: 14)
+                        .offset(y: -9)
+                }
+                .overlay {
+                    FormaPinGota().stroke(Color.white, lineWidth: 2.5)
+                }
+                .shadow(color: .black.opacity(0.22), radius: 4, x: 0, y: 2)
+                .offset(y: -28)
 
-                // Anillo en el suelo: el punto exacto donde caerá el pin.
-                Circle()
-                    .stroke(Color.appPrimary.opacity(0.35), lineWidth: 2)
-                    .frame(width: animar ? 26 : 16, height: animar ? 26 : 16)
-                    .animation(
-                        !animar
-                        ? nil
-                        : .easeOut(duration: 0.9).repeatForever(autoreverses: true),
-                        value: animar
-                    )
-            }
-            .allowsHitTesting(false)
+            // El centro del anillo es el punto que MapProxy convierte.
+            // El pin elevado no desplaza este objetivo ni modifica su tamaño.
+            Circle()
+                .fill(Color.appSurface.opacity(0.75))
+                .overlay { Circle().stroke(Color.appPrimary, lineWidth: 2) }
+                .frame(width: 24, height: 24)
+            Circle()
+                .fill(Color.appPrimary)
+                .frame(width: 4, height: 4)
         }
+        .frame(width: 30, height: 26)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
