@@ -51,7 +51,6 @@
 		BC0200000000000000000008 /* RutaOpcion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000007 /* RutaOpcion.swift */; };
 		BC020000000000000000000A /* RutasViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000009 /* RutasViewModel.swift */; };
 		BC020000000000000000000C /* RutaOpcionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC020000000000000000000B /* RutaOpcionCard.swift */; };
-		BC020000000000000000000E /* RutasMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC020000000000000000000D /* RutasMapView.swift */; };
 		BC0200000000000000000010 /* DetalleRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC020000000000000000000F /* DetalleRutaView.swift */; };
 		BC0200000000000000000012 /* VoiceOverHelpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000011 /* VoiceOverHelpSheet.swift */; };
 		BC0200000000000000000014 /* PerfilCuponesGuardados.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000013 /* PerfilCuponesGuardados.swift */; };
@@ -231,7 +230,6 @@
 		BC0200000000000000000007 /* RutaOpcion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutaOpcion.swift; sourceTree = "<group>"; };
 		BC0200000000000000000009 /* RutasViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutasViewModel.swift; sourceTree = "<group>"; };
 		BC020000000000000000000B /* RutaOpcionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutaOpcionCard.swift; sourceTree = "<group>"; };
-		BC020000000000000000000D /* RutasMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RutasMapView.swift; sourceTree = "<group>"; };
 		BC020000000000000000000F /* DetalleRutaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetalleRutaView.swift; sourceTree = "<group>"; };
 		BC0200000000000000000011 /* VoiceOverHelpSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOverHelpSheet.swift; sourceTree = "<group>"; };
 		BC0200000000000000000013 /* PerfilCuponesGuardados.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfilCuponesGuardados.swift; sourceTree = "<group>"; };
@@ -620,7 +618,6 @@
 				BC0200000000000000000009 /* RutasViewModel.swift */,
 				BD5200000000000000000001 /* IndiceBusquedaRuta.swift */,
 				BC020000000000000000000B /* RutaOpcionCard.swift */,
-				BC020000000000000000000D /* RutasMapView.swift */,
 				BC020000000000000000000F /* DetalleRutaView.swift */,
 				0A8004D9300AD9FE004E1676 /* RutasView.swift */,
 			);
@@ -985,7 +982,6 @@
 				BC020000000000000000000A /* RutasViewModel.swift in Sources */,
 				BD5200000000000000000002 /* IndiceBusquedaRuta.swift in Sources */,
 				BC020000000000000000000C /* RutaOpcionCard.swift in Sources */,
-				BC020000000000000000000E /* RutasMapView.swift in Sources */,
 				BC0200000000000000000010 /* DetalleRutaView.swift in Sources */,
 				BC0200000000000000000012 /* VoiceOverHelpSheet.swift in Sources */,
 				BC0200000000000000000014 /* PerfilCuponesGuardados.swift in Sources */,

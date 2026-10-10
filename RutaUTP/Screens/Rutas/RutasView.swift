@@ -3,12 +3,11 @@
 //  RutaUTP
 //
 //  Vista de Rutas (tab "Rutas" del BottomNavBar).
-//  - Estado 1 (sin ruta seleccionada): mapa no interactivo + lista de rutas.
+//  - Estado 1 (sin ruta seleccionada): buscador y lista de rutas.
 //  - Estado 2 (con ruta seleccionada): DetalleRutaView con transición slide.
 //
 
 import SwiftUI
-import MapKit
 
 // MARK: - Vista principal
 struct RutasView: View {
@@ -107,168 +106,165 @@ struct RutasView: View {
     private func procesarHookDebug() {}
     #endif
 
-    // MARK: - Lista screen
+    // MARK: - Lista de rutas
     private var listaScreen: some View {
-        VStack(spacing: 0) {
-            // Header
+        let rutas = viewModel.rutasFiltradas
+        return VStack(spacing: 0) {
             header
             buscador
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    RutasMapView()
-                        .frame(height: 280)
-
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(L.signable("rutas.elegir", "Elige tu ruta", "Pick your route"))
-                                    .font(.headlineSm)
-                                    .foregroundStyle(.onSurface)
-                                    .seniable("rutas.elegir", distintivoDx: 10)
-                                Text(TransporteApp.rutasUTPPendientes
-                                     ? L.t("Buses UTP · rutas próximamente", "UTP buses · routes coming soon")
-                                     : viewModel.cargando
-                                     ? L.t("Cargando rutas oficiales…", "Loading official routes…")
-                                     : (viewModel.filtroCerca != nil
-                                        ? L.t("Líneas que pasan cerca de", "Lines passing near") + " \(viewModel.filtroCerca!.titulo)"
-                                        : L.t("\(viewModel.rutas.count) rutas oficiales · ordenadas por cercanía a UTP", "\(viewModel.rutas.count) official routes · sorted by distance to UTP")))
-                                    .font(.bodySm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                            }
-                            Spacer()
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(L.signable("rutas.elegir", "Elige tu ruta", "Pick your route"))
+                                .font(.headlineSm)
+                                .foregroundStyle(Color.onSurface)
+                                .seniable("rutas.elegir", distintivoDx: 10)
+                                .accessibilityAddTraits(.isHeader)
+                            Text(TransporteApp.rutasUTPPendientes
+                                 ? L.t("Buses UTP · rutas próximamente", "UTP buses · routes coming soon")
+                                 : L.t("Encuentra tu micro y revisa su recorrido", "Find your bus and check its route"))
+                                .font(.bodySm)
+                                .foregroundStyle(Color.onSurfaceVariant)
                         }
-                        .padding(.top, 20)
-
-                        if viewModel.cargando {
-                            HStack(spacing: 12) {
-                                ProgressView()
-                                Text(L.t("Parseando feed GTFS…", "Parsing GTFS feed…"))
-                                    .font(.bodySm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 32)
-                        } else if let error = viewModel.errorCarga {
-                            VStack(spacing: 10) {
-                                Image(systemName: "exclamationmark.triangle")
-                                    .font(.system(size: 26))
-                                    .foregroundStyle(.onSurfaceVariant)
-                                Text(error.mensajeUsuario)
-                                    .font(.bodySm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                                Button(L.t("Reintentar", "Try again")) {
-                                    Task { await viewModel.cargar(reintentar: true) }
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 32)
-                            .multilineTextAlignment(.center)
-                        } else if viewModel.feedVacio {
-                            Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
-                                 : L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurfaceVariant)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 32)
-                        } else if viewModel.rutasFiltradas.isEmpty {
-                            Text(viewModel.filtroCerca != nil
-                                 ? L.t("Ninguna línea tiene paradero a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar", "No route has a stop within \(Int(RutasViewModel.radioCercaMetros)) m of this place")
-                                 : L.t("No hay rutas que coincidan con ", "No routes match ") + "“\(viewModel.textoBusqueda)”")
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurfaceVariant)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 32)
-                                .multilineTextAlignment(.center)
-                        } else {
-                            ForEach(viewModel.rutasFiltradas) { ruta in
-                                Button {
-                                    withAnimation(.spring(response: 0.3)) {
-                                        rutaSeleccionada = ruta
-                                    }
-                                } label: {
-                                    RutaOpcionCard(ruta: ruta, distanciaLugar: viewModel.distanciaTexto(ruta: ruta))
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityHint(L.t("Muestra el recorrido, paraderos y opciones de navegación", "Shows the route, stops and navigation options"))
-                            }
+                        Spacer(minLength: 8)
+                        if !viewModel.cargando && viewModel.errorCarga == nil && !viewModel.feedVacio {
+                            Text("\(rutas.count)")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.onPrimaryContainer)
+                                .padding(12)
+                                .background(Color.primaryContainer, in: Capsule())
+                                .accessibilityLabel(L.t("\(rutas.count) rutas encontradas", "\(rutas.count) routes found"))
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, tabBarHeight + 30)
+                    .padding(.vertical, 6)
+
+                    if viewModel.cargando {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text(L.t("Cargando rutas…", "Loading routes…"))
+                                .font(.bodySm)
+                                .foregroundStyle(Color.onSurfaceVariant)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
+                    } else if let error = viewModel.errorCarga {
+                        VStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 26))
+                            Text(error.mensajeUsuario)
+                                .font(.bodySm)
+                            Button(L.t("Reintentar", "Try again")) {
+                                Task { await viewModel.cargar(reintentar: true) }
+                            }
+                            .frame(minHeight: 44)
+                        }
+                        .foregroundStyle(Color.onSurfaceVariant)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
+                        .multilineTextAlignment(.center)
+                    } else if viewModel.feedVacio {
+                        estadoVacio(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
+                                    : L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
+                    } else if rutas.isEmpty {
+                        estadoVacio(viewModel.textoBusqueda.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    && viewModel.filtroCerca != nil
+                                    ? L.t("No hay líneas con paradero a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar.", "No routes have a stop within \(Int(RutasViewModel.radioCercaMetros)) m of this place.")
+                                    : L.t("No encontramos rutas para ", "No routes found for ") + "“\(viewModel.textoBusqueda)”")
+                    } else {
+                        ForEach(rutas) { ruta in
+                            Button {
+                                withAnimation(.spring(response: 0.3)) { rutaSeleccionada = ruta }
+                            } label: {
+                                RutaOpcionCard(ruta: ruta, distanciaLugar: viewModel.distanciaTexto(ruta: ruta))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint(L.t("Muestra el recorrido, paraderos y opciones de navegación", "Shows the route, stops and navigation options"))
+                        }
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, tabBarHeight + 30)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .background(Color.appBackground.ignoresSafeArea())
     }
 
+    private func estadoVacio(_ mensaje: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "bus")
+                .font(.system(size: 28))
+                .accessibilityHidden(true)
+            Text(mensaje)
+                .font(.bodySm)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(Color.onSurfaceVariant)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+    }
+
     // MARK: - Buscador de rutas
     private var buscador: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.onSurfaceVariant)
+                    .accessibilityHidden(true)
+                TextField(L.t("Letra, línea, empresa o avenida", "Letter, line, company or avenue"), text: $viewModel.textoBusqueda)
+                    .font(.bodySm)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .submitLabel(.search)
+                    .accessibilityLabel(L.t("Buscar rutas por letra, línea, empresa o avenida", "Search routes by letter, line, company or avenue"))
+                if !viewModel.textoBusqueda.isEmpty {
+                    Button { viewModel.textoBusqueda = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color.onSurfaceVariant)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Borrar búsqueda de rutas", "Clear route search"))
+                }
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 8)
+            .frame(minHeight: 52)
+            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 16))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.outlineVariant.opacity(0.4), lineWidth: 1)
+            }
+            Text(L.t("Ejemplo: A · M-34 · empresa · Mansiche", "Example: A · M-34 · company · Mansiche"))
+                .font(.caption)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .padding(.horizontal, 3)
             if let cerca = viewModel.filtroCerca {
                 HStack(spacing: 8) {
                     Image(systemName: "location.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(L.t("Líneas cerca de", "Lines near") + " \(cerca.titulo)")
-                            .font(.bodySm)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.onPrimaryContainer)
-                        Text(String(format: L.t("%1$d de %2$d líneas con paradero a menos de %3$d m", "%1$d of %2$d routes have a stop within %3$d m"), viewModel.rutasFiltradas.count, viewModel.rutas.count, Int(RutasViewModel.radioCercaMetros)))
-                            .font(.system(size: 10))
-                            .foregroundStyle(.onPrimaryContainer.opacity(0.8))
-                    }
-                    Spacer()
+                        .accessibilityHidden(true)
+                    Text(L.t("Cerca de ", "Near ") + cerca.titulo + " · \(Int(RutasViewModel.radioCercaMetros)) m")
+                        .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         withAnimation { viewModel.limpiarFiltroCerca() }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 17))
-                            .foregroundStyle(.onPrimaryContainer.opacity(0.7))
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(L.t("Quitar filtro", "Clear filter"))
+                    .accessibilityLabel(L.t("Quitar filtro de cercanía", "Clear nearby filter"))
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.primaryContainer)
-                )
-            } else {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.onSurfaceVariant)
-                    TextField(L.t("Buscar línea, empresa o avenida", "Search line, company or avenue"), text: $viewModel.textoBusqueda)
-                        .font(.bodySm)
-                        .autocorrectionDisabled()
-                    if !viewModel.textoBusqueda.isEmpty {
-                        Button {
-                            viewModel.textoBusqueda = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 15))
-                                .foregroundStyle(.onSurfaceVariant.opacity(0.6))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(L.t("Borrar búsqueda de rutas", "Clear route search"))
-                        .frame(minWidth: 44, minHeight: 44)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.surfaceContainerLowest)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.40), lineWidth: 1)
-                )
+                .foregroundStyle(Color.onPrimaryContainer)
+                .padding(.leading, 12)
+                .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 12))
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Header
