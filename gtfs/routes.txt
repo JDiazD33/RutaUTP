@@ -36,7 +36,7 @@ route_id,agency_id,route_short_name,route_long_name,route_color,route_type
 17521283,20,C-38 "S4",C-38 "S4" : Av. Julián Arce → Av. Julián Arce,FFFFFF,3
 17521284,7,M-33 "B<3",M-33 "B<3" : Calle San Judas Tadeo → Calle San Judas Tadeo,CC3333,3
 17522621,21,C-42 "B2",C-42 "B2" : Ca. Los Robles → Ca. Los Robles,FFFF66,3
-17522670,22,M-02 "A",M-02 "A" : Calle Libertad → Calle Libertad,006600,3
+17522670,22,M-01 "A",M-01 "A" : Calle Libertad → Calle Libertad,006600,3
 17522705,23,C-44 "T2",C-44 "T2" : Vía Panamericana → Av. Dinamarca,3399FF,3
 17522721,24,M-05 "H",M-05 "H" : Av. La Paz → Av. La Paz,FF9966,3
 17522730,23,C-44 "T2",C-44 "T2" : Av. Dinamarca → Vía Panamericana,,3
@@ -44,7 +44,7 @@ route_id,agency_id,route_short_name,route_long_name,route_color,route_type
 17527200,25,CT-23 BC,CT-23 BC : Calle Panamá → Calle Panamá,808080,3
 17527270,26,CT-24 A,CT-24 A : Jirón Rimac → Jirón Rimac,808080,3
 17527397,26,CT-24 B,CT-24 B : Calle Panamá → Calle Panamá,808080,3
-17527405,22,M-01 "C",M-01 "C" : Panamericana Norte → Panamericana Norte,006600,3
+17527405,22,M-02 "C",M-02 "C" : Panamericana Norte → Panamericana Norte,006600,3
 17549691,25,CT-23 A,CT-23 A : Jirón Rimac → Jirón Rimac,808080,3
 17549744,25,CT-23 B,CT-23 B : Calle Panamá → Calle Panamá,808080,3
 17550302,24,M-05 "H <3",M-05 "H <3" : Av. La Paz → Av. La Paz,FF9966,3
