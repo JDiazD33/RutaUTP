@@ -43,6 +43,16 @@ struct RutaGTFS: Identifiable {
     let distanciaKm: Double         // longitud del recorrido
     let distanciaUTPMetros: Double  // distancia mínima del shape al campus UTP
 
+    /// Identificación para abordar; conserva los campos del feed y el route_id.
+    var lineaConLetra: String {
+        GTFSNombreParser.lineaConLetra(linea: linea, variante: variante)
+    }
+
+    /// Letra visible, también para las CT que la incluyen dentro de `linea`.
+    var letraTransporte: String {
+        GTFSNombreParser.identificacionTransporte(linea: linea, variante: variante).letra
+    }
+
     var precioTexto: String {
         precio > 0 ? String(format: "S/ %.2f", precio) : "S/ —"
     }
@@ -54,6 +64,29 @@ struct RutaGTFS: Identifiable {
 
 // MARK: - Parser de nombres
 enum GTFSNombreParser {
+
+    /// Presentación compartida por Mapa, confirmación de subida y Rutas.
+    /// No cambia los campos originales: las CT guardan la letra en `linea`.
+    static func identificacionTransporte(linea: String, variante: String) -> (codigo: String, letra: String) {
+        var codigo = linea
+        var letra = variante.trimmingCharacters(in: .whitespacesAndNewlines)
+        if letra.isEmpty && linea.hasPrefix("CT-") {
+            let partes = linea.split(maxSplits: 1, whereSeparator: \.isWhitespace)
+            if partes.count == 2 {
+                codigo = String(partes[0])
+                letra = String(partes[1])
+            }
+        }
+        let letraVisible = letra.replacingOccurrences(of: "<3", with: " ♥")
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return (codigo, letraVisible)
+    }
+
+    static func lineaConLetra(linea: String, variante: String) -> String {
+        let identificacion = identificacionTransporte(linea: linea, variante: variante)
+        guard !identificacion.letra.isEmpty else { return linea }
+        return identificacion.codigo + L.t(" · Letra ", " · Letter ") + identificacion.letra
+    }
 
     /// `C-01 "B"` → línea "C-01", variante "B".
     static func lineaYVariante(shortName: String) -> (linea: String, variante: String) {

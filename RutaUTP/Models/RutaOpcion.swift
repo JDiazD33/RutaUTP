@@ -19,6 +19,15 @@ struct RutaOpcion: Identifiable, Equatable {
     let paradaFin: String
     var variante: String = ""
 
+    /// Misma identificación visible que el mapa, sin modificar línea o variante.
+    var letraTransporte: String {
+        GTFSNombreParser.identificacionTransporte(linea: linea, variante: variante).letra
+    }
+
+    var lineaConLetra: String {
+        GTFSNombreParser.lineaConLetra(linea: linea, variante: variante)
+    }
+
     var frecuenciaTexto: String {
         frecuenciaMin > 0 ? L.t("cada \(frecuenciaMin) min", "every \(frecuenciaMin) min") : "—"
     }
@@ -32,4 +41,3 @@ struct RutaOpcion: Identifiable, Equatable {
         lhs.id == rhs.id
     }
 }
-
