@@ -131,7 +131,8 @@ struct RouteChangesSheet: View {
                             Text(errorCargaRutas).foregroundStyle(.secondary)
                             Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
                         } else if routes.isEmpty {
-                            Text(L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
+                            Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
+                                 : L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
                                 .foregroundStyle(.secondary)
                         }
                         Picker(L.t("Línea y ramal", "Line and branch"), selection: Binding(get: { routeID }, set: { value in
@@ -260,7 +261,7 @@ struct RouteChangesSheet: View {
                 cargandoRutas = true
                 errorCargaRutas = nil
                 do {
-                    let catalogo = try await GTFSRepository.shared.cargarRutas(reintentar: revisionCatalogo > 0)
+                    let catalogo = try await TransporteApp.repositorio.cargarRutas(reintentar: revisionCatalogo > 0)
                     guard !Task.isCancelled else { return }
                     routes = catalogo
                 } catch {
@@ -315,9 +316,11 @@ enum UbicacionPuntual {
     static func obtener(
         desde service: LocationServiceProtocol,
         timeout: TimeInterval = 12,
+        antiguedadMaxima: TimeInterval = 45,
         ahora: @escaping () -> Date = Date.init
     ) async -> CLLocation? {
-        guard !Task.isCancelled, timeout.isFinite, timeout > 0 else { return nil }
+        guard !Task.isCancelled, timeout.isFinite, timeout > 0,
+              antiguedadMaxima.isFinite, antiguedadMaxima > 0 else { return nil }
         // La solicitud del permiso del sistema no es cancelable. Se comprueba
         // cancelación al volver, antes de registrar un consumidor o iniciar GPS.
         let permiso = await service.requestPermission()
@@ -340,7 +343,9 @@ enum UbicacionPuntual {
                 service.startUpdating()
                 for await lectura in lecturas {
                     guard !Task.isCancelled, service.authorizationStatus.isAuthorized else { return nil }
-                    if esValida(lectura, ahora: ahora()) { return lectura }
+                    if esValida(lectura, ahora: ahora(), antiguedadMaxima: antiguedadMaxima) {
+                        return lectura
+                    }
                 }
                 return nil
             }
@@ -366,9 +371,11 @@ enum UbicacionPuntual {
         return resultado
     }
 
-    static func esValida(_ location: CLLocation, ahora: Date) -> Bool {
+    static func esValida(_ location: CLLocation, ahora: Date,
+                         antiguedadMaxima: TimeInterval = 45) -> Bool {
         let edad = ahora.timeIntervalSince(location.timestamp)
-        return edad.isFinite && edad >= -10 && edad <= 45
+        return antiguedadMaxima.isFinite && antiguedadMaxima > 0
+            && edad.isFinite && edad >= -10 && edad <= antiguedadMaxima
             && location.horizontalAccuracy.isFinite
             && location.horizontalAccuracy >= 0 && location.horizontalAccuracy <= 50
             && CLLocationCoordinate2DIsValid(location.coordinate)
@@ -488,6 +495,14 @@ private struct RouteIncidentMap: View {
         .overlay(alignment: .topLeading) {
             LeyendaCoherencia()
                 .padding(8)
+        }
+        .overlay(alignment: .bottomLeading) {
+            SelectorParaderoAccesible(paraderos: route.paraderos, seleccion: point) {
+                point = $0
+                camera = .region(MKCoordinateRegion(center: $0, span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)))
+                onPointChange?()
+            }
+            .padding(12)
         }
     }
 }

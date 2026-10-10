@@ -85,11 +85,11 @@ struct ElegirDestinoEnMapa: View {
                          : L.t("Usar este destino", "Use this destination"))
                         .font(.headlineSm)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(.onPrimaryFill)
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.appPrimary)
+                        .fill(Color.primaryFill)
                         .shadow(color: .appPrimary.opacity(0.35), radius: 12, x: 0, y: 6)
                 )
             }

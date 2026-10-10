@@ -3,7 +3,7 @@
 //  RutaUTP
 //
 //  Pantalla principal del mapa.
-//  - Mapa (MapKit) de fondo con marcadores UTP, usuario y buses animados.
+//  - Mapa (MapKit) con la sede elegida, usuario y buses animados.
 //  - Header con botón de menú y título "Mapa".
 //  - Panel de búsqueda con TextField funcional y chips de destino.
 //  - Al seleccionar destino: mapa hace zoom + traza la ruta con buses animados.
@@ -28,6 +28,7 @@ struct MapaView: View {
 }
 
 private struct MapaScreenContent: View {
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
@@ -58,7 +59,7 @@ private struct MapaScreenContent: View {
 
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
+            center: TransporteApp.referenciaInicio,
             span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
         )
     )
@@ -107,6 +108,7 @@ private struct MapaScreenContent: View {
                 },
                 onClearMarker: despejarMarcador
             )
+            .accessibilityHidden(mostrarDrawer || vm.calculandoItinerario)
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
@@ -144,6 +146,7 @@ private struct MapaScreenContent: View {
                 // Sin esto el bloque se sigue dibujando fuera de pantalla y
                 // seguiría robando toques al mapa.
                 .allowsHitTesting(!panelesRetirados)
+                .accessibilityHidden(panelesRetirados)
 
                 Spacer()
 
@@ -168,6 +171,7 @@ private struct MapaScreenContent: View {
                     if !mostrandoRuta, trackingCoordinator.isEnabled, trackingCoordinator.selectedTripRoute != nil {
                         TripContributionPanel(
                             coordinator: trackingCoordinator,
+                            locationService: vm.sharedLocationService,
                             statusMessage: trackingCoordinator.statusMessage,
                             statusColor: colorEstadoContribucion
                         )
@@ -197,6 +201,7 @@ private struct MapaScreenContent: View {
                 .offset(y: panelesRetirados ? desplazamientoFueraDePantalla : 0)
                 .opacity(panelesRetirados ? 0 : 1)
                 .allowsHitTesting(!panelesRetirados)
+                .accessibilityHidden(panelesRetirados)
             }
             .animation(
                 panelesRetirados
@@ -206,10 +211,12 @@ private struct MapaScreenContent: View {
             )
             // Entrada/salida del buscador según haya o no itinerario resuelto.
             .animation(.easeInOut(duration: 0.28), value: vm.itinerario != nil)
+            .accessibilityHidden(mostrarDrawer)
 
             // ── POPUP DETALLE DE BUS ANIMADO ──
             MapBusSelectionOverlay(vm: vm, tabBarHeight: tabBarHeight)
                 .zIndex(10)
+                .accessibilityHidden(mostrarDrawer)
 
             // ── DRAWER OVERLAY ──
             if mostrarDrawer {
@@ -235,6 +242,7 @@ private struct MapaScreenContent: View {
             if !mostrandoRuta {
                 BottomNavBar()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .accessibilityHidden(mostrarDrawer || modoColocarMarcador || vm.calculandoItinerario)
             }
         }
         .ignoresSafeArea(edges: .bottom)
@@ -242,6 +250,7 @@ private struct MapaScreenContent: View {
         .onAppear {
             pantallaVisible = true
             vm.actualizarActividadVisual(scenePhase == .active)
+            vm.actualizarSedeTrabajo()
             vm.iniciarGPS()
             vm.refrescarDestinos() // chips: refleja lo guardado en Guardado
             consumirDestinoPendiente()
@@ -272,6 +281,12 @@ private struct MapaScreenContent: View {
         }
         .onChange(of: router.destinoPendiente) { _, _ in
             consumirDestinoPendiente()
+        }
+        .onChange(of: SedeTrabajoStore.shared.sede?.id) { _, _ in
+            vm.actualizarSedeTrabajo()
+        }
+        .onChange(of: SedeTrabajoStore.shared.utpComoReferencia) { _, _ in
+            vm.actualizarSedeTrabajo()
         }
         .onChange(of: vm.itinerarioFocusTick) { _, _ in
             guard let polyline = vm.routePolyline else { return }
@@ -321,6 +336,7 @@ private struct MapaScreenContent: View {
         .animation(.easeInOut(duration: 0.28), value: mostrarDrawer)
         .sheet(isPresented: $showBoardingConfirmation) {
             BoardingConfirmationSheet(coordinator: trackingCoordinator,
+                                      locationService: vm.sharedLocationService,
                                       suggestedRouteID: vm.itinerario?.route.id,
                                       onRemindLater: { programarPreguntaDeViaje(en: 120) })
         }
@@ -434,6 +450,10 @@ private struct MapaScreenContent: View {
     private var botonColocarMarcador: some View {
         Button {
             campoEnfocado = false
+            if voiceOverOn {
+                showElegirEnMapa = true
+                return
+            }
             withAnimation {
                 modoColocarMarcador = true
             }
@@ -455,8 +475,9 @@ private struct MapaScreenContent: View {
         .buttonStyle(.plain)
         .accessibilityLabel(L.t("Colocar un marcador en el mapa",
                                 "Drop a marker on the map"))
-        .accessibilityHint(L.t("Mueve el mapa. El punto se selecciona tras un segundo sin moverlo",
-                               "Move the map. The point is selected after one second without movement"))
+        .accessibilityHint(voiceOverOn
+            ? L.t("Abre el selector de puntos con acciones para mover y confirmar el destino", "Opens the point picker with actions to move and confirm the destination")
+            : L.t("Mueve el mapa. El punto se selecciona tras un segundo sin moverlo", "Move the map. The point is selected after one second without movement"))
     }
 
     private var marcadorEsDestinoActual: Bool {
@@ -581,12 +602,12 @@ private struct MapaScreenContent: View {
                     .font(.labelCapsMd)
                     .appTracking(AppTracking.wideLabel)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(.onPrimaryFill)
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
             .background(
                 Capsule()
-                    .fill(Color.appPrimary)
+                    .fill(Color.primaryFill)
                     .shadow(color: .appPrimary.opacity(0.35), radius: 8, x: 0, y: 4)
             )
         }
