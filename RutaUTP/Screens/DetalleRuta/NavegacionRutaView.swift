@@ -448,6 +448,8 @@ struct NavegacionRutaView: View {
     @State private var pantallaVisible = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @AccessibilityFocusState(for: .voiceOver) private var enfocarLlegada: Bool
 
     init(ruta: RutaOpcion, onFinish: @escaping () -> Void) {
         self.ruta = ruta
@@ -469,12 +471,14 @@ struct NavegacionRutaView: View {
                 modoDemo: viewModel.modoDemo
             )
             .ignoresSafeArea()
+            .accessibilityHidden(viewModel.estado == .finalizado)
 
             VStack(spacing: 0) {
                 topBar
                 Spacer()
                 panelInferior
             }
+            .accessibilityHidden(viewModel.estado == .finalizado)
 
             if viewModel.estado == .finalizado {
                 alertaLlegada
@@ -497,6 +501,14 @@ struct NavegacionRutaView: View {
                 viewModel.iniciar()
             }
         }
+        .onChange(of: faseAccesible) { _, _ in
+            guard voiceOverOn, scenePhase == .active, pantallaVisible else { return }
+            enfocarLlegada = viewModel.estado == .finalizado
+            if !enfocarLlegada {
+                UIAccessibility.post(notification: .announcement, argument: instruccion + ". " + subtitulo)
+            }
+        }
+        .accessibilityAction(.escape) { onFinish() }
     }
 
     // MARK: - Top bar
@@ -512,6 +524,8 @@ struct NavegacionRutaView: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
             Spacer()
 
             Button {
@@ -520,13 +534,14 @@ struct NavegacionRutaView: View {
                 Label(viewModel.modoDemo ? "Demo ON" : "Demo",
                       systemImage: viewModel.modoDemo ? "stop.fill" : "play.circle.fill")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(viewModel.modoDemo ? Color.onPrimaryFill : Color.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
-                    .background(Capsule().fill(viewModel.modoDemo ? Color.appPrimary : Color.white.opacity(0.14)))
+                    .background(Capsule().fill(viewModel.modoDemo ? Color.primaryFill : Color.white.opacity(0.14)))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Simular recorrido", "Simulate route"))
+            .accessibilityValue(viewModel.modoDemo ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
             .disabled(viewModel.shape.count < 2)
 
             Button {
@@ -573,6 +588,9 @@ struct NavegacionRutaView: View {
                 }
                 Spacer()
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(instruccion)
+            .accessibilityValue(subtitulo)
 
             if viewModel.estado == .sinPermiso {
                 Button(L.t("Abrir Ajustes", "Open Settings")) {
@@ -614,6 +632,9 @@ struct NavegacionRutaView: View {
                         .foregroundStyle(ruta.colorLinea)
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L.t("Avance de la línea, tiempos estimados", "Route progress, estimated times"))
+            .accessibilityValue(L.t("\(Int(viewModel.progreso * 100)) por ciento", "\(Int(viewModel.progreso * 100)) percent"))
 
             // Stats
             HStack(spacing: 0) {
@@ -670,9 +691,24 @@ struct NavegacionRutaView: View {
                 .foregroundStyle(.white.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(etiqueta)
+        .accessibilityValue(valor == "—" ? L.t("No disponible", "Unavailable") : valor)
     }
 
     // MARK: - Estado → UI
+    /// Excluye metros variables para no interrumpir la lectura en cada actualización GPS.
+    private var faseAccesible: String {
+        switch viewModel.estado {
+        case .esperandoGPS: return "gps"
+        case .sinRecorrido: return "sinRecorrido"
+        case .sinPermiso: return "permiso"
+        case .enRuta: return "ruta"
+        case .fueraDeRuta: return "fuera"
+        case .cercaDestino: return "cerca"
+        case .finalizado: return "final"
+        }
+    }
     private var iconoEstado: String {
         switch viewModel.estado {
         case .sinRecorrido: return "map.fill"
@@ -748,23 +784,26 @@ struct NavegacionRutaView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 52))
                 .foregroundStyle(.green)
+                .accessibilityHidden(true)
             Text(L.t("Fin del recorrido", "End of the route"))
                 .font(.system(size: 20, weight: .heavy))
                 .foregroundStyle(.white)
+                .accessibilityAddTraits(.isHeader)
             Text(L.t("Llegaste a ", "You arrived at ") + ruta.paradaFin)
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
+                .accessibilityFocused($enfocarLlegada)
 
             Button {
                 onFinish()
             } label: {
                 Text(L.t("Terminar", "Done"))
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Capsule().fill(Color.appPrimary))
+                    .background(Capsule().fill(Color.primaryFill))
             }
             .buttonStyle(.plain)
         }

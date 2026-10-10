@@ -113,7 +113,7 @@ struct MapaRutaRepresentable: UIViewRepresentable {
                 coordinate: ultimo,
                 tipo: .destino,
                 color: .systemRed,
-                title: tituloDestino ?? "UTP Trujillo"
+                title: tituloDestino ?? L.t("Destino", "Destination")
             ))
         }
         // Bus decorativo a mitad del recorrido
@@ -259,7 +259,7 @@ struct RutaMapKitView: View {
     RutaMapKitView(ruta: RutaOpcion(
         id: "17419574", linea: "C-06", empresa: "Titanic Express",
         recorrido: "Vía Panamericana Norte (ramal circular)",
-        frecuenciaMin: 5, duracionMin: 45, costo: "S/ 2.00",
+        frecuenciaMin: 5, duracionMin: 45, costo: "S/ 2.50",
         numParaderos: 120, distanciaKm: 18.4, colorLinea: Color(hex: "#9999FF"),
         shape: [], paraderos: [],
         paradaInicio: "Panamericana Norte", paradaFin: "Av. América"
@@ -267,4 +267,3 @@ struct RutaMapKitView: View {
     .frame(height: 280)
     .padding()
 }
-

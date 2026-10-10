@@ -19,7 +19,7 @@ final class ParaderoExploraAnnotation: NSObject, MKAnnotation {
     let esInicio: Bool
     let esFin: Bool
 
-    var title: String? { esInicio || esFin ? nombre : nil }
+    var title: String? { nombre }
 
     init(coordinate: CLLocationCoordinate2D, nombre: String,
          esInicio: Bool = false, esFin: Bool = false) {
@@ -139,6 +139,8 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
                 view.glyphImage = UIImage(systemName: paradero.esInicio ? "play.fill" : "flag.fill")
                 view.titleVisibility = .visible
                 view.canShowCallout = true
+                view.isAccessibilityElement = true
+                view.accessibilityLabel = (paradero.esInicio ? L.t("Paradero inicial: ", "First stop: ") : L.t("Paradero final: ", "Last stop: ")) + paradero.nombre
                 return view
             }
 
@@ -152,6 +154,8 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
                 .withTintColor(.darkGray, renderingMode: .alwaysOriginal)
             view.canShowCallout = true
             view.displayPriority = .defaultLow
+            view.isAccessibilityElement = true
+            view.accessibilityLabel = L.t("Paradero: ", "Stop: ") + paradero.nombre
             return view
         }
     }
@@ -163,6 +167,7 @@ struct ExploradorRutaView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var ajustarTrigger: Int = 0
+    @State private var mostrarListaParaderos = false
 
     /// Trazado para DIBUJAR, decimado.
     ///
@@ -243,11 +248,32 @@ struct ExploradorRutaView: View {
                     .padding(.bottom, 12)
             }
         }
+        .accessibilityAction(.escape) { dismiss() }
+        .sheet(isPresented: $mostrarListaParaderos) {
+            NavigationStack {
+                List(Array(ruta.paraderos.enumerated()), id: \.offset) { indice, paradero in
+                    Text(paradero.nombre)
+                        .accessibilityLabel(L.t("Paradero \(indice + 1): ", "Stop \(indice + 1): ") + paradero.nombre)
+                }
+                .navigationTitle(L.t("Paraderos de ", "Stops for ") + ruta.linea)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L.t("Cerrar", "Close")) { mostrarListaParaderos = false }
+                    }
+                }
+            }
+            .seguirTemaForzado()
+        }
     }
 
     // MARK: - Leyenda con datos del feed
     private var leyenda: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Button { mostrarListaParaderos = true } label: {
+                Label(L.t("Ver lista de paraderos", "View stop list"), systemImage: "list.bullet")
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 3)
                     .fill(ruta.colorLinea)
