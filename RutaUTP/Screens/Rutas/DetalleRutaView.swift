@@ -34,6 +34,10 @@ struct DetalleRutaView: View {
                         .frame(height: 280)
                         .contentShape(Rectangle())
                         .onTapGesture { showExplorador = true }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(L.t("Explorar recorrido de la línea ", "Explore route for line ") + ruta.lineaConLetra)
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { showExplorador = true }
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
 
@@ -44,9 +48,15 @@ struct DetalleRutaView: View {
                                 .fill(ruta.colorLinea)
                                 .frame(width: 6, height: 48)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(ruta.empresa + (ruta.variante.isEmpty ? "" : " · " + ruta.variante))
+                                Text(ruta.empresa)
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
+                                if !ruta.letraTransporte.isEmpty {
+                                    Text(L.t("Letra del transporte: ", "Transport letter: ") + ruta.letraTransporte)
+                                        .font(.bodySm.weight(.semibold))
+                                        .foregroundStyle(.onSurface)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                                 Text(ruta.recorrido)
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
@@ -108,7 +118,7 @@ struct DetalleRutaView: View {
                                 pasoRow("1", L.t("Ve al paradero \(ruta.paradaInicio)", "Go to \(ruta.paradaInicio) stop"),
                                         L.t("Sale uno \(ruta.frecuenciaTexto)", "One departs \(ruta.frecuenciaTexto)"),
                                         "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
-                                pasoRow("2", L.t("Sube a la línea \(ruta.linea)", "Board line \(ruta.linea)"),
+                                pasoRow("2", L.t("Sube a la línea \(ruta.lineaConLetra)", "Board line \(ruta.lineaConLetra)"),
                                         L.t("\(ruta.empresa) • \(ruta.tiempoTexto) de viaje", "\(ruta.empresa) • \(ruta.tiempoTexto) trip"),
                                         "bus.fill", ruta.colorLinea, .white, isLast: false)
                                 pasoRow("3", L.t("Baja en \(ruta.paradaFin)", "Get off at \(ruta.paradaFin)"),
@@ -269,6 +279,8 @@ private struct StatTile: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.surfaceContainerLow)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
     }
 }
-

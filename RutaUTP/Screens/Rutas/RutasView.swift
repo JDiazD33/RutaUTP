@@ -125,7 +125,9 @@ struct RutasView: View {
                                     .font(.headlineSm)
                                     .foregroundStyle(.onSurface)
                                     .seniable("rutas.elegir", distintivoDx: 10)
-                                Text(viewModel.cargando
+                                Text(TransporteApp.rutasUTPPendientes
+                                     ? L.t("Buses UTP · rutas próximamente", "UTP buses · routes coming soon")
+                                     : viewModel.cargando
                                      ? L.t("Cargando rutas oficiales…", "Loading official routes…")
                                      : (viewModel.filtroCerca != nil
                                         ? L.t("Líneas que pasan cerca de", "Lines passing near") + " \(viewModel.filtroCerca!.titulo)"
@@ -162,7 +164,8 @@ struct RutasView: View {
                             .padding(.vertical, 32)
                             .multilineTextAlignment(.center)
                         } else if viewModel.feedVacio {
-                            Text(L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
+                            Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
+                                 : L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
                                 .font(.bodySm)
                                 .foregroundStyle(.onSurfaceVariant)
                                 .frame(maxWidth: .infinity)
@@ -178,13 +181,15 @@ struct RutasView: View {
                                 .multilineTextAlignment(.center)
                         } else {
                             ForEach(viewModel.rutasFiltradas) { ruta in
-                                RutaOpcionCard(ruta: ruta, distanciaLugar: viewModel.distanciaTexto(ruta: ruta))
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        withAnimation(.spring(response: 0.3)) {
-                                            rutaSeleccionada = ruta
-                                        }
+                                Button {
+                                    withAnimation(.spring(response: 0.3)) {
+                                        rutaSeleccionada = ruta
                                     }
+                                } label: {
+                                    RutaOpcionCard(ruta: ruta, distanciaLugar: viewModel.distanciaTexto(ruta: ruta))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint(L.t("Muestra el recorrido, paraderos y opciones de navegación", "Shows the route, stops and navigation options"))
                             }
                         }
                     }
@@ -246,6 +251,8 @@ struct RutasView: View {
                                 .foregroundStyle(.onSurfaceVariant.opacity(0.6))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(L.t("Borrar búsqueda de rutas", "Clear route search"))
+                        .frame(minWidth: 44, minHeight: 44)
                     }
                 }
                 .padding(.horizontal, 12)
@@ -270,10 +277,13 @@ struct RutasView: View {
             Image(systemName: "bus.fill")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.appPrimary)
-            Text(L.signable("rutas.titulo", "Rutas", "Routes"))
+                .accessibilityHidden(true)
+            Text(TransporteApp.busesUTPActivos ? L.t("Rutas UTP", "UTP routes")
+                 : L.signable("rutas.titulo", "Rutas", "Routes"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
                 .seniable("rutas.titulo")
+                .accessibilityAddTraits(.isHeader)
             Spacer()
         }
         .padding(.horizontal, 20)

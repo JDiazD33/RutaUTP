@@ -27,10 +27,11 @@ struct RutaOpcionCard: View {
                     .font(.bodyMdMedium)
                     .foregroundStyle(.onSurface)
                     .lineLimit(1)
-                if !ruta.variante.isEmpty {
-                    Text(L.t("Variante ", "Variant ") + ruta.variante)
+                if !ruta.letraTransporte.isEmpty {
+                    Text(L.t("Letra ", "Letter ") + ruta.letraTransporte)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.onSurface)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Color.surfaceContainerLow, in: Capsule())
                 }
@@ -81,6 +82,10 @@ struct RutaOpcionCard: View {
                 .stroke(Color.outlineVariant.opacity(0.40), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Línea ", "Line ") + ruta.lineaConLetra + ", " + ruta.empresa)
+        .accessibilityValue([ruta.recorrido, distanciaLugar, ruta.frecuenciaTexto,
+                             L.t("\(ruta.numParaderos) paraderos", "\(ruta.numParaderos) stops")]
+            .compactMap { $0 }.joined(separator: ". "))
     }
 }
-
