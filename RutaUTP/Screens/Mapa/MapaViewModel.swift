@@ -37,9 +37,19 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// hay forma de saber cuál de los dos va bien.
     static let radioBusquedaRuta: Double = 1600
 
-    // Región por defecto centrada en Trujillo / UTP
+    let busesUTPActivos = TransporteApp.busesUTPActivos
+    private(set) var utpComoReferencia = TransporteApp.utpComoReferencia
+    private(set) var sedeTrabajo = TransporteApp.sedeVisible
+
+    /// La sede elegida es la referencia; sin ella se usa GPS o Trujillo.
+    private var coordenadaInicio: CLLocationCoordinate2D {
+        if utpComoReferencia { return GTFSRepository.coordenadaUTP }
+        return sedeTrabajo?.coordinate ?? userRealCoordinate ?? DestinosFijos.centroTrujillo
+    }
+
+    // El mapa nunca asigna una empresa o sede por su cuenta.
     var region: MKCoordinateRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
+        center: TransporteApp.referenciaInicio,
         span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
     )
 
@@ -135,6 +145,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     var mensajePanelSinBuses: String {
+        if TransporteApp.rutasUTPPendientes { return TransporteApp.mensajePendiente }
         if let error = errorLineas { return error.mensajeUsuario }
         if rutasCercanas.isEmpty {
             return L.t("No encontramos líneas cerca de este punto",
@@ -147,6 +158,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     var textoEstadoLineas: String {
+        if TransporteApp.rutasUTPPendientes { return L.t("Rutas próximamente", "Routes coming soon") }
         if cargandoLineas { return L.t("Buscando líneas…", "Finding lines…") }
         let cantidad = cantidadLineasDelPanel
         guard cantidad > 0 else { return mensajePanelSinBuses }
@@ -155,9 +167,11 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 ? String(format: L.t("1 línea pasa por %@", "1 line passes by %@"), destino.titulo)
                 : String(format: L.t("%d líneas pasan por %@", "%d lines pass by %@"), cantidad, destino.titulo)
         }
+        let referencia = utpComoReferencia ? L.t("Campus UTP Trujillo", "UTP Trujillo campus")
+            : sedeTrabajo?.nombre ?? L.t("este punto", "this point")
         return cantidad == 1
-            ? L.t("1 línea cerca del campus", "1 line near campus")
-            : String(format: L.t("%d líneas cerca del campus", "%d lines near campus"), cantidad)
+            ? String(format: L.t("1 línea cerca de %@", "1 line near %@"), referencia)
+            : String(format: L.t("%d líneas cerca de %@", "%d lines near %@"), cantidad, referencia)
     }
 
     var busSeleccionado: BusAnimado? = nil
@@ -202,7 +216,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// Último tick del timer: para mover los buses por tiempo transcurrido
     /// real (metros = velocidad × dt) y no por pasos fijos de segmento.
     @ObservationIgnored private var ultimoTickBuses: Date?
-    /// Punto de interés actual del panel (destino elegido o campus UTP).
+    /// Punto de interés actual del panel (destino, sede o ubicación disponible).
     /// Evita relanzar la consulta GTFS si el ancla no cambió y permite
     /// descartar resultados obsoletos si el usuario cambió de destino.
     private var anclaLineas: (lat: Double, lon: Double)? = nil
@@ -227,8 +241,9 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     init(
         locationService: LocationServiceProtocol = LocationService(),
         routeService: RouteCalculationService = RouteCalculationService(),
-        repositorioGTFS: RutasGTFSProviding = GTFSRepository.shared,
+        repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio,
         crearProveedorReal: @escaping () -> VehicleTrackingProviding? = {
+            guard !TransporteApp.rutasUTPPendientes else { return nil }
             guard MQTTConfiguration.fromEnvironment() != nil else { return nil }
             return TrackingProviderFactory.makeDefault()
         }
@@ -242,11 +257,25 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         completer.delegate = self
         completer.resultTypes = [.pointOfInterest, .address]
         completer.region = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
+            center: DestinosFijos.centroTrujillo,
             span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
         )
 
         refrescarDestinos()
+    }
+
+    /// Cambiar la referencia de inicio no sustituye un viaje ya elegido.
+    func actualizarSedeTrabajo() {
+        let nueva = TransporteApp.sedeVisible
+        let campus = TransporteApp.utpComoReferencia
+        guard sedeTrabajo?.id != nueva?.id || utpComoReferencia != campus else { return }
+        sedeTrabajo = nueva
+        utpComoReferencia = campus
+        guard busquedaResultado == nil else { return }
+        region = MKCoordinateRegion(center: coordenadaInicio,
+                                    span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035))
+        recentrarToken += 1
+        recargarLineas(cercaDe: nil)
     }
 
     /// Reconstruye los chips: fijos + lugares guardados por el usuario.
@@ -306,7 +335,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                     let isInitialFix = (self.userRealCoordinate == nil)
                     self.userRealCoordinate = location.coordinate
                     if isInitialFix {
-                        if self.busquedaResultado == nil { self.recenterOnUser() }
+                        if self.busquedaResultado == nil, self.sedeTrabajo == nil, !self.utpComoReferencia {
+                            self.recenterOnUser()
+                            self.recargarLineas(cercaDe: nil)
+                        }
 
                         // Un destino puede elegirse antes del primer fix:
                         // calcular su itinerario al recibir la ubicación real.
@@ -369,6 +401,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
     private func reanudarSimulacionBuses() {
         guard actividadVisual, simulacionBusesIniciada,
+              !TransporteApp.rutasUTPPendientes,
               fuenteFlota == .simulated, busSimulationTask == nil else { return }
         ultimoTickBuses = nil
         // Bucle de simulación aislado al hilo principal. Antes era un `Timer`
@@ -384,11 +417,11 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     /// Recarga las líneas del panel según un punto de interés: el destino
-    /// seleccionado (chip, Guardado, búsqueda) o, por defecto, el campus.
+    /// seleccionado (chip, Guardado, búsqueda) o la referencia de inicio.
     /// Solo la demo genera unidades desde el feed. En modo real el catálogo
     /// describe recorridos, y las posiciones provienen exclusivamente del canal.
     func recargarLineas(cercaDe ancla: CLLocationCoordinate2D?, reintentar: Bool = false) {
-        let punto = ancla ?? GTFSRepository.coordenadaUTP
+        let punto = ancla ?? coordenadaInicio
         let clave = (lat: punto.latitude, lon: punto.longitude)
         if !reintentar, let previa = anclaLineas,
            abs(previa.lat - clave.lat) < 1e-9,
@@ -676,11 +709,12 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                     longitude: anclaLineas.lon
                 )
             }
-            return busquedaResultado?.coordenada
-                ?? GTFSRepository.coordenadaUTP
+            return busquedaResultado?.coordenada ?? coordenadaInicio
         }()
 
-        flotaBuses = posiciones.map { posicion in
+        // UTP solo muestra unidades vinculadas a su catálogo institucional.
+        let visibles = busesUTPActivos ? posiciones.filter { rutasPorId[$0.routeId] != nil } : posiciones
+        flotaBuses = visibles.map { posicion in
             let ruta = rutasPorId[posicion.routeId]
             let eta = etaRealCache.minutes(position: posicion, target: anclaETA)
 
@@ -785,7 +819,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// guardado que ya es un chip. Se derivan de `DestinosFijos` (fuente única).
     private static let nombresFijosEstables: Set<String> = DestinosFijos.nombresEstables
 
-    /// Chips FIJOS de la app: puntos de referencia conocidos de Trujillo.
+    /// Chips de inicio: la sede elegida y referencias conocidas de Trujillo.
     /// Casa/Trabajo ya no son fijos: si el usuario los guarda, aparecen solos.
     ///
     /// El dato (coordenadas, icono y clave señable) vive en `DestinosFijos`,
@@ -794,12 +828,17 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     ///
     /// Calculada y no almacenada: el `label` sale en el idioma activo en cada
     /// lectura. Con el texto congelado en un `let`, cambiar de idioma dejaría
-    /// los chips en el idioma anterior (son tres elementos: coste nulo).
+    /// los chips en el idioma anterior (una lista pequeña de referencias).
     private var destinosFijos: [DestinoChip] {
-        DestinosFijos.todos.map {
+        let referencias = DestinosFijos.todos.filter { utpComoReferencia || $0.id != 1 }.map {
             DestinoChip(id: $0.id, label: $0.label, icon: $0.icono,
                         lat: $0.lat, lon: $0.lon, claveSenia: $0.claveSenia)
         }
+        guard let sedeTrabajo else { return referencias }
+        let sede = DestinoChip(id: CatalogoSedesTrabajo.idChipSede,
+                               label: sedeTrabajo.nombre, icon: "building.2.fill",
+                               lat: sedeTrabajo.lat, lon: sedeTrabajo.lon)
+        return [sede] + referencias
     }
 
     /// Lugares guardados leídos de disco. Se cachean aquí para que `destinos`
@@ -974,6 +1013,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         distanciaKm = nil
         mensajeRuta = nil
         calculandoItinerario = false
+        guard !TransporteApp.rutasUTPPendientes else {
+            mensajeRuta = TransporteApp.mensajePendiente
+            return
+        }
         guard let origen = userRealCoordinate else {
             mensajeRuta = L.t("Necesitamos tu ubicación para encontrar dónde subir. Activa el GPS y permite el acceso a la ubicación.",
                               "We need your location to find a boarding stop. Enable GPS and allow location access.")
@@ -984,7 +1027,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         routeTask = Task { @MainActor [weak self] in
             let catalog: GTFSRouteCatalog
             do {
-                catalog = try await GTFSRepository.shared.cargarCatalogo(reintentar: true)
+                catalog = try await TransporteApp.repositorio.cargarCatalogo(reintentar: true)
             } catch {
                 guard !Task.isCancelled, let self, self.routeRevision == revision else { return }
                 self.mensajeRuta = ((error as? FalloCargaGTFS)
@@ -1031,12 +1074,12 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         routePolyline = nil
         etaMinutos = nil
         distanciaKm = nil
-        // Sin destino: el panel vuelve a las líneas del campus.
+        // Sin destino: volver a la sede o al punto disponible, sin elegir viaje.
         recargarLineas(cercaDe: nil)
 
         withAnimation(.spring(response: 0.5)) {
             region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645),
+                center: coordenadaInicio,
                 span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
             )
         }

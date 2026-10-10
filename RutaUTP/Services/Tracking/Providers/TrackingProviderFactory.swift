@@ -3,6 +3,8 @@ import Foundation
 enum TrackingProviderFactory {
 
     static func makeDefault() -> VehicleTrackingProviding {
+        // Sin recorridos institucionales no se conecta el canal de la flota urbana.
+        if TransporteApp.rutasUTPPendientes { return SimulatedTrackingProvider() }
         guard let configuration =
                 MQTTConfiguration.fromEnvironment() else {
             #if DEBUG

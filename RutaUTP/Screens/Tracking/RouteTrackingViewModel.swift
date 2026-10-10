@@ -13,7 +13,7 @@ import MapKit
 @Observable
 final class RouteTrackingViewModel {
 
-    // MARK: - Destinos del demo (mismos chips fijos del Mapa)
+    // MARK: - Destinos del demo (sede y referencias del Mapa)
 
     struct DestinoDemo: Identifiable, Equatable {
         let id: Int
@@ -28,13 +28,16 @@ final class RouteTrackingViewModel {
     /// en cada lectura. Antes era un `let` evaluado al crear el VM y dependía
     /// de que RootView reconstruyera el árbol al cambiar de idioma; al quitar
     /// ese `.id()`, un `let` habría quedado congelado en el idioma de arranque.
-    /// Los tres puntos y sus claves señables viven en `DestinosFijos`,
+    /// Las referencias y sus claves señables viven en `DestinosFijos`,
     /// compartido con el Mapa: antes estaban escritos literales en los dos.
     var destinos: [DestinoDemo] {
-        DestinosFijos.todos.map {
+        let referencias = DestinosFijos.todos.filter { TransporteApp.busesUTPActivos || $0.id != 1 }.map {
             DestinoDemo(id: $0.id, label: $0.label, icon: $0.icono,
                         coordinate: $0.coordinate)
         }
+        guard let sede = TransporteApp.sedeVisible else { return referencias }
+        return [DestinoDemo(id: CatalogoSedesTrabajo.idChipSede, label: sede.nombre,
+                            icon: "building.2.fill", coordinate: sede.coordinate)] + referencias
     }
 
     // MARK: - Estado de navegación (igual a NavegacionRutaView)
@@ -174,6 +177,7 @@ final class RouteTrackingViewModel {
     @ObservationIgnored private var routeRevision = UUID()
     @ObservationIgnored private var lastRecalculation = Date.distantPast
     private var allStops: [ParaderoGTFS] = []
+    private var idsRutasDisponibles: Set<String> = []
     private var catalogoPendientePorFallo = false
     private var mensajeErrorCatalogo: String?
     @ObservationIgnored private var nearestAnchor: CLLocationCoordinate2D?
@@ -196,7 +200,7 @@ final class RouteTrackingViewModel {
         defer { buscandoDestino = false }
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query + ", Trujillo, Perú"
-        request.region = MKCoordinateRegion(center: GTFSRepository.coordenadaUTP,
+        request.region = MKCoordinateRegion(center: TransporteApp.referenciaInicio,
                                             span: MKCoordinateSpan(latitudeDelta: 0.3, longitudeDelta: 0.3))
         do {
             let response = try await MKLocalSearch(request: request).start()
@@ -264,7 +268,7 @@ final class RouteTrackingViewModel {
     init(locationService: LocationServiceProtocol,
          routeService: RouteCalculationService = RouteCalculationService(),
          vehicleProvider: VehicleTrackingProviding = SimulatedTrackingProvider(),
-         repositorioGTFS: RutasGTFSProviding = GTFSRepository.shared) {
+         repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio) {
         self.locationService = locationService
         self.routeService = routeService
         self.vehicleProvider = vehicleProvider
@@ -295,6 +299,11 @@ final class RouteTrackingViewModel {
         // Los proveedores conservan su stream hasta stop(). Una reentrada
         // renueva nuestros lectores sin cancelar el viaje ni el GPS global.
         liberarLectores()
+        guard !TransporteApp.rutasUTPPendientes else {
+            estado = .listo
+            errorMessage = TransporteApp.mensajePendiente
+            return
+        }
         defer {
             // Cancelar la tarea de una entrada aún vigente también libera lo
             // que ya arrancó antes de esperar el catálogo. Una entrada nueva
@@ -335,6 +344,7 @@ final class RouteTrackingViewModel {
         mensajeErrorCatalogo = nil
         var seen = Set<String>()
         allStops = feed.flatMap(\.paraderos).filter { seen.insert($0.id).inserted }
+        idsRutasDisponibles = Set(feed.map(\.id))
         // Varias rutas pueden compartir `linea`: en este feed 12 de los 90
         // nombres son variantes de la misma línea. Como `VehiclePosition` solo
         // trae la línea y no el route_id, el mapa no puede distinguirlas, así
@@ -434,6 +444,10 @@ final class RouteTrackingViewModel {
 
     func iniciar(destino: DestinoDemo) async {
         guard !calculandoRuta else { return }
+        guard !TransporteApp.rutasUTPPendientes else {
+            errorMessage = TransporteApp.mensajePendiente
+            return
+        }
         guard authStatus.isAuthorized else {
             errorMessage = L.t("Sin permiso de ubicación. Concédelo en Ajustes.",
                                "No location permission. Grant it in Settings.")
@@ -492,6 +506,10 @@ final class RouteTrackingViewModel {
     /// Solo itinerarios de transporte del feed: nunca sustituye un micro por una ruta de auto.
     private func calcularRuta(desde origen: CLLocationCoordinate2D,
                               hacia destino: CLLocationCoordinate2D) async {
+        guard !TransporteApp.rutasUTPPendientes else {
+            errorMessage = TransporteApp.mensajePendiente
+            return
+        }
         let revision = UUID()
         routeRevision = revision
         let radio = radioParadero
@@ -499,7 +517,7 @@ final class RouteTrackingViewModel {
         do {
             // Iniciar/recalcular es una acción concreta; no tratar el fallo
             // de lectura como ausencia de paraderos dentro del radio.
-            catalog = try await GTFSRepository.shared.cargarCatalogo(reintentar: true)
+            catalog = try await TransporteApp.repositorio.cargarCatalogo(reintentar: true)
             guard revision == routeRevision, !Task.isCancelled else { return }
         } catch {
             guard revision == routeRevision, !Task.isCancelled else { return }
@@ -723,8 +741,11 @@ final class RouteTrackingViewModel {
                 guard ahora - ultimaActualizacion >= 0.25 else { continue }
                 ultimaActualizacion = ahora
 
+                let visibles = TransporteApp.busesUTPActivos
+                    ? positions.filter { self.idsRutasDisponibles.contains($0.routeId) } : positions
+
                 var velocidades = self.velocidadesVehiculos
-                for vehiculo in positions {
+                for vehiculo in visibles {
                     if let previa = self.snapshotVehiculosAnterior[vehiculo.id] {
                         let dt = vehiculo.timestamp - previa.t
                         if dt > 0.2 {
@@ -735,7 +756,7 @@ final class RouteTrackingViewModel {
                     self.snapshotVehiculosAnterior[vehiculo.id] = (vehiculo.coordinate, vehiculo.timestamp)
                 }
                 self.velocidadesVehiculos = velocidades
-                self.vehiculos = positions
+                self.vehiculos = visibles
             }
         }
         vehicleProvider.start()
@@ -778,7 +799,7 @@ final class RouteTrackingViewModel {
     /// `force` salta el filtro de distancia (lo usa el refresco con retardo
     /// que agrupa movimientos rápidos del mapa).
     func refrescarNegocios(force: Bool = false) {
-        let pos = businessMapCenter ?? posicion ?? GTFSRepository.coordenadaUTP
+        let pos = businessMapCenter ?? posicion ?? TransporteApp.referenciaInicio
         if !force, let ultimo = ultimoRefreshNegocios,
            NegociosService.distanciaMetros(ultimo, pos) < 120 { return }
         ultimoRefreshNegocios = pos

@@ -93,7 +93,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
     private let motionService:
         MotionActivityProviding
 
-    private let repository:
+    private var repository:
         GTFSRepository
 
     /// Componente encargado de transmitir observaciones autorizadas.
@@ -186,7 +186,7 @@ private let isForcedOnboardForMQTTTest =
         locationService: LocationServiceProtocol,
         motionService: MotionActivityProviding =
             CoreMotionActivityService(),
-        repository: GTFSRepository = .shared,
+        repository: GTFSRepository = TransporteApp.repositorio,
         initialRoutes: [DetectionRouteGeometry] = [],
         observationPublisher: ObservationPublishing? = nil,
         tripOccupancy: OccupancyService = OccupancyService(),
@@ -249,6 +249,19 @@ private let isForcedOnboardForMQTTTest =
         await start(token: startGuard.begin())
     }
 
+    /// Conserva el consentimiento; invalida tareas y sesiones del catálogo anterior.
+    func actualizarModoTransporte() {
+        stop()
+        repository = TransporteApp.repositorio
+        routes = []
+        errorCargaRutas = nil
+        if TransporteApp.rutasUTPPendientes {
+            statusMessage = TransporteApp.mensajePendiente
+        } else if isEnabled {
+            beginStart()
+        }
+    }
+
     func setContributionEnabled(
         _ enabled: Bool
     ) {
@@ -296,6 +309,11 @@ private let isForcedOnboardForMQTTTest =
     /// contribución y quedar, sin estas comprobaciones, con la detección viva.
     private func start(token: Int, reintentarGTFS: Bool = false) async {
         guard startGuard.isCurrent(token), isEnabled else {
+            return
+        }
+
+        guard !TransporteApp.rutasUTPPendientes else {
+            statusMessage = TransporteApp.mensajePendiente
             return
         }
 

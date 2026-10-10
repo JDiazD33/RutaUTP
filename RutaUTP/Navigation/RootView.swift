@@ -11,10 +11,17 @@ import UIKit
 
 struct RootView: View {
     @StateObject private var router = AppRouter()
+    @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
+    @AppStorage(PreferenciasApp.busesUTP) private var preferenciaBusesUTP = false
+    private var busesUTPActivos: Bool {
+        preferenciaBusesUTP && TransporteApp.busesUTPDisponibles
+    }
     /// El router recrea la vista al cambiar de pantalla; el viaje conserva su modelo.
     @StateObject private var trackingStore: ScreenModelStore<RouteTrackingViewModel>
     @AppStorage(SeniasService.llaveModo) private var modoSenias = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
 
     /// Servicio de ubicación compartido con el rastreo pasivo. Se recibe desde
     /// `RutaUTPApp`; el valor por defecto solo sirve para las previsualizaciones.
@@ -68,19 +75,35 @@ struct RootView: View {
         ZStack {
             switch router.currentScreen {
             case .bienvenida:    BienvenidaView()
-            case .mapaPrincipal: MapaView(locationService: locationService)
-            case .rutas:         RutasView()
-            case .guardado:      GuardadoView()
-            case .seguridad:     SeguridadView(locationService: locationService)
+            case .mapaPrincipal: MapaView(locationService: locationService).id(busesUTPActivos)
+            case .rutas:         RutasView().id(busesUTPActivos)
+            case .guardado:      GuardadoView().id(busesUTPActivos)
+            case .seguridad:     SeguridadView(locationService: locationService).id(busesUTPActivos)
             case .perfil:        PerfilView()
             case .trackingDemo:  RouteTrackingDemoView(model: trackingStore.model)
+                    .id(ObjectIdentifier(trackingStore.model))
             }
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
         .environmentObject(router)
         .tint(.appPrimary)
-        .animation(.easeInOut(duration: 0.25), value: router.currentScreen)
+        .animation(reduceMotion || voiceOverOn ? nil : .easeInOut(duration: 0.25), value: router.currentScreen)
         .onAppear { aplicarTemaEnVentanas(isDarkMode) }
+        .onChange(of: TransporteApp.busesUTPDisponibles, initial: true) { _, disponibles in
+            // Descarta también una activación antigua guardada fuera de UTP;
+            // volver después al campus no debe reactivar el modo oculto.
+            if !disponibles { preferenciaBusesUTP = false }
+        }
+        .onChange(of: busesUTPActivos) { _, _ in
+            // Terminar el contexto anterior evita mezclar viajes, flotas o selecciones.
+            trackingStore.model.cancelTrip()
+            trackingStore.model.suspenderPantalla()
+            trackingStore.reemplazar(RouteTrackingViewModel(locationService: locationService))
+            trackingCoordinator.actualizarModoTransporte()
+            router.rutaPendiente = nil
+            router.destinoPendiente = nil
+            router.lugarCercanoPendiente = nil
+        }
         .onChange(of: isDarkMode) { _, nuevo in
             // Un único escritor del tema: inmediato y en ambos sentidos.
             aplicarTemaEnVentanas(nuevo)

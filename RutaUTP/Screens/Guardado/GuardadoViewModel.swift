@@ -32,7 +32,7 @@ final class GuardadoViewModel: ObservableObject {
     private let repositorioGTFS: RutasGTFSProviding
 
     init(almacen: AlmacenLugares = LugaresStore.almacen,
-         repositorioGTFS: RutasGTFSProviding = GTFSRepository.shared) {
+         repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio) {
         self.almacen = almacen
         self.repositorioGTFS = repositorioGTFS
     }

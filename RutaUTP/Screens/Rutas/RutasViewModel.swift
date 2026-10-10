@@ -16,7 +16,7 @@ final class RutasViewModel: ObservableObject {
     private var cargaEnCurso = false
     private var catalogoSolicitado = false
 
-    init(repositorioGTFS: RutasGTFSProviding = GTFSRepository.shared) {
+    init(repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio) {
         self.repositorioGTFS = repositorioGTFS
     }
 
@@ -124,4 +124,3 @@ final class RutasViewModel: ObservableObject {
         distanciaALugar = [:]
     }
 }
-

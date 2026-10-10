@@ -21,7 +21,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
     private var previousTick: Date?
     private var actividadVisual = true
     private var iniciado = false
-    private var center = GTFSRepository.coordenadaUTP
+    private var center = TransporteApp.referenciaInicio
     private var routes: [RutaGTFS] = []
     private var preferredRouteID: String?
 
@@ -45,7 +45,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         loading = Task { @MainActor [weak self] in
             let feed: [RutaGTFS]
             do {
-                feed = try await GTFSRepository.shared.cargarRutas(reintentar: false)
+                feed = try await TransporteApp.repositorio.cargarRutas(reintentar: false)
             } catch {
                 guard let self, !Task.isCancelled, self.generation == token else { return }
                 self.errorCargaRutas = error.localizedDescription
