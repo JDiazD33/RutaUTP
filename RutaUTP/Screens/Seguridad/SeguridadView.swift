@@ -14,8 +14,6 @@ struct SeguridadView: View {
     /// La misma instancia que Mapa y el rastreo; el valor por defecto es para previews.
     var locationService: LocationServiceProtocol = LocationService()
     @EnvironmentObject private var router: AppRouter
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
-    @State private var ventanaVoiceOver: Int?
 
     @State private var showReportarSheet = false
     @State private var showPublicarComunidad = false
@@ -65,120 +63,7 @@ struct SeguridadView: View {
         #endif
     }()
 
-    // 24 publicaciones demo: una con foto y tres de texto por ventana de cuatro minutos.
-    private static let reportes: [ReporteComunidad] = {
-        let nombres: [(String, String)] = [
-            ("Jorge D.", "JD"), ("Maria A.", "MA"), ("Rosa C.", "RC"),
-            ("Luis F.", "LF"), ("Ana P.", "AP"), ("Carlos M.", "CM"),
-            ("Gabriela S.", "GS"), ("Pedro L.", "PL"), ("Fernanda R.", "FR"),
-            ("Diego V.", "DV"), ("Lucía T.", "LT"), ("Marco E.", "ME"),
-            ("Karla B.", "KB"), ("Renzo Q.", "RQ"), ("Valeria H.", "VH"),
-            ("Oscar N.", "ON"), ("Pamela G.", "PG"), ("Julio C.", "JC"),
-            ("Andrea M.", "AM"), ("Victor S.", "VS"), ("Rocío F.", "RF"),
-            ("Héctor Z.", "HZ"), ("Natalia O.", "NO"), ("Iván P.", "IP"),
-            ("Silvia R.", "SR"), ("Bruno A.", "BA"), ("Katia L.", "KL"),
-            ("Ricardo T.", "RT"), ("Elena V.", "EV"), ("Fausto M.", "FM")
-        ]
-        let cuerpos: [(String, TipoReporte)] = [
-            ("Micro lleno en Av. Larco. Pasaron 3 sin parar hacia la UTP.", .alerta),
-            ("Demora en Óvalo Papal por obras. Considerar 10 min adicionales.", .trafico),
-            ("Tomar Av. Miraflores a las 7:30 AM evita el tráfico de España.", .sugerencia),
-            ("El chofer de la C-01 muy amable, esperó a una señora mayor que corría.", .otro),
-            ("Cuidado con los carteristas en el paradero del Mercado Mayorista, hora punta.", .alerta),
-            ("Colapso total en Av. América Sur desde las 6 PM, mejor ir por Mansiche.", .trafico),
-            ("La línea C-07 va despejada sábados por la mañana, casi siempre hay asiento.", .sugerencia),
-            ("Paradero frente a la UTP sin luz desde el lunes, Reporté al 105.", .alerta),
-            ("Tráfico lento en Av. César Vallejo por desfile, tomar La Ribera.", .trafico),
-            ("Tip: bajarse 1 cuadra antes de la UTP por Piérola ahorra 5 min de embotellamiento.", .sugerencia),
-            ("Moto-taxista se pasó el semáforo en España con Mansiche. Suerte que frenó a tiempo.", .alerta),
-            ("En Huanchaco hay tráfico pesado los domodos por el malecón, ir temprano.", .trafico),
-            ("El micro de las 6:20 AM llega vacío al paradero de Urb. El Recreo.", .sugerencia),
-            ("Se accidentó un combi cerca del Óvalo Faustino Sánchez, colapso 40 min.", .alerta),
-            ("Ruta M-05 toma caminos raros para evitar tráfico, pero llega rápido.", .otro),
-            ("Tarifa S/ 2.50 en la C-01 confirmado. Algunos intentan cobrar más de noche.", .alerta),
-            ("Av. Larco de Huanchaco congestionada al mediodía por turistas.", .trafico),
-            ("Los paraderos nuevos de Av. España tienen techo y cámaras, bien ahí.", .otro)
-        ]
-        let englishPosts = [
-            "Buses are full on Av. Larco. Three passed without stopping on the way to UTP.",
-            "Roadworks are causing delays at Óvalo Papal. Allow an extra 10 minutes.",
-            "Taking Av. Miraflores at 7:30 AM avoids traffic on España.",
-            "The C-01 driver was very kind and waited for an older woman running to the stop.",
-            "Watch out for pickpockets at the Mercado Mayorista stop during rush hour.",
-            "Av. América Sur is gridlocked after 6 PM. Mansiche may be a better option.",
-            "The C-07 is quiet on Saturday mornings; seats are usually available.",
-            "The stop across from UTP has had no lighting since Monday. I reported it to 105.",
-            "A parade is slowing traffic on Av. César Vallejo. Try La Ribera.",
-            "Tip: getting off one block before UTP on Piérola avoids about 5 minutes of traffic.",
-            "A mototaxi ran a red light at España and Mansiche. Luckily it stopped in time.",
-            "Huanchaco's waterfront is busy on Sundays. Leave early.",
-            "The 6:20 AM bus reaches the Urb. El Recreo stop nearly empty.",
-            "A combi crashed near Óvalo Faustino Sánchez. Traffic has been blocked for 40 minutes.",
-            "The M-05 takes unusual detours to avoid traffic, but arrives quickly.",
-            "The C-01 fare is S/ 2.50. Some drivers try to charge more at night.",
-            "Av. Larco in Huanchaco gets congested around noon because of visitors.",
-            "The new stops on Av. España have roofs and cameras. Great improvement."
-        ]
-        let tiempos = ["HACE 3 MIN", "HACE 8 MIN", "HACE 12 MIN", "HACE 20 MIN",
-                       "HACE 35 MIN", "HACE 1 HORA", "HACE 2 HORAS"]
-        let avatares: [EstiloAvatarReporte] = [
-            .primario, .secundario, .terciario
-        ]
-
-        let originales = cuerpos.enumerated().map { i, par in
-            let persona = nombres[i % nombres.count]
-            let avatar = avatares[i % avatares.count]
-            return ReporteComunidad(
-                iniciales: persona.1,
-                nombre: persona.0,
-                hace: tiempos[(i * 3 + 1) % tiempos.count],
-                tipo: par.1,
-                cuerpo: par.0,
-                cuerpoIngles: englishPosts[i],
-                utiles: 6 + (i * 13) % 78,
-                dislikes: 1 + (i * 7) % 9,
-                comentarios: (i * 5) % 11,
-                utilMarcado: i % 6 == 0,
-                estiloAvatar: avatar
-            )
-        }
-        let ilustrados: [(String, String, TipoReporte, FotoComunidad, String, String)] = [
-            ("Andrea M.", "AM", .alerta, .centro,
-             "Ojo al esperar el micro en el centro: hay vehículos junto a la vereda. Busquen un punto de subida que deje libre el paso peatonal.",
-             "Take care while waiting for a bus downtown: vehicles are next to the sidewalk. Choose a boarding point that keeps pedestrian access clear."),
-            ("Víctor S.", "VS", .trafico, .papal,
-             "Los accesos al Óvalo Papal pueden demorar el viaje. Salgan con tiempo y revisen su línea antes de ir al paradero.",
-             "The approaches to Óvalo Papal can delay your trip. Leave with time to spare and check your line before heading to the stop."),
-            ("Rocío F.", "RF", .sugerencia, .pizarro,
-             "Para moverme a pie por el centro prefiero el paseo Pizarro. Al buscar un micro, reviso en el mapa el paradero de subida fuera del tramo peatonal.",
-             "I prefer the Pizarro pedestrian street when walking downtown. To catch a bus, I check the map for a boarding stop outside the pedestrian section."),
-            ("Héctor Z.", "HZ", .otro, .papal,
-             "Comparto esta referencia del Óvalo Papal para quienes recién conocen Trujillo. Confirmen el sentido de su línea antes de abordar.",
-             "Sharing this reference of Óvalo Papal for newcomers to Trujillo. Check your line's direction before boarding."),
-            ("Natalia O.", "NO", .alerta, .pizarro,
-             "Al salir del paseo Pizarro, atentos a los cruces con calles vehiculares. Antes de seguir hacia el paradero, miren ambos lados.",
-             "Watch for crossings with vehicle traffic when leaving Pizarro street. Look both ways before continuing to your stop."),
-            ("Iván P.", "IP", .trafico, .centro,
-             "En las calles del centro se comparte espacio con taxis y vehículos de reparto. Evitemos pedir al micro que se detenga en una esquina.",
-             "Downtown streets share space with taxis and delivery vehicles. Avoid asking the bus to stop at a corner.")
-        ]
-        // Intercala una foto y hasta tres originales, conservando el orden.
-        // Los originales que sobren se añaden al final, incluso sin fotos.
-        var resultado: [ReporteComunidad] = []
-        var restantes = originales[...]
-        for (index, dato) in ilustrados.enumerated() {
-            let nuevo = ReporteComunidad(iniciales: dato.1, nombre: dato.0,
-                hace: "HACE 3 MIN", tipo: dato.2, cuerpo: dato.4, cuerpoIngles: dato.5,
-                foto: dato.3, utiles: 8 + index * 3, comentarios: 2,
-                estiloAvatar: .secundario)
-            resultado.append(nuevo)
-            let grupo = restantes.prefix(3)
-            resultado.append(contentsOf: grupo)
-            restantes = restantes.dropFirst(grupo.count)
-        }
-        resultado.append(contentsOf: restantes)
-        return resultado
-    }()
+    private static let reportes = ReporteComunidad.publicacionesDemo
 
     /// Alertas del feed de comunidad, contadas del MISMO array que alimenta
     /// las cards. Antes la barra de resumen mostraba un "2" escrito a mano
@@ -186,45 +71,6 @@ struct SeguridadView: View {
     /// desincronizarse del contenido.
     private static var alertasEnFeed: Int {
         reportes.filter { $0.tipo == .alerta }.count
-    }
-
-    /// Publicaciones por ventana del feed de comunidad.
-    private static let tamanoVentana = 4
-
-    /// Número de ventanas del feed.
-    ///
-    /// Tolerante a un total que no sea múltiplo exacto del tamaño de ventana:
-    /// antes se calculaba como `reportes.count / 4` y `reportesVisibles`
-    /// indexaba `[inicio..<inicio+4]`, así que añadir o quitar una publicación
-    /// sin respetar el bloque provocaba un índice fuera de rango al dibujar.
-    private static var numeroDeVentanas: Int {
-        max(1, Int(ceil(Double(reportes.count) / Double(tamanoVentana))))
-    }
-
-    /// Índice de ventana de 4 minutos (6 ventanas para 24 reportes de a 4).
-    /// DEBUG: --comunidad N fuerza la ventana para pruebas visuales.
-    private var indiceVentana: Int {
-        if voiceOverOn, let ventanaVoiceOver { return ventanaVoiceOver }
-        return indiceVentanaActual
-    }
-
-    private var indiceVentanaActual: Int {
-        #if DEBUG
-        let args = ProcessInfo.processInfo.arguments
-        if let i = args.firstIndex(of: "--comunidad"), i + 1 < args.count,
-           let n = Int(args[i + 1]) {
-            return n % Self.numeroDeVentanas
-        }
-        #endif
-        let epoch = Int(Date().timeIntervalSinceReferenceDate)
-        return (epoch / 240) % Self.numeroDeVentanas
-    }
-
-    private var reportesVisibles: [ReporteComunidad] {
-        let inicio = indiceVentana * Self.tamanoVentana
-        let fin = min(inicio + Self.tamanoVentana, Self.reportes.count)
-        guard inicio < fin else { return [] }
-        return Array(Self.reportes[inicio..<fin])
     }
 
     // 10 puntos/zonas de seguridad de Trujillo; se deslizan como carrusel.
@@ -302,7 +148,7 @@ struct SeguridadView: View {
                 header
                 summaryBar
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 28) {
+                    LazyVStack(spacing: 28) {
                         if Self.soloComunidadDebug {
                             comunidadSection
                         } else if Self.soloZonasDebug {
@@ -361,10 +207,6 @@ struct SeguridadView: View {
                     ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
             }
             cargandoParaderos = false
-        }
-        .onAppear { if voiceOverOn { ventanaVoiceOver = indiceVentanaActual } }
-        .onChange(of: voiceOverOn) { _, activo in
-            ventanaVoiceOver = activo ? indiceVentanaActual : nil
         }
         // Mapa fullscreen de paraderos iluminados (desde el banner)
         .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { lugaresVM.cargar() }) {
@@ -658,7 +500,7 @@ struct SeguridadView: View {
     private func lugarTileLugar(_ lugar: LugarGuardado) -> some View {
         let esArrastrado = lugaresVM.arrastrando?.id == lugar.id
         return lugarTile(nombre: lugar.nombre,
-                         icon: lugar.categoria.icono,
+                         icon: lugar.icono,
                          bg: lugar.esFijo ? Color.primaryFill : Color.primaryContainer.opacity(0.12),
                          fg: lugar.esFijo ? .onPrimaryFill : .appPrimary,
                          border: lugar.esFijo,
@@ -856,9 +698,7 @@ struct SeguridadView: View {
     }
 
     private var paraderosGuardados: [LugarGuardado] {
-        lugaresVM.lugares.filter { lugar in
-            !lugar.esFijo && (lugar.paraderoID != nil || catalogoParaderos.contains { lugar.corresponde(al: $0) })
-        }
+        lugaresVM.lugares.filter { $0.esParaderoGuardado(en: catalogoParaderos) }
     }
 
     private var paraderosGuardadosSection: some View {
@@ -909,7 +749,7 @@ struct SeguridadView: View {
         }
     }
 
-    // MARK: - Comunidad (24 publicaciones, rotan cada 4 minutos)
+    // MARK: - Comunidad (lista de publicaciones demo de Trujillo)
     private var comunidadSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -920,9 +760,7 @@ struct SeguridadView: View {
                         Text(L.signable("seguridad.comunidad", "Comunidad", "Community"))
                             .font(.headlineSm)
                             .seniable("seguridad.comunidad", distintivoDx: 10)
-                        Text(voiceOverOn
-                             ? L.t("Opiniones de demostración · lectura manual", "Demo posts · manual reading")
-                             : L.t("Opiniones de demostración · cada 4 min", "Demo posts · rotate every 4 min"))
+                        Text(L.t("Trujillo · publicaciones de demostración", "Trujillo · demo posts"))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                     }
@@ -940,47 +778,20 @@ struct SeguridadView: View {
                 .accessibilityLabel(L.t("Añadir publicación a la comunidad", "Add a community post"))
             }
 
-            // La lectura con VoiceOver conserva su página y no crea el reloj de rotación.
-            if voiceOverOn {
-                tarjetasComunidad
-                HStack {
-                    Button(L.t("Anteriores", "Previous")) { cambiarVentanaVoiceOver(-1) }
-                        .disabled(indiceVentana == 0)
-                    Spacer()
-                    Text("\(indiceVentana + 1) / \(Self.numeroDeVentanas)")
-                        .accessibilityLabel(L.t("Grupo \(indiceVentana + 1) de \(Self.numeroDeVentanas)", "Group \(indiceVentana + 1) of \(Self.numeroDeVentanas)"))
-                    Spacer()
-                    Button(L.t("Siguientes", "Next")) { cambiarVentanaVoiceOver(1) }
-                        .disabled(indiceVentana + 1 == Self.numeroDeVentanas)
-                }
-                .buttonStyle(.bordered)
-            } else {
-                TimelineView(.periodic(from: .now, by: 240)) { _ in tarjetasComunidad }
-            }
+            tarjetasComunidad
         }
     }
 
 
 
     private var tarjetasComunidad: some View {
-        VStack(spacing: 12) {
-            ForEach(reportesVisibles) { reporte in
+        LazyVStack(spacing: 12) {
+            ForEach(Self.reportes) { reporte in
                 ReporteCard(reporte: reporte, reacciones: reacciones)
                     .onTapGesture { selectedReporte = reporte }
                     .accessibilityAction(named: Text(L.t("Ver publicación", "View post"))) { selectedReporte = reporte }
-                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
             }
         }
-        .id(indiceVentana)
-        .animation(voiceOverOn ? nil : .easeInOut(duration: 0.4), value: indiceVentana)
-    }
-
-    private func cambiarVentanaVoiceOver(_ desplazamiento: Int) {
-        let nueva = indiceVentana + desplazamiento
-        guard (0..<Self.numeroDeVentanas).contains(nueva) else { return }
-        ventanaVoiceOver = nueva
-        UIAccessibility.post(notification: .announcement,
-            argument: L.t("Grupo \(nueva + 1) de \(Self.numeroDeVentanas)", "Group \(nueva + 1) of \(Self.numeroDeVentanas)"))
     }
 
     // MARK: - Helpers
