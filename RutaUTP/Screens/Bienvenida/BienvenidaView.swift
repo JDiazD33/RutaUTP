@@ -128,12 +128,12 @@ struct BienvenidaView: View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Color.appPrimary)
+                    .fill(Color.primaryFill)
                     .frame(width: 48, height: 48)
                     .shadow(color: .appPrimary.opacity(0.35), radius: 8, x: 0, y: 2)
                 Image(systemName: "bus.fill")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(L.t("LLEGANDO EN", "ARRIVING IN"))
@@ -203,14 +203,14 @@ struct BienvenidaView: View {
                         }
                     } label: {
                         Capsule()
-                            .fill(selectedPage == page ? Color.appPrimary : Color.gray.opacity(0.3))
+                            .fill(selectedPage == page ? Color.primaryFill : Color.gray.opacity(0.3))
                             .frame(width: selectedPage == page ? 36 : 8, height: 8)
                             .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L.t("Página \(page + 1) de 3", "Page \(page + 1) of 3"))
-                    .accessibilityValue(selectedPage == page ? L.t("Seleccionada", "Selected") : "")
+                    .accessibilityAddTraits(selectedPage == page ? .isSelected : [])
                 }
             }
             Text(L.t("Desliza para conocer las novedades", "Swipe to discover what's new"))
@@ -243,6 +243,7 @@ struct BienvenidaView: View {
                         .padding(.horizontal, 12).padding(.vertical, 7)
                         .background(Color.appPrimary.opacity(0.08), in: Capsule())
                     Text(title).font(.displayLg)
+                        .accessibilityAddTraits(.isHeader)
                         .foregroundStyle(Color.onSurface).multilineTextAlignment(.center)
                     Text(description).font(.bodyLg)
                         .foregroundStyle(Color.onSurfaceVariant).multilineTextAlignment(.center)
@@ -291,15 +292,15 @@ struct BienvenidaView: View {
             HStack(spacing: 8) {
                 Text(L.signable("bienvenida.comenzar", "Comenzar", "Get Started"))
                     .font(.displayLgPhone)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
             }
             .frame(maxWidth: .infinity, minHeight: 62)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.appPrimary)
+                    .fill(Color.primaryFill)
                     .shadow(color: .appPrimary.opacity(0.35), radius: 14, x: 0, y: 8)
             )
         }

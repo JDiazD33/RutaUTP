@@ -33,7 +33,9 @@ struct OfflineMapSheet: View {
                             ? L.t("Rutas disponibles sin conexión", "Routes available offline")
                             : errorCarga != nil
                                 ? L.t("No se pudieron cargar las rutas", "Couldn't load routes")
-                                : L.t("El catálogo no contiene rutas", "The catalog contains no routes"))
+                                : TransporteApp.rutasUTPPendientes
+                                    ? L.t("Rutas UTP próximamente", "UTP routes coming soon")
+                                    : L.t("El catálogo no contiene rutas", "The catalog contains no routes"))
                         .font(.title2.bold())
                     if comprobando {
                         ProgressView().frame(maxWidth: .infinity)
@@ -42,7 +44,8 @@ struct OfflineMapSheet: View {
                         Text(L.t("Los recorridos y paraderos vienen incluidos en la app. No necesitas descargarlos ni activar un interruptor para consultarlos sin internet.", "Routes and stops are included in the app. No download or switch is needed to view them offline."))
                             .foregroundStyle(.secondary)
                     } else {
-                        Text(errorCarga ?? L.t("El catálogo local se cargó correctamente, pero no incluye rutas.", "The local catalog loaded successfully but contains no routes."))
+                        Text(errorCarga ?? (TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
+                             : L.t("El catálogo local se cargó correctamente, pero no incluye rutas.", "The local catalog loaded successfully but contains no routes.")))
                             .foregroundStyle(.secondary)
                         if errorCarga != nil {
                             Button(L.t("Reintentar", "Retry")) { revision += 1 }
@@ -75,7 +78,7 @@ struct OfflineMapSheet: View {
             comprobando = true
             errorCarga = nil
             do {
-                let rutas = try await GTFSRepository.shared.cargarRutas(reintentar: revision > 0)
+                let rutas = try await TransporteApp.repositorio.cargarRutas(reintentar: revision > 0)
                 guard !Task.isCancelled else { return }
                 numeroRutas = rutas.count
             } catch {

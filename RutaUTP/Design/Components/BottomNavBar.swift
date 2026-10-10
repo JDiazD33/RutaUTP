@@ -91,16 +91,18 @@ struct BottomNavBar: View {
 
             HStack(alignment: .center, spacing: 0) {
                 ForEach(NavTab.allCases, id: \.self) { tab in
-                    NavTabItem(
-                        tab: tab,
-                        isActive: router.currentScreen == tab.screen
-                    )
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         router.navigate(to: tab.screen)
+                    } label: {
+                        NavTabItem(tab: tab, isActive: router.currentScreen == tab.screen)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(tab.label)
+                    .accessibilityAddTraits(router.currentScreen == tab.screen ? .isSelected : [])
                 }
             }
             .padding(.top, 8)
@@ -116,6 +118,8 @@ struct BottomNavBar: View {
             Color.appSurface
                 .ignoresSafeArea(edges: .bottom)
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L.t("Navegación principal", "Main navigation"))
     }
 }
 

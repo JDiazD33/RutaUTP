@@ -420,7 +420,8 @@ struct SeniableModifier: ViewModifier {
                         TapGesture().onEnded { presenter.mostrar(clave: clave) }
                     )
                     .accessibilityAddTraits(.isButton)
-                    .accessibilityHint(L.t("Toca para ver la seña en lengua de señas", "Tap to see the sign language translation"))
+                    .accessibilityHint(L.t("Muestra la traducción en lengua de señas", "Shows the sign language translation"))
+                    .accessibilityAction { presenter.mostrar(clave: clave) }
             } else {
                 conDistintivo(content)
             }
