@@ -110,6 +110,8 @@ struct ReporteCard: View {
                         .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
                 )
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L.t("Publicación de ", "Post by ") + reporte.nombre)
     }
 
     @ViewBuilder
@@ -279,8 +281,8 @@ struct ReporteDetailSheet: View {
             Button { dismiss() } label: {
                 Text(L.t("Cerrar", "Close"))
                     .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                    .foregroundStyle(.white)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
+                    .foregroundStyle(.onPrimaryFill)
                     .font(.bodyMdMedium)
             }
             .buttonStyle(.plain)
@@ -369,4 +371,3 @@ struct FotoReporteView: View {
         }
     }
 }
-

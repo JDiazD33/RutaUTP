@@ -42,9 +42,9 @@ struct ElegirLugaresSheet: View {
                         } label: {
                             Label(L.t("Ir a Guardado", "Go to Saved"), systemImage: "plus.circle.fill")
                                 .font(.headlineSm)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.onPrimaryFill)
                                 .frame(maxWidth: .infinity, minHeight: 48)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
                         }
                         .buttonStyle(.plain)
                     }
@@ -114,6 +114,11 @@ struct ElegirLugaresSheet: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(lugar.nombre)
+        .accessibilityValue(lugar.direccion)
+        .accessibilityAddTraits(elegidos.contains(lugar.id) ? .isSelected : [])
+        .accessibilityHint(L.t("Añade o quita este lugar de los accesos de Seguridad", "Adds or removes this place from Safety shortcuts"))
     }
 
     private var botonListo: some View {
@@ -124,9 +129,9 @@ struct ElegirLugaresSheet: View {
         } label: {
             Text(L.t("Guardar selección", "Save selection"))
                 .font(.headlineSm)
-                .foregroundStyle(.white)
+                .foregroundStyle(.onPrimaryFill)
                 .frame(maxWidth: .infinity, minHeight: 52)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
         }
         .buttonStyle(.plain)
     }
@@ -202,4 +207,3 @@ struct TileDropDelegate: DropDelegate {
         return true
     }
 }
-

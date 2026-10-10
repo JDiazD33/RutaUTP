@@ -14,6 +14,8 @@ struct SeguridadView: View {
     /// La misma instancia que Mapa y el rastreo; el valor por defecto es para previews.
     var locationService: LocationServiceProtocol = LocationService()
     @EnvironmentObject private var router: AppRouter
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @State private var ventanaVoiceOver: Int?
 
     @State private var showReportarSheet = false
     @State private var showPublicarComunidad = false
@@ -202,6 +204,11 @@ struct SeguridadView: View {
     /// Índice de ventana de 4 minutos (6 ventanas para 24 reportes de a 4).
     /// DEBUG: --comunidad N fuerza la ventana para pruebas visuales.
     private var indiceVentana: Int {
+        if voiceOverOn, let ventanaVoiceOver { return ventanaVoiceOver }
+        return indiceVentanaActual
+    }
+
+    private var indiceVentanaActual: Int {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "--comunidad"), i + 1 < args.count,
@@ -343,9 +350,10 @@ struct SeguridadView: View {
             cargandoParaderos = true
             errorCargaParaderos = nil
             do {
-                let feed = try await GTFSRepository.shared.cargarRutas(reintentar: revisionCatalogo > 0)
+                let feed = try await TransporteApp.repositorio.cargarRutas(reintentar: revisionCatalogo > 0)
                 guard !Task.isCancelled else { return }
-                paraderosIluminados = ParaderosIluminados.seleccionar(feed)
+                paraderosIluminados = ParaderosIluminados.seleccionar(feed,
+                    cercaDe: TransporteApp.referenciaInicio)
                 catalogoParaderos = feed.flatMap(\.paraderos)
             } catch {
                 guard !Task.isCancelled else { return }
@@ -353,6 +361,10 @@ struct SeguridadView: View {
                     ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
             }
             cargandoParaderos = false
+        }
+        .onAppear { if voiceOverOn { ventanaVoiceOver = indiceVentanaActual } }
+        .onChange(of: voiceOverOn) { _, activo in
+            ventanaVoiceOver = activo ? indiceVentanaActual : nil
         }
         // Mapa fullscreen de paraderos iluminados (desde el banner)
         .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { lugaresVM.cargar() }) {
@@ -399,12 +411,12 @@ struct SeguridadView: View {
                     buscarZona(zona)
                 } label: {
                     HStack {
-                        if buscandoZona { ProgressView().tint(.white) }
+                        if buscandoZona { ProgressView().tint(.onPrimaryFill) }
                         Label(L.t("Ver ubicación en el mapa", "View location on map"), systemImage: "map.fill")
                     }
-                    .font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+                    .font(.system(size: 15, weight: .bold)).foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.appPrimary))
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.primaryFill))
                 }.disabled(buscandoZona)
                 Spacer(minLength: 0)
             }
@@ -449,6 +461,7 @@ struct SeguridadView: View {
                 Text(L.t("Seguridad", "Safety"))
                     .font(.headlineLgMobile)
                     .foregroundStyle(.appPrimary)
+                    .accessibilityAddTraits(.isHeader)
             }
             Spacer()
             // Lado derecho: boton Reportar
@@ -463,10 +476,10 @@ struct SeguridadView: View {
                         .font(.labelCapsMd)
                         .appTracking(AppTracking.wideLabel)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(.onPrimaryFill)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(Capsule().fill(Color.appPrimary))
+                .background(Capsule().fill(Color.primaryFill))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Reportar incidente", "Report an incident"))
@@ -609,6 +622,17 @@ struct SeguridadView: View {
                                     tiles: $lugaresVM.tilesActuales,
                                     arrastrando: $lugaresVM.arrastrando,
                                     onPersistir: lugaresVM.persistirOrden))
+                        .accessibilityActions {
+                            if lugaresVM.modoEdicion, !lugar.esFijo,
+                               let indice = lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) {
+                                if indice > 0, !lugaresVM.tilesActuales[indice - 1].esFijo {
+                                    Button(L.t("Mover antes", "Move earlier")) { moverTileAccesible(lugar, desplazamiento: -1) }
+                                }
+                                if indice + 1 < lugaresVM.tilesActuales.count {
+                                    Button(L.t("Mover después", "Move later")) { moverTileAccesible(lugar, desplazamiento: 1) }
+                                }
+                            }
+                        }
                 }
                 lugarTileAñadir
             }
@@ -616,12 +640,27 @@ struct SeguridadView: View {
         }
     }
 
+    /// Misma lista y persistencia que el arrastre; respeta el lugar fijo y los datos inválidos.
+    private func moverTileAccesible(_ lugar: LugarGuardado, desplazamiento: Int) {
+        guard lugaresVM.modoEdicion, !lugaresVM.datosLugaresInvalidos, !lugar.esFijo,
+              let indice = lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) else { return }
+        let destino = indice + desplazamiento
+        guard lugaresVM.tilesActuales.indices.contains(destino),
+              !lugaresVM.tilesActuales[destino].esFijo else { return }
+        lugaresVM.tilesActuales.swapAt(indice, destino)
+        lugaresVM.persistirOrden()
+        if UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(notification: .announcement,
+                argument: L.t("\(lugar.nombre), posición \(destino + 1)", "\(lugar.nombre), position \(destino + 1)"))
+        }
+    }
+
     private func lugarTileLugar(_ lugar: LugarGuardado) -> some View {
         let esArrastrado = lugaresVM.arrastrando?.id == lugar.id
         return lugarTile(nombre: lugar.nombre,
                          icon: lugar.categoria.icono,
-                         bg: lugar.esFijo ? Color.appPrimary : Color.primaryContainer.opacity(0.12),
-                         fg: lugar.esFijo ? .white : .appPrimary,
+                         bg: lugar.esFijo ? Color.primaryFill : Color.primaryContainer.opacity(0.12),
+                         fg: lugar.esFijo ? .onPrimaryFill : .appPrimary,
                          border: lugar.esFijo,
                          badgeFrecuente: lugar.esFrecuente,
                          indiceTile: lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) ?? 0)
@@ -650,7 +689,7 @@ struct SeguridadView: View {
                     Button {
                         AppHaptics.warning()
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            lugaresVM.eliminar(lugar)
+                            _ = lugaresVM.eliminar(lugar)
                         }
                     } label: {
                         Image(systemName: "minus")
@@ -796,7 +835,7 @@ struct SeguridadView: View {
             defer { buscandoZona = false }
             let request = MKLocalSearch.Request()
             request.naturalLanguageQuery = zona.consultaMapa + ", Trujillo, Perú"
-            request.region = MKCoordinateRegion(center: GTFSRepository.coordenadaUTP,
+            request.region = MKCoordinateRegion(center: TransporteApp.referenciaInicio,
                 span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15))
             do {
                 let response = try await MKLocalSearch(request: request).start()
@@ -881,7 +920,9 @@ struct SeguridadView: View {
                         Text(L.signable("seguridad.comunidad", "Comunidad", "Community"))
                             .font(.headlineSm)
                             .seniable("seguridad.comunidad", distintivoDx: 10)
-                        Text(L.t("Opiniones de demostración · cada 4 min", "Demo posts · rotate every 4 min"))
+                        Text(voiceOverOn
+                             ? L.t("Opiniones de demostración · lectura manual", "Demo posts · manual reading")
+                             : L.t("Opiniones de demostración · cada 4 min", "Demo posts · rotate every 4 min"))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
                     }
@@ -899,26 +940,48 @@ struct SeguridadView: View {
                 .accessibilityLabel(L.t("Añadir publicación a la comunidad", "Add a community post"))
             }
 
-            // Se re-evalúa cada 4 min → rota la ventana de opiniones.
-            TimelineView(.periodic(from: .now, by: 240)) { _ in
-                VStack(spacing: 12) {
-                    ForEach(reportesVisibles) { r in
-                        ReporteCard(reporte: r, reacciones: reacciones)
-                        .onTapGesture { selectedReporte = r }
-                        .accessibilityAction(named: Text(L.t("Ver publicación", "View post"))) { selectedReporte = r }
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal:   .opacity
-                        ))
-                    }
+            // La lectura con VoiceOver conserva su página y no crea el reloj de rotación.
+            if voiceOverOn {
+                tarjetasComunidad
+                HStack {
+                    Button(L.t("Anteriores", "Previous")) { cambiarVentanaVoiceOver(-1) }
+                        .disabled(indiceVentana == 0)
+                    Spacer()
+                    Text("\(indiceVentana + 1) / \(Self.numeroDeVentanas)")
+                        .accessibilityLabel(L.t("Grupo \(indiceVentana + 1) de \(Self.numeroDeVentanas)", "Group \(indiceVentana + 1) of \(Self.numeroDeVentanas)"))
+                    Spacer()
+                    Button(L.t("Siguientes", "Next")) { cambiarVentanaVoiceOver(1) }
+                        .disabled(indiceVentana + 1 == Self.numeroDeVentanas)
                 }
-                .id(indiceVentana)
-                .animation(.easeInOut(duration: 0.4), value: indiceVentana)
+                .buttonStyle(.bordered)
+            } else {
+                TimelineView(.periodic(from: .now, by: 240)) { _ in tarjetasComunidad }
             }
         }
     }
 
 
+
+    private var tarjetasComunidad: some View {
+        VStack(spacing: 12) {
+            ForEach(reportesVisibles) { reporte in
+                ReporteCard(reporte: reporte, reacciones: reacciones)
+                    .onTapGesture { selectedReporte = reporte }
+                    .accessibilityAction(named: Text(L.t("Ver publicación", "View post"))) { selectedReporte = reporte }
+                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
+            }
+        }
+        .id(indiceVentana)
+        .animation(voiceOverOn ? nil : .easeInOut(duration: 0.4), value: indiceVentana)
+    }
+
+    private func cambiarVentanaVoiceOver(_ desplazamiento: Int) {
+        let nueva = indiceVentana + desplazamiento
+        guard (0..<Self.numeroDeVentanas).contains(nueva) else { return }
+        ventanaVoiceOver = nueva
+        UIAccessibility.post(notification: .announcement,
+            argument: L.t("Grupo \(nueva + 1) de \(Self.numeroDeVentanas)", "Group \(nueva + 1) of \(Self.numeroDeVentanas)"))
+    }
 
     // MARK: - Helpers
     private var saludoDinamico: String {

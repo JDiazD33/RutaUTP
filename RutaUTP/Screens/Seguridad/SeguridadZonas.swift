@@ -87,7 +87,7 @@ struct BannerParaderosPreview: View {
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     ZStack {
                         // Noche
-                        LinearGradient(colors: [Color.appPrimary, Color.primaryContainer],
+                        LinearGradient(colors: [Color.primaryFill, Color.primaryContainer],
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
 
                         // Calles
@@ -137,7 +137,7 @@ struct BannerParaderosPreview: View {
             VStack(alignment: .leading, spacing: 5) {
                 Label(L.t("EXPLORA TU CIUDAD", "EXPLORE YOUR CITY"), systemImage: "map.fill")
                     .font(.system(size: 10, weight: .bold)).tracking(1.2)
-                    .foregroundStyle(.onPrimaryContainer)
+                    .foregroundStyle(.white)
                 Text(L.t("Encuentra tu próxima parada", "Find your next stop"))
                     .font(.system(size: 21, weight: .bold, design: .rounded))
                     .foregroundStyle(.white).lineLimit(2)
@@ -151,7 +151,7 @@ struct BannerParaderosPreview: View {
             HStack(spacing: 6) {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.onPrimaryContainer)
+                    .foregroundStyle(.white)
                 Text(L.t("\(cantidad) paraderos por explorar", "\(cantidad) stops to explore"))
                     .font(.bodySm)
                     .foregroundStyle(.white)
@@ -179,4 +179,3 @@ struct BannerParaderosPreview: View {
 #Preview {
     SeguridadView().environmentObject(AppRouter())
 }
-

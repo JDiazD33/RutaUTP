@@ -4,7 +4,8 @@ import CoreLocation
 
 /// Muestra estable del feed. GTFS no informa sobre iluminación ni vigilancia.
 enum ParaderosIluminados {
-    static func seleccionar(_ feed: [RutaGTFS], cantidad: Int = 24) -> [ParaderoGTFS] {
+    static func seleccionar(_ feed: [RutaGTFS], cantidad: Int = 24,
+                            cercaDe referencia: CLLocationCoordinate2D = DestinosFijos.centroTrujillo) -> [ParaderoGTFS] {
         guard cantidad > 0 else { return [] }
         var seen = Set<String>()
         let stops = feed.flatMap(\.paraderos).sorted { $0.id < $1.id }.filter {
@@ -12,12 +13,12 @@ enum ParaderosIluminados {
             return seen.insert(key).inserted
         }
         guard !stops.isEmpty else { return [] }
-        let nearCampus = stops.sorted {
-            PolylineMatching.distanceMeters($0.coordinate, GTFSRepository.coordenadaUTP) <
-            PolylineMatching.distanceMeters($1.coordinate, GTFSRepository.coordenadaUTP)
+        let cercanos = stops.sorted {
+            PolylineMatching.distanceMeters($0.coordinate, referencia) <
+            PolylineMatching.distanceMeters($1.coordinate, referencia)
         }
-        // Incluye opciones próximas al campus y una muestra repartida por la red.
-        var result = Array(nearCampus.prefix(min(8, cantidad)))
+        // Incluye opciones próximas a la referencia y una muestra repartida por la red.
+        var result = Array(cercanos.prefix(min(8, cantidad)))
         let remaining = stops.filter { stop in !result.contains { $0.id == stop.id } }
         let slots = min(cantidad - result.count, remaining.count)
         if slots > 0 {
@@ -33,7 +34,7 @@ struct ParaderosIluminadosView: View {
     @EnvironmentObject private var router: AppRouter
     @AppStorage("isDarkMode") private var dark = false
     @State private var camera: MapCameraPosition = .region(MKCoordinateRegion(
-        center: GTFSRepository.coordenadaUTP,
+        center: TransporteApp.referenciaInicio,
         span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)))
     @State private var loadedStops: [ParaderoGTFS] = []
     @State private var routes: [RutaGTFS] = []
@@ -65,7 +66,16 @@ struct ParaderosIluminadosView: View {
     @FocusState private var searchFocused: Bool
 
     private var accent: Color { .appPrimary }
-    private var anchor: CLLocationCoordinate2D { location ?? GTFSRepository.coordenadaUTP }
+    private var anchor: CLLocationCoordinate2D {
+        location ?? TransporteApp.referenciaInicio
+    }
+    private var referenciaDistancias: String {
+        if location != nil { return L.t("Cerca de ti", "Near you") }
+        if TransporteApp.busesUTPActivos { return L.t("Desde el campus UTP", "From the UTP campus") }
+        return TransporteApp.sedeVisible == nil
+            ? L.t("Desde el centro", "From downtown")
+            : L.t("Desde tu sede", "From your workplace")
+    }
     private var stops: [ParaderoGTFS] { loadedStops.isEmpty ? paraderos : loadedStops }
     private var visible: [ParaderoGTFS] {
         stops.filter { stop in
@@ -81,7 +91,11 @@ struct ParaderosIluminadosView: View {
     var body: some View {
         Map(position: $camera) {
             UserAnnotation()
-            Annotation("UTP", coordinate: GTFSRepository.coordenadaUTP) { MarcadorUTP() }
+            if let sede = TransporteApp.sedeVisible {
+                Annotation(sede.nombre, coordinate: sede.coordinate, anchor: .bottom) {
+                    MarcadorSedeTrabajo(sede: sede)
+                }
+            }
             if radius > 0 {
                 MapCircle(center: anchor, radius: Double(radius))
                     .foregroundStyle(accent.opacity(0.1))
@@ -112,7 +126,7 @@ struct ParaderosIluminadosView: View {
             loading = true
             errorCargaRutas = nil
             do {
-                let catalogo = try await GTFSRepository.shared.cargarRutas(reintentar: revisionCatalogo > 0)
+                let catalogo = try await TransporteApp.repositorio.cargarRutas(reintentar: revisionCatalogo > 0)
                 guard !Task.isCancelled else { return }
                 routes = catalogo
             } catch {
@@ -122,7 +136,7 @@ struct ParaderosIluminadosView: View {
                 loading = false
                 return
             }
-            loadedStops = paraderos.isEmpty ? ParaderosIluminados.seleccionar(routes) : paraderos
+            loadedStops = paraderos.isEmpty ? ParaderosIluminados.seleccionar(routes, cercaDe: anchor) : paraderos
             lineasPorParadero = Self.lineasQueSirven(loadedStops, en: routes)
             guard !Task.isCancelled else { return }
             loading = false
@@ -214,7 +228,7 @@ struct ParaderosIluminadosView: View {
                 Text("\(visible.count)").font(.system(size: 11, weight: .bold))
                     .padding(.horizontal, 8).padding(.vertical, 4).background(Capsule().fill(accent.opacity(0.12)))
                 Spacer()
-                Text(location == nil ? L.t("Desde UTP", "From UTP") : L.t("Cerca de ti", "Near you"))
+                Text(referenciaDistancias)
                     .font(.system(size: 11)).foregroundStyle(Color.onSurfaceVariant)
             }.padding(.horizontal, 18)
             if let message = locationMessage {
@@ -349,6 +363,9 @@ struct ParaderosIluminadosView: View {
         .background(RoundedRectangle(cornerRadius: 20).fill(Color.surfaceContainerLowest))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(selectedID == stop.id ? accent.opacity(0.45) : Color.outlineVariant.opacity(0.3), lineWidth: 1))
         .onTapGesture { select(stop) }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(stop.nombre)
+        .accessibilityAction(named: Text(L.t("Seleccionar paradero", "Select stop"))) { select(stop) }
     }
 
     private func distance(_ stop: ParaderoGTFS) -> Double { PolylineMatching.distanceMeters(anchor, stop.coordinate) }
@@ -390,7 +407,7 @@ struct ParaderosIluminadosView: View {
             guard !Task.isCancelled else { return }
             guard status.isAuthorized else {
                 locating = false
-                locationMessage = L.t("Activa Ubicación en Ajustes. Las distancias usan UTP como referencia.", "Enable Location in Settings. Distances currently use UTP as the reference.")
+                locationMessage = L.t("Activa Ubicación en Ajustes para calcular distancias desde tu posición.", "Enable Location in Settings to calculate distances from your position.")
                 return
             }
             locationService.startUpdating()
@@ -457,12 +474,12 @@ private struct SafetyStopPin: View {
     var body: some View {
         VStack(spacing: 0) {
             Image(systemName: saved ? "bookmark.fill" : "bus.fill")
-                .font(.system(size: selected ? 20 : 16, weight: .bold)).foregroundStyle(.white)
+                .font(.system(size: selected ? 20 : 16, weight: .bold)).foregroundStyle(selected ? Color.onPrimaryFill : Color.onSecondary)
                 .frame(width: selected ? 48 : 38, height: selected ? 48 : 38)
-                .background(RoundedRectangle(cornerRadius: 15).fill(selected ? Color.appPrimary : Color.secondary))
+                .background(RoundedRectangle(cornerRadius: 15).fill(selected ? Color.primaryFill : Color.secondary))
                 .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.appSurface, lineWidth: 3))
             Image(systemName: "arrowtriangle.down.fill").font(.system(size: 10))
-                .foregroundStyle(selected ? Color.appPrimary : Color.secondary).offset(y: -1)
+                .foregroundStyle(selected ? Color.primaryFill : Color.secondary).offset(y: -1)
         }
         .frame(minWidth: 44, minHeight: 52)
         .shadow(color: .black.opacity(0.2), radius: selected ? 7 : 3, y: 3)
