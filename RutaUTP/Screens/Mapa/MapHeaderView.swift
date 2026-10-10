@@ -4,6 +4,7 @@ import MapKit
 struct MapHeaderView: View {
     let vm: MapaViewModel
     @Binding var mostrarDrawer: Bool
+    @AccessibilityFocusState(for: .voiceOver) private var enfocarMenu: Bool
 
     // MARK: - Header
     var body: some View {
@@ -21,10 +22,12 @@ struct MapHeaderView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Abrir menú", "Open menu"))
+            .accessibilityFocused($enfocarMenu)
 
-            Text(L.t("Mapa", "Map"))
+            Text(vm.busesUTPActivos ? L.t("Buses UTP", "UTP buses") : L.t("Mapa", "Map"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
+                .accessibilityAddTraits(.isHeader)
 
             if vm.fuenteFlota == .real {
                 // Tener credenciales no demuestra que hayan llegado posiciones.
@@ -57,5 +60,8 @@ struct MapHeaderView: View {
                 .frame(height: 1),
             alignment: .bottom
         )
+        .onChange(of: mostrarDrawer) { _, abierto in
+            if !abierto { enfocarMenu = true }
+        }
     }
 }

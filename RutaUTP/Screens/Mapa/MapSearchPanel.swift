@@ -57,6 +57,7 @@ struct MapSearchPanel: View {
                 if vm.buscando {
                     ProgressView()
                         .scaleEffect(0.8)
+                        .accessibilityLabel(L.t("Buscando destino", "Searching for destination"))
                 } else if !vm.textoBusqueda.isEmpty {
                     Button {
                         vm.limpiar()
@@ -66,6 +67,8 @@ struct MapSearchPanel: View {
                             .foregroundStyle(.onSurfaceVariant.opacity(0.5))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Borrar destino y ruta", "Clear destination and route"))
+                    .frame(minWidth: 44, minHeight: 44)
                 }
 
                 // Elegir destino tocando el mapa (ícono tipo Google Maps).
@@ -105,6 +108,10 @@ struct MapSearchPanel: View {
                             .padding(.vertical, 8)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(sug.title)
+                        .accessibilityValue(sug.subtitle)
+                        .accessibilityHint(L.t("Busca una ruta hasta este lugar", "Finds a route to this place"))
 
                         if sug != vm.sugerenciasBusqueda.prefix(5).last {
                             Divider()
@@ -147,6 +154,8 @@ struct MapSearchPanel: View {
 
     private func chip(_ destino: DestinoChip) -> some View {
         let activo = vm.destinoSeleccionado?.id == destino.id
+            && vm.destinoSeleccionado?.lat == destino.lat
+            && vm.destinoSeleccionado?.lon == destino.lon
         let acento = Color.appPrimary
         return Button {
             SeniasPresenter.shared.ejecutarTrasVerSenia(clave: destino.claveSenia) {
@@ -178,7 +187,10 @@ struct MapSearchPanel: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(destino.label)
         .accessibilityValue(activo ? L.t("Seleccionado", "Selected") : "")
+        .accessibilityAddTraits(activo ? .isSelected : [])
         .accessibilityHint(L.t("Mostrar este destino en el mapa", "Show this destination on the map"))
         .seniable(destino.claveSenia, conGesto: false)
     }
