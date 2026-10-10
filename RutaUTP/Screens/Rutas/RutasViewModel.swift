@@ -15,6 +15,8 @@ final class RutasViewModel: ObservableObject {
     private let repositorioGTFS: RutasGTFSProviding
     private var cargaEnCurso = false
     private var catalogoSolicitado = false
+    private var indicesBusqueda: [String: IndiceBusquedaRuta] = [:]
+    private var letrasCatalogo: Set<String> = []
 
     init(repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio) {
         self.repositorioGTFS = repositorioGTFS
@@ -27,19 +29,13 @@ final class RutasViewModel: ObservableObject {
     static let radioCercaMetros: Double = 300
 
     var rutasFiltradas: [RutaOpcion] {
-        if filtroCerca != nil {
-            return rutas
-                .filter { (distanciaALugar[$0.id] ?? .infinity) <= Self.radioCercaMetros }
-                .sorted { (distanciaALugar[$0.id] ?? .infinity) < (distanciaALugar[$1.id] ?? .infinity) }
+        let consulta = ConsultaRuta(textoBusqueda, letras: letrasCatalogo)
+        let filtradas = rutas.filter { ruta in
+            let cerca = filtroCerca == nil || (distanciaALugar[ruta.id] ?? .infinity) <= Self.radioCercaMetros
+            return cerca && (indicesBusqueda[ruta.id]?.coincide(con: consulta) ?? false)
         }
-        let t = textoBusqueda.trimmingCharacters(in: .whitespaces)
-        guard !t.isEmpty else { return rutas }
-        return rutas.filter {
-            $0.linea.localizedCaseInsensitiveContains(t)
-            || $0.empresa.localizedCaseInsensitiveContains(t)
-            || $0.recorrido.localizedCaseInsensitiveContains(t)
-            || $0.variante.localizedCaseInsensitiveContains(t)
-        }
+        guard filtroCerca != nil else { return filtradas }
+        return filtradas.sorted { (distanciaALugar[$0.id] ?? .infinity) < (distanciaALugar[$1.id] ?? .infinity) }
     }
 
     /// Texto "a X m del lugar" para la card bajo el filtro.
@@ -59,7 +55,10 @@ final class RutasViewModel: ObservableObject {
         do {
             let feed = try await repositorioGTFS.cargarRutas(reintentar: reintentar)
             guard !Task.isCancelled else { return }
-            rutas = Self.convertir(feed)
+            let catalogo = Self.convertir(feed)
+            indicesBusqueda = catalogo.reduce(into: [:]) { $0[$1.id] = IndiceBusquedaRuta(ruta: $1) }
+            letrasCatalogo = Set(indicesBusqueda.values.map(\.letra).filter { !$0.isEmpty })
+            rutas = catalogo
             feedVacio = rutas.isEmpty
             catalogoSolicitado = true
             if let destino = filtroCerca { activarFiltroCerca(destino: destino) }
