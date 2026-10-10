@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BD4000000000000000000002 /* PerfilPreferenciasVisuales.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD4000000000000000000001 /* PerfilPreferenciasVisuales.swift */; };
 		BD3000000000000000000002 /* SelectorTematicasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3000000000000000000001 /* SelectorTematicasSheet.swift */; };
 		BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */ = {isa = PBXBuildFile; fileRef = BD3000000000000000000003 /* sedes-empresas-trujillo.json */; };
 		BD2000000000000000000002 /* TransporteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2000000000000000000001 /* TransporteApp.swift */; };
@@ -183,6 +184,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BD4000000000000000000001 /* PerfilPreferenciasVisuales.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfilPreferenciasVisuales.swift; sourceTree = "<group>"; };
 		BD3000000000000000000001 /* SelectorTematicasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectorTematicasSheet.swift; sourceTree = "<group>"; };
 		BD3000000000000000000003 /* sedes-empresas-trujillo.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Data/sedes-empresas-trujillo.json"; sourceTree = "<group>"; };
 		BD2000000000000000000001 /* TransporteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TransporteApp.swift"; sourceTree = "<group>"; };
@@ -591,6 +593,7 @@
 		0A8004D8300AD9FE004E1676 /* Perfil */ = {
 			isa = PBXGroup;
 			children = (
+				BD4000000000000000000001 /* PerfilPreferenciasVisuales.swift */,
 				BC0200000000000000000011 /* VoiceOverHelpSheet.swift */,
 				BC0200000000000000000013 /* PerfilCuponesGuardados.swift */,
 				0AC4E0A220260907004E1676 /* CarneDigitalView.swift */,
@@ -931,6 +934,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD4000000000000000000002 /* PerfilPreferenciasVisuales.swift in Sources */,
 				BD3000000000000000000002 /* SelectorTematicasSheet.swift in Sources */,
 				BD2000000000000000000002 /* TransporteApp.swift in Sources */,
 				BD2000000000000000000004 /* ModoBusesUTPSection.swift in Sources */,
