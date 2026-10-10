@@ -5,6 +5,9 @@ import SwiftUI
 struct PaletaEmpresa {
     let colorMarca: Color
     let appPrimary: Color
+    let primaryFill: Color
+    let onPrimaryFill: Color
+    let primaryGradientEnd: Color
     let primaryContainer: Color
     let onPrimaryContainer: Color
     let primaryFixed: Color
@@ -33,13 +36,114 @@ enum PaletasEmpresa {
         case .interbank: return interbank
         case .popeyes: return popeyes
         case .plazaVea: return plazaVea
+        case .cineplanet: return cineplanet
+        case .innovaSchools: return innovaSchools
+        case .inkafarma: return inkafarma
+        case .mifarma: return mifarma
+        case .bembos: return bembos
+        case .donBelisario: return donBelisario
         }
+    }
+
+    // Valores de marca publicados en sus recursos web. Los tonos de interfaz
+    // son derivados para que los botones sigan admitiendo texto blanco.
+    private static let cineplanet = corporativa(
+        marca: "#004A8C", primaria: "#004A8C", secundaria: "#C5003B",
+        claro: "#E2EEFF", oscuro: "#203B58")
+    // El símbolo publicado en el favicon oficial contiene azul #0069AD,
+    // verde #6BC62A y naranja #FF9700. Los acentos pequeños se oscurecen.
+    private static let innovaSchools = PaletaEmpresa(
+        colorMarca: Color(hex: "#0069AD"),
+        appPrimary: Color(light: "#0069AD", dark: "#8BCBFA"),
+        primaryFill: Color(hex: "#0069AD"),
+        onPrimaryFill: .white,
+        primaryGradientEnd: Color(hex: "#A85400"),
+        primaryContainer: Color(hex: "#0069AD"),
+        onPrimaryContainer: .white,
+        primaryFixed: Color(hex: "#DDF0FF"),
+        inversePrimary: Color(hex: "#0069AD"),
+        secondary: Color(hex: "#317B13"),
+        secondaryContainer: Color(light: "#6BC62A", dark: "#294E1D"),
+        onSecondary: .white,
+        onSecondaryContainer: Color(light: "#17360B", dark: "#D4F3B7"),
+        tertiary: Color(hex: "#A85400"),
+        tertiaryContainer: Color(hex: "#A85400"),
+        onTertiary: .white,
+        onTertiaryContainer: .white,
+        onSurfaceVariant: Color(light: "#40535D", dark: "#BFD2DF"),
+        outline: Color(light: "#728C99", dark: "#9CBCCB"),
+        outlineVariant: Color(light: "#CCDDE3", dark: "#354E5B")
+    )
+    // Amarillo dominante en superficies de acción; verde para enlaces,
+    // iconos y detalles. La tinta sobre amarillo nunca depende de .white.
+    private static let inkafarma = PaletaEmpresa(
+        colorMarca: Color(hex: "#FFF200"),
+        appPrimary: Color(light: "#167538", dark: "#8FDC9C"),
+        primaryFill: Color(hex: "#FFF200"),
+        onPrimaryFill: Color(hex: "#193D23"),
+        primaryGradientEnd: Color(hex: "#FFFAD1"),
+        primaryContainer: Color(hex: "#FFF200"),
+        onPrimaryContainer: Color(hex: "#193D23"),
+        primaryFixed: Color(hex: "#FFFAD1"),
+        inversePrimary: Color(hex: "#FFF200"),
+        secondary: Color(hex: "#167538"),
+        secondaryContainer: Color(light: "#DEF3CB", dark: "#274A2A"),
+        onSecondary: .white,
+        onSecondaryContainer: Color(light: "#255A2A", dark: "#DDF5C3"),
+        tertiary: Color(hex: "#167538"),
+        tertiaryContainer: Color(hex: "#167538"),
+        onTertiary: .white,
+        onTertiaryContainer: .white,
+        onSurfaceVariant: Color(light: "#4C5139", dark: "#CFD3B6"),
+        outline: Color(light: "#887D40", dark: "#BDB56B"),
+        outlineVariant: Color(light: "#E3DEB8", dark: "#4A482C")
+    )
+    private static let mifarma = corporativa(
+        marca: "#FF7929", primaria: "#AD4C00", secundaria: "#167538",
+        claro: "#FFF0DE", oscuro: "#54371D")
+    private static let bembos = corporativa(
+        marca: "#1100CF", primaria: "#1100CF", secundaria: "#7D5800",
+        claro: "#EAE7FF", oscuro: "#302764")
+    private static let donBelisario = corporativa(
+        marca: "#E5133A", primaria: "#B70F2E", secundaria: "#121212",
+        claro: "#FFE8ED", oscuro: "#542A35")
+
+    /// Construida una sola vez por marca; las vistas consumen los mismos tokens.
+    /// Contenedores claros/oscuros, texto y contornos mantienen roles separados.
+    private static func corporativa(marca: String, primaria: String,
+                                    secundaria: String, claro: String,
+                                    oscuro: String) -> PaletaEmpresa {
+        PaletaEmpresa(
+            colorMarca: Color(hex: marca),
+            appPrimary: Color(hex: primaria),
+            primaryFill: Color(hex: primaria),
+            onPrimaryFill: .white,
+            primaryGradientEnd: Color(hex: primaria),
+            primaryContainer: Color(hex: primaria),
+            onPrimaryContainer: .white,
+            primaryFixed: Color(hex: claro),
+            inversePrimary: Color(light: primaria, dark: claro),
+            secondary: Color(hex: secundaria),
+            secondaryContainer: Color(light: claro, dark: oscuro),
+            onSecondary: .white,
+            onSecondaryContainer: Color(light: secundaria, dark: claro),
+            tertiary: Color(hex: primaria),
+            tertiaryContainer: Color(hex: primaria),
+            onTertiary: .white,
+            onTertiaryContainer: .white,
+            onSurfaceVariant: Color(light: "#48505A", dark: "#C2CBD6"),
+            outline: Color(light: "#77808D", dark: "#A5AFBD"),
+            outlineVariant: Color(light: "#D5DCE5", dark: "#3B4655")
+        )
     }
 
     // UTP reproduce literalmente los tokens anteriores de Colors.swift.
     private static let utp = PaletaEmpresa(
         colorMarca: Color(hex: "#a80033"),
         appPrimary: Color(hex: "#a80033"),
+        primaryFill: Color(hex: "#a80033"),
+        onPrimaryFill: .white,
+        primaryGradientEnd: Color(hex: "#005b6e"),
         primaryContainer: Color(hex: "#d31245"),
         onPrimaryContainer: Color(hex: "#ffe8e8"),
         primaryFixed: Color(hex: "#ffdadb"),
@@ -62,6 +166,9 @@ enum PaletasEmpresa {
     private static let interbank = PaletaEmpresa(
         colorMarca: Color(hex: "#05BE50"),
         appPrimary: Color(hex: "#007D36"),
+        primaryFill: Color(hex: "#007D36"),
+        onPrimaryFill: .white,
+        primaryGradientEnd: Color(hex: "#006D35"),
         primaryContainer: Color(hex: "#00853A"),
         onPrimaryContainer: Color(hex: "#E5FFEF"),
         primaryFixed: Color(hex: "#D7F8E3"),
@@ -83,6 +190,9 @@ enum PaletasEmpresa {
     private static let popeyes = PaletaEmpresa(
         colorMarca: Color(hex: "#FF7D00"),
         appPrimary: Color(hex: "#B54000"),
+        primaryFill: Color(hex: "#B54000"),
+        onPrimaryFill: .white,
+        primaryGradientEnd: Color(hex: "#8A3100"),
         primaryContainer: Color(hex: "#B54000"),
         onPrimaryContainer: Color(hex: "#FFF0E3"),
         primaryFixed: Color(hex: "#FFE6CD"),
@@ -104,6 +214,9 @@ enum PaletasEmpresa {
     private static let plazaVea = PaletaEmpresa(
         colorMarca: Color(hex: "#CC292E"),
         appPrimary: Color(hex: "#CC292E"),
+        primaryFill: Color(hex: "#CC292E"),
+        onPrimaryFill: .white,
+        primaryGradientEnd: Color(hex: "#9D1E23"),
         primaryContainer: Color(hex: "#9D1E23"),
         onPrimaryContainer: Color(hex: "#FFF0F1"),
         primaryFixed: Color(hex: "#FFF0F1"),

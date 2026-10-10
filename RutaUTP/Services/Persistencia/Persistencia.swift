@@ -94,4 +94,5 @@ enum Persistencia {
 enum PreferenciasApp {
     static let notificaciones = "perfil_notificaciones"
     static let compartirUbicacion = "perfil_compartirUbicacion"
+    static let busesUTP = "transporte.buses.utp.v1"
 }

@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */ = {isa = PBXBuildFile; fileRef = BD3000000000000000000003 /* sedes-empresas-trujillo.json */; };
+		BD2000000000000000000002 /* TransporteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2000000000000000000001 /* TransporteApp.swift */; };
+		BD2000000000000000000004 /* ModoBusesUTPSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2000000000000000000003 /* ModoBusesUTPSection.swift */; };
+		BD2000000000000000000006 /* gtfs-utp in Resources */ = {isa = PBXBuildFile; fileRef = BD2000000000000000000005 /* gtfs-utp */; };
+		BD0900000000000000000004 /* SedeTrabajoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0900000000000000000003 /* SedeTrabajoStore.swift */; };
+		BD0900000000000000000002 /* SedeTrabajo.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0900000000000000000001 /* SedeTrabajo.swift */; };
 		BD0500000000000000000002 /* TematicaEmpresa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0500000000000000000001 /* TematicaEmpresa.swift */; };
 		BD0500000000000000000004 /* PaletaEmpresa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0500000000000000000003 /* PaletaEmpresa.swift */; };
 		BD0500000000000000000006 /* SelectorTematicaEmpresa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */; };
@@ -174,6 +180,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BD3000000000000000000003 /* sedes-empresas-trujillo.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Data/sedes-empresas-trujillo.json"; sourceTree = "<group>"; };
+		BD2000000000000000000001 /* TransporteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TransporteApp.swift"; sourceTree = "<group>"; };
+		BD2000000000000000000003 /* ModoBusesUTPSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ModoBusesUTPSection.swift"; sourceTree = "<group>"; };
+		BD2000000000000000000005 /* gtfs-utp */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "gtfs-utp"; sourceTree = "<group>"; };
+		BD0900000000000000000003 /* SedeTrabajoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SedeTrabajoStore.swift; sourceTree = "<group>"; };
+		BD0900000000000000000001 /* SedeTrabajo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SedeTrabajo.swift; sourceTree = "<group>"; };
 		BD0500000000000000000001 /* TematicaEmpresa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TematicaEmpresa.swift; sourceTree = "<group>"; };
 		BD0500000000000000000003 /* PaletaEmpresa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletaEmpresa.swift; sourceTree = "<group>"; };
 		BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectorTematicaEmpresa.swift; sourceTree = "<group>"; };
@@ -364,6 +376,7 @@
 		0A40D90B2FDE5E7D00F79FBC = {
 			isa = PBXGroup;
 			children = (
+				BD2000000000000000000005 /* gtfs-utp */,
 				0A8004F6300AD9FE004E1676 /* RutaUTP */,
 				AA6600000000000000000D01 /* gtfs */,
 				AA6600000000000000000E07 /* senias */,
@@ -384,6 +397,7 @@
 		0A800414300AD9FE004E1676 /* Persistencia */ = {
 			isa = PBXGroup;
 			children = (
+				BD0900000000000000000003 /* SedeTrabajoStore.swift */,
 				0A800412300AD9FE004E1676 /* Persistencia.swift */,
 				0A800431300AD9FE004E1676 /* LugaresStore.swift */,
 			);
@@ -438,6 +452,7 @@
 		0A8004B8300AD9FE004E1676 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				BD2000000000000000000003 /* ModoBusesUTPSection.swift */,
 				BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */,
 				BC1200000000000000000001 /* ServiceDeadlineScheduler.swift */,
 				BC0600000000000000000001 /* DecorativeAnimationScope.swift */,
@@ -483,6 +498,7 @@
 		0A8004C0300AD9FE004E1676 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				BD0900000000000000000001 /* SedeTrabajo.swift */,
 				BC0300000000000000000001 /* ScreenModelStore.swift */,
 				BC0200000000000000000007 /* RutaOpcion.swift */,
 				BC010000000000000000000B /* Mapa */,
@@ -720,6 +736,7 @@
 		0A8004F6300AD9FE004E1676 /* RutaUTP */ = {
 			isa = PBXGroup;
 			children = (
+				BD3000000000000000000003 /* sedes-empresas-trujillo.json */,
 				0A8004BC300AD9FE004E1676 /* Design */,
 				0A8004C0300AD9FE004E1676 /* Models */,
 				0A8004C3300AD9FE004E1676 /* Navigation */,
@@ -774,6 +791,7 @@
 		AA6600000000000000000C01 /* GTFS */ = {
 			isa = PBXGroup;
 			children = (
+				BD2000000000000000000001 /* TransporteApp.swift */,
 				BC1100000000000000000001 /* GTFSRouteCatalog.swift */,
 				BC1000000000000000000001 /* GTFSNearbyRouteIndex.swift */,
 				BC0900000000000000000001 /* GTFSNearbyRoutes.swift */,
@@ -880,6 +898,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */,
+				BD2000000000000000000006 /* gtfs-utp in Resources */,
 				0A800502300AD9FE004E1676 /* Preview Assets.xcassets in Resources */,
 				0A80051D300AD9FE004E1676 /* Assets.xcassets in Resources */,
 				AA6600000000000000000D02 /* gtfs in Resources */,
@@ -902,6 +922,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD2000000000000000000002 /* TransporteApp.swift in Sources */,
+				BD2000000000000000000004 /* ModoBusesUTPSection.swift in Sources */,
+				BD0900000000000000000004 /* SedeTrabajoStore.swift in Sources */,
+				BD0900000000000000000002 /* SedeTrabajo.swift in Sources */,
 				BD0500000000000000000002 /* TematicaEmpresa.swift in Sources */,
 				BD0500000000000000000004 /* PaletaEmpresa.swift in Sources */,
 				BD0500000000000000000006 /* SelectorTematicaEmpresa.swift in Sources */,
@@ -1281,7 +1305,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "apolito.RutaUTP.dev-o-joaquindiaz.RutaUTPTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";
@@ -1300,7 +1323,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "apolito.RutaUTP.dev-o-joaquindiaz.RutaUTPTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RutaUTP.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RutaUTP";

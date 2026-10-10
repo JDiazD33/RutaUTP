@@ -1,0 +1,218 @@
+[
+  {
+    "id": "inkafarma-los-angeles",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma Los Ángeles",
+    "direccion": "Av. Los Ángeles 599, Trujillo",
+    "lat": -8.1296515,
+    "lon": -79.0372864,
+    "googlePlaceID": "ChIJ5SD7zG09rZER3PvA1gKPRUI"
+  },
+  {
+    "id": "inkafarma-28-julio",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma T-40 — 28 de Julio",
+    "direccion": "Av. 28 de Julio 298, Trujillo",
+    "lat": -8.1185013,
+    "lon": -79.0277349,
+    "googlePlaceID": "ChIJkeR5_3g9rZERfoPuDip19GI"
+  },
+  {
+    "id": "inkafarma-husares",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma Húsares de Junín",
+    "direccion": "Av. Húsares de Junín 697, Trujillo",
+    "lat": -8.1220176,
+    "lon": -79.0340542,
+    "googlePlaceID": "ChIJw8NALnE9rZERwpV_X-oTYT8"
+  },
+  {
+    "id": "inkafarma-larco",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma Larco",
+    "direccion": "Av. Larco 650, Trujillo",
+    "lat": -8.1222785,
+    "lon": -79.0370508,
+    "googlePlaceID": "ChIJAd3PqHY9rZERVtuU9EOusRw"
+  },
+  {
+    "id": "inkafarma-espana-196",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma España 196",
+    "direccion": "Av. España 196, Trujillo",
+    "lat": -8.1146175,
+    "lon": -79.0318928,
+    "googlePlaceID": "ChIJZ7cNNoY9rZERBsbKhuoN2x0"
+  },
+  {
+    "id": "inkafarma-espana-2399",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma España 2399",
+    "direccion": "Av. España 2399, Trujillo",
+    "lat": -8.1158443,
+    "lon": -79.025577,
+    "googlePlaceID": "ChIJHRe_B4I9rZERR1vwQ_O9BT4"
+  },
+  {
+    "id": "inkafarma-juan-pablo",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma Juan Pablo II",
+    "direccion": "Av. Juan Pablo II 765, Trujillo",
+    "lat": -8.1193026,
+    "lon": -79.0399253,
+    "googlePlaceID": "ChIJnblL5HQ9rZEREk-WpPvRFJc"
+  },
+  {
+    "id": "inkafarma-america-sur",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma T-33 — América Sur",
+    "direccion": "Av. América Sur 2333, Mz. V Lt. 26, Urb. Santa María I Etapa, Trujillo",
+    "lat": -8.1232896,
+    "lon": -79.0225375,
+    "googlePlaceID": "ChIJMa_sUXw9rZERur0t95WyUyU"
+  },
+  {
+    "id": "inkafarma-cesar-vallejo",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma T-49 — César Vallejo",
+    "direccion": "Av. Prol. César Vallejo 1208, Trujillo",
+    "lat": -8.1299749,
+    "lon": -79.032396,
+    "googlePlaceID": "ChIJscujDm89rZERe80qTkGxGYY"
+  },
+  {
+    "id": "inkafarma-ayacucho",
+    "empresa": "inkafarma",
+    "nombre": "Inkafarma Ayacucho",
+    "direccion": "Jr. Ayacucho 565, Trujillo",
+    "lat": -8.1125119,
+    "lon": -79.0255489,
+    "googlePlaceID": "ChIJG80DsFU9rZERTd-j6BwssR8"
+  },
+  {
+    "id": "mifarma-larco-prime",
+    "empresa": "mifarma",
+    "nombre": "Mifarma Prime Larco",
+    "direccion": "Av. Larco 269, Trujillo",
+    "lat": -8.117385,
+    "lon": -79.032302,
+    "googlePlaceID": "ChIJ0xYEWQA9rZER96MUzPSr5YA"
+  },
+  {
+    "id": "mifarma-espana-pizarro",
+    "empresa": "mifarma",
+    "nombre": "Mifarma España — Pizarro",
+    "direccion": "Av. España 100, esquina con Francisco Pizarro 106, Trujillo",
+    "lat": -8.1155664,
+    "lon": -79.0311324,
+    "googlePlaceID": "ChIJl7RgX-k9rZERYz-EESb1khc"
+  },
+  {
+    "id": "mifarma-bolognesi",
+    "empresa": "mifarma",
+    "nombre": "Mifarma Bolognesi",
+    "direccion": "Jr. Bolognesi 652, Trujillo",
+    "lat": -8.1165479,
+    "lon": -79.0267708,
+    "googlePlaceID": "ChIJP5JhYAw9rZERBZ0RTAjP5j8"
+  },
+  {
+    "id": "mifarma-espana-2412",
+    "empresa": "mifarma",
+    "nombre": "Mifarma España 2412",
+    "direccion": "Av. España 2412–2414, Trujillo",
+    "lat": -8.1158615,
+    "lon": -79.0261327,
+    "googlePlaceID": "ChIJk5hhoJk9rZERDMfFR90UCnU"
+  },
+  {
+    "id": "mifarma-fatima",
+    "empresa": "mifarma",
+    "nombre": "Mifarma Fátima",
+    "direccion": "Av. Fátima 650, Trujillo",
+    "lat": -8.1296854,
+    "lon": -79.0369867,
+    "googlePlaceID": "ChIJc0uGy209rZERK-SZFTL2ev4"
+  },
+  {
+    "id": "mifarma-bolivar",
+    "empresa": "mifarma",
+    "nombre": "Mifarma Bolívar",
+    "direccion": "Jr. Bolívar 393–395, Urb. Cercado, Trujillo",
+    "lat": -8.1136632,
+    "lon": -79.0279465,
+    "googlePlaceID": "ChIJKeOuoSU9rZERTugq28yqyWo"
+  },
+  {
+    "id": "mifarma-el-palmar",
+    "empresa": "mifarma",
+    "nombre": "Mifarma El Palmar",
+    "direccion": "Calle El Palmar Lt. 70-A, Trujillo",
+    "lat": -8.123715,
+    "lon": -79.0259862,
+    "googlePlaceID": "ChIJTdtrzEQ9rZER8tUiS6a0fyY"
+  },
+  {
+    "id": "mifarma-pizarro",
+    "empresa": "mifarma",
+    "nombre": "Mifarma Pizarro",
+    "direccion": "Jr. Francisco Pizarro 510, Trujillo",
+    "lat": -8.11167,
+    "lon": -79.027553,
+    "googlePlaceID": "ChIJy1h9noM9rZERxT9m6tk3P7Q"
+  },
+  {
+    "id": "innova-schools-san-isidro",
+    "empresa": "innova_schools",
+    "nombre": "Innova Schools San Isidro",
+    "direccion": "Calle Tungsteno s/n, Urb. San Luis — San Isidro, Trujillo",
+    "lat": -8.0957829,
+    "lon": -79.0457065,
+    "googlePlaceID": "ChIJixjBzIg9rZERwRGk565xMbo"
+  },
+  {
+    "id": "innova-schools-el-golf",
+    "empresa": "innova_schools",
+    "nombre": "Innova Schools El Golf",
+    "direccion": "Av. Carretera Industrial Mz. A Lt. 1, Trujillo",
+    "lat": -8.1342481,
+    "lon": -79.0255691,
+    "googlePlaceID": "ChIJtWsR02Y9rZERWJLW5Dp5--k"
+  },
+  {
+    "id": "innova-schools-santa",
+    "empresa": "innova_schools",
+    "nombre": "Innova Schools Santa",
+    "direccion": "Prolongación Av. Santa 1515, Urb. Pay Pay, Trujillo",
+    "lat": -8.0949068,
+    "lon": -79.0156107,
+    "googlePlaceID": "ChIJqVAPxCEWrZERL3sug-S9Y_g"
+  },
+  {
+    "id": "bembos-mallplaza",
+    "empresa": "bembos",
+    "nombre": "Bembos Mallplaza",
+    "direccion": "Av. Mansiche s/n, local L-8, Mallplaza Trujillo",
+    "lat": -8.1018225,
+    "lon": -79.048576,
+    "googlePlaceID": "ChIJw5zBnU49rZERuH5sGXgAzww"
+  },
+  {
+    "id": "bembos-mallplaza-helados",
+    "empresa": "bembos",
+    "nombre": "Bembos Mallplaza — Helados",
+    "direccion": "Av. América Oeste, Mallplaza Trujillo (módulo de helados)",
+    "lat": -8.1018772,
+    "lon": -79.0494207,
+    "googlePlaceID": "ChIJ9UVSgrs9rZERhLSkvLzF15c"
+  },
+  {
+    "id": "cineplanet-centro",
+    "empresa": "cineplanet",
+    "nombre": "Cineplanet Trujillo Centro",
+    "direccion": "Jr. Orbegoso 245, Trujillo",
+    "lat": -8.1094531,
+    "lon": -79.0299395,
+    "googlePlaceID": ""
+  }
+]

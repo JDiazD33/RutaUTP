@@ -13,6 +13,10 @@ extension Color {
 
     // MARK: - Primarios (temática elegida)
     static var appPrimary: Color { PaletasEmpresa.actual.appPrimary }
+    /// Superficies de acción y su tinta: permite amarillo con texto oscuro.
+    static var primaryFill: Color { PaletasEmpresa.actual.primaryFill }
+    static var onPrimaryFill: Color { PaletasEmpresa.actual.onPrimaryFill }
+    static var primaryGradientEnd: Color { PaletasEmpresa.actual.primaryGradientEnd }
     static var primaryContainer: Color { PaletasEmpresa.actual.primaryContainer }
     static var onPrimaryContainer: Color { PaletasEmpresa.actual.onPrimaryContainer }
     static var primaryFixed: Color { PaletasEmpresa.actual.primaryFixed }
@@ -108,6 +112,9 @@ extension ShapeStyle where Self == Color {
 
     // Primarios
     static var appPrimary:           Color { .appPrimary }
+    static var primaryFill:          Color { .primaryFill }
+    static var onPrimaryFill:        Color { .onPrimaryFill }
+    static var primaryGradientEnd:   Color { .primaryGradientEnd }
     static var primaryContainer:     Color { .primaryContainer }
     static var onPrimaryContainer:   Color { .onPrimaryContainer }
     static var primaryFixed:         Color { .primaryFixed }

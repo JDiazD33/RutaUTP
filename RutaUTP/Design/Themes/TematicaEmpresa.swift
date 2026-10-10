@@ -2,11 +2,17 @@ import Foundation
 import Observation
 
 /// IDs de apariencia, independientes de empresa del perfil y modo oscuro.
-enum TematicaEmpresa: String, Identifiable {
+enum TematicaEmpresa: String, Identifiable, Decodable {
     case utp
     case interbank
     case popeyes
     case plazaVea = "plaza_vea"
+    case cineplanet
+    case innovaSchools = "innova_schools"
+    case inkafarma
+    case mifarma
+    case bembos
+    case donBelisario = "don_belisario"
 
     var id: String { rawValue }
 
@@ -16,19 +22,35 @@ enum TematicaEmpresa: String, Identifiable {
         case .interbank: return "Interbank"
         case .popeyes: return "Popeyes"
         case .plazaVea: return "Plaza Vea"
+        case .cineplanet: return "Cineplanet"
+        case .innovaSchools: return "Innova Schools"
+        case .inkafarma: return "Inkafarma"
+        case .mifarma: return "Mifarma"
+        case .bembos: return "Bembos"
+        case .donBelisario: return "Don Belisario"
         }
     }
 
     var logoAsset: String? {
         switch self {
-        case .utp: return nil
+        case .utp: return "utp-monocromatico"
         case .interbank: return "interbank-logo"
         case .popeyes: return "popeyes-logo"
         case .plazaVea: return "plazavea-logo"
+        case .cineplanet: return "cineplanet-logo"
+        case .innovaSchools: return "innova-schools-logo"
+        case .inkafarma: return "inkafarma-logo"
+        case .mifarma: return "mifarma-logo"
+        case .bembos: return "bembos-logo"
+        case .donBelisario: return "don-belisario-logo"
         }
     }
 
-    static let empresas: [TematicaEmpresa] = [.interbank, .popeyes, .plazaVea]
+    static let empresas: [TematicaEmpresa] = [
+        .interbank, .popeyes, .plazaVea, .cineplanet, .innovaSchools,
+        .inkafarma, .mifarma, .bembos, .donBelisario
+    ]
+    static let todas: [TematicaEmpresa] = [.utp] + empresas
 }
 
 /// Leer la selección desde un token Color registra la dependencia del body,

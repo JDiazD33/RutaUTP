@@ -19,6 +19,9 @@ import CoreLocation
 
 enum DestinosFijos {
 
+    /// Referencia neutral de Trujillo cuando todavía no se eligió una sede.
+    static let centroTrujillo = CLLocationCoordinate2D(latitude: -8.1090, longitude: -79.0270)
+
     struct Fijo {
         let id: Int
         /// Clave estable de la seña. Nunca el texto: ver `L.signable`.
@@ -44,7 +47,7 @@ enum DestinosFijos {
              lat: -8.098247879173792, lon: -79.03818104755645),
         Fijo(id: 2, claveSenia: "mapa.destino.centro", es: "Centro", en: "Downtown",
              icono: "building.2.fill",
-             lat: -8.1090, lon: -79.0270),
+             lat: centroTrujillo.latitude, lon: centroTrujillo.longitude),
         Fijo(id: 3, claveSenia: "mapa.destino.huanchaco", es: "Huanchaco", en: "Huanchaco",
              icono: "water.waves",
              lat: -8.0825, lon: -79.1197)
