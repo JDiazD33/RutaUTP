@@ -18,8 +18,9 @@ struct TrackingMapCanvas: View {
             // Destinos del demo = chips fijos del Mapa.
             ForEach(vm.destinos) { destino in
                 Annotation(destino.label, coordinate: destino.coordinate) {
-                    if destino.label == "UTP" {
-                        MarcadorUTP()
+                    if destino.id == CatalogoSedesTrabajo.idChipSede,
+                       let sede = TransporteApp.sedeVisible {
+                        MarcadorSedeTrabajo(sede: sede)
                     } else {
                         MarcadorDestinoBuscado(titulo: destino.label)
                     }
@@ -68,7 +69,11 @@ struct TrackingMapCanvas: View {
                     TransitStopMarker(number: "", title: L.t("PARADERO", "STOP"), color: .secondary)
                 }
             }
-            if destinoActual.id == 999 {
+            // Si la sede cambió durante un viaje, conservar su destino anterior.
+            if !vm.destinos.contains(where: {
+                abs($0.coordinate.latitude - destinoActual.coordinate.latitude) < 1e-9
+                    && abs($0.coordinate.longitude - destinoActual.coordinate.longitude) < 1e-9
+            }) {
                 Annotation(destinoActual.label, coordinate: destinoActual.coordinate) {
                     Image(systemName: "flag.checkered.circle.fill")
                         .font(.system(size: 30)).foregroundStyle(Color.appPrimary)
@@ -79,15 +84,7 @@ struct TrackingMapCanvas: View {
             // Vehículos en tiempo real vía provider: tap → popup en vivo.
             ForEach(vm.vehiculos) { vehiculo in
                 Annotation(L.t("Línea", "Line") + " \(vehiculo.linea)", coordinate: vehiculo.coordinate) {
-                    AnimatedBusMarker(
-                        linea: vehiculo.linea,
-                        color: colorDeLinea(vehiculo.linea),
-                        heading: vehiculo.heading
-                    )
-                    .scaleEffect(vehiculoSeleccionadoID == vehiculo.id ? 1.15 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7),
-                               value: vehiculoSeleccionadoID)
-                    .onTapGesture {
+                    Button {
                         AppHaptics.impact(.light)
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             // Toggle: segundo tap sobre el mismo bus cierra.
@@ -95,24 +92,35 @@ struct TrackingMapCanvas: View {
                                 ? nil : vehiculo.id
                             vm.negocioSeleccionado = nil
                         }
+                    } label: {
+                        AnimatedBusMarker(linea: vehiculo.linea,
+                                          color: colorDeLinea(vehiculo.linea), heading: vehiculo.heading)
+                            .scaleEffect(vehiculoSeleccionadoID == vehiculo.id ? 1.15 : 1.0)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: vehiculoSeleccionadoID)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(L.t("Micro de la línea ", "Bus on line ") + vehiculo.linea)
+                    .accessibilityValue(vm.fuenteVehiculos == .simulated ? L.t("Demostración", "Demo") : L.t("Posición recibida", "Received position"))
+                    .accessibilityAddTraits(vehiculoSeleccionadoID == vehiculo.id ? .isSelected : [])
+                    .accessibilityHint(L.t("Muestra o cierra los detalles de este micro", "Shows or closes this bus's details"))
                 }
             }
 
             // Catálogo demo espaciado según el área visible, también al explorar la ciudad.
             ForEach(vm.negociosCerca) { negocio in
                 Annotation(negocio.nombre, coordinate: negocio.coordinate, anchor: .bottom) {
-                    NegocioBubbleMarker(
-                        negocio: negocio,
-                        seleccionado: vm.negocioSeleccionado?.id == negocio.id
-                    )
-                    .onTapGesture {
+                    Button {
                         AppHaptics.impact(.light)
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             vm.negocioSeleccionado = negocio
                             vehiculoSeleccionadoID = nil
                         }
+                    } label: {
+                        NegocioBubbleMarker(negocio: negocio, seleccionado: vm.negocioSeleccionado?.id == negocio.id)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(vm.negocioSeleccionado?.id == negocio.id ? .isSelected : [])
                 }
             }
         }

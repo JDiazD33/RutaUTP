@@ -41,6 +41,9 @@ struct TrackingProgressPanel: View {
                     .monospacedDigit()
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Avance del recorrido", "Trip progress"))
+        .accessibilityValue(L.t("\(Int(vm.progreso * 100)) por ciento", "\(Int(vm.progreso * 100)) percent"))
     }
 
     private var statsRow: some View {
@@ -90,5 +93,8 @@ struct TrackingProgressPanel: View {
                 .foregroundStyle(Color.onSurface.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(etiqueta)
+        .accessibilityValue(valor == "—" ? L.t("No disponible", "Unavailable") : valor)
     }
 }

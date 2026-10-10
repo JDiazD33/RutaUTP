@@ -35,13 +35,13 @@ private struct TrackingScreenContent: View {
 
     // Las anotaciones cambian durante la simulación: nunca usar encuadre automático.
     @State private var cameraPosition: MapCameraPosition = .region(MKCoordinateRegion(
-        center: GTFSRepository.coordenadaUTP,
+        center: TransporteApp.referenciaInicio,
         span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)))
     @State private var seguir: Bool = true
     @State private var ultimoCentroCamara: CLLocationCoordinate2D?
     @State private var rumboCamara: Double?
     @State private var ultimaActualizacionCamara: Date = .distantPast
-    /// Chip tocado; nil conserva el destino del viaje o usa UTP por defecto.
+    /// Chip tocado; nil conserva el viaje o usa la sede/centro como sugerencia.
     @State private var destinoElegido: RouteTrackingViewModel.DestinoDemo?
 
     /// Tema elegido en Ajustes. La pantalla de tracking está estilizada en
@@ -177,6 +177,12 @@ private struct TrackingScreenContent: View {
         .onAppear {
             pantallaVisible = true
             vm.actualizarActividadVisual(scenePhase == .active)
+        }
+        .onChange(of: SedeTrabajoStore.shared.sede?.id) { _, _ in
+            guard !vm.tripInProgress, vm.destinoSeleccionado == nil, destinoElegido == nil else { return }
+            cameraPosition = .region(MKCoordinateRegion(
+                center: TransporteApp.referenciaInicio,
+                span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)))
         }
         .onDisappear {
             pantallaVisible = false
@@ -462,10 +468,10 @@ private struct TrackingScreenContent: View {
                 } label: {
                     Label(L.t("Abrir Ajustes", "Open Settings"), systemImage: "gearshape.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.onPrimaryFill)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(Color.appPrimary))
+                        .background(Capsule().fill(Color.primaryFill))
                 }
                 .buttonStyle(.plain)
             }
@@ -523,6 +529,8 @@ private struct TrackingScreenContent: View {
             HStack(spacing: 8) {
                 ForEach(vm.destinos) { destino in
                     let seleccionado = destino.id == destinoActual.id
+                        && destino.coordinate.latitude == destinoActual.coordinate.latitude
+                        && destino.coordinate.longitude == destinoActual.coordinate.longitude
                     Button {
                         AppHaptics.selection()
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -536,10 +544,10 @@ private struct TrackingScreenContent: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .lineLimit(1)
                         }
-                        .foregroundStyle(seleccionado ? Color.white : Color.onSurface)
+                        .foregroundStyle(seleccionado ? Color.onPrimaryFill : Color.onSurface)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(seleccionado ? Color.appPrimary
+                        .background(Capsule().fill(seleccionado ? Color.primaryFill
                                                                 : Color.onSurface.opacity(0.12)))
                     }
                     .buttonStyle(.plain)
@@ -566,7 +574,7 @@ private struct TrackingScreenContent: View {
                             .minimumScaleFactor(0.8)
                     }
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(vm.posicion == nil ? Color.white : Color.onPrimaryFill)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(vm.posicion == nil ? Color.onSurface.opacity(0.25) : Color.primaryContainer))
@@ -592,10 +600,10 @@ private struct TrackingScreenContent: View {
                                       : L.t("Simular avance", "Simulate progress"),
                           systemImage: vm.modoDemo ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(vm.modoDemo ? Color.white : Color.onSurface)
+                        .foregroundStyle(vm.modoDemo ? Color.onPrimaryFill : Color.onSurface)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(vm.modoDemo ? Color.appPrimary
+                        .background(Capsule().fill(vm.modoDemo ? Color.primaryFill
                                                                : Color.onSurface.opacity(0.12)))
                 }
                 .buttonStyle(.plain)
@@ -606,10 +614,10 @@ private struct TrackingScreenContent: View {
                 } label: {
                     Label(L.t("Detener", "Stop"), systemImage: "stop.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.onPrimaryFill)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(Color.appPrimary))
+                        .background(Capsule().fill(Color.primaryFill))
                 }
                 .buttonStyle(.plain)
             }
@@ -627,10 +635,10 @@ private struct TrackingScreenContent: View {
                             } label: {
                                 Text("\(Int(factor))×")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(activo ? Color.white : Color.onSurface.opacity(0.8))
+                                    .foregroundStyle(activo ? Color.onPrimaryFill : Color.onSurface.opacity(0.8))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 7)
-                                    .background(Capsule().fill(activo ? Color.appPrimary : .clear))
+                                    .background(Capsule().fill(activo ? Color.primaryFill : .clear))
                             }
                             .buttonStyle(.plain)
                         }
@@ -754,15 +762,17 @@ private struct TrackingScreenContent: View {
         return VStack(alignment: .leading, spacing: 8) {
             Label("1 · " + plan.board.nombre + " · \(Int(metrics.walkToBoardMeters)) m " + L.t("a pie", "walk"),
                   systemImage: "figure.walk")
-            Label(L.t("Micro ", "Bus ") + plan.route.linea + " · " + plan.route.precioTexto,
+            Label(L.t("Micro ", "Bus ") + plan.route.lineaConLetra + " · " + plan.route.precioTexto,
                   systemImage: "bus.fill")
+                .fixedSize(horizontal: false, vertical: true)
             if let transfer = plan.transfer {
                 Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
                 Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
                 Label(L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.transferWalkMeters))) m · " + transfer.board.nombre,
                       systemImage: "figure.walk")
-                Label(L.t("Luego toma ", "Then take ") + transfer.route.linea + " · " + transfer.route.precioTexto,
+                Label(L.t("Luego toma ", "Then take ") + transfer.route.lineaConLetra + " · " + transfer.route.precioTexto,
                       systemImage: "arrow.triangle.swap")
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(L.t("El tiempo incluye una espera estimada para el segundo micro.",
                          "Time includes an estimated wait for the second bus."))
                     .foregroundStyle(Color.onSurfaceVariant)

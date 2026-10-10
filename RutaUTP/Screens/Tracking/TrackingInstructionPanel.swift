@@ -1,8 +1,11 @@
 import SwiftUI
 import MapKit
+import UIKit
 
 struct TrackingInstructionPanel: View {
     let vm: RouteTrackingViewModel
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         // Instrucción principal según estado
@@ -24,6 +27,26 @@ struct TrackingInstructionPanel: View {
                     .lineLimit(1)
             }
             Spacer()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(instruccion)
+        .accessibilityValue(subtitulo)
+        .onChange(of: claveAnuncio) { _, _ in
+            guard voiceOverOn, scenePhase == .active else { return }
+            UIAccessibility.post(notification: .announcement, argument: instruccion + ". " + subtitulo)
+        }
+    }
+
+    /// Solo fases relevantes: cada fix GPS o distancia no interrumpe la lectura.
+    private var claveAnuncio: String {
+        switch vm.estado {
+        case .esperandoGPS: return "gps"
+        case .sinPermiso: return "permiso"
+        case .listo: return "listo"
+        case .enRuta: return "enRuta-\(vm.journeyLeg)"
+        case .fueraDeRuta: return "fuera"
+        case .cercaDestino: return "cerca"
+        case .finalizado: return "fin"
         }
     }
 

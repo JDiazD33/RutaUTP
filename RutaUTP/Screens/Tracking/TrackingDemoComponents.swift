@@ -102,9 +102,9 @@ struct BotonFlotanteMapa: View {
 
                 Image(systemName: icono)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(destacado ? Color.white : Color.onSurface)
+                    .foregroundStyle(destacado ? Color.onPrimaryFill : Color.onSurface)
                     .frame(width: 46, height: 46)
-                    .background(Circle().fill(destacado ? Color.appPrimary
+                    .background(Circle().fill(destacado ? Color.primaryFill
                                                         : Color.surfaceContainerLowest.opacity(0.92)))
                     .overlay(Circle().stroke(Color.onSurface.opacity(0.12), lineWidth: 1))
                     .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 2)
@@ -137,12 +137,12 @@ struct VehiclePopupCard: View {
                     .frame(width: 42, height: 42)
                 Image(systemName: "bus.fill")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
             }
             .overlay(alignment: .top) {
                 Text("L-\(vehiculo.linea)")
                     .font(.system(size: 9, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
                     .background(Capsule().fill(Color.primaryContainer))
@@ -271,10 +271,10 @@ struct ResumenLlegadaCard: View {
             Button(action: onCerrar) {
                 Text(L.t("Terminar", "Done"))
                     .font(.system(size: 15, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Capsule().fill(Color.appPrimary))
+                    .background(Capsule().fill(Color.primaryFill))
             }
             .buttonStyle(.plain)
         }
