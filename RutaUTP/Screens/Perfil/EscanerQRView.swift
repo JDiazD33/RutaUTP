@@ -439,6 +439,9 @@ struct EscanerQRView: View {
     var onPagar: @MainActor (Double) -> Bool
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @Environment(\.scenePhase) private var scenePhase
+    @AccessibilityFocusState(for: .voiceOver) private var enfocarResultado: Bool
     @StateObject private var modelo = EscanerQRModel()
     @State private var mensajePago: String?
 
@@ -461,6 +464,14 @@ struct EscanerQRView: View {
         }
         .task { await modelo.comenzar() }
         .onDisappear { modelo.detener() }
+        .onChange(of: modelo.resultado?.id) { _, id in
+            enfocarResultado = id != nil
+        }
+        .onChange(of: mensajePago) { _, mensaje in
+            guard voiceOverOn, scenePhase == .active, let mensaje else { return }
+            UIAccessibility.post(notification: .announcement, argument: mensaje)
+        }
+        .accessibilityAction(.escape) { dismiss() }
     }
 
     // MARK: - Ventana de escaneo
@@ -516,6 +527,7 @@ struct EscanerQRView: View {
             Text(L.t("Escanear QR", "Scan QR"))
                 .font(.headlineSm)
                 .foregroundStyle(.white)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer(minLength: 0)
 
@@ -581,10 +593,10 @@ struct EscanerQRView: View {
                         Link(destination: url) {
                             Text(L.t("Abrir Ajustes", "Open Settings"))
                                 .font(.bodySmMedium)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.onPrimaryFill)
                                 .frame(maxWidth: .infinity, minHeight: 46)
                                 .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color.appPrimary))
+                                    .fill(Color.primaryFill))
                         }
                         .buttonStyle(.plain)
                     }
@@ -680,6 +692,7 @@ struct EscanerQRView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color.appPrimary)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L.t("Código leído", "Code read"))
@@ -689,6 +702,9 @@ struct EscanerQRView: View {
                         .font(.bodyXs)
                         .foregroundStyle(.onSurfaceVariant)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityFocused($enfocarResultado)
 
                 Spacer(minLength: 0)
             }
@@ -751,7 +767,7 @@ struct EscanerQRView: View {
                             .font(.bodySmMedium)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color.primaryContainer))
@@ -815,6 +831,9 @@ struct EscanerQRView: View {
                 .lineLimit(1)
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(etiqueta)
+        .accessibilityValue(valor)
     }
 }
 

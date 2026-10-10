@@ -43,8 +43,8 @@ struct PerfilCuponesGuardados: View {
                     } label: {
                         Label(L.t("Explorar negocios", "Explore businesses"), systemImage: "map.fill")
                             .font(.subheadline.bold()).padding(.vertical, 10).padding(.horizontal, 16)
-                            .foregroundStyle(.white)
-                            .background(Color.appPrimary, in: Capsule())
+                            .foregroundStyle(.onPrimaryFill)
+                            .background(Color.primaryFill, in: Capsule())
                     }
                     .buttonStyle(.plain)
                 }
