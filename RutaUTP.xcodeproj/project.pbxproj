@@ -32,6 +32,7 @@
 		BC0600000000000000000002 /* DecorativeAnimationScope.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0600000000000000000001 /* DecorativeAnimationScope.swift */; };
 		BC0300000000000000000002 /* ScreenModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000001 /* ScreenModelStore.swift */; };
 		BC0300000000000000000004 /* RouteSummaryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000003 /* RouteSummaryPanel.swift */; };
+		BD5100000000000000000002 /* DestinosGuardadosSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5100000000000000000001 /* DestinosGuardadosSheet.swift */; };
 		BC0300000000000000000006 /* TransitMapCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000005 /* TransitMapCanvas.swift */; };
 		BC0300000000000000000008 /* MapHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000007 /* MapHeaderView.swift */; };
 		BC030000000000000000000A /* MapSearchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0300000000000000000009 /* MapSearchPanel.swift */; };
@@ -209,6 +210,7 @@
 		BC0600000000000000000001 /* DecorativeAnimationScope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecorativeAnimationScope.swift; sourceTree = "<group>"; };
 		BC0300000000000000000001 /* ScreenModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenModelStore.swift; sourceTree = "<group>"; };
 		BC0300000000000000000003 /* RouteSummaryPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteSummaryPanel.swift; sourceTree = "<group>"; };
+		BD5100000000000000000001 /* DestinosGuardadosSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DestinosGuardadosSheet.swift; sourceTree = "<group>"; };
 		BC0300000000000000000005 /* TransitMapCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitMapCanvas.swift; sourceTree = "<group>"; };
 		BC0300000000000000000007 /* MapHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHeaderView.swift; sourceTree = "<group>"; };
 		BC0300000000000000000009 /* MapSearchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapSearchPanel.swift; sourceTree = "<group>"; };
@@ -570,6 +572,7 @@
 			isa = PBXGroup;
 			children = (
 				BC0300000000000000000003 /* RouteSummaryPanel.swift */,
+				BD5100000000000000000001 /* DestinosGuardadosSheet.swift */,
 				BC0300000000000000000005 /* TransitMapCanvas.swift */,
 				BC0300000000000000000007 /* MapHeaderView.swift */,
 				BC0300000000000000000009 /* MapSearchPanel.swift */,
@@ -957,6 +960,7 @@
 				BC0600000000000000000002 /* DecorativeAnimationScope.swift in Sources */,
 				BC0300000000000000000002 /* ScreenModelStore.swift in Sources */,
 				BC0300000000000000000004 /* RouteSummaryPanel.swift in Sources */,
+				BD5100000000000000000002 /* DestinosGuardadosSheet.swift in Sources */,
 				BC0300000000000000000006 /* TransitMapCanvas.swift in Sources */,
 				BC0300000000000000000008 /* MapHeaderView.swift in Sources */,
 				BC030000000000000000000A /* MapSearchPanel.swift in Sources */,
