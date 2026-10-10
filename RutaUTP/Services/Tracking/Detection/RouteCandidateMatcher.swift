@@ -4,8 +4,17 @@ import CoreLocation
 struct DetectionRouteGeometry {
     let id: String
     let linea: String
+    let variante: String
     let shape: [CLLocationCoordinate2D]
     let stops: [CLLocationCoordinate2D]
+
+    var letraTransporte: String {
+        GTFSNombreParser.identificacionTransporte(linea: linea, variante: variante).letra
+    }
+
+    var lineaConLetra: String {
+        GTFSNombreParser.lineaConLetra(linea: linea, variante: variante)
+    }
 
     /// Caja envolvente del recorrido, para descartar rutas lejanas sin recorrer
     /// sus vértices. Ver `RouteCandidateMatcher.closestMatch`.
@@ -15,10 +24,12 @@ struct DetectionRouteGeometry {
         id: String,
         linea: String,
         shape: [CLLocationCoordinate2D],
-        stops: [CLLocationCoordinate2D]
+        stops: [CLLocationCoordinate2D],
+        variante: String = ""
     ) {
         self.id = id
         self.linea = linea
+        self.variante = variante
         self.shape = shape
         self.stops = stops
         self.boundingBox = Self.makeBoundingBox(shape)
@@ -30,6 +41,7 @@ struct DetectionRouteGeometry {
     ) {
         id = route.id
         linea = route.linea
+        variante = route.variante
 
         shape = PolylineMatching.decimate(
             route.shape,
