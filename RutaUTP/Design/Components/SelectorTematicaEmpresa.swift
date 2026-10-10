@@ -1,13 +1,9 @@
 import SwiftUI
 
-/// Logos originales en plantilla: tinta negra en claro y blanca en oscuro.
+/// Resumen compacto: el catálogo completo se abre solo cuando se quiere cambiar.
 struct SelectorTematicaEmpresa: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dynamicTypeSize) private var textSize
-    @ScaledMetric(relativeTo: .body) private var alturaLogo = 30.0
-
+    @State private var mostrarTematicas = false
     private let store = TematicaEmpresaStore.shared
-    private var apilar: Bool { textSize >= .xxxLarge }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -17,107 +13,62 @@ struct SelectorTematicaEmpresa: View {
                 .appTracking(AppTracking.wideLabel)
                 .accessibilityAddTraits(.isHeader)
 
-            Text(L.t("Elige los colores de la aplicación.", "Choose the app's colors."))
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if apilar {
-                VStack(spacing: 10) {
-                    ForEach(TematicaEmpresa.empresas) { opcion in
-                        boton(opcion)
+            Button { mostrarTematicas = true } label: {
+                HStack(spacing: 16) {
+                    LogoEmpresa(empresa: store.seleccion)
+                        .frame(width: 88, height: 32)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(store.seleccion.nombre).font(.body.weight(.semibold))
+                        Text(L.t("Cambiar temática", "Change theme"))
+                            .font(.caption).foregroundStyle(.onSurfaceVariant)
                     }
-                }
-            } else {
-                HStack(alignment: .top, spacing: 10) {
-                    ForEach(TematicaEmpresa.empresas) { opcion in
-                        boton(opcion)
-                    }
-                }
-            }
-
-            Button {
-                elegir(.utp)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: store.seleccion == .utp
-                          ? "checkmark.circle.fill" : "arrow.uturn.backward")
-                        .accessibilityHidden(true)
-                    Text(L.t("Colores originales UTP", "Original UTP colors"))
-                        .fixedSize(horizontal: false, vertical: true)
+                    .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.onSurfaceVariant)
+                        .accessibilityHidden(true)
                 }
-                .font(.bodySm)
-                .foregroundStyle(.appPrimary)
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                .foregroundStyle(.onSurface)
+                .padding(16)
+                .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Temática UTP", "UTP theme"))
-            .accessibilityValue(valorAccesible(.utp))
-            .accessibilityAddTraits(store.seleccion == .utp ? [.isSelected] : [])
-        }
-    }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L.t("Cambiar temática de colores", "Change color theme"))
+            .accessibilityValue(store.seleccion.nombre)
+            .accessibilityHint(L.t("Abre las empresas disponibles y permite elegir tu sede", "Opens available companies and lets you choose your workplace"))
 
-    private func boton(_ opcion: TematicaEmpresa) -> some View {
-        let elegida = store.seleccion == opcion
-        return Button {
-            elegir(opcion)
-        } label: {
-            VStack(spacing: 12) {
-                if let asset = opcion.logoAsset {
-                    Image(asset)
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: alturaLogo)
-                        .accessibilityHidden(true)
+            Text(L.t("Confirma tu empresa y sede para aplicar sus colores y la referencia del mapa.",
+                     "Confirm your company and workplace to apply its colors and map reference."))
+                .font(.bodySm).foregroundStyle(.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if store.seleccion != .utp || !TransporteApp.utpComoReferencia {
+                Button {
+                    AppHaptics.selection()
+                    TransporteApp.usarSedeTrabajo(CatalogoSedesTrabajo.campusUTP)
+                } label: {
+                    HStack(spacing: 12) {
+                        LogoEmpresa(empresa: .utp).frame(width: 64, height: 24)
+                        Text(L.t("Volver a UTP", "Return to UTP"))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        Image(systemName: "arrow.uturn.backward").accessibilityHidden(true)
+                    }
+                    .font(.bodySm).foregroundStyle(.appPrimary)
+                    .frame(minHeight: 44).contentShape(Rectangle())
                 }
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(PaletasEmpresa.paleta(para: opcion).colorMarca)
-                        .frame(width: 6, height: 6)
-                        .accessibilityHidden(true)
-                    Text(opcion.nombre)
-                        .font(.caption.weight(.semibold))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Image(systemName: elegida ? "checkmark.circle.fill" : "circle")
-                        .font(.caption)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(Color.onSurface)
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L.t("Volver a UTP", "Return to UTP"))
+                .accessibilityHint(L.t("Restaura los colores UTP y el campus de Trujillo en el mapa", "Restores UTP colors and the Trujillo campus on the map"))
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 16)
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(elegida ? Color.onSurface : Color.outlineVariant,
-                            lineWidth: elegida ? 2 : 1)
-            }
-            .contentShape(RoundedRectangle(cornerRadius: 12))
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L.t("Temática ", "Theme ") + opcion.nombre)
-        .accessibilityValue(valorAccesible(opcion))
-        .accessibilityHint(L.t("Doble toque para aplicar estos colores.",
-                              "Double tap to apply these colors."))
-        .accessibilityAddTraits(elegida ? [.isSelected] : [])
-    }
-
-    private func valorAccesible(_ opcion: TematicaEmpresa) -> String {
-        store.seleccion == opcion
-            ? L.t("Seleccionada", "Selected")
-            : L.t("No seleccionada", "Not selected")
-    }
-
-    private func elegir(_ opcion: TematicaEmpresa) {
-        guard store.seleccion != opcion else { return }
-        AppHaptics.selection()
-        store.seleccionar(opcion)
+        .sheet(isPresented: $mostrarTematicas) {
+            SelectorTematicasSheet()
+                .seguirTemaForzado()
+                .presentationDetents([.large])
+        }
     }
 }

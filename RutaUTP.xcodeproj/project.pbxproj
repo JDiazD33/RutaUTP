@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BD3000000000000000000002 /* SelectorTematicasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3000000000000000000001 /* SelectorTematicasSheet.swift */; };
 		BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */ = {isa = PBXBuildFile; fileRef = BD3000000000000000000003 /* sedes-empresas-trujillo.json */; };
 		BD2000000000000000000002 /* TransporteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2000000000000000000001 /* TransporteApp.swift */; };
 		BD2000000000000000000004 /* ModoBusesUTPSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2000000000000000000003 /* ModoBusesUTPSection.swift */; };
 		BD2000000000000000000006 /* gtfs-utp in Resources */ = {isa = PBXBuildFile; fileRef = BD2000000000000000000005 /* gtfs-utp */; };
+		BD0900000000000000000006 /* SelectorSedeTrabajo.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0900000000000000000005 /* SelectorSedeTrabajo.swift */; };
 		BD0900000000000000000004 /* SedeTrabajoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0900000000000000000003 /* SedeTrabajoStore.swift */; };
 		BD0900000000000000000002 /* SedeTrabajo.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0900000000000000000001 /* SedeTrabajo.swift */; };
 		BD0500000000000000000002 /* TematicaEmpresa.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0500000000000000000001 /* TematicaEmpresa.swift */; };
@@ -180,10 +182,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BD3000000000000000000001 /* SelectorTematicasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectorTematicasSheet.swift; sourceTree = "<group>"; };
 		BD3000000000000000000003 /* sedes-empresas-trujillo.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Data/sedes-empresas-trujillo.json"; sourceTree = "<group>"; };
 		BD2000000000000000000001 /* TransporteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TransporteApp.swift"; sourceTree = "<group>"; };
 		BD2000000000000000000003 /* ModoBusesUTPSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ModoBusesUTPSection.swift"; sourceTree = "<group>"; };
 		BD2000000000000000000005 /* gtfs-utp */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "gtfs-utp"; sourceTree = "<group>"; };
+		BD0900000000000000000005 /* SelectorSedeTrabajo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectorSedeTrabajo.swift; sourceTree = "<group>"; };
 		BD0900000000000000000003 /* SedeTrabajoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SedeTrabajoStore.swift; sourceTree = "<group>"; };
 		BD0900000000000000000001 /* SedeTrabajo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SedeTrabajo.swift; sourceTree = "<group>"; };
 		BD0500000000000000000001 /* TematicaEmpresa.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TematicaEmpresa.swift; sourceTree = "<group>"; };
@@ -452,7 +456,9 @@
 		0A8004B8300AD9FE004E1676 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				BD3000000000000000000001 /* SelectorTematicasSheet.swift */,
 				BD2000000000000000000003 /* ModoBusesUTPSection.swift */,
+				BD0900000000000000000005 /* SelectorSedeTrabajo.swift */,
 				BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */,
 				BC1200000000000000000001 /* ServiceDeadlineScheduler.swift */,
 				BC0600000000000000000001 /* DecorativeAnimationScope.swift */,
@@ -922,8 +928,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD3000000000000000000002 /* SelectorTematicasSheet.swift in Sources */,
 				BD2000000000000000000002 /* TransporteApp.swift in Sources */,
 				BD2000000000000000000004 /* ModoBusesUTPSection.swift in Sources */,
+				BD0900000000000000000006 /* SelectorSedeTrabajo.swift in Sources */,
 				BD0900000000000000000004 /* SedeTrabajoStore.swift in Sources */,
 				BD0900000000000000000002 /* SedeTrabajo.swift in Sources */,
 				BD0500000000000000000002 /* TematicaEmpresa.swift in Sources */,
