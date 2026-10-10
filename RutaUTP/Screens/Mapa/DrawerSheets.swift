@@ -9,6 +9,7 @@
 //  para que el archivo del drawer contenga el drawer.
 
 import SwiftUI
+import UIKit
 // Estos sheets eran `private` cuando vivían junto al drawer. Ahora cruzan de
 // archivo (el drawer los instancia desde SideDrawer.swift y DatosPersonalesSheet
 // usa SheetHeader), así que son internos al módulo. Siguen sin salir del target.
@@ -179,6 +180,7 @@ struct AjustesSheet: View {
     /// explica el alcance. Es un permiso para publicar tu ubicación, y el
     /// usuario tiene que poder saber qué se envía y cuándo antes de aceptarlo.
     @State private var mostrarConsentimiento = false
+    @State private var mostrarDetallesContribucion = false
 
     var body: some View {
         ScrollView {
@@ -200,6 +202,8 @@ struct AjustesSheet: View {
 
                 // La temática es independiente del modo claro/oscuro.
                 SelectorTematicaEmpresa()
+
+                SelectorSedeTrabajo()
 
                 // Contribución asociada a la cuenta de instalación y al viaje.
                 VStack(alignment: .leading, spacing: 8) {
@@ -228,29 +232,15 @@ struct AjustesSheet: View {
                     .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
                     .accessibilityHint(TextoConsentimientoContribucion.pistaAccesibilidad)
 
-                    Text(!trackingCoordinator.isPublisherConfigured
-                         ? L.t("La contribución no está disponible porque esta instalación no tiene configurado el canal MQTT.",
-                               "Contribution is unavailable because MQTT is not configured for this installation.")
-                         : trackingCoordinator.isEnabled
-                             ? L.t("Estás contribuyendo. El estado actual aparece en la tarjeta de tu viaje, en la parte inferior del mapa.",
-                                   "You are contributing. The current status appears in your trip card at the bottom of the map.")
-                             : TextoConsentimientoContribucion.explicacion)
-                        .font(.bodyXs)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                    TextoContribucionJustificado(texto: descripcionContribucion, color: .onSurfaceVariant)
                         .frame(maxWidth: .infinity)
 
-                    // El alcance también debe poder consultarse si el usuario
-                    // ya había activado la contribución en una versión anterior.
-                    if trackingCoordinator.isPublisherConfigured && trackingCoordinator.isEnabled {
-                        Text(TextoConsentimientoContribucion.explicacion)
-                            .font(.bodyXs)
-                            .foregroundStyle(.onSurfaceVariant)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity)
+                    Button(L.t("Ver detalles", "View details")) {
+                        mostrarDetallesContribucion = true
                     }
+                    .font(.bodyXsMedium)
+                    .foregroundStyle(.appPrimary)
+                    .accessibilityHint(L.t("Muestra qué datos se envían y cuándo", "Shows which data is sent and when"))
                 }
 
                 Spacer()
@@ -275,6 +265,25 @@ struct AjustesSheet: View {
             // no hace con la configuración actual.
             Text(TextoConsentimientoContribucion.confirmacion)
         }
+        .alert(L.t("Contribución de ubicaciones", "Location contribution"),
+               isPresented: $mostrarDetallesContribucion) {
+            Button(L.t("Entendido", "OK"), role: .cancel) {}
+        } message: {
+            Text(TextoConsentimientoContribucion.explicacion)
+        }
+    }
+
+    private var descripcionContribucion: String {
+        if !trackingCoordinator.isPublisherConfigured {
+            return L.t("La ayuda con ubicaciones estará disponible cuando se configure el servicio de esta instalación.",
+                       "Location sharing will be available once the service is configured for this installation.")
+        }
+        if trackingCoordinator.isEnabled {
+            return L.t("Estás ayudando con ubicaciones. Consulta el estado de tu viaje en la tarjeta inferior del mapa.",
+                       "You are sharing locations. Check your trip status in the card at the bottom of the map.")
+        }
+        return L.t("Al confirmar tu viaje, ayudas a ubicar buses. Solo se envían datos con la app abierta.",
+                   "After confirming your trip, you help locate buses. Data is sent only while the app is open.")
     }
 
     private enum TemaOpcion { case light, dark }
@@ -307,6 +316,41 @@ struct AjustesSheet: View {
             .animation(.easeInOut(duration: 0.2), value: isSelected)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Apariencia ", "Appearance ") + label)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// Resumen compacto; la explicación completa se consulta mediante «Ver detalles».
+private struct TextoContribucionJustificado: UIViewRepresentable {
+    let texto: String
+    let color: Color
+
+    func makeUIView(context: Context) -> UILabel {
+        let label = UILabel()
+        label.numberOfLines = 3
+        label.textAlignment = .justified
+        label.lineBreakMode = .byTruncatingTail
+        label.adjustsFontForContentSizeCategory = true
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return label
+    }
+
+    func updateUIView(_ uiView: UILabel, context: Context) {
+        uiView.text = texto
+        uiView.font = UIFont.preferredFont(forTextStyle: .footnote, compatibleWith: uiView.traitCollection)
+        uiView.textColor = UIColor(color).resolvedColor(with: UITraitCollection(
+            userInterfaceStyle: context.environment.colorScheme == .dark ? .dark : .light
+        ))
+        uiView.accessibilityLabel = texto
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UILabel, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0 else { return nil }
+        let size = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: ceil(size.height))
     }
 }
 
@@ -326,8 +370,8 @@ struct SoporteSheet: View {
              "In the Saved screen, tap + Add and fill in the details.")),
         ("location.fill",
          L.t("¿Cómo cambio mi destino?", "How do I change my destination?"),
-         L.t("En el mapa, toca un chip (UTP, Centro, Huanchaco o tus lugares guardados) para cambiar rápido.",
-             "On the map, tap a chip (UTP, Downtown, Huanchaco or your saved places) to switch quickly.")),
+         L.t("En el mapa, toca un chip (tu sede, Centro, Huanchaco o tus lugares guardados) para cambiar rápido. Elige tu sede en Ajustes.",
+             "On the map, tap a chip (your workplace, Downtown, Huanchaco or your saved places) to switch quickly. Choose your workplace in Settings.")),
         ("arrow.triangle.2.circlepath",
          L.t("¿Cómo actualizo una ruta?", "How do I refresh a route?"),
          L.t("Las rutas se actualizan automáticamente cada pocos segundos.",
@@ -350,10 +394,10 @@ struct SoporteSheet: View {
                         Text(L.t("Contactar Soporte Técnico", "Contact Technical Support"))
                     }
                     .font(.headlineSm)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background(
-                        RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary)
+                        RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill)
                     )
                 }
                 .buttonStyle(.plain)
@@ -410,14 +454,14 @@ struct SobreNosotrosSheet: View {
                     ZStack {
                         Circle()
                             .fill(LinearGradient(
-                                colors: [Color.appPrimary, Color.primaryContainer, Color.tertiary],
+                                colors: [Color.primaryFill, Color.primaryContainer, Color.primaryGradientEnd],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ))
                             .frame(width: 96, height: 96)
                         Image(systemName: "bus.fill")
                             .font(.system(size: 44, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.onPrimaryFill)
                     }
                     Text("Ruta UTP Trujillo")
                         .font(.headlineMd)
@@ -437,8 +481,8 @@ struct SobreNosotrosSheet: View {
                         .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
                         .appTracking(AppTracking.wideLabel)
-                    Text(L.t("Aplicación prototipo que ayuda a los estudiantes de la UTP Trujillo a encontrar rutas de micros y combis hacia el campus. Incluye lugares guardados, reportes comunitarios y seguimiento en tiempo real.",
-                             "Prototype app that helps UTP Trujillo students find bus and van routes to campus. It includes saved places, community reports and live tracking."))
+                    Text(L.t("Aplicación prototipo de movilidad en Trujillo para estudiantes y colaboradores. Permite elegir una sede de trabajo, buscar rutas de micros y combis, guardar lugares y consultar reportes comunitarios y seguimiento.",
+                             "Prototype mobility app in Trujillo for students and employees. Choose a workplace, find bus and van routes, save places, and view community reports and tracking."))
                         .font(.bodyMd)
                         .foregroundStyle(.onSurface)
                 }
@@ -523,11 +567,11 @@ struct CerrarSesionSheet: View {
                 } label: {
                     Text(L.t("Sí, cerrar sesión", "Yes, log out"))
                         .font(.headlineSm)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.onPrimaryFill)
                         .frame(maxWidth: .infinity, minHeight: 52)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.appPrimary)
+                                .fill(Color.primaryFill)
                         )
                 }
                 .buttonStyle(.plain)

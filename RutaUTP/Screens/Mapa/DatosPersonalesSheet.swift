@@ -91,9 +91,9 @@ private struct ParentescoPickerSheet: View {
             } label: {
                 Text(L.t("Aceptar", "OK"))
                     .font(.headlineSm)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Aceptar parentesco", "Confirm relationship"))
@@ -177,7 +177,7 @@ struct DatosPersonalesSheet: View {
                         ZStack {
                             Circle()
                                 .fill(LinearGradient(
-                                    colors: [Color.appPrimary, Color.primaryContainer, Color.tertiary],
+                                    colors: [Color.primaryFill, Color.primaryContainer, Color.primaryGradientEnd],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ))
@@ -196,7 +196,7 @@ struct DatosPersonalesSheet: View {
                             } else {
                                 Text("JD")
                                     .font(.headlineMd)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.onPrimaryFill)
                                     .accessibilityHidden(true)
                             }
                         }
@@ -528,9 +528,9 @@ struct DatosPersonalesSheet: View {
                         } label: {
                             Text(L.t("Guardar", "Save"))
                                 .font(.bodyMdMedium)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.onPrimaryFill)
                                 .frame(maxWidth: .infinity, minHeight: 48)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
+                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(L.t("Guardar contacto de emergencia", "Save emergency contact"))

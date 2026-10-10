@@ -36,6 +36,7 @@ struct SideDrawer: View {
     /// (ProfileImageStore). Se recarga al abrir el drawer y al cerrar el sheet.
     @State private var fotoPerfil: UIImage? = nil
     @State private var revisionFoto = UUID()
+    @AccessibilityFocusState(for: .voiceOver) private var enfocarMenu: Bool
 
     private let drawerWidth: CGFloat = 300
 
@@ -47,8 +48,7 @@ struct SideDrawer: View {
                 .ignoresSafeArea()
                 .onTapGesture { close() }
                 .animation(.easeInOut(duration: 0.28), value: isOpen)
-                .accessibilityLabel(L.t("Cerrar menú", "Close menu"))
-                .accessibilityHint(L.t("Doble toque para cerrar el panel lateral", "Double tap to close the side panel"))
+                .accessibilityHidden(true)
 
             // Panel
             drawerContent
@@ -72,6 +72,9 @@ struct SideDrawer: View {
                         }
                 )
         }
+        .accessibilityHidden(!isOpen)
+        .accessibilityAction(.escape) { close() }
+        .onAppear { enfocarMenu = isOpen }
         // Sheets para cada item del menu
         .sheet(item: $activeSheet) { item in
             sheetContent(for: item)
@@ -89,6 +92,7 @@ struct SideDrawer: View {
             fotoPerfil = foto
         }
         .onChange(of: isOpen) { _, abierto in
+            enfocarMenu = abierto
             if abierto { revisionFoto = UUID() }
         }
         .onChange(of: activeSheet) { _, sheet in
@@ -141,7 +145,7 @@ struct SideDrawer: View {
                         } else {
                             Text("JD")
                                 .font(.headlineMd)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.onPrimaryFill)
                         }
                     }
                     .accessibilityLabel(L.t("Foto de perfil", "Profile photo"))
@@ -168,17 +172,20 @@ struct SideDrawer: View {
 
                 Text("Ruta UTP Trujillo")
                     .font(.headlineSm)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .padding(.top, 6)
                 Text(L.t("Menú principal", "Main menu"))
                     .font(.bodyXs)
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(.onPrimaryFill.opacity(0.75))
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityFocused($enfocarMenu)
+                    .accessibilityAction(named: Text(L.t("Cerrar menú", "Close menu"))) { close() }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 48)
             .padding(.bottom, 20)
             .padding(.horizontal, 24)
-            .background(Color.appPrimary)
+            .background(Color.primaryFill)
 
             // Items
             VStack(spacing: 0) {
