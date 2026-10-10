@@ -1,4 +1,4 @@
-// Carné digital de muestra. No acredita identidad, matrícula ni acceso al campus.
+// Carné digital de muestra de la empresa elegida, sin validación institucional.
 // Código de barras generado localmente con CoreImage, sin validación institucional.
 
 import SwiftUI
@@ -7,10 +7,12 @@ import CoreImage.CIFilterBuiltins
 
 struct CarneDigitalView: View {
     var nombre: String
+    var empresa: TematicaEmpresa = .utp
 
-
-    // Identificador ficticio del prototipo (no proviene de la universidad).
-    private let codigoUTP = "1234567"
+    // Conserva el código de muestra UTP; las empresas usan una marca de demo.
+    private var codigoMuestra: String {
+        empresa == .utp ? "1234567" : "DEMO-" + empresa.rawValue.uppercased()
+    }
 
     // Foto de perfil: ProfileImageStore es la fuente única (drawer, perfil y carné)
     @State private var fotoPerfil: UIImage? = nil
@@ -35,7 +37,7 @@ struct CarneDigitalView: View {
 
                 avisoDemostracion
 
-                marcaUniversidad
+                marcaInstitucion
 
             }
             .padding(20)
@@ -44,7 +46,7 @@ struct CarneDigitalView: View {
         .presentationDragIndicator(.visible)
         .onAppear {
             if codigoBarras == nil {
-                codigoBarras = generarCodigoBarras(desde: codigoUTP)
+                codigoBarras = generarCodigoBarras(desde: codigoMuestra)
             }
         }
         .task {
@@ -79,9 +81,16 @@ struct CarneDigitalView: View {
                     .foregroundStyle(.appPrimary)
             }
             .accessibilityHidden(true)
-            Text(L.t("Carné Digital · muestra", "Digital ID · sample"))
-                .font(.headlineMd)
-                .foregroundStyle(.onSurface)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L.t("Carné Digital · muestra", "Digital ID · sample"))
+                    .font(.headlineMd)
+                    .foregroundStyle(.onSurface)
+                if empresa != .utp {
+                    Text(empresa.nombre)
+                        .font(.bodySm)
+                        .foregroundStyle(.onSurfaceVariant)
+                }
+            }
             Spacer()
         }
         .accessibilityElement(children: .combine)
@@ -117,16 +126,19 @@ struct CarneDigitalView: View {
                 .frame(height: 1)
                 .accessibilityHidden(true)
 
-            // Código UTP
+            // Código ficticio de la institución seleccionada.
             VStack(alignment: .leading, spacing: 6) {
                 Text(L.t("CÓDIGO DE MUESTRA", "SAMPLE CODE"))
                     .font(.labelCapsMd)
                     .foregroundStyle(.onSurfaceVariant)
                     .appTracking(AppTracking.wideLabelMd)
-                Text(codigoUTP)
-                    .font(.system(size: 26, weight: .semibold))
+                Text(codigoMuestra)
+                    .font(empresa == .utp ? .system(size: 26, weight: .semibold)
+                                         : .system(.title3, weight: .semibold))
                     .foregroundStyle(.onSurface)
-                    .tracking(3)
+                    .tracking(empresa == .utp ? 3 : 1)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 18)
@@ -141,7 +153,9 @@ struct CarneDigitalView: View {
 
             // Indicación + código de barras
             VStack(spacing: 12) {
-                Text(L.t("Código de demostración. No permite ingresar al campus.", "Demo code. It does not grant campus access."))
+                Text(empresa == .utp
+                     ? L.t("Código de demostración. No permite ingresar al campus.", "Demo code. It does not grant campus access.")
+                     : L.t("Código de demostración de \(empresa.nombre). No permite acceder a sus instalaciones.", "\(empresa.nombre) demo code. It does not grant access to company facilities."))
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .multilineTextAlignment(.center)
@@ -154,7 +168,7 @@ struct CarneDigitalView: View {
                         .frame(maxWidth: .infinity)
                         .padding(10)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white))
-                        .accessibilityLabel(L.t("Código de barras de muestra, sin validez: ", "Sample barcode, not valid: ") + codigoUTP)
+                        .accessibilityLabel(L.t("Código de barras de muestra, sin validez: ", "Sample barcode, not valid: ") + codigoMuestra)
                 }
             }
             .padding(.horizontal, 16)
@@ -162,7 +176,9 @@ struct CarneDigitalView: View {
             .accessibilityElement(children: .contain)
 
             // Aviso integrado en la tarjeta, también visible en una captura.
-            Text(L.t("MUESTRA · SIN VALIDEZ UNIVERSITARIA", "SAMPLE · NOT A VALID UNIVERSITY ID"))
+            Text(empresa == .utp
+                 ? L.t("MUESTRA · SIN VALIDEZ UNIVERSITARIA", "SAMPLE · NOT A VALID UNIVERSITY ID")
+                 : L.t("MUESTRA · SIN VALIDEZ CORPORATIVA", "SAMPLE · NOT A VALID COMPANY ID"))
                 .font(.labelCapsSm)
                 .foregroundStyle(.white)
                 .appTracking(AppTracking.wideLabelMd)
@@ -181,14 +197,15 @@ struct CarneDigitalView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L.t("Carné digital de muestra de ", "Sample digital ID of ") + "\(nombre)" + L.t(", código ficticio ", ", sample code ") + codigoUTP)
+        .accessibilityLabel(L.t("Carné digital de muestra de ", "Sample digital ID of ") + nombre
+            + ", " + empresa.nombre + L.t(", código ficticio ", ", sample code ") + codigoMuestra)
     }
 
     // MARK: - Foto circular con acento de la temática
     private var fotoConCamara: some View {
         ZStack {
             Circle()
-                .fill(Color.appPrimary)
+                .fill(Color.primaryFill)
                 .frame(width: 84, height: 84)
                 .overlay(Circle().stroke(Color.white, lineWidth: 3))
             if let foto = fotoPerfil {
@@ -202,7 +219,7 @@ struct CarneDigitalView: View {
             } else {
                 Text(iniciales(nombre))
                     .font(.headlineMd)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .accessibilityHidden(true)
             }
         }
@@ -236,9 +253,12 @@ struct CarneDigitalView: View {
             Text("⚠️")
                 .font(.system(size: 24))
                 .accessibilityHidden(true)
-            Text(L.t(
+            Text(empresa == .utp ? L.t(
                 "Este carné es una muestra con un código ficticio. El nombre y la foto no verifican tu identidad ni tu matrícula. No es una credencial emitida por la universidad y no permite ingresar al campus.",
                 "This ID is a sample with a fictional code. The name and photo do not verify your identity or enrollment. It is not a university-issued credential and does not grant campus access."
+            ) : L.t(
+                "Este carné es una muestra de \(empresa.nombre) con un código ficticio. El nombre y la foto no verifican tu identidad ni tu vínculo laboral. No es una credencial emitida por la empresa y no permite acceder a sus instalaciones.",
+                "This \(empresa.nombre) ID is a sample with a fictional code. The name and photo do not verify your identity or employment. It is not a company-issued credential and does not grant access to its facilities."
             ))
             .font(.bodyXsMedium)
             .foregroundStyle(onMostaza)
@@ -251,40 +271,39 @@ struct CarneDigitalView: View {
                 .fill(mostaza)
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(L.t(
+        .accessibilityLabel(empresa == .utp ? L.t(
             "Carné de muestra con código ficticio. No verifica identidad ni matrícula, no está emitido por la universidad y no permite ingresar al campus.",
             "Sample ID with a fictional code. It does not verify identity or enrollment, is not university-issued and does not grant campus access."
-        ))
+        ) : L.t("Carné de muestra de \(empresa.nombre), con código ficticio. No verifica identidad ni vínculo laboral, no está emitido por la empresa y no permite acceder a sus instalaciones.",
+                 "Sample \(empresa.nombre) ID with a fictional code. It does not verify identity or employment, is not company-issued and does not grant access to its facilities."))
     }
 
-    // MARK: - Pie: marca de la universidad
+    // MARK: - Pie: marca de la institución
 
-    /// Marca de la universidad al pie del carné.
-    ///
-    /// El recurso es la marca de tres cuadros (U · T · P) y **no** lleva
-    /// `template-rendering-intent`: con «template» se dibujaba como una silueta
-    /// plana y las letras blancas desaparecían dentro de una mancha oscura. Por
-    /// eso tampoco se usa ya `foregroundStyle`: el logo trae su propio color.
-    ///
-    /// Va sobre placa blanca porque la marca es oscura sobre claro; así se lee
-    /// igual en tema claro y en oscuro, donde el carné es negro. Como el archivo
-    /// no trae texto, el nombre lo pone la interfaz debajo.
-    private var marcaUniversidad: some View {
+    /// UTP conserva su marca original sobre placa blanca. Las otras empresas
+    /// muestran su propio logo, con tinta adaptativa para claro y oscuro.
+    private var marcaInstitucion: some View {
         VStack(spacing: 12) {
-            Image("UTPLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: 150)
-                .padding(.vertical, 10)
-                .padding(.horizontal, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.white)
-                )
-                .accessibilityHidden(true)
+            if empresa == .utp {
+                Image("UTPLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 150)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white)
+                    )
+                    .accessibilityHidden(true)
+            } else {
+                LogoEmpresa(empresa: empresa)
+                    .frame(height: 48)
+                    .frame(maxWidth: 180)
+                    .padding(.vertical, 10)
+            }
 
-            Text(L.t("UNIVERSIDAD TECNOLÓGICA DEL PERÚ",
-                     "UNIVERSIDAD TECNOLÓGICA DEL PERÚ"))
+            Text(empresa == .utp ? "UNIVERSIDAD TECNOLÓGICA DEL PERÚ" : empresa.nombre)
                 .font(.labelCapsSm)
                 .foregroundStyle(.onSurface)
                 .appTracking(AppTracking.wideLabel)
@@ -303,8 +322,7 @@ struct CarneDigitalView: View {
                 )
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(L.t("Universidad Tecnológica del Perú",
-                                "Universidad Tecnológica del Perú"))
+        .accessibilityLabel(empresa == .utp ? "Universidad Tecnológica del Perú" : empresa.nombre)
     }
 
     // MARK: - Helpers

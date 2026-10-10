@@ -4,6 +4,7 @@ import UIKit
 
 struct CarnetScannerView: View {
     @Environment(\.dismiss) private var dismiss
+    var empresa: TematicaEmpresa = .utp
     var onCapture: () -> Void
     @State private var foto: UIImage?
     @State private var picker: Fuente?
@@ -80,7 +81,9 @@ struct CarnetScannerView: View {
                     }
                     .tint(Color.appPrimary)
                     .disabled(guardando)
-                    Text(L.t("Puedes cambiar la foto cuando quieras. Se conserva al cerrar la app. Guardarla no verifica tu identidad universitaria.", "You can replace the photo anytime. It stays saved after closing the app. Saving it does not verify your university identity."))
+                    Text(empresa == .utp
+                        ? L.t("Puedes cambiar la foto cuando quieras. Se conserva al cerrar la app. Guardarla no verifica tu identidad universitaria.", "You can replace the photo anytime. It stays saved after closing the app. Saving it does not verify your university identity.")
+                        : L.t("Puedes cambiar la foto cuando quieras. Se conserva al cerrar la app y pertenece a tu carnet de \(empresa.nombre). Guardarla no verifica tu identidad ni tu vínculo laboral.", "You can replace the photo anytime. It stays saved after closing the app and belongs to your \(empresa.nombre) card. Saving it does not verify your identity or employment."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -88,7 +91,7 @@ struct CarnetScannerView: View {
                 .padding(20)
             }
             .background(Color.appSurface)
-            .navigationTitle(L.t("Carnet Universitario", "University Card"))
+            .navigationTitle(CarnetPerfil.foto.titulo(para: empresa))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -98,7 +101,7 @@ struct CarnetScannerView: View {
         }
         .task {
             guard foto == nil else { return }
-            let stored = await CarnetImageStore.load()
+            let stored = await CarnetImageStore.load(empresa: empresa)
             guard !Task.isCancelled, foto == nil else { return }
             foto = stored
         }
@@ -180,7 +183,7 @@ struct CarnetScannerView: View {
             // de disco que no debe bloquear la interfaz. Antes se hacía con
             // GCD + Result, mezclado con el async/await del resto del módulo.
             let guardada = await Task.detached(priority: .userInitiated) {
-                try? CarnetImageStore.save(image)
+                try? CarnetImageStore.save(image, empresa: empresa)
             }.value
 
             guardando = false
@@ -346,10 +349,31 @@ private struct VisorFotoCarnet: View {
                 )
                 .frame(width: geo.size.width, height: geo.size.height)
                 .accessibilityLabel(L.t("Foto del carné", "Card photo"))
-                .accessibilityHint(L.t(
-                    "Pellizca para ampliar. Doble toque para volver a ver el carné completo.",
-                    "Pinch to zoom. Double tap to fit the whole card again."
-                ))
+                .accessibilityValue(L.t("Ampliación \(Int(zoom * 100)) por ciento", "Zoom \(Int(zoom * 100)) percent"))
+                .accessibilityHint(L.t("Usa Acciones para acercar, alejar o restablecer la foto", "Use Actions to zoom in, zoom out or reset the photo"))
+                .accessibilityActions {
+                    Button(L.t("Acercar", "Zoom in")) {
+                        zoom = min(Self.zoomMaximo, zoom + 0.5)
+                    }
+                    Button(L.t("Alejar", "Zoom out")) {
+                        zoom = max(1, zoom - 0.5)
+                        desplazamiento = limitar(desplazamiento, marco: marco,
+                            tamano: tamanoDibujado(marco: marco, escala: escalaBase * zoom))
+                    }
+                    Button(L.t("Ver foto completa", "Fit whole photo"), action: reiniciar)
+                    Button(L.t("Mover foto arriba", "Move photo up")) {
+                        desplazamiento = limitar(CGSize(width: desplazamiento.width, height: desplazamiento.height - 20), marco: marco, tamano: tamanoDibujado(marco: marco, escala: escalaBase * zoom))
+                    }
+                    Button(L.t("Mover foto abajo", "Move photo down")) {
+                        desplazamiento = limitar(CGSize(width: desplazamiento.width, height: desplazamiento.height + 20), marco: marco, tamano: tamanoDibujado(marco: marco, escala: escalaBase * zoom))
+                    }
+                    Button(L.t("Mover foto a la izquierda", "Move photo left")) {
+                        desplazamiento = limitar(CGSize(width: desplazamiento.width - 20, height: desplazamiento.height), marco: marco, tamano: tamanoDibujado(marco: marco, escala: escalaBase * zoom))
+                    }
+                    Button(L.t("Mover foto a la derecha", "Move photo right")) {
+                        desplazamiento = limitar(CGSize(width: desplazamiento.width + 20, height: desplazamiento.height), marco: marco, tamano: tamanoDibujado(marco: marco, escala: escalaBase * zoom))
+                    }
+                }
                 .overlay(alignment: .bottom) {
                     // El botón solo aparece ampliado: es la salida rápida a la
                     // vista completa, que es el estado por defecto.
@@ -427,10 +451,26 @@ struct EncuadreFotoView: View {
                                     desplazamiento = limitar(desplazamiento, marco: marco, escala: escalaBase(marco) * zoom)
                                 }))
                         .accessibilityLabel(L.t("Vista previa del recorte", "Crop preview"))
+                        .accessibilityValue(L.t("Ampliación \(Int(zoom * 100)) por ciento", "Zoom \(Int(zoom * 100)) percent"))
+                        .accessibilityActions {
+                            Button(L.t("Mover foto arriba", "Move photo up")) {
+                                desplazamiento = limitar(CGSize(width: desplazamiento.width, height: desplazamiento.height - 20), marco: marco, escala: escalaBase(marco) * zoom)
+                            }
+                            Button(L.t("Mover foto abajo", "Move photo down")) {
+                                desplazamiento = limitar(CGSize(width: desplazamiento.width, height: desplazamiento.height + 20), marco: marco, escala: escalaBase(marco) * zoom)
+                            }
+                            Button(L.t("Mover foto a la izquierda", "Move photo left")) {
+                                desplazamiento = limitar(CGSize(width: desplazamiento.width - 20, height: desplazamiento.height), marco: marco, escala: escalaBase(marco) * zoom)
+                            }
+                            Button(L.t("Mover foto a la derecha", "Move photo right")) {
+                                desplazamiento = limitar(CGSize(width: desplazamiento.width + 20, height: desplazamiento.height), marco: marco, escala: escalaBase(marco) * zoom)
+                            }
+                        }
                         VStack {
                             Label(L.t("Ampliación", "Zoom"), systemImage: "plus.magnifyingglass")
                             Slider(value: $zoom, in: 1...6)
                                 .accessibilityLabel(L.t("Ampliación", "Zoom"))
+                                .accessibilityValue(L.t("\(Int(zoom * 100)) por ciento", "\(Int(zoom * 100)) percent"))
                         }
                         Button(L.t("Restablecer encuadre", "Reset framing")) {
                             zoom = 1

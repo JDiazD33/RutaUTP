@@ -1,26 +1,28 @@
 import UIKit
 
-/// Foto del carné físico, independiente de la foto de perfil.
+/// Foto del carné físico por empresa, independiente de la foto de perfil.
 enum CarnetImageStore {
-    private static var url: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("utp-card.jpg")
+    private static func url(empresa: TematicaEmpresa) -> URL {
+        // Conservar el archivo original de UTP: no se migra ni se reemplaza.
+        let archivo = empresa == .utp ? "utp-card.jpg" : "company-card-\(empresa.rawValue).jpg"
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(archivo)
     }
 
-    static func load() async -> UIImage? {
+    static func load(empresa: TematicaEmpresa = .utp) async -> UIImage? {
         await Task.detached(priority: .userInitiated) {
-            UIImage(contentsOfFile: url.path)
+            UIImage(contentsOfFile: url(empresa: empresa).path)
         }.value
     }
 
     /// Conserva la misma validación que load, sin retener la imagen en Perfil.
-    static func hasStoredImage() async -> Bool {
+    static func hasStoredImage(empresa: TematicaEmpresa = .utp) async -> Bool {
         await Task.detached(priority: .userInitiated) {
-            UIImage(contentsOfFile: url.path) != nil
+            UIImage(contentsOfFile: url(empresa: empresa).path) != nil
         }.value
     }
 
-    static func save(_ image: UIImage) throws -> UIImage {
+    static func save(_ image: UIImage, empresa: TematicaEmpresa = .utp) throws -> UIImage {
         guard image.size.width > 0, image.size.height > 0 else {
             throw CocoaError(.fileWriteUnknown)
         }
@@ -37,7 +39,7 @@ enum CarnetImageStore {
         }
         guard let data = normalized.jpegData(compressionQuality: 0.9),
               let stored = UIImage(data: data) else { throw CocoaError(.fileWriteUnknown) }
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        try data.write(to: url(empresa: empresa), options: [.atomic, .completeFileProtection])
         return stored
     }
 }
