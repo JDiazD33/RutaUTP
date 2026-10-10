@@ -55,6 +55,8 @@ struct BusCard: View {
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(linea + ", " + empresa)
+        .accessibilityValue([minutos, tipo, placa].filter { !$0.isEmpty }.joined(separator: ". "))
     }
 }
-

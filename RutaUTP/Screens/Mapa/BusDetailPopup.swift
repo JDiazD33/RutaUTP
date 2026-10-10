@@ -45,6 +45,8 @@ struct BusDetailPopup: View {
                         .foregroundStyle(.onSurfaceVariant.opacity(0.6))
                 }
                 .buttonStyle(.plain)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel(L.t("Cerrar detalle del micro", "Close bus details"))
             }
 
             if bus.fuente == .real {
@@ -88,6 +90,8 @@ struct BusDetailPopup: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(bus.color.opacity(0.35), lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L.t("Detalle de la línea ", "Details for line ") + bus.linea)
+        .accessibilityAction(.escape, onClose)
     }
 }
-

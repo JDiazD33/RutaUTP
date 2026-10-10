@@ -17,7 +17,8 @@ struct NearbyTransportPanel<ReportButton: View>: View {
 
                 if !panelColapsado {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(L.signable("mapa.cercanos", "Transportes cercanos", "Nearby transport"))
+                        Text(vm.busesUTPActivos ? L.t("Buses de la UTP", "UTP buses")
+                             : L.signable("mapa.cercanos", "Transportes cercanos", "Nearby transport"))
                             .font(.system(size: 15, weight: .heavy))
                             .foregroundStyle(.onSurface)
                             .seniable("mapa.cercanos")
@@ -87,10 +88,12 @@ struct NearbyTransportPanel<ReportButton: View>: View {
                     } else if vm.tarjetasDelPanel.isEmpty {
                         HStack(spacing: 8) {
                             Image(systemName: "bus")
-                                .foregroundStyle(.onSurfaceVariant)
+                                .foregroundStyle(vm.busesUTPActivos ? Color.red : Color.onSurfaceVariant)
+                                .accessibilityHidden(true)
                             Text(vm.mensajePanelSinBuses)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(.onSurfaceVariant)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(14)
                         .frame(width: 256, alignment: .leading)
@@ -100,21 +103,24 @@ struct NearbyTransportPanel<ReportButton: View>: View {
                         )
                     } else {
                         ForEach(vm.tarjetasDelPanel) { bus in
-                            BusCard(
-                                linea: L.t("LÍNEA", "LINE") + " \(bus.linea)",
-                                empresa: bus.empresa,
-                                minutos: bus.etiquetaLlegada,
-                                tipo: bus.tipo,
-                                placa: bus.ramalTexto,
-                                colorLinea: bus.color
-                            )
-                            .frame(height: 100)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                            Button {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                     vm.seleccionarBus(id: bus.id)
                                 }
+                            } label: {
+                                BusCard(
+                                    linea: L.t("LÍNEA", "LINE") + " \(bus.linea)",
+                                    empresa: bus.empresa,
+                                    minutos: bus.etiquetaLlegada,
+                                    tipo: bus.tipo,
+                                    placa: bus.ramalTexto,
+                                    colorLinea: bus.color
+                                )
+                                .frame(height: 100)
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityHint(L.t("Muestra información de esta línea", "Shows information for this line"))
                         }
                     }
                 }

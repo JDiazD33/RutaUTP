@@ -23,6 +23,7 @@ struct RouteSummaryPanel: View {
                         .frame(width: 32, height: 32)
                 }
                 .accessibilityLabel(L.t("Quitar ruta", "Clear route"))
+                .frame(minWidth: 44, minHeight: 44)
             }
             .font(.system(size: 13, weight: .semibold))
             if let installed = vm.itinerarioInstalado {
@@ -30,15 +31,17 @@ struct RouteSummaryPanel: View {
                 let metrics = installed.metrics
                 Label(L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.walkToBoardMeters))) m · " + plan.board.nombre,
                       systemImage: "figure.walk")
-                Label(L.t("Toma la línea ", "Take line ") + plan.route.linea + " · " + plan.route.precioTexto,
+                Label(L.t("Toma la línea ", "Take line ") + plan.route.lineaConLetra + " · " + plan.route.precioTexto,
                       systemImage: "bus.fill")
+                    .fixedSize(horizontal: false, vertical: true)
                 if let transfer = plan.transfer {
                     Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
                     Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
                     Label(L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.transferWalkMeters))) m · " + transfer.board.nombre,
                           systemImage: "figure.walk")
-                    Label(L.t("Luego toma ", "Then take ") + transfer.route.linea + " · " + transfer.route.precioTexto,
+                    Label(L.t("Luego toma ", "Then take ") + transfer.route.lineaConLetra + " · " + transfer.route.precioTexto,
                           systemImage: "arrow.triangle.swap")
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(L.t("El tiempo incluye una espera estimada para el segundo micro.",
                              "Time includes an estimated wait for the second bus."))
                         .foregroundStyle(Color.onSurfaceVariant)
@@ -65,6 +68,8 @@ struct RouteSummaryPanel: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L.t("Guía de la ruta", "Route guide"))
     }
 
     /// Acceso voluntario que permanece disponible aunque se cierre el aviso.
