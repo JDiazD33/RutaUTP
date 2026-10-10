@@ -43,70 +43,133 @@ struct TripContributionPanel: View {
     let locationService: LocationServiceProtocol
     var statusMessage: String? = nil
     var statusColor: Color = .secondary
-    @State private var showTrip = false
+    var onEndTrip: () -> Void = {}
+    @State private var showDetails = false
+    @State private var choosingLine = false
+    @State private var confirmEndTrip = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let route = coordinator.selectedTripRoute {
-                HStack {
-                    Label(L.t("Tu Transporte Público: línea ", "Your public transport: line ") + route.linea, systemImage: "bus.fill")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Button(L.t("Ya bajé", "I've got off")) { coordinator.endTrip() }
-                        .buttonStyle(.bordered)
-                }
-                Text(coordinator.confirmedLine != nil
-                     ? L.t("Estás ayudando en esta línea. Mantén la app abierta.",
-                           "You're helping on this line. Keep the app open.")
-                     : L.t("Esperando detectar movimiento compatible con tu línea.",
-                           "Waiting for movement matching your line."))
-                    .font(.caption).foregroundStyle(.secondary)
-                if let place = coordinator.boardingPlace {
-                    Label(L.t("Subiste en: ", "Boarded at: ") + place, systemImage: "mappin")
-                        .font(.caption).lineLimit(2)
-                }
-                if coordinator.boardingPoint != nil {
-                    Label(L.t("Punto de subida guardado", "Boarding point saved"), systemImage: "mappin.and.ellipse")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                TripOccupancyControls(service: coordinator.tripOccupancy) { coordinator.updateTripOccupancy($0) }
-                Button(L.t("Cambiar de línea", "Change line")) { showTrip = true }
-                    .font(.caption)
-            } else {
-                Button { showTrip = true } label: {
-                    Label(L.t("Estoy en un micro", "I'm on a bus"), systemImage: "bus.fill")
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            if coordinator.isEnabled, !coordinator.isRunning,
-               let fallo = coordinator.errorCargaRutas {
-                Text(fallo.mensajeUsuario).font(.caption).foregroundStyle(.secondary)
-                Button(L.t("Reintentar detección", "Retry detection")) {
-                    coordinator.setContributionEnabled(true)
-                }
-                .buttonStyle(.bordered)
-            }
-            if let statusMessage {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Circle()
-                        .fill(statusColor)
-                        .frame(width: 7, height: 7)
-                        .accessibilityHidden(true)
-                    Text(statusMessage)
-                        .font(.system(size: 11, weight: .medium))
+        if let route = coordinator.selectedTripRoute {
+            Button { showDetails = true } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "bus.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.onPrimaryFill)
+                        .frame(width: 36, height: 36)
+                        .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 10))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(L.t("Tu transporte público", "Your public transport"))
+                            .font(.caption)
+                            .foregroundStyle(Color.onSurfaceVariant)
+                        Text(L.t("Línea ", "Line ") + route.lineaConLetra)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.onSurface)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.onSurfaceVariant)
-                        .lineLimit(2)
-                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 4)
-                .accessibilityElement(children: .combine)
+                .padding(12)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
+                        .allowsHitTesting(false)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L.t("Tu transporte público. Línea ", "Your public transport. Line ") + route.lineaConLetra)
+            .accessibilityHint(L.t("Abre la ocupación y las opciones para cambiar de línea o finalizar el viaje.",
+                                  "Opens occupancy and options to change line or end the trip."))
+            .sheet(isPresented: $showDetails, onDismiss: { choosingLine = false }) {
+                Group {
+                    if choosingLine {
+                        TripSelectionSheet(coordinator: coordinator,
+                                           locationService: locationService,
+                                           suggestedRouteID: coordinator.selectedTripRoute?.id)
+                    } else {
+                        tripDetails
+                    }
+                }
+                .presentationDetents(choosingLine ? [.large] : [.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .sheet(isPresented: $showTrip) {
-            TripSelectionSheet(coordinator: coordinator, locationService: locationService)
+    }
+
+    private var tripDetails: some View {
+        NavigationStack {
+            Form {
+                if let route = coordinator.selectedTripRoute {
+                    Section(L.t("Tu transporte público", "Your public transport")) {
+                        LabeledContent(L.t("Línea", "Line"), value: route.linea)
+                        LabeledContent(L.t("Letra del transporte", "Transport letter"),
+                                       value: route.letraTransporte.isEmpty
+                                        ? L.t("No especificada", "Not specified")
+                                        : route.letraTransporte)
+                        if let place = coordinator.boardingPlace {
+                            Label(L.t("Subiste en: ", "Boarded at: ") + place, systemImage: "mappin")
+                        }
+                        if coordinator.boardingPoint != nil {
+                            Label(L.t("Punto de subida guardado", "Boarding point saved"), systemImage: "mappin.and.ellipse")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Section(L.t("Ocupación del micro", "Bus occupancy")) {
+                        TripOccupancyControls(service: coordinator.tripOccupancy) {
+                            coordinator.updateTripOccupancy($0)
+                        }
+                    }
+                    Section(L.t("Estado del viaje", "Trip status")) {
+                        Text(coordinator.confirmedLine != nil
+                             ? L.t("Estás ayudando en esta línea.", "You're helping on this line.")
+                             : L.t("Esperando detectar movimiento compatible con tu línea.",
+                                   "Waiting for movement matching your line."))
+                        if let statusMessage {
+                            Label {
+                                Text(statusMessage)
+                            } icon: {
+                                Circle().fill(statusColor).frame(width: 8, height: 8)
+                            }
+                        }
+                        if coordinator.isEnabled, !coordinator.isRunning,
+                           let fallo = coordinator.errorCargaRutas {
+                            Text(fallo.mensajeUsuario)
+                            Button(L.t("Reintentar detección", "Retry detection")) {
+                                coordinator.setContributionEnabled(true)
+                            }
+                        }
+                    }
+                    Section {
+                        Button(L.t("Cambiar de línea", "Change line")) { choosingLine = true }
+                        Button(L.t("Finalizar viaje", "End trip"), role: .destructive) {
+                            confirmEndTrip = true
+                        }
+                    }
+                }
+            }
+            .navigationTitle(L.t("Tu viaje", "Your trip"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Listo", "Done")) { showDetails = false }
+                }
+            }
+            .confirmationDialog(L.t("¿Finalizar este viaje?", "End this trip?"),
+                                isPresented: $confirmEndTrip, titleVisibility: .visible) {
+                Button(L.t("Finalizar viaje", "End trip"), role: .destructive) {
+                    coordinator.endTrip()
+                    showDetails = false
+                    onEndTrip()
+                }
+                Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
+            } message: {
+                Text(L.t("Se dejará de compartir la ubicación de este micro y volverás al mapa principal.",
+                         "Sharing this bus's location will stop and you'll return to the main map."))
+            }
         }
     }
 }
