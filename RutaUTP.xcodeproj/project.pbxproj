@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		BD5200000000000000000002 /* IndiceBusquedaRuta.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5200000000000000000001 /* IndiceBusquedaRuta.swift */; };
+		BD5400000000000000000002 /* FotoComunidadViales.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5400000000000000000001 /* FotoComunidadViales.swift */; };
 		BD4000000000000000000002 /* PerfilPreferenciasVisuales.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD4000000000000000000001 /* PerfilPreferenciasVisuales.swift */; };
 		BD3000000000000000000002 /* SelectorTematicasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD3000000000000000000001 /* SelectorTematicasSheet.swift */; };
 		BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */ = {isa = PBXBuildFile; fileRef = BD3000000000000000000003 /* sedes-empresas-trujillo.json */; };
@@ -187,6 +188,7 @@
 
 /* Begin PBXFileReference section */
 		BD5200000000000000000001 /* IndiceBusquedaRuta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndiceBusquedaRuta.swift; sourceTree = "<group>"; };
+		BD5400000000000000000001 /* FotoComunidadViales.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FotoComunidadViales.swift; sourceTree = "<group>"; };
 		BD4000000000000000000001 /* PerfilPreferenciasVisuales.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfilPreferenciasVisuales.swift; sourceTree = "<group>"; };
 		BD3000000000000000000001 /* SelectorTematicasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectorTematicasSheet.swift; sourceTree = "<group>"; };
 		BD3000000000000000000003 /* sedes-empresas-trujillo.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Data/sedes-empresas-trujillo.json"; sourceTree = "<group>"; };
@@ -632,6 +634,7 @@
 				0A80042F300AD9FE004E1676 /* SeguridadLugares.swift */,
 				0A80042D300AD9FE004E1676 /* SeguridadZonas.swift */,
 				0A80042B300AD9FE004E1676 /* SeguridadComunidad.swift */,
+				BD5400000000000000000001 /* FotoComunidadViales.swift */,
 				AA6600000000000000000A06 /* ParaderosIluminadosView.swift */,
 			);
 			path = Seguridad;
@@ -981,6 +984,7 @@
 				BC0200000000000000000008 /* RutaOpcion.swift in Sources */,
 				BC020000000000000000000A /* RutasViewModel.swift in Sources */,
 				BD5200000000000000000002 /* IndiceBusquedaRuta.swift in Sources */,
+				BD5400000000000000000002 /* FotoComunidadViales.swift in Sources */,
 				BC020000000000000000000C /* RutaOpcionCard.swift in Sources */,
 				BC0200000000000000000010 /* DetalleRutaView.swift in Sources */,
 				BC0200000000000000000012 /* VoiceOverHelpSheet.swift in Sources */,

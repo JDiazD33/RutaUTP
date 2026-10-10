@@ -338,33 +338,34 @@ struct FotoReporteView: View {
                 if detalle {
                     Image(foto.asset).resizable().scaledToFit()
                 } else {
-                    GeometryReader { geo in
-                        Image(foto.asset).resizable().scaledToFill()
-                            .frame(width: geo.size.width, height: 180)
-                            .clipped()
-                    }
-                    .frame(height: 180)
+                    Image(foto.asset).resizable().scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                        .background(Color.surfaceContainerLow)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .accessibilityLabel(L.t("Foto de archivo: ", "Archive photo: ") + foto.lugar)
+            .accessibilityValue(foto.descripcionLocalizada)
             Label(foto.lugar, systemImage: "mappin.and.ellipse")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.onSurface)
             Text(L.t("PUBLICACIÓN DEMO · FOTO DE REFERENCIA", "DEMO POST · REFERENCE PHOTO"))
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(Color.onSurfaceVariant)
-            Text("© " + foto.autor + " · " + foto.fecha + " · CC BY-SA " + foto.licencia)
+            Text(foto.atribucion)
                 .font(.system(size: 10))
                 .foregroundStyle(Color.onSurfaceVariant)
             if detalle {
-                Text(L.t("Autor del post ficticio. La foto es de archivo y no documenta un incidente actual. Vista previa recortada; imagen completa arriba.",
-                         "Fictional post author. This archive photo does not document a current incident. Cropped preview; full image above."))
+                Text(L.t("Autor del post ficticio. La foto es de archivo y no documenta un incidente actual. Se conserva el encuadre; las nuevas fotos usan una copia de menor resolución.",
+                         "Fictional post author. This archive photo does not document a current incident. Framing is preserved; new photos use a lower-resolution copy."))
                     .font(.caption)
                     .foregroundStyle(Color.onSurfaceVariant)
                 HStack(spacing: 16) {
                     if let url = URL(string: foto.fuente) { Link(L.t("Ver fuente", "View source"), destination: url) }
-                    if let url = URL(string: foto.licenciaURL) { Link(L.t("Licencia", "License"), destination: url) }
+                    if let licenciaURL = foto.licenciaURL, let url = URL(string: licenciaURL) {
+                        Link(L.t("Licencia", "License"), destination: url)
+                    }
                 }
                 .font(.caption.weight(.medium))
             }
