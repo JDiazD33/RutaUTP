@@ -48,10 +48,20 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     // El mapa nunca asigna una empresa o sede por su cuenta.
-    var region: MKCoordinateRegion = MKCoordinateRegion(
-        center: TransporteApp.referenciaInicio,
-        span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
-    )
+    var region: MKCoordinateRegion = MapaViewModel.regionDeReferencia(TransporteApp.referenciaInicio)
+
+    /// Acercamiento suave al abrir el mapa, conservando la sede de referencia.
+    static func regionDeReferencia(_ centro: CLLocationCoordinate2D) -> MKCoordinateRegion {
+        MKCoordinateRegion(center: centro,
+                           span: MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03))
+    }
+
+    /// El mismo zoom se aplica al GPS inicial y al botón de ubicación.
+    static func regionDePersona(_ centro: CLLocationCoordinate2D,
+                                duranteViaje: Bool = false) -> MKCoordinateRegion {
+        let metros: CLLocationDistance = duranteViaje ? 850 : 1200
+        return MKCoordinateRegion(center: centro, latitudinalMeters: metros, longitudinalMeters: metros)
+    }
 
     var textoBusqueda: String = ""
     var destinoSeleccionado: DestinoChip? = nil
@@ -272,8 +282,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         sedeTrabajo = nueva
         utpComoReferencia = campus
         guard busquedaResultado == nil else { return }
-        region = MKCoordinateRegion(center: coordenadaInicio,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035))
+        region = Self.regionDeReferencia(coordenadaInicio)
         recentrarToken += 1
         recargarLineas(cercaDe: nil)
     }
@@ -802,10 +811,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
             // cámara local cambia pero `region` no se entera).
             recentrarToken += 1
             withAnimation(.spring(response: 0.5)) {
-                region = MKCoordinateRegion(
-                    center: userCoord,
-                    span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
-                )
+                region = Self.regionDePersona(userCoord)
             }
         } else {
             iniciarGPS()
@@ -865,7 +871,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
             .map { indice, lugar in
                 DestinoChip(id: 100 + indice,
                             label: lugar.nombre,
-                            icon: lugar.categoria.icono,
+                            icon: lugar.icono,
                             lat: lugar.lat ?? 0,
                             lon: lugar.lon ?? 0)
             }
@@ -1078,10 +1084,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         recargarLineas(cercaDe: nil)
 
         withAnimation(.spring(response: 0.5)) {
-            region = MKCoordinateRegion(
-                center: coordenadaInicio,
-                span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
-            )
+            region = Self.regionDeReferencia(coordenadaInicio)
         }
     }
 }
