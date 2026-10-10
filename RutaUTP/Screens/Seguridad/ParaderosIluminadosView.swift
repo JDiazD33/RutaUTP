@@ -456,7 +456,7 @@ struct ParaderosIluminadosView: View {
         if let index = places.firstIndex(where: { $0.corresponde(al: stop) && !$0.esFijo }) {
             places.remove(at: index)
         } else {
-            places.append(LugarGuardado(nombre: stop.nombre, direccion: "Trujillo", categoria: .otro, lat: stop.lat, lon: stop.lon, paraderoID: stop.id))
+            places.append(LugarGuardado(nombre: stop.nombre, direccion: "Trujillo", categoria: .paradero, lat: stop.lat, lon: stop.lon, paraderoID: stop.id))
         }
         guard LugaresStore.guardar(places) else {
             errorAlGuardar = true
