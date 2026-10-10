@@ -19,11 +19,13 @@ struct RouteSummaryPanel: View {
                 Spacer(minLength: 4)
                 Button { vm.limpiar() } label: {
                     Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(Color.onSurfaceVariant)
-                        .frame(width: 32, height: 32)
+                        .frame(width: 48, height: 48)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel(L.t("Quitar ruta", "Clear route"))
-                .frame(minWidth: 44, minHeight: 44)
             }
             .font(.system(size: 13, weight: .semibold))
             if let installed = vm.itinerarioInstalado {
