@@ -520,9 +520,9 @@ private struct MapaUbicacionPicker: View {
             } label: {
                 Text(L.t("Confirmar ubicación", "Confirm location"))
                     .font(.headlineSm)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.appPrimary))
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primaryFill))
             }
             .buttonStyle(PressableCapsuleStyle())
         }

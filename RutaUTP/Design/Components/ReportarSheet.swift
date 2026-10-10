@@ -115,14 +115,14 @@ struct ReportarSheet: View {
                 Text(L.t("Enviar reporte", "Send report"))
                     .font(.headlineSm)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(puedeEnviar ? Color.onPrimaryFill : Color.white)
             .frame(maxWidth: .infinity, minHeight: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: puedeEnviar
-                                ? [.appPrimary, .appPrimary.opacity(0.78)]
+                                ? [.primaryFill, .primaryFill.opacity(0.78)]
                                 : [Color.onSurfaceVariant.opacity(0.35), Color.onSurfaceVariant.opacity(0.25)],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )

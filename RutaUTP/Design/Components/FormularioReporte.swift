@@ -75,6 +75,8 @@ struct SelectorTipoReporte: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(t.titulo)
         .accessibilityAddTraits(seleccionado ? .isSelected : [])
     }
 }
@@ -133,6 +135,8 @@ struct CampoDescripcionReporte: View {
             }
 
             TextField(tipo.placeholder, text: $descripcion, axis: .vertical)
+                .accessibilityLabel(L.t("Descripción del reporte", "Report description"))
+                .accessibilityHint(L.t("Máximo \(FormularioReporte.maxCaracteres) caracteres", "Maximum \(FormularioReporte.maxCaracteres) characters"))
                 .lineLimit(4...7)
                 .padding(12)
                 .background(
