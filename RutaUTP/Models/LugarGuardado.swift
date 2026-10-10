@@ -12,6 +12,7 @@ enum CategoriaLugar: String, CaseIterable, Identifiable, Codable {
     case restaurante  = "Restaurante"
     case plaza        = "Plaza"
     case playa        = "Playa"
+    case paradero     = "Paradero"
     case otro         = "Otro"
 
     var id: String { rawValue }
@@ -27,6 +28,7 @@ enum CategoriaLugar: String, CaseIterable, Identifiable, Codable {
         case .restaurante: return L.t("Restaurante", "Restaurant")
         case .plaza:       return L.t("Plaza", "Square")
         case .playa:       return L.t("Playa", "Beach")
+        case .paradero:    return L.t("Paradero", "Bus stop")
         case .otro:        return L.t("Otro", "Other")
         }
     }
@@ -39,6 +41,7 @@ enum CategoriaLugar: String, CaseIterable, Identifiable, Codable {
         case .restaurante: return "fork.knife"
         case .plaza:       return "building.columns.fill"
         case .playa:       return "water.waves"
+        case .paradero:    return "bus.fill"
         case .otro:        return "mappin.circle.fill"
         }
     }
@@ -65,6 +68,17 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
     var coordinate: CLLocationCoordinate2D? {
         guard let lat, let lon else { return nil }
         return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
+    /// Los paraderos anteriores conservan su categoría e identificador persistidos.
+    var esParadero: Bool { categoria == .paradero || paraderoID != nil }
+
+    var icono: String { esParadero ? CategoriaLugar.paradero.icono : categoria.icono }
+
+    /// Criterio compartido por Seguridad y el selector de destinos del mapa.
+    /// El catálogo reconoce los guardados anteriores a la incorporación del ID.
+    func esParaderoGuardado(en catalogo: [ParaderoGTFS]) -> Bool {
+        !esFijo && (esParadero || catalogo.contains { corresponde(al: $0) })
     }
 
     init(id: UUID = UUID(),
