@@ -341,7 +341,9 @@ struct GuardadoView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(lugar.nombre)
         .accessibilityValue(lugar.direccion + (lugar.esFrecuente ? L.t(". Frecuente", ". Frequent") : ""))
-        .accessibilityHint(L.t("Muestra las opciones del lugar guardado", "Shows saved place options"))
+        .accessibilityHint(lugar.esParadero
+                           ? L.t("Muestra las opciones del paradero guardado", "Shows saved stop options")
+                           : L.t("Muestra las opciones del lugar guardado", "Shows saved place options"))
     }
 
     private func iconCircle(lugar: LugarGuardado) -> some View {
@@ -350,7 +352,7 @@ struct GuardadoView: View {
         let fg: Color = isPrimary ? .onPrimaryFill : .appPrimary
         return ZStack {
             Circle().fill(bg).frame(width: 48, height: 48)
-            Image(systemName: lugar.categoria.icono)
+            Image(systemName: lugar.icono)
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(fg)
         }
@@ -605,7 +607,9 @@ struct LugarDetailSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    Label(L.t("LUGAR GUARDADO", "SAVED PLACE"), systemImage: "bookmark.fill")
+                    Label(lugar.esParadero
+                          ? L.t("PARADERO GUARDADO", "SAVED STOP")
+                          : L.t("LUGAR GUARDADO", "SAVED PLACE"), systemImage: "bookmark.fill")
                         .font(.caption.weight(.bold)).foregroundStyle(Color.onSurfaceVariant)
                     Spacer()
                     Button { dismiss() } label: {
@@ -617,7 +621,7 @@ struct LugarDetailSheet: View {
                 }
 
                 HStack(alignment: .top, spacing: 14) {
-                    Image(systemName: lugar.categoria.icono)
+                    Image(systemName: lugar.icono)
                         .font(.system(size: 25, weight: .semibold))
                         .foregroundStyle(Color.appPrimary)
                         .frame(width: 58, height: 58)
@@ -637,7 +641,7 @@ struct LugarDetailSheet: View {
                     if let coord = lugarCoord {
                         Map(position: $camera, interactionModes: []) {
                             Annotation(lugar.nombre, coordinate: coord) {
-                                Image(systemName: lugar.categoria.icono)
+                                Image(systemName: lugar.icono)
                                     .font(.title3.bold()).foregroundStyle(.onPrimaryFill)
                                     .padding(12).background(Color.primaryFill, in: Circle())
                                     .overlay(Circle().stroke(.white, lineWidth: 3))
