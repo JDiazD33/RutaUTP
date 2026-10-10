@@ -10,12 +10,26 @@ struct TransitMapCanvas: View {
     let onCameraChange: (CLLocationCoordinate2D) -> Void
     let onClearMarker: () -> Void
 
+    private var destinoCoincideConReferencia: Bool {
+        guard let destino = vm.busquedaResultado else { return false }
+        let referencia = vm.utpComoReferencia ? GTFSRepository.coordenadaUTP : vm.sedeTrabajo?.coordinate
+        guard let referencia else { return false }
+        return abs(destino.coordenada.latitude - referencia.latitude) < 1e-9
+            && abs(destino.coordenada.longitude - referencia.longitude) < 1e-9
+    }
+
     var body: some View {
         Map(position: $cameraPosition) {
 
-            // 1. Marcador UTP Trujillo (Av. Nicolás de Piérola 1221)
-            Annotation("UTP Trujillo", coordinate: CLLocationCoordinate2D(latitude: -8.098247879173792, longitude: -79.03818104755645)) {
-                MarcadorUTP()
+            if vm.utpComoReferencia {
+                Annotation(L.t("Campus UTP Trujillo", "UTP Trujillo campus"),
+                           coordinate: GTFSRepository.coordenadaUTP) {
+                    MarcadorCampusUTP(busesUTPActivos: vm.busesUTPActivos)
+                }
+            } else if let sede = vm.sedeTrabajo {
+                Annotation(sede.nombre, coordinate: sede.coordinate, anchor: .bottom) {
+                    MarcadorSedeTrabajo(sede: sede)
+                }
             }
 
             // 2. Marcador del Usuario (GPS Real o Peatón)
@@ -58,7 +72,8 @@ struct TransitMapCanvas: View {
             }
 
             // 4. Marcador del Destino Buscado (ej. UPAO, Casa, Mall Plaza)
-            if let res = vm.busquedaResultado, res.titulo != "UTP", !marcadorEsDestinoActual {
+            if let res = vm.busquedaResultado, !marcadorEsDestinoActual,
+               !destinoCoincideConReferencia {
                 Annotation(res.titulo, coordinate: res.coordenada) {
                     MarcadorDestinoBuscado(titulo: res.titulo)
                 }
@@ -103,6 +118,10 @@ struct TransitMapCanvas: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+        .mapControls {
+            MapCompass().mapControlVisibility(.hidden)
+            MapScaleView()
         }
         .ignoresSafeArea()
         // Cada movimiento reinicia la espera, incluido el deslizamiento

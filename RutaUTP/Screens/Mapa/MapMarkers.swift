@@ -38,25 +38,66 @@ struct PulsingUserMarker: View {
     }
 }
 
-// MARK: - UTP marker
-struct MarcadorUTP: View {
+/// Referencia institucional; no representa un vehículo ni un paradero confirmado.
+struct MarcadorCampusUTP: View {
+    let busesUTPActivos: Bool
+
     var body: some View {
-        VStack(spacing: 2) {
-            Text("UTP Trujillo")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.white)
+        VStack(spacing: 4) {
+            Text("UTP")
+                .font(.caption.bold())
+                .foregroundStyle(busesUTPActivos ? Color.white : Color.onPrimaryFill)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Capsule().fill(Color.appPrimary))
-                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
-            ZStack {
-                Circle().fill(Color.appPrimary).frame(width: 36, height: 36)
-                    .shadow(color: .black.opacity(0.30), radius: 4, x: 0, y: 2)
-                Image(systemName: "graduationcap.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                .background(busesUTPActivos ? Color.red : Color.primaryFill, in: Capsule())
+            if busesUTPActivos {
+                Image(systemName: "bus.fill")
+                    .font(.title2.bold())
+                    .foregroundStyle(.red)
+                    .padding(10)
+                    .background(Color.appSurface, in: Circle())
+            } else {
+                ZStack {
+                    Circle().fill(Color.primaryFill).frame(width: 48, height: 48)
+                    Image(systemName: CategoriaLugar.universidad.icono)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.onPrimaryFill)
+                }
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Campus UTP Trujillo, referencia del mapa", "UTP Trujillo campus, map reference"))
+    }
+}
+
+// MARK: - Sede de trabajo elegida
+struct MarcadorSedeTrabajo: View {
+    let sede: SedeTrabajo
+
+    var body: some View {
+        let paleta = PaletasEmpresa.paleta(para: sede.empresa)
+        VStack(spacing: 2) {
+            Text(sede.nombre)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(paleta.onPrimaryFill)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(paleta.primaryFill))
+                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+                .lineLimit(1)
+                .frame(maxWidth: 200)
+            ZStack {
+                Circle().fill(paleta.primaryFill).frame(width: 44, height: 44)
+                    .shadow(color: .black.opacity(0.30), radius: 4, x: 0, y: 2)
+                if let logo = sede.empresa.logoAsset {
+                    Image(logo).renderingMode(.template).resizable().scaledToFit()
+                        .frame(width: 34, height: 24)
+                        .foregroundStyle(paleta.onPrimaryFill)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(sede.nombre + ", " + sede.direccion)
     }
 }
 
@@ -151,9 +192,9 @@ struct MarcadorPin: View {
             .onTapGesture { onTap?() }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L.t("Marcador en el mapa", "Map marker"))
-            .accessibilityHint(L.t("Toca para quitar el marcador",
-                                   "Tap to remove the marker"))
-            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(onTap == nil ? "" : L.t("Quita el marcador", "Removes the marker"))
+            .accessibilityAddTraits(onTap == nil ? [] : .isButton)
+            .accessibilityAction { onTap?() }
     }
 }
 
