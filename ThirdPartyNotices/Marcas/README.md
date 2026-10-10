@@ -63,3 +63,53 @@ La selección tiene nombre e indicador accesible además del color.
 La compilación y la revisión estática no sustituyen comprobar el aspecto real,
 contraste en cada contexto, VoiceOver y tamaños de texto. Esas verificaciones
 en ejecución quedan pendientes, de acuerdo con la preferencia de solo compilar.
+
+## Ampliación del 9 de octubre de 2026
+
+Se incorporan seis marcas. Los archivos se copiaron de recursos públicos
+oficiales, sin redibujar logos. Inkafarma y Mifarma se obtuvieron decodificando
+el PNG original incluido en el SVG de Intercorp. UTP conserva `UTPLogo` para sus
+usos anteriores y dispone de una variante de plantilla `utp-monocromatico` para estos
+selectores: reutiliza los mismos trazados de las letras, caladas sobre los tres
+bloques mediante un único trazado con regla par-impar. Así las letras no se
+rellenan al teñir el logo. El recurso original no se modifica.
+
+| Marca | Fuente del logo | Archivo incorporado |
+| --- | --- | --- |
+| Cineplanet | [SVG de la cabecera oficial](https://www.cineplanet.com.pe/static/0bfdc57563b9ea90e0ae.svg), enlazado desde [Cineplanet](https://www.cineplanet.com.pe/) | `cineplanet-logo.imageset/logo.svg`, 13.459 bytes |
+| Innova Schools | [SVG oficial](https://www.innovaschools.edu.pe/sites/default/files/logo-innova-horizontal%201.svg), enlazado desde [Innova Schools](https://www.innovaschools.edu.pe/) | `innova-schools-logo.imageset/logo.svg`, 9.211 bytes |
+| Inkafarma | [SVG publicado por Intercorp](https://www.intercorp.com.pe/img/logos/inkafarma.svg) | PNG blanco transparente original de 908 × 124 px, 3.716 bytes |
+| Mifarma | [SVG publicado por Intercorp](https://www.intercorp.com.pe/img/logos/mifarma.svg) | PNG blanco transparente original de 714 × 180 px, 11.430 bytes |
+| Bembos | [SVG oficial](https://www.bembos.com.pe/static/version1791283172/frontend/Ngr/bembos/es_PE/images/logo.svg), enlazado desde [Bembos](https://www.bembos.com.pe/) | `bembos-logo.imageset/logo.svg`, 2.927 bytes |
+| Don Belisario | [PNG de la cabecera oficial](https://www.donbelisario.com.pe/media/logo/stores/6/Logo-DB_90x56px.png), enlazado desde [Don Belisario](https://www.donbelisario.com.pe/) | PNG transparente original de 90 × 56 px, 948 bytes |
+
+Los seis imagesets declaran presentación de plantilla; los tres SVG conservan
+representación vectorial. `LogoEmpresa` unifica la tinta negra en claro y blanca
+en oscuro en los selectores. El mapa muestra el logo con la tinta correspondiente
+al fondo de la sede: verde oscuro sobre amarillo en Inkafarma, blanco sobre los
+otros acentos. UTP muestra «UTP» y el birrete de Guardado sobre el mismo círculo;
+en el modo Buses UTP conserva el icono de bus. Los recursos quedan empaquetados y no se
+descargan durante el uso de la app.
+
+| Marca | Colores observados en recursos oficiales | Acento principal aplicado |
+| --- | --- | --- |
+| Cineplanet | Azul `#004A8C`, rosa `#E50246`, del [CSS oficial](https://www.cineplanet.com.pe/static/app.bundle.8165d066a53f883bf458.css) | Azul `#004A8C`; rosa secundario adaptado `#C5003B` |
+| Innova Schools | Azul `#0069AD`, verde `#6BC62A`, naranja `#FF9700`, del [símbolo oficial a color](https://www.innovaschools.edu.pe/sites/default/files/favicon-16x16_0.png) enlazado por su web | Azul en superficies principales, verde en secundarios y naranja en terciarios; verde `#317B13` y naranja `#A85400` adaptados para texto blanco |
+| Inkafarma | Verde `#1B8F43`, amarillo `#FFF200`, rojo `#ED1C24`, del [icono oficial](https://inkafarma.pe/assets/icons/icon_inka_logo.svg) | Amarillo `#FFF200` dominante en botones, cabeceras y marcador; tinta oscura `#193D23`; verde `#167538` en detalles |
+| Mifarma | Naranja `#FF7929`, verde `#1B8F43`, lima `#79B827`, amarillo `#FFF200`, del [imagotipo enlazado por su web](https://images.ctfassets.net/buvy887680uc/3f1z1TRfyGL0gSeubGwUKm/788001d462053aed81aa6b8650e61331/imagotipo-color.svg) | Naranja adaptado `#AD4C00`; muestra de marca `#FF7929` |
+| Bembos | Azul `#1100CF`, amarillo `#FFB500`, rojo `#FF000F`, del SVG oficial | Azul `#1100CF`; oro secundario adaptado `#7D5800` |
+| Don Belisario | Rojo `#E5133A`, rojo oscuro `#B70F2E`, negro `#121212`, del CSS enlazado por su web oficial | Rojo oscuro `#B70F2E`; muestra de marca `#E5133A` |
+
+Son colores observados en esos recursos, no un manual corporativo. Los tintes
+claros/oscuros y los tonos oscurecidos para texto blanco son adaptaciones de la
+app. Tras la corrección solicitada, el texto oscuro sobre el amarillo Inkafarma
+tiene una relación calculada de **10,36:1**. Las combinaciones comprobadas de
+Innova Schools superan **5,29:1**; esos cálculos no acreditan contraste en todos
+los usos de la interfaz ni revisión visual en ejecución. En el favicon de
+Innova, los valores citados aparecen en 20, 20 y 6 píxeles opacos,
+respectivamente; describen ese recurso publicado, no un manual corporativo.
+
+La procedencia de las sedes, sus exclusiones y límites está en
+[sedes-nuevas-trujillo.json](/Users/joaquindiaz05/Documents/RU-IOQT/RutaUTP/ThirdPartyNotices/Marcas/sedes-nuevas-trujillo.json).
+La entrega y sus comprobaciones se registran en
+[AMPLIACION-EMPRESAS.md](/Users/joaquindiaz05/Documents/RU-IOQT/RutaUTP/AMPLIACION-EMPRESAS.md).
