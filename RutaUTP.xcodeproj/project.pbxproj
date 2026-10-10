@@ -44,7 +44,6 @@
 		BC0200000000000000000014 /* PerfilCuponesGuardados.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0200000000000000000013 /* PerfilCuponesGuardados.swift */; };
 		BC0100000000000000000002 /* BusAnimado.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000001 /* BusAnimado.swift */; };
 		BC0100000000000000000004 /* DestinoChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000003 /* DestinoChip.swift */; };
-		BC0100000000000000000006 /* MapaAnotacion.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000005 /* MapaAnotacion.swift */; };
 		BC0100000000000000000008 /* VehicleETAEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000007 /* VehicleETAEstimator.swift */; };
 		BC010000000000000000000A /* TransitPlanning.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0100000000000000000009 /* TransitPlanning.swift */; };
 		0A800401300AD9FE004E1676 /* DestinosFijos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800400300AD9FE004E1676 /* DestinosFijos.swift */; };
@@ -212,7 +211,6 @@
 		BC0200000000000000000013 /* PerfilCuponesGuardados.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfilCuponesGuardados.swift; sourceTree = "<group>"; };
 		BC0100000000000000000001 /* BusAnimado.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusAnimado.swift; sourceTree = "<group>"; };
 		BC0100000000000000000003 /* DestinoChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DestinoChip.swift; sourceTree = "<group>"; };
-		BC0100000000000000000005 /* MapaAnotacion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapaAnotacion.swift; sourceTree = "<group>"; };
 		BC0100000000000000000007 /* VehicleETAEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleETAEstimator.swift; sourceTree = "<group>"; };
 		BC0100000000000000000009 /* TransitPlanning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitPlanning.swift; sourceTree = "<group>"; };
 		0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RutaUTP.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -359,7 +357,6 @@
 				BC0300000000000000000017 /* BusPanelItem.swift */,
 				BC0100000000000000000001 /* BusAnimado.swift */,
 				BC0100000000000000000003 /* DestinoChip.swift */,
-				BC0100000000000000000005 /* MapaAnotacion.swift */,
 			);
 			path = Mapa;
 			sourceTree = "<group>";
@@ -942,7 +939,6 @@
 				BC0200000000000000000014 /* PerfilCuponesGuardados.swift in Sources */,
 				BC0100000000000000000002 /* BusAnimado.swift in Sources */,
 				BC0100000000000000000004 /* DestinoChip.swift in Sources */,
-				BC0100000000000000000006 /* MapaAnotacion.swift in Sources */,
 				BC0100000000000000000008 /* VehicleETAEstimator.swift in Sources */,
 				BC010000000000000000000A /* TransitPlanning.swift in Sources */,
 				2F87EE09304DE96300E2F5F2 /* MQTTConfiguration.swift in Sources */,
