@@ -85,7 +85,7 @@ struct ElegirLugaresSheet: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle().fill(Color.primaryContainer.opacity(0.12)).frame(width: 40, height: 40)
-                    Image(systemName: lugar.categoria.icono)
+                    Image(systemName: lugar.icono)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.appPrimary)
                 }
