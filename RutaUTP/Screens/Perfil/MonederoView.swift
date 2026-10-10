@@ -15,6 +15,8 @@ struct MonederoCard: View {
     @ObservedObject var store: MonederoStore
     let onRecargar: () -> Void
     let onMostrarQR: () -> Void
+    var tinta: Color = .white
+    var empresa: TematicaEmpresa = .utp
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -27,18 +29,18 @@ struct MonederoCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(tinta)
 
             Text(store.saldoTexto)
                 .font(.system(.title, weight: .heavy))
                 .monospacedDigit()
-                .foregroundStyle(.white)
+                .foregroundStyle(tinta)
 
             Text(L.t("≈ \(store.pasajesDisponibles) pasajes a \(store.tarifaTexto)",
                      "≈ \(store.pasajesDisponibles) fares at \(store.tarifaTexto)"))
                 .font(.caption2)
                 .fixedSize(horizontal: false, vertical: true)
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(tinta.opacity(0.8))
 
             (textSize >= .xxxLarge ? AnyLayout(VStackLayout(spacing: 8))
                                     : AnyLayout(HStackLayout(spacing: 8))) {
@@ -51,12 +53,12 @@ struct MonederoCard: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.18)))
+        .background(RoundedRectangle(cornerRadius: 12).fill(tinta.opacity(0.18)))
         .overlay(
-            RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.25), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12).stroke(tinta.opacity(0.25), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L.t("Monedero UTP", "UTP Wallet"))
+        .accessibilityLabel(L.t("Monedero ", "Wallet ") + empresa.nombre)
         .accessibilityValue(L.t("Saldo de demostración \(store.saldoTexto), aproximadamente \(store.pasajesDisponibles) pasajes a \(store.tarifaTexto)",
                                 "Demo balance \(store.saldoTexto), approximately \(store.pasajesDisponibles) fares at \(store.tarifaTexto)"))
     }
@@ -73,12 +75,12 @@ struct MonederoCard: View {
                     .font(.caption2.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(tinta)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity, minHeight: 44)
-            .background(Capsule().fill(.white.opacity(0.22)))
-            .overlay(Capsule().stroke(.white.opacity(0.3), lineWidth: 0.8))
+            .background(Capsule().fill(tinta.opacity(0.22)))
+            .overlay(Capsule().stroke(tinta.opacity(0.3), lineWidth: 0.8))
         }
         .buttonStyle(.plain)
     }
@@ -351,7 +353,7 @@ struct RecargarSaldoSheet: View {
                     .font(.headlineSm)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(.onPrimaryFill)
             .frame(maxWidth: .infinity, minHeight: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -594,7 +596,7 @@ struct QRPasajeSheet: View {
                     Text(L.t("Escanear un QR", "Scan a QR"))
                         .font(.headlineSm)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(.onPrimaryFill)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.primaryContainer))

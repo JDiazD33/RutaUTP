@@ -11,6 +11,7 @@ import UIKit
 struct PerfilView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
     @ScaledMetric(relativeTo: .title2) private var avatarSize = 72.0
 
     private var apilarContenido: Bool { textSize >= .xxxLarge }
@@ -38,13 +39,40 @@ struct PerfilView: View {
     @State private var showQRPasaje: Bool = false
     @State private var showCarneDigital: Bool = false
     @State private var showCarnetScanner: Bool = false
+    @State private var empresaDelCarnet: TematicaEmpresa = .utp
     @State private var carnetGuardado: Bool = false
+    @State private var empresaFotoVerificada: TematicaEmpresa?
     @StateObject private var tarjetasStore = TarjetasStore()
     /// Monedero de pasajes: el contenido real de la billetera.
     @StateObject private var monederoStore = MonederoStore()
     /// Misma foto que en el drawer: ProfileImageStore es la fuente única.
     @State private var fotoPerfil: UIImage? = nil
     @State private var revisionFotos = UUID()
+    private let preferenciasVisuales = PreferenciasVisualesPerfilStore.shared
+
+    private var empresa: TematicaEmpresa { TematicaEmpresaStore.shared.seleccion }
+    private var mostrarCarnetFoto: Bool { preferenciasVisuales.visible(.foto, empresa: empresa) }
+    private var mostrarCarnetDigital: Bool { preferenciasVisuales.visible(.digital, empresa: empresa) }
+    private var hayCarnetGuardado: Bool { carnetGuardado && empresaFotoVerificada == empresa }
+    private var rolPerfil: String {
+        empresa == .utp ? L.t("ESTUDIANTE UTP", "UTP STUDENT")
+            : L.t("COLABORADOR · ", "EMPLOYEE · ") + empresa.nombre.uppercased()
+    }
+
+    /// Inkafarma conserva el amarillo, con fondos suaves solo en esta cabecera.
+    private var coloresCabecera: [Color] {
+        empresa == .inkafarma
+            ? [Color(light: "#FFF4B5", dark: "#3C381C"),
+               Color(light: "#FFF9DF", dark: "#252A1C"),
+               Color(light: "#EAF3DF", dark: "#193623")]
+            : [.primaryFill, .primaryContainer, .primaryGradientEnd]
+    }
+    private var tintaCabecera: Color {
+        empresa == .inkafarma ? Color(light: "#193D23", dark: "#E8EED2") : .onPrimaryFill
+    }
+    private var fondoAvatar: Color {
+        empresa == .inkafarma ? Color(light: "#EAD983", dark: "#456534") : .inversePrimary
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -76,19 +104,36 @@ struct PerfilView: View {
             // Solo DEBUG: abre directo el Carné Digital, p.ej.
             // xcrun simctl launch ... apolito.RutaUTP --pantalla perfil --carne
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--carne") { showCarneDigital = true }
+            if ProcessInfo.processInfo.arguments.contains("--carne"), mostrarCarnetDigital {
+                empresaDelCarnet = empresa
+                showCarneDigital = true
+            }
             // Monedero: permite mirar sus hojas sin navegar hasta ellas.
             if ProcessInfo.processInfo.arguments.contains("--qr") { showQRPasaje = true }
             if ProcessInfo.processInfo.arguments.contains("--recargar") { showRecargarSaldo = true }
             #endif
         }
-        .task(id: revisionFotos) {
+        .task(id: "\(empresa.rawValue)-\(mostrarCarnetFoto)-\(revisionFotos.uuidString)") {
+            let empresaActual = empresa
             let foto = await ProfileImageStore.load()
             guard !Task.isCancelled else { return }
             fotoPerfil = foto
-            let disponible = await CarnetImageStore.hasStoredImage()
+            let disponible = mostrarCarnetFoto
+                ? await CarnetImageStore.hasStoredImage(empresa: empresaActual) : false
             guard !Task.isCancelled else { return }
             carnetGuardado = disponible
+            empresaFotoVerificada = empresaActual
+        }
+        .onChange(of: empresa) { _, _ in
+            carnetGuardado = false
+            showCarneDigital = false
+            showCarnetScanner = false
+        }
+        .onChange(of: mostrarCarnetFoto) { _, visible in
+            if !visible { showCarnetScanner = false }
+        }
+        .onChange(of: mostrarCarnetDigital) { _, visible in
+            if !visible { showCarneDigital = false }
         }
         .onChange(of: showDatosPersonales) { _, abierto in
             if !abierto { revisionFotos = UUID() }
@@ -130,17 +175,20 @@ struct PerfilView: View {
         }
         // Sheet del Carné Digital (identificación con código de barras)
         .sheet(isPresented: $showCarneDigital) {
-            CarneDigitalView(nombre: nombre)
+            CarneDigitalView(nombre: nombre, empresa: empresaDelCarnet)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .seguirTemaForzado()
         }
         // Scanner de Carnet
         .fullScreenCover(isPresented: $showCarnetScanner) {
-            CarnetScannerView {
+            let empresaCaptura = empresaDelCarnet
+            CarnetScannerView(empresa: empresaCaptura) {
                 carnetGuardado = true
+                empresaFotoVerificada = empresaCaptura
                 revisionFotos = UUID()
             }
+            .seguirTemaForzado()
         }
         // Sheet de Datos Personales (reutilizado del SideDrawer)
         .sheet(isPresented: $showDatosPersonales) {
@@ -158,8 +206,9 @@ struct PerfilView: View {
         // Sheet con instrucciones para activar VoiceOver
         .sheet(isPresented: $showVoiceOverHelp) {
             VoiceOverHelpSheet()
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+                .seguirTemaForzado()
         }
     }
 
@@ -186,7 +235,7 @@ struct PerfilView: View {
                                   : AnyLayout(HStackLayout(alignment: .center, spacing: 14))) {
                     ZStack {
                         Circle()
-                            .fill(Color.inversePrimary)
+                            .fill(fondoAvatar)
                             .frame(width: avatarSize, height: avatarSize)
                             .overlay(Circle().stroke(Color.white, lineWidth: 3))
                         if let fotoPerfil {
@@ -200,7 +249,7 @@ struct PerfilView: View {
                         } else {
                             Text(iniciales(nombre))
                                 .font(.headlineMd)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(tintaCabecera)
                         }
                     }
                     .accessibilityLabel(L.t("Foto de perfil, ", "Profile photo, ") + iniciales(nombre))
@@ -208,17 +257,17 @@ struct PerfilView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(nombre)
                             .font(.headlineLgMobile)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(tintaCabecera)
                         (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
                                           : AnyLayout(HStackLayout(spacing: 6))) {
-                            Text(L.t("ESTUDIANTE UTP", "UTP STUDENT"))
+                            Text(rolPerfil)
                                 .font(.labelCapsSm)
-                                .foregroundStyle(.white.opacity(0.95))
+                                .foregroundStyle(tintaCabecera.opacity(0.95))
                                 .appTracking(AppTracking.wideLabel)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(Capsule().fill(Color.white.opacity(0.20)))
-                            if carnetGuardado {
+                            if mostrarCarnetFoto, hayCarnetGuardado {
                                 HStack(spacing: 3) {
                                     Image(systemName: "checkmark.seal.fill")
                                         .font(.system(size: 10, weight: .bold))
@@ -227,7 +276,7 @@ struct PerfilView: View {
                                         .font(.labelCapsSm)
                                         .appTracking(AppTracking.wideLabel)
                                 }
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.onTertiary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(Capsule().fill(Color.tertiary))
@@ -238,15 +287,15 @@ struct PerfilView: View {
                 }
                 .padding(.horizontal, 20)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(nombre + L.t(", estudiante UTP", ", UTP student")
-                                + (carnetGuardado ? L.t(", carné guardado", ", card saved") : ""))
+                .accessibilityLabel(nombre + ", " + rolPerfil
+                                + (mostrarCarnetFoto && hayCarnetGuardado ? L.t(", carné guardado", ", card saved") : ""))
                 .accessibilityAddTraits(.isHeader)
 
                 // Mi Wallet integrado debajo del nombre
                 VStack(alignment: .leading, spacing: 10) {
                     Text(L.t("MI BILLETERA", "MY WALLET"))
                         .font(.labelCapsSm)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(tintaCabecera.opacity(0.85))
                         .appTracking(AppTracking.wideLabel)
                         .padding(.horizontal, 4)
                         .accessibilityAddTraits(.isHeader)
@@ -255,27 +304,35 @@ struct PerfilView: View {
                     // billetera, y así sus dos botones no se recortan.
                     MonederoCard(store: monederoStore,
                                  onRecargar: { showRecargarSaldo = true },
-                                 onMostrarQR: { showQRPasaje = true })
+                                 onMostrarQR: { showQRPasaje = true },
+                                 tinta: tintaCabecera,
+                                 empresa: empresa)
 
-                    (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-                                      : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
-                        // Carnet UTP: la foto del carné físico.
-                        tarjetaBilletera(icono: "person.text.rectangle.fill",
-                                         titulo: L.t("Carnet Universitario", "University Card"),
-                                         detalle: carnetGuardado
-                                             ? L.t("Ver foto guardada", "View saved photo")
-                                             : L.t("Añadir foto", "Add photo"),
-                                         conChevron: false) {
-                            showCarnetScanner = true
-                        }
+                    if mostrarCarnetFoto || mostrarCarnetDigital {
+                        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                                          : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
+                            if mostrarCarnetFoto {
+                                tarjetaBilletera(icono: CarnetPerfil.foto.icono,
+                                                titulo: CarnetPerfil.foto.titulo(para: empresa),
+                                                detalle: hayCarnetGuardado
+                                                    ? L.t("Ver foto guardada", "View saved photo")
+                                                    : L.t("Añadir foto", "Add photo"),
+                                                conChevron: false) {
+                                    empresaDelCarnet = empresa
+                                    showCarnetScanner = true
+                                }
+                            }
 
-                        // Carné Digital de muestra: no es una credencial validada.
-                        tarjetaBilletera(icono: "person.crop.rectangle.fill",
-                                         titulo: L.t("Carné Digital", "Digital ID"),
-                                         detalle: L.t("Muestra · sin validez",
-                                                      "Sample · not valid"),
-                                         conChevron: true) {
-                            showCarneDigital = true
+                            if mostrarCarnetDigital {
+                                tarjetaBilletera(icono: CarnetPerfil.digital.icono,
+                                                titulo: CarnetPerfil.digital.titulo(para: empresa),
+                                                detalle: L.t("Muestra · sin validez",
+                                                             "Sample · not valid"),
+                                                conChevron: true) {
+                                    empresaDelCarnet = empresa
+                                    showCarneDigital = true
+                                }
+                            }
                         }
                     }
 
@@ -288,22 +345,22 @@ struct PerfilView: View {
                                           : AnyLayout(HStackLayout(spacing: 10))) {
                             Image(systemName: "creditcard.fill")
                                 .font(.system(size: 18))
-                                .foregroundStyle(.white.opacity(0.85))
+                                .foregroundStyle(tintaCabecera.opacity(0.85))
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(L.t("Mis tarjetas", "My cards"))
                                     .font(.footnote.bold())
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(tintaCabecera)
                                 Text(L.t("Referencias locales · sin pagos",
                                          "Local references · no payments"))
                                     .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.75))
+                                    .foregroundStyle(tintaCabecera.opacity(0.75))
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             if !apilarContenido { Spacer() }
                             Text(L.t("LOCAL", "LOCAL"))
                                 .font(.labelCapsSm)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(tintaCabecera)
                                 .appTracking(AppTracking.wideLabel)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
@@ -329,10 +386,10 @@ struct PerfilView: View {
                 Spacer(minLength: 24)
             }
         }
-        .frame(minHeight: 470)
+        .frame(minHeight: mostrarCarnetFoto || mostrarCarnetDigital ? 470 : 360)
         .background {
             LinearGradient(
-                colors: [Color.appPrimary, Color.primaryContainer, Color.tertiary],
+                colors: coloresCabecera,
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         }
@@ -354,22 +411,22 @@ struct PerfilView: View {
             HStack(spacing: 10) {
                 Image(systemName: icono)
                     .font(.system(size: 18))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(tintaCabecera)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(titulo)
                         .font(.footnote.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(tintaCabecera)
                     Text(detalle)
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(tintaCabecera.opacity(0.8))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if conChevron {
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(tintaCabecera.opacity(0.7))
                         .accessibilityHidden(true)
                 }
             }
@@ -388,6 +445,13 @@ struct PerfilView: View {
     // MARK: - Configuración
     private var configuracion: some View {
         VStack(alignment: .leading, spacing: 12) {
+            PerfilPreferenciasVisuales(empresa: empresa)
+                .padding(.bottom, 12)
+            if TransporteApp.busesUTPDisponibles {
+                ModoBusesUTPSection()
+                    .padding(.bottom, 12)
+            }
+
             Text(L.t("Preferencias", "Preferences"))
                 .font(.labelCapsLg)
                 .foregroundStyle(.onSurfaceVariant)
@@ -456,16 +520,9 @@ struct PerfilView: View {
     // MARK: - Fila Accesibilidad (VoiceOver)
     @ViewBuilder
     private func accesibilidadRow() -> some View {
-        let voiceOverOn = UIAccessibility.isVoiceOverRunning
         Button {
             AppHaptics.impact(.light)
-            if voiceOverOn {
-                // Ya está activo: abrir ajustes de la app (por si quiere ajustar algo)
-                abrirAjustesIOS()
-            } else {
-                // Mostrar instrucciones + botón a Ajustes
-                showVoiceOverHelp = true
-            }
+            showVoiceOverHelp = true
         } label: {
             HStack(spacing: 14) {
                 ZStack {
@@ -496,14 +553,10 @@ struct PerfilView: View {
             .padding(.vertical, 14)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("VoiceOver")
         .accessibilityValue(voiceOverOn ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
-        .accessibilityHint(L.t("Doble toque para ver cómo activar VoiceOver en tu iPhone", "Double tap to see how to enable VoiceOver on your iPhone"))
-    }
-
-    private func abrirAjustesIOS() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        UIApplication.shared.open(url)
+        .accessibilityHint(L.t("Muestra instrucciones de activación y gestos de navegación", "Shows activation instructions and navigation gestures"))
     }
 
     private func toggleRow(icon: String, iconColor: Color, label: String, isOn: Binding<Bool>) -> some View {
