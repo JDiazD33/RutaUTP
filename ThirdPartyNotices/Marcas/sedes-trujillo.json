@@ -1,0 +1,152 @@
+{
+  "fecha_revision": "2026-10-09",
+  "ciudad": "Trujillo, Perú",
+  "metodo": "Revisión directa de fichas públicas en Google Maps, seguida de contraste con el listado oficial de Interbank para distinguir tiendas financieras de agentes y cajeros.",
+  "fuentes_complementarias": [
+    {
+      "url": "https://interbank.pe/lista-de-tiendas",
+      "fecha_de_actualizacion_del_documento": "2025-01-23",
+      "uso": "Descubrimiento de tiendas financieras, no prueba de apertura actual."
+    },
+    {
+      "url": "https://interbank.pe/puntos-de-atencion",
+      "uso": "Distinción entre tiendas propias, agentes en comercios y cajeros."
+    },
+    {
+      "url": "https://www.popeyes.com.pe/locales",
+      "uso": "Directorio oficial; el local histórico de Real Plaza se contrastó en Google Maps."
+    }
+  ],
+  "alcance_y_limites": [
+    "Incluye sedes de las tres marcas solicitadas; no otros comercios de Intercorp.",
+    "Los agentes de bodegas/comercios y cajeros automáticos no se presentan como sedes propias para empleados.",
+    "Google Maps ofreció una vista limitada. Las ocho entradas seleccionables se comprobaron con coordenadas y estado; no se garantiza exhaustividad futura.",
+    "Las coordenadas son los pins publicados, no accesos peatonales comprobados en campo.",
+    "En Larco y Centro hay diferencias entre las direcciones del PDF de enero de 2025 y las fichas Google Maps actuales. La app muestra las direcciones de Google Maps.",
+    "El Plaza Vea de Av. España al sur figura sin número en su ficha: no se inventa una numeración.",
+    "Popeyes se presenta como Próximamente por instrucción del usuario, sin atribuir fecha o local de apertura.",
+    "El catálogo se incluye localmente: no hay consultas a Google ni detección automática de sede al abrir la app. Las fichas se abren solo al tocar Ver en Google Maps."
+  ],
+  "sedes_seleccionables": [
+    {
+      "id": "interbank-centro-gamarra",
+      "marca": "interbank",
+      "nombre_en_app": "Interbank Centro — Gamarra",
+      "direccion_google_maps": "Jr. Gamarra 450, Trujillo",
+      "lat": -8.1103596,
+      "lon": -79.0267624,
+      "google_place_id": "ChIJdTe2doQ9rZERjFx-9JTDaA0",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Interbank+Centro+%E2%80%94+Gamarra%2C+Jr.+Gamarra+450%2C+Trujillo&query_place_id=ChIJdTe2doQ9rZERjFx-9JTDaA0",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    },
+    {
+      "id": "interbank-larco",
+      "marca": "interbank",
+      "nombre_en_app": "Interbank Larco",
+      "direccion_google_maps": "Av. Larco 780, Trujillo",
+      "lat": -8.1211306,
+      "lon": -79.036233,
+      "google_place_id": "ChIJVyHXAXQ9rZERLcd2T3GuRkw",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Interbank+Larco%2C+Av.+Larco+780%2C+Trujillo&query_place_id=ChIJVyHXAXQ9rZERLcd2T3GuRkw",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    },
+    {
+      "id": "interbank-mallplaza",
+      "marca": "interbank",
+      "nombre_en_app": "Interbank Mallplaza",
+      "direccion_google_maps": "Av. Mansiche y América Oeste, locales B-1253 / B-1257, Trujillo",
+      "lat": -8.1018948,
+      "lon": -79.0467764,
+      "google_place_id": "ChIJE0idAbc9rZERjkZ9p_va72k",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Interbank+Mallplaza%2C+Av.+Mansiche+y+Am%C3%A9rica+Oeste%2C+locales+B-1253+%2F+B-1257%2C+Trujillo&query_place_id=ChIJE0idAbc9rZERjkZ9p_va72k",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    },
+    {
+      "id": "interbank-el-chacarero",
+      "marca": "interbank",
+      "nombre_en_app": "Interbank El Chacarero",
+      "direccion_google_maps": "Prol. Unión 2218, Trujillo",
+      "lat": -8.0906329,
+      "lon": -79.0066038,
+      "google_place_id": "ChIJG2HANogXrZERTIWcQVy_RsY",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Interbank+El+Chacarero%2C+Prol.+Uni%C3%B3n+2218%2C+Trujillo&query_place_id=ChIJG2HANogXrZERTIWcQVy_RsY",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    },
+    {
+      "id": "plazavea-espana",
+      "marca": "plazaVea",
+      "nombre_en_app": "Plaza Vea España",
+      "direccion_google_maps": "Av. España, Trujillo",
+      "lat": -8.1159412,
+      "lon": -79.0261629,
+      "google_place_id": "ChIJaebOUTE9rZERtp1ChS0rYrU",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Plaza+Vea+Espa%C3%B1a%2C+Av.+Espa%C3%B1a%2C+Trujillo&query_place_id=ChIJaebOUTE9rZERtp1ChS0rYrU",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    },
+    {
+      "id": "plazavea-espana-780",
+      "marca": "plazaVea",
+      "nombre_en_app": "Plaza Vea España 780",
+      "direccion_google_maps": "Av. España 780, Trujillo",
+      "lat": -8.1076368,
+      "lon": -79.0299941,
+      "google_place_id": "ChIJFy-0KIU9rZERvkTRFnzVzy8",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Plaza+Vea+Espa%C3%B1a+780%2C+Av.+Espa%C3%B1a+780%2C+Trujillo&query_place_id=ChIJFy-0KIU9rZERvkTRFnzVzy8",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    },
+    {
+      "id": "plazavea-primavera",
+      "marca": "plazaVea",
+      "nombre_en_app": "Plaza Vea Primavera",
+      "direccion_google_maps": "Av. Teodoro Valcárcel 266–268, Trujillo",
+      "lat": -8.1014367,
+      "lon": -79.0355399,
+      "google_place_id": "ChIJl_9I_rI9rZERRueGGAB6uA4",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Plaza+Vea+Primavera%2C+Av.+Teodoro+Valc%C3%A1rcel+266%E2%80%93268%2C+Trujillo&query_place_id=ChIJl_9I_rI9rZERRueGGAB6uA4",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    },
+    {
+      "id": "plazavea-el-chacarero",
+      "marca": "plazaVea",
+      "nombre_en_app": "Plaza Vea El Chacarero",
+      "direccion_google_maps": "Prol. Unión 2218, Trujillo",
+      "lat": -8.0900189,
+      "lon": -79.0062619,
+      "google_place_id": "ChIJ0Ub_bbcXrZERU3K1JkFHb64",
+      "google_maps_url": "https://www.google.com/maps/search/?api=1&query=Plaza+Vea+El+Chacarero%2C+Prol.+Uni%C3%B3n+2218%2C+Trujillo&query_place_id=ChIJ0Ub_bbcXrZERU3K1JkFHb64",
+      "estado_consultado": "Operativo: ficha sin cierre temporal o permanente; mostraba horario de atención",
+      "seleccionable": true
+    }
+  ],
+  "sedes_no_disponibles": [
+    {
+      "marca": "plazaVea",
+      "nombre": "Plaza Vea Real Plaza Trujillo",
+      "estado_google_maps": "Cerrado permanentemente",
+      "seleccionable": false,
+      "url": "https://www.google.com/maps/search/?api=1&query=Plaza+Vea+Real+Plaza+Trujillo&query_place_id=ChIJI2_MQW89rZERfJ9g7daxg_E"
+    },
+    {
+      "marca": "interbank",
+      "nombre": "Interbank Real Plaza Trujillo",
+      "estado_google_maps": "Cerrado temporalmente",
+      "seleccionable": false,
+      "url": "https://www.google.com/maps/place/Interbank/data=!4m6!3m5!1s0x91ad3d6f3b8ab505:0x5bd21fc3e8e51e6e!8m2!3d-8.1311884!4d-79.0324097!16s%2Fg%2F1hhkr81r_"
+    },
+    {
+      "marca": "popeyes",
+      "nombre": "Popeyes Real Plaza Trujillo",
+      "estado_google_maps": "Cerrado permanentemente",
+      "seleccionable": false,
+      "presentacion_solicitada": "Próximamente",
+      "url": "https://www.google.com/maps/place/Popeyes/data=!4m6!3m5!1s0x91ad3d68ab3bac95:0xcddd601da74fc4e6!8m2!3d-8.1323599!4d-79.0327154!16s%2Fg%2F11ddxp2qts"
+    }
+  ]
+}

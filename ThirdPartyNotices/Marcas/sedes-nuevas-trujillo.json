@@ -1,0 +1,304 @@
+{
+  "fecha_consulta": "2026-10-09",
+  "alcance": "Catálogo inicial de sedes verificadas en Trujillo; no es un censo exhaustivo de boticas. Google Maps ofrece resultados limitados sin iniciar sesión.",
+  "metodo": "Coordenadas y Place IDs leídos de fichas y resultados visibles en Google Maps. Innova Schools se contrastó con su directorio oficial; Cineplanet Centro figura en el selector actual de cines de su web oficial.",
+  "sedes": [
+    {
+      "id": "inkafarma-los-angeles",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma Los Ángeles",
+      "direccion": "Av. Los Ángeles 599, Trujillo",
+      "lat": -8.1296515,
+      "lon": -79.0372864,
+      "googlePlaceID": "ChIJ5SD7zG09rZER3PvA1gKPRUI",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+Los+%C3%81ngeles%2C+Av.+Los+%C3%81ngeles+599%2C+Trujillo&query_place_id=ChIJ5SD7zG09rZER3PvA1gKPRUI",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-28-julio",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma T-40 — 28 de Julio",
+      "direccion": "Av. 28 de Julio 298, Trujillo",
+      "lat": -8.1185013,
+      "lon": -79.0277349,
+      "googlePlaceID": "ChIJkeR5_3g9rZERfoPuDip19GI",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+T-40+%E2%80%94+28+de+Julio%2C+Av.+28+de+Julio+298%2C+Trujillo&query_place_id=ChIJkeR5_3g9rZERfoPuDip19GI",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-husares",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma Húsares de Junín",
+      "direccion": "Av. Húsares de Junín 697, Trujillo",
+      "lat": -8.1220176,
+      "lon": -79.0340542,
+      "googlePlaceID": "ChIJw8NALnE9rZERwpV_X-oTYT8",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+H%C3%BAsares+de+Jun%C3%ADn%2C+Av.+H%C3%BAsares+de+Jun%C3%ADn+697%2C+Trujillo&query_place_id=ChIJw8NALnE9rZERwpV_X-oTYT8",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-larco",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma Larco",
+      "direccion": "Av. Larco 650, Trujillo",
+      "lat": -8.1222785,
+      "lon": -79.0370508,
+      "googlePlaceID": "ChIJAd3PqHY9rZERVtuU9EOusRw",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+Larco%2C+Av.+Larco+650%2C+Trujillo&query_place_id=ChIJAd3PqHY9rZERVtuU9EOusRw",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-espana-196",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma España 196",
+      "direccion": "Av. España 196, Trujillo",
+      "lat": -8.1146175,
+      "lon": -79.0318928,
+      "googlePlaceID": "ChIJZ7cNNoY9rZERBsbKhuoN2x0",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+Espa%C3%B1a+196%2C+Av.+Espa%C3%B1a+196%2C+Trujillo&query_place_id=ChIJZ7cNNoY9rZERBsbKhuoN2x0",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-espana-2399",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma España 2399",
+      "direccion": "Av. España 2399, Trujillo",
+      "lat": -8.1158443,
+      "lon": -79.025577,
+      "googlePlaceID": "ChIJHRe_B4I9rZERR1vwQ_O9BT4",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+Espa%C3%B1a+2399%2C+Av.+Espa%C3%B1a+2399%2C+Trujillo&query_place_id=ChIJHRe_B4I9rZERR1vwQ_O9BT4",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-juan-pablo",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma Juan Pablo II",
+      "direccion": "Av. Juan Pablo II 765, Trujillo",
+      "lat": -8.1193026,
+      "lon": -79.0399253,
+      "googlePlaceID": "ChIJnblL5HQ9rZEREk-WpPvRFJc",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+Juan+Pablo+II%2C+Av.+Juan+Pablo+II+765%2C+Trujillo&query_place_id=ChIJnblL5HQ9rZEREk-WpPvRFJc",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-america-sur",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma T-33 — América Sur",
+      "direccion": "Av. América Sur 2333, Mz. V Lt. 26, Urb. Santa María I Etapa, Trujillo",
+      "lat": -8.1232896,
+      "lon": -79.0225375,
+      "googlePlaceID": "ChIJMa_sUXw9rZERur0t95WyUyU",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+T-33+%E2%80%94+Am%C3%A9rica+Sur%2C+Av.+Am%C3%A9rica+Sur+2333%2C+Mz.+V+Lt.+26%2C+Urb.+Santa+Mar%C3%ADa+I+Etapa%2C+Trujillo&query_place_id=ChIJMa_sUXw9rZERur0t95WyUyU",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-cesar-vallejo",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma T-49 — César Vallejo",
+      "direccion": "Av. Prol. César Vallejo 1208, Trujillo",
+      "lat": -8.1299749,
+      "lon": -79.032396,
+      "googlePlaceID": "ChIJscujDm89rZERe80qTkGxGYY",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+T-49+%E2%80%94+C%C3%A9sar+Vallejo%2C+Av.+Prol.+C%C3%A9sar+Vallejo+1208%2C+Trujillo&query_place_id=ChIJscujDm89rZERe80qTkGxGYY",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "inkafarma-ayacucho",
+      "empresa": "inkafarma",
+      "nombre": "Inkafarma Ayacucho",
+      "direccion": "Jr. Ayacucho 565, Trujillo",
+      "lat": -8.1125119,
+      "lon": -79.0255489,
+      "googlePlaceID": "ChIJG80DsFU9rZERTd-j6BwssR8",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Inkafarma+Ayacucho%2C+Jr.+Ayacucho+565%2C+Trujillo&query_place_id=ChIJG80DsFU9rZERTd-j6BwssR8",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-larco-prime",
+      "empresa": "mifarma",
+      "nombre": "Mifarma Prime Larco",
+      "direccion": "Av. Larco 269, Trujillo",
+      "lat": -8.117385,
+      "lon": -79.032302,
+      "googlePlaceID": "ChIJ0xYEWQA9rZER96MUzPSr5YA",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+Prime+Larco%2C+Av.+Larco+269%2C+Trujillo&query_place_id=ChIJ0xYEWQA9rZER96MUzPSr5YA",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-espana-pizarro",
+      "empresa": "mifarma",
+      "nombre": "Mifarma España — Pizarro",
+      "direccion": "Av. España 100, esquina con Francisco Pizarro 106, Trujillo",
+      "lat": -8.1155664,
+      "lon": -79.0311324,
+      "googlePlaceID": "ChIJl7RgX-k9rZERYz-EESb1khc",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+Espa%C3%B1a+%E2%80%94+Pizarro%2C+Av.+Espa%C3%B1a+100%2C+esquina+con+Francisco+Pizarro+106%2C+Trujillo&query_place_id=ChIJl7RgX-k9rZERYz-EESb1khc",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-bolognesi",
+      "empresa": "mifarma",
+      "nombre": "Mifarma Bolognesi",
+      "direccion": "Jr. Bolognesi 652, Trujillo",
+      "lat": -8.1165479,
+      "lon": -79.0267708,
+      "googlePlaceID": "ChIJP5JhYAw9rZERBZ0RTAjP5j8",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+Bolognesi%2C+Jr.+Bolognesi+652%2C+Trujillo&query_place_id=ChIJP5JhYAw9rZERBZ0RTAjP5j8",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-espana-2412",
+      "empresa": "mifarma",
+      "nombre": "Mifarma España 2412",
+      "direccion": "Av. España 2412–2414, Trujillo",
+      "lat": -8.1158615,
+      "lon": -79.0261327,
+      "googlePlaceID": "ChIJk5hhoJk9rZERDMfFR90UCnU",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+Espa%C3%B1a+2412%2C+Av.+Espa%C3%B1a+2412%E2%80%932414%2C+Trujillo&query_place_id=ChIJk5hhoJk9rZERDMfFR90UCnU",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-fatima",
+      "empresa": "mifarma",
+      "nombre": "Mifarma Fátima",
+      "direccion": "Av. Fátima 650, Trujillo",
+      "lat": -8.1296854,
+      "lon": -79.0369867,
+      "googlePlaceID": "ChIJc0uGy209rZERK-SZFTL2ev4",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+F%C3%A1tima%2C+Av.+F%C3%A1tima+650%2C+Trujillo&query_place_id=ChIJc0uGy209rZERK-SZFTL2ev4",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-bolivar",
+      "empresa": "mifarma",
+      "nombre": "Mifarma Bolívar",
+      "direccion": "Jr. Bolívar 393–395, Urb. Cercado, Trujillo",
+      "lat": -8.1136632,
+      "lon": -79.0279465,
+      "googlePlaceID": "ChIJKeOuoSU9rZERTugq28yqyWo",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+Bol%C3%ADvar%2C+Jr.+Bol%C3%ADvar+393%E2%80%93395%2C+Urb.+Cercado%2C+Trujillo&query_place_id=ChIJKeOuoSU9rZERTugq28yqyWo",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-el-palmar",
+      "empresa": "mifarma",
+      "nombre": "Mifarma El Palmar",
+      "direccion": "Calle El Palmar Lt. 70-A, Trujillo",
+      "lat": -8.123715,
+      "lon": -79.0259862,
+      "googlePlaceID": "ChIJTdtrzEQ9rZER8tUiS6a0fyY",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+El+Palmar%2C+Calle+El+Palmar+Lt.+70-A%2C+Trujillo&query_place_id=ChIJTdtrzEQ9rZER8tUiS6a0fyY",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "mifarma-pizarro",
+      "empresa": "mifarma",
+      "nombre": "Mifarma Pizarro",
+      "direccion": "Jr. Francisco Pizarro 510, Trujillo",
+      "lat": -8.11167,
+      "lon": -79.027553,
+      "googlePlaceID": "ChIJy1h9noM9rZERxT9m6tk3P7Q",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Mifarma+Pizarro%2C+Jr.+Francisco+Pizarro+510%2C+Trujillo&query_place_id=ChIJy1h9noM9rZERxT9m6tk3P7Q",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "innova-schools-san-isidro",
+      "empresa": "innova_schools",
+      "nombre": "Innova Schools San Isidro",
+      "direccion": "Calle Tungsteno s/n, Urb. San Luis — San Isidro, Trujillo",
+      "lat": -8.0957829,
+      "lon": -79.0457065,
+      "googlePlaceID": "ChIJixjBzIg9rZERwRGk565xMbo",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Innova+Schools+San+Isidro%2C+Calle+Tungsteno+s%2Fn%2C+Urb.+San+Luis+%E2%80%94+San+Isidro%2C+Trujillo&query_place_id=ChIJixjBzIg9rZERwRGk565xMbo",
+      "estado_consultado": "Sin cierre temporal o permanente en la ficha consultada; Innova muestra horario de reapertura."
+    },
+    {
+      "id": "innova-schools-el-golf",
+      "empresa": "innova_schools",
+      "nombre": "Innova Schools El Golf",
+      "direccion": "Av. Carretera Industrial Mz. A Lt. 1, Trujillo",
+      "lat": -8.1342481,
+      "lon": -79.0255691,
+      "googlePlaceID": "ChIJtWsR02Y9rZERWJLW5Dp5--k",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Innova+Schools+El+Golf%2C+Av.+Carretera+Industrial+Mz.+A+Lt.+1%2C+Trujillo&query_place_id=ChIJtWsR02Y9rZERWJLW5Dp5--k",
+      "estado_consultado": "Sin cierre temporal o permanente en la ficha consultada; Innova muestra horario de reapertura."
+    },
+    {
+      "id": "innova-schools-santa",
+      "empresa": "innova_schools",
+      "nombre": "Innova Schools Santa",
+      "direccion": "Prolongación Av. Santa 1515, Urb. Pay Pay, Trujillo",
+      "lat": -8.0949068,
+      "lon": -79.0156107,
+      "googlePlaceID": "ChIJqVAPxCEWrZERL3sug-S9Y_g",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Innova+Schools+Santa%2C+Prolongaci%C3%B3n+Av.+Santa+1515%2C+Urb.+Pay+Pay%2C+Trujillo&query_place_id=ChIJqVAPxCEWrZERL3sug-S9Y_g",
+      "estado_consultado": "Sin cierre temporal o permanente en la ficha consultada; Innova muestra horario de reapertura."
+    },
+    {
+      "id": "bembos-mallplaza",
+      "empresa": "bembos",
+      "nombre": "Bembos Mallplaza",
+      "direccion": "Av. Mansiche s/n, local L-8, Mallplaza Trujillo",
+      "lat": -8.1018225,
+      "lon": -79.048576,
+      "googlePlaceID": "ChIJw5zBnU49rZERuH5sGXgAzww",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Bembos+Mallplaza%2C+Av.+Mansiche+s%2Fn%2C+local+L-8%2C+Mallplaza+Trujillo&query_place_id=ChIJw5zBnU49rZERuH5sGXgAzww",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "bembos-mallplaza-helados",
+      "empresa": "bembos",
+      "nombre": "Bembos Mallplaza — Helados",
+      "direccion": "Av. América Oeste, Mallplaza Trujillo (módulo de helados)",
+      "lat": -8.1018772,
+      "lon": -79.0494207,
+      "googlePlaceID": "ChIJ9UVSgrs9rZERhLSkvLzF15c",
+      "url_fuente": "https://www.google.com/maps/search/?api=1&query=Bembos+Mallplaza+%E2%80%94+Helados%2C+Av.+Am%C3%A9rica+Oeste%2C+Mallplaza+Trujillo+%28m%C3%B3dulo+de+helados%29&query_place_id=ChIJ9UVSgrs9rZERhLSkvLzF15c",
+      "estado_consultado": "Mostraba horario de atención y sin cierre temporal o permanente."
+    },
+    {
+      "id": "cineplanet-centro",
+      "empresa": "cineplanet",
+      "nombre": "Cineplanet Trujillo Centro",
+      "direccion": "Jr. Orbegoso 245, Trujillo",
+      "lat": -8.1094531,
+      "lon": -79.0299395,
+      "googlePlaceID": "",
+      "url_fuente": "https://www.google.com/maps/place/Cineplanet+Trujillo+Centro/data=!4m6!3m5!1s0x91ad3d84c71221e5:0xcd6e1f363bdaa6ce!8m2!3d-8.1094531!4d-79.0299395!16s%2Fg%2F1tgdpmnn",
+      "estado_consultado": "Ficha Google Maps y cine CP Trujillo Centro disponible en el selector de la web oficial."
+    }
+  ],
+  "descartadas": [
+    {
+      "empresa": "don_belisario",
+      "nombre": "Don Belisario América Oeste",
+      "direccion": "Av. América Oeste 550, Trujillo",
+      "estado": "Cerrado permanentemente",
+      "url": "https://www.google.com/maps/place/Don+Belisario/data=!4m6!3m5!1s0x91ad3dbb78fe977f:0xb98c9b37aa42a682!8m2!3d-8.103215!4d-79.04808!16s%2Fg%2F11bt_n5zn0",
+      "presentacion": "Temática disponible, sin sede verificada; no se atribuye una apertura futura."
+    },
+    {
+      "empresa": "bembos",
+      "nombre": "Bembos Real Plaza",
+      "estado": "Cerrado permanentemente",
+      "url": "https://www.google.com/maps/search/?api=1&query=Bembos+Real+Plaza+Trujillo&query_place_id=ChIJ5fyST289rZERAhI2NkUwim8"
+    },
+    {
+      "empresa": "innova_schools",
+      "nombre": "Innova Pre / colegio duplicado El Golf / tiendas de uniformes / Eiffel Schools",
+      "estado": "Descartados: negocios ajenos a la marca o ficha duplicada, sin asignar sedes adicionales."
+    }
+  ],
+  "fuentes_oficiales": [
+    "https://www.innovaschools.edu.pe/taxonomy/term/188",
+    "https://www.cineplanet.com.pe/",
+    "https://www.bembos.com.pe/locales",
+    "https://www.donbelisario.com.pe/locales",
+    "https://ubicaciones.mifarma.com.pe/es"
+  ],
+  "limites": [
+    "No se comprobaron accesos peatonales ni rutas de transporte hacia cada local.",
+    "No se consultan directorios externos ni ubicación automática al abrir la app.",
+    "Los horarios no se guardan: el estado de apertura al consultarlos no se interpreta como disponibilidad permanente."
+  ]
+}
