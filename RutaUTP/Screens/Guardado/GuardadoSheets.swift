@@ -119,8 +119,8 @@ struct LineaDetailSheet: View {
                         }
                         .padding(8)
                         .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appPrimary))
-                        .foregroundStyle(.white)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
+                        .foregroundStyle(.onPrimaryFill)
                         .font(.headlineSm)
                     }
                     .buttonStyle(.plain)
@@ -264,6 +264,7 @@ struct AddLugarSheet: View {
                 .appTracking(AppTracking.wideLabel)
             TextField(L.t("Ej. Mi trabajo", "e.g. My job"), text: $nombre)
                 .textFieldStyle(.plain)
+                .accessibilityLabel(L.t("Nombre del lugar", "Place name"))
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
         }
@@ -283,9 +284,12 @@ struct AddLugarSheet: View {
                               "Tap the map and the address fills in"), text: $direccion)
                     .font(.bodySm)
                     .autocorrectionDisabled()
+                    .accessibilityLabel(L.t("Dirección del lugar", "Place address"))
+                    .accessibilityHint(L.t("Escribe una dirección o elige un punto con las acciones del mapa", "Enter an address or choose a point using the map actions"))
                     .onChange(of: direccion) { _, _ in programarGeocodificacion() }
                 if buscandoUbicacion {
                     ProgressView().scaleEffect(0.8)
+                        .accessibilityLabel(L.t("Buscando dirección", "Looking up address"))
                 }
             }
             .padding(12)
@@ -454,14 +458,14 @@ struct AddLugarSheet: View {
                      : L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
                     .font(.headlineSm)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(puedeGuardar ? Color.onPrimaryFill : Color.white)
             .frame(maxWidth: .infinity, minHeight: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: puedeGuardar
-                                ? [.appPrimary, .appPrimary.opacity(0.78)]
+                                ? [.primaryFill, .primaryFill.opacity(0.78)]
                                 : [Color.onSurfaceVariant.opacity(0.35), Color.onSurfaceVariant.opacity(0.25)],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
@@ -668,11 +672,11 @@ struct MapaElegirExpandido: View {
                     Text(L.t("Usar esta ubicación", "Use this location"))
                         .font(.headlineSm)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(.onPrimaryFill)
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.appPrimary)
+                        .fill(Color.primaryFill)
                         .shadow(color: .appPrimary.opacity(0.35), radius: 12, x: 0, y: 6)
                 )
             }
@@ -731,14 +735,17 @@ struct AddLineaSheet: View {
                     TextField(L.t("Buscar línea, empresa o avenida", "Search line, company or avenue"), text: $texto)
                         .font(.bodySm)
                         .autocorrectionDisabled()
+                        .accessibilityLabel(L.t("Buscar línea para guardar", "Search for a line to save"))
                     if !texto.isEmpty {
                         Button {
                             texto = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.onSurfaceVariant.opacity(0.6))
+                                .frame(minWidth: 44, minHeight: 44)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(L.t("Borrar búsqueda", "Clear search"))
                     }
                 }
                 .padding(.horizontal, 12)
@@ -766,7 +773,8 @@ struct AddLineaSheet: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if catalogo.isEmpty {
-                    Text(L.t("El catálogo no contiene líneas.", "The catalog contains no routes."))
+                    Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
+                         : L.t("El catálogo no contiene líneas.", "The catalog contains no routes."))
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -852,5 +860,10 @@ struct AddLineaSheet: View {
         .buttonStyle(.plain)
         .disabled(guardada)
         .opacity(guardada ? 0.55 : 1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Línea ", "Line ") + ruta.linea + ", " + ruta.empresa)
+        .accessibilityValue(ruta.recorrido + (guardada ? L.t(", guardada", ", saved") : ""))
+        .accessibilityHint(guardada ? "" : L.t("Añade esta línea a Guardado", "Adds this line to Saved"))
+        .accessibilityAddTraits(guardada ? .isSelected : [])
     }
 }

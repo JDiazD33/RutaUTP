@@ -145,10 +145,12 @@ struct GuardadoView: View {
             Image(systemName: "bookmark.fill")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.appPrimary)
+                .accessibilityHidden(true)
             Text(L.signable("guardado.titulo", "Guardado", "Saved"))
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
                 .seniable("guardado.titulo", distintivoDx: 10)
+                .accessibilityAddTraits(.isHeader)
             Spacer()
             botonAñadir
         }
@@ -187,13 +189,13 @@ struct GuardadoView: View {
                     .font(.labelCapsMd)
                     .appTracking(AppTracking.wideLabel)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(.onPrimaryFill)
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
             .background(
                 Capsule().fill(
                     LinearGradient(
-                        colors: [.appPrimary, .appPrimary.opacity(0.78)],
+                        colors: [.primaryFill, .primaryFill.opacity(0.78)],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     )
                 )
@@ -232,13 +234,14 @@ struct GuardadoView: View {
                             .seniable(t == .lugares ? "guardado.lugares" : "guardado.lineas",
                                       distintivoDx: 10, conGesto: false)
                         Rectangle()
-                            .fill(selectedTab == t ? Color.appPrimary : Color.clear)
+                            .fill(selectedTab == t ? Color.primaryFill : Color.clear)
                             .frame(height: 2)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
+                .accessibilityAddTraits(selectedTab == t ? .isSelected : [])
             }
         }
         .background(Color.appSurface)
@@ -335,12 +338,16 @@ struct GuardadoView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(lugar.nombre)
+        .accessibilityValue(lugar.direccion + (lugar.esFrecuente ? L.t(". Frecuente", ". Frequent") : ""))
+        .accessibilityHint(L.t("Muestra las opciones del lugar guardado", "Shows saved place options"))
     }
 
     private func iconCircle(lugar: LugarGuardado) -> some View {
         let isPrimary = lugar.esFijo
-        let bg: Color = isPrimary ? .appPrimary : .primaryContainer.opacity(0.15)
-        let fg: Color = isPrimary ? .white : .appPrimary
+        let bg: Color = isPrimary ? .primaryFill : .primaryContainer.opacity(0.15)
+        let fg: Color = isPrimary ? .onPrimaryFill : .appPrimary
         return ZStack {
             Circle().fill(bg).frame(width: 48, height: 48)
             Image(systemName: lugar.categoria.icono)
@@ -504,12 +511,14 @@ struct MapaElegirLugar: UIViewRepresentable {
         let tap = UITapGestureRecognizer(target: context.coordinator,
                                          action: #selector(Coordinator.mapaTocado(_:)))
         mapView.addGestureRecognizer(tap)
+        context.coordinator.configurarAccesibilidad(mapView, seleccion: coordenada)
         return mapView
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         let coordinator = context.coordinator
         coordinator.colorPin = UIColor(colorPin)
+        coordinator.onTocar = onTocar
 
         // Pin
         if let coordenada {
@@ -539,6 +548,7 @@ struct MapaElegirLugar: UIViewRepresentable {
                     ), animated: true)
             }
         }
+        coordinator.configurarAccesibilidad(mapView, seleccion: coordenada)
     }
 
     final class Coordinator: NSObject, MKMapViewDelegate {
@@ -588,7 +598,7 @@ struct LugarDetailSheet: View {
     @State private var confirmarEliminar = false
     @State private var errorAlEliminar = false
     @State private var camera: MapCameraPosition = .region(MKCoordinateRegion(
-        center: GTFSRepository.coordenadaUTP,
+        center: TransporteApp.referenciaInicio,
         span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)))
 
     var body: some View {
@@ -628,8 +638,8 @@ struct LugarDetailSheet: View {
                         Map(position: $camera, interactionModes: []) {
                             Annotation(lugar.nombre, coordinate: coord) {
                                 Image(systemName: lugar.categoria.icono)
-                                    .font(.title3.bold()).foregroundStyle(.white)
-                                    .padding(12).background(Color.appPrimary, in: Circle())
+                                    .font(.title3.bold()).foregroundStyle(.onPrimaryFill)
+                                    .padding(12).background(Color.primaryFill, in: Circle())
                                     .overlay(Circle().stroke(.white, lineWidth: 3))
                                     .shadow(color: .black.opacity(0.2), radius: 5, y: 3)
                             }
@@ -726,8 +736,8 @@ struct LugarDetailSheet: View {
                 Image(systemName: "chevron.right").font(.caption.bold())
             }
             .padding(16)
-            .foregroundStyle(principal ? Color.white : Color.onSurface)
-            .background(principal ? Color.appPrimary : Color.surfaceContainerLowest,
+            .foregroundStyle(principal ? Color.onPrimaryFill : Color.onSurface)
+            .background(principal ? Color.primaryFill : Color.surfaceContainerLowest,
                         in: RoundedRectangle(cornerRadius: 18))
             .contentShape(RoundedRectangle(cornerRadius: 18))
         }
