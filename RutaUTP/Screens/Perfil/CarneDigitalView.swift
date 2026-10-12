@@ -155,7 +155,7 @@ struct CarneDigitalView: View {
             VStack(spacing: 12) {
                 Text(empresa == .utp
                      ? L.t("Código de demostración. No permite ingresar al campus.", "Demo code. It does not grant campus access.")
-                     : L.t("Código de demostración de \(empresa.nombre). No permite acceder a sus instalaciones.", "\(empresa.nombre) demo code. It does not grant access to company facilities."))
+                     : L.f("Código de demostración de {0}. No permite acceder a sus instalaciones.", "{0} demo code. It does not grant access to company facilities.", ["\(empresa.nombre)"]))
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .multilineTextAlignment(.center)
@@ -256,10 +256,7 @@ struct CarneDigitalView: View {
             Text(empresa == .utp ? L.t(
                 "Este carné es una muestra con un código ficticio. El nombre y la foto no verifican tu identidad ni tu matrícula. No es una credencial emitida por la universidad y no permite ingresar al campus.",
                 "This ID is a sample with a fictional code. The name and photo do not verify your identity or enrollment. It is not a university-issued credential and does not grant campus access."
-            ) : L.t(
-                "Este carné es una muestra de \(empresa.nombre) con un código ficticio. El nombre y la foto no verifican tu identidad ni tu vínculo laboral. No es una credencial emitida por la empresa y no permite acceder a sus instalaciones.",
-                "This \(empresa.nombre) ID is a sample with a fictional code. The name and photo do not verify your identity or employment. It is not a company-issued credential and does not grant access to its facilities."
-            ))
+            ) : L.f("Este carné es una muestra de {0} con un código ficticio. El nombre y la foto no verifican tu identidad ni tu vínculo laboral. No es una credencial emitida por la empresa y no permite acceder a sus instalaciones.", "This {0} ID is a sample with a fictional code. The name and photo do not verify your identity or employment. It is not a company-issued credential and does not grant access to its facilities.", ["\(empresa.nombre)"]))
             .font(.bodyXsMedium)
             .foregroundStyle(onMostaza)
             .fixedSize(horizontal: false, vertical: true)
@@ -274,8 +271,7 @@ struct CarneDigitalView: View {
         .accessibilityLabel(empresa == .utp ? L.t(
             "Carné de muestra con código ficticio. No verifica identidad ni matrícula, no está emitido por la universidad y no permite ingresar al campus.",
             "Sample ID with a fictional code. It does not verify identity or enrollment, is not university-issued and does not grant campus access."
-        ) : L.t("Carné de muestra de \(empresa.nombre), con código ficticio. No verifica identidad ni vínculo laboral, no está emitido por la empresa y no permite acceder a sus instalaciones.",
-                 "Sample \(empresa.nombre) ID with a fictional code. It does not verify identity or employment, is not company-issued and does not grant access to its facilities."))
+        ) : L.f("Carné de muestra de {0}, con código ficticio. No verifica identidad ni vínculo laboral, no está emitido por la empresa y no permite acceder a sus instalaciones.", "Sample {0} ID with a fictional code. It does not verify identity or employment, is not company-issued and does not grant access to its facilities.", ["\(empresa.nombre)"]))
     }
 
     // MARK: - Pie: marca de la institución

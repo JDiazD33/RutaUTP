@@ -83,7 +83,7 @@ struct CarnetScannerView: View {
                     .disabled(guardando)
                     Text(empresa == .utp
                         ? L.t("Puedes cambiar la foto cuando quieras. Se conserva al cerrar la app. Guardarla no verifica tu identidad universitaria.", "You can replace the photo anytime. It stays saved after closing the app. Saving it does not verify your university identity.")
-                        : L.t("Puedes cambiar la foto cuando quieras. Se conserva al cerrar la app y pertenece a tu carnet de \(empresa.nombre). Guardarla no verifica tu identidad ni tu vínculo laboral.", "You can replace the photo anytime. It stays saved after closing the app and belongs to your \(empresa.nombre) card. Saving it does not verify your identity or employment."))
+                        : L.f("Puedes cambiar la foto cuando quieras. Se conserva al cerrar la app y pertenece a tu carnet de {0}. Guardarla no verifica tu identidad ni tu vínculo laboral.", "You can replace the photo anytime. It stays saved after closing the app and belongs to your {0} card. Saving it does not verify your identity or employment.", ["\(empresa.nombre)"]))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -349,7 +349,7 @@ private struct VisorFotoCarnet: View {
                 )
                 .frame(width: geo.size.width, height: geo.size.height)
                 .accessibilityLabel(L.t("Foto del carné", "Card photo"))
-                .accessibilityValue(L.t("Ampliación \(Int(zoom * 100)) por ciento", "Zoom \(Int(zoom * 100)) percent"))
+                .accessibilityValue(L.f("Ampliación {0} por ciento", "Zoom {0} percent", ["\(Int(zoom * 100))"]))
                 .accessibilityHint(L.t("Usa Acciones para acercar, alejar o restablecer la foto", "Use Actions to zoom in, zoom out or reset the photo"))
                 .accessibilityActions {
                     Button(L.t("Acercar", "Zoom in")) {
@@ -451,7 +451,7 @@ struct EncuadreFotoView: View {
                                     desplazamiento = limitar(desplazamiento, marco: marco, escala: escalaBase(marco) * zoom)
                                 }))
                         .accessibilityLabel(L.t("Vista previa del recorte", "Crop preview"))
-                        .accessibilityValue(L.t("Ampliación \(Int(zoom * 100)) por ciento", "Zoom \(Int(zoom * 100)) percent"))
+                        .accessibilityValue(L.f("Ampliación {0} por ciento", "Zoom {0} percent", ["\(Int(zoom * 100))"]))
                         .accessibilityActions {
                             Button(L.t("Mover foto arriba", "Move photo up")) {
                                 desplazamiento = limitar(CGSize(width: desplazamiento.width, height: desplazamiento.height - 20), marco: marco, escala: escalaBase(marco) * zoom)
@@ -470,7 +470,7 @@ struct EncuadreFotoView: View {
                             Label(L.t("Ampliación", "Zoom"), systemImage: "plus.magnifyingglass")
                             Slider(value: $zoom, in: 1...6)
                                 .accessibilityLabel(L.t("Ampliación", "Zoom"))
-                                .accessibilityValue(L.t("\(Int(zoom * 100)) por ciento", "\(Int(zoom * 100)) percent"))
+                                .accessibilityValue(L.f("{0} por ciento", "{0} percent", ["\(Int(zoom * 100))"]))
                         }
                         Button(L.t("Restablecer encuadre", "Reset framing")) {
                             zoom = 1
