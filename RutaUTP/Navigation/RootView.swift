@@ -22,6 +22,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @State private var bottomNavBarHeight: CGFloat = 64
 
     /// Servicio de ubicación compartido con el rastreo pasivo. Se recibe desde
     /// `RutaUTPApp`; el valor por defecto solo sirve para las previsualizaciones.
@@ -47,10 +48,11 @@ struct RootView: View {
         }
     }
 
-    init(locationService: LocationServiceProtocol = LocationService()) {
-        self.locationService = locationService
+    init(locationService: LocationServiceProtocol? = nil) {
+        let compartido = locationService ?? LocationService()
+        self.locationService = compartido
         _trackingStore = StateObject(wrappedValue: ScreenModelStore(
-            RouteTrackingViewModel(locationService: locationService)
+            RouteTrackingViewModel(locationService: compartido)
         ))
 
         // Solo DEBUG: permite abrir directo en una pantalla desde consola,
@@ -76,7 +78,7 @@ struct RootView: View {
             switch router.currentScreen {
             case .bienvenida:    BienvenidaView()
             case .mapaPrincipal: MapaView(locationService: locationService).id(busesUTPActivos)
-            case .rutas:         RutasView().id(busesUTPActivos)
+            case .rutas:         RutasView(locationService: locationService).id(busesUTPActivos)
             case .guardado:      GuardadoView().id(busesUTPActivos)
             case .seguridad:     SeguridadView(locationService: locationService).id(busesUTPActivos)
             case .perfil:        PerfilView()
@@ -86,6 +88,11 @@ struct RootView: View {
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
         .environmentObject(router)
+        .environment(\.bottomNavBarHeight, bottomNavBarHeight)
+        .onPreferenceChange(BottomNavBarHeightPreferenceKey.self) { height in
+            guard height.isFinite, height > 0, abs(height - bottomNavBarHeight) > 0.5 else { return }
+            bottomNavBarHeight = height
+        }
         .tint(.appPrimary)
         .animation(reduceMotion || voiceOverOn ? nil : .easeInOut(duration: 0.25), value: router.currentScreen)
         .onAppear { aplicarTemaEnVentanas(isDarkMode) }

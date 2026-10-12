@@ -1,6 +1,7 @@
 import Foundation
 import CoreMotion
 
+@MainActor
 final class CoreMotionActivityService:
     MotionActivityProviding {
 
@@ -14,6 +15,7 @@ final class CoreMotionActivityService:
         AsyncStream<DetectedMotionActivity>?
 
     private var isRunning = false
+    private var generation = UUID()
 
     private(set) var currentActivity:
         DetectedMotionActivity = .unknown
@@ -36,12 +38,13 @@ final class CoreMotionActivityService:
 
         prepareStreamIfNeeded()
         isRunning = true
+        let token = UUID()
+        generation = token
 
         manager.startActivityUpdates(
             to: operationQueue
         ) { [weak self] activity in
             guard
-                let self,
                 let activity
             else {
                 return
@@ -49,19 +52,23 @@ final class CoreMotionActivityService:
 
             let detected = Self.map(activity)
 
-            self.currentActivity = detected
-            self.continuation?.yield(detected)
+            Task { @MainActor [weak self] in
+                guard let self, self.isRunning, self.generation == token else { return }
+                self.currentActivity = detected
+                self.continuation?.yield(detected)
 
-            #if DEBUG
-            print(
-                "[CoreMotion] Actividad detectada: " +
-                detected.rawValue
-            )
-            #endif
+                #if DEBUG
+                print(
+                    "[CoreMotion] Actividad detectada: " +
+                    detected.rawValue
+                )
+                #endif
+            }
         }
     }
 
     func stop() {
+        generation = UUID()
         guard isRunning else {
             return
         }
@@ -109,7 +116,7 @@ final class CoreMotionActivityService:
         }
     }
 
-    private static func map(
+    nonisolated private static func map(
         _ activity: CMMotionActivity
     ) -> DetectedMotionActivity {
         guard activity.confidence != .low else {

@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 enum TrackingProviderFactory {
 
     static func makeDefault() -> VehicleTrackingProviding {

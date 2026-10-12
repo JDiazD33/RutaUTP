@@ -20,6 +20,8 @@ import CoreLocation
 
 struct PublicarComunidadSheet: View {
 
+    let locationService: LocationServiceProtocol
+
     @Environment(\.dismiss) private var dismiss
 
     // Contenido base (mismos campos que ReportarSheet)
@@ -35,9 +37,7 @@ struct PublicarComunidadSheet: View {
     // Ubicación opcional (Apple Maps)
     @State private var mostrarMapa = false
     @State private var ubicacion: CLLocationCoordinate2D?
-    @State private var direccionUbicacion: String?
-    @State private var geolocalizando = false
-    private let geocoder = CLGeocoder()
+    @StateObject private var geocodificacion = GeocodificacionComunidadModel()
 
     @State private var showSuccess = false
 
@@ -67,6 +67,7 @@ struct PublicarComunidadSheet: View {
             }
         }
         .presentationDragIndicator(.visible)
+        .onDisappear { geocodificacion.cancelar() }
         .confirmationDialog(L.t("Foto del aporte", "Post photo"),
                             isPresented: $showFuenteFoto,
                             titleVisibility: .visible) {
@@ -85,9 +86,9 @@ struct PublicarComunidadSheet: View {
             GaleriaPicker { foto = $0 }
         }
         .fullScreenCover(isPresented: $mostrarMapa) {
-            MapaUbicacionPicker(inicial: ubicacion) { coord in
+            MapaUbicacionPicker(inicial: ubicacion, locationService: locationService) { coord in
                 ubicacion = coord
-                geocodificar(coord)
+                geocodificacion.buscar(coord)
             }
         }
         // Mismo criterio que ReportarSheet: la publicación no llega a ningún
@@ -234,16 +235,16 @@ struct PublicarComunidadSheet: View {
                 .accessibilityLabel(L.t("Editar ubicación en el mapa", "Edit location on map"))
 
                 HStack(spacing: 6) {
-                    if geolocalizando {
+                    if geocodificacion.buscando {
                         ProgressView()
                             .controlSize(.small)
                     } else {
                         Image(systemName: "mappin.and.ellipse")
                             .font(.system(size: 13, weight: .semibold))
                     }
-                    Text(geolocalizando
+                    Text(geocodificacion.buscando
                          ? L.t("Buscando dirección…", "Looking up address…")
-                         : (direccionUbicacion ?? coordenadasTexto(ubi)))
+                         : (geocodificacion.direccion ?? coordenadasTexto(ubi)))
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .lineLimit(1)
@@ -252,9 +253,8 @@ struct PublicarComunidadSheet: View {
                         AppHaptics.impact(.light)
                         withAnimation(.easeInOut(duration: 0.2)) {
                             ubicacion = nil
-                            direccionUbicacion = nil
                         }
-                        geocoder.cancelGeocode()
+                        geocodificacion.cancelar(limpiar: true)
                     } label: {
                         Text(L.t("Quitar", "Remove"))
                             .font(.bodySmMedium)
@@ -310,26 +310,6 @@ struct PublicarComunidadSheet: View {
         String(format: "%.4f, %.4f", coord.latitude, coord.longitude)
     }
 
-    private func geocodificar(_ coord: CLLocationCoordinate2D) {
-        geocoder.cancelGeocode()
-        geolocalizando = true
-        let loc = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
-        geocoder.reverseGeocodeLocation(loc) { placemarks, _ in
-            DispatchQueue.main.async {
-                geolocalizando = false
-                if let pm = placemarks?.first {
-                    let partes = [pm.thoroughfare, pm.subThoroughfare, pm.locality]
-                        .compactMap { $0 }
-                    if !partes.isEmpty {
-                        direccionUbicacion = partes.joined(separator: " ")
-                        return
-                    }
-                }
-                direccionUbicacion = nil
-            }
-        }
-    }
-
     // MARK: - Publicar
 
     private var botonPublicar: some View {
@@ -367,6 +347,40 @@ struct PublicarComunidadSheet: View {
     }
 }
 
+/// Mantiene una sola identidad de consulta aunque SwiftUI reconstruya la hoja.
+@MainActor
+private final class GeocodificacionComunidadModel: ObservableObject {
+    @Published private(set) var direccion: String?
+    @Published private(set) var buscando = false
+    private let geocoder = CLGeocoder()
+    private var solicitud = StartGuard()
+
+    func buscar(_ coordenada: CLLocationCoordinate2D) {
+        cancelar(limpiar: true)
+        guard CLLocationCoordinate2DIsValid(coordenada) else { return }
+        let token = solicitud.begin()
+        buscando = true
+        let location = CLLocation(latitude: coordenada.latitude, longitude: coordenada.longitude)
+        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.solicitud.isCurrent(token) else { return }
+                let partes = [placemarks?.first?.thoroughfare,
+                              placemarks?.first?.subThoroughfare,
+                              placemarks?.first?.locality].compactMap { $0 }
+                self.direccion = partes.isEmpty ? nil : partes.joined(separator: " ")
+                self.buscando = false
+            }
+        }
+    }
+
+    func cancelar(limpiar: Bool = false) {
+        solicitud.invalidate()
+        geocoder.cancelGeocode()
+        buscando = false
+        if limpiar { direccion = nil }
+    }
+}
+
 // MARK: - Selector de ubicación a pantalla completa (Apple Maps)
 
 /// Mapa de Apple Maps (MapKit) con pin fijo al centro: el usuario mueve el
@@ -388,10 +402,12 @@ private struct MapaUbicacionPicker: View {
     // GPS real (mismo servicio que la pestaña Mapa)
     @State private var userRealCoordinate: CLLocationCoordinate2D?
     @State private var locationTask: Task<Void, Never>?
-    @StateObject private var locationService = LocationService()
+    private let locationService: LocationServiceProtocol
 
-    init(inicial: CLLocationCoordinate2D?, onConfirmar: @escaping (CLLocationCoordinate2D) -> Void) {
+    init(inicial: CLLocationCoordinate2D?, locationService: LocationServiceProtocol,
+         onConfirmar: @escaping (CLLocationCoordinate2D) -> Void) {
         self.onConfirmar = onConfirmar
+        self.locationService = locationService
         self.teniaUbicacionPrevia = (inicial != nil)
         let centroInicial = inicial ?? Self.centroDefault
         _centro = State(initialValue: centroInicial)
@@ -399,41 +415,36 @@ private struct MapaUbicacionPicker: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Map(position: $posicion)
-                .ignoresSafeArea()
-                .onMapCameraChange(frequency: .onEnd) { context in
-                    centro = context.camera.centerCoordinate
-                }
-
-            // Pin fijo al centro (la punta apunta al centro del mapa).
-            Image(systemName: "mappin")
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(.appPrimary)
-                .shadow(color: .black.opacity(0.35), radius: 3, y: 2)
-                .frame(width: 44, height: 44)
-                .offset(y: -22)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-
-            // Volver a mi ubicación (abajo a la derecha, flotando sobre el
-            // panel de confirmar y sin pegarse al marco del teléfono).
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    botonMiUbicacion
-                        .padding(.trailing, 16)
-                        .padding(.bottom, 16)
-                }
+        GeometryReader { geometry in
+            let punto = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            MapReader { proxy in
+                Map(position: $posicion)
+                    .overlay {
+                        // El anillo es el mismo punto que se convierte a coordenada.
+                        PinEnColocacion().position(punto)
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        botonMiUbicacion.padding(16)
+                    }
+                    .onMapCameraChange(frequency: .continuous) { _ in
+                        if let coordenada = proxy.convert(punto, from: .local) {
+                            centro = coordenada
+                        }
+                    }
+                    .onChange(of: geometry.size) { _, _ in
+                        if let coordenada = proxy.convert(punto, from: .local) {
+                            centro = coordenada
+                        }
+                    }
             }
         }
+        .ignoresSafeArea()
         .safeAreaInset(edge: .top, spacing: 0) { barraSuperior }
         .safeAreaInset(edge: .bottom, spacing: 0) { panelConfirmar }
         .task { iniciarGPS(autoCentrar: !teniaUbicacionPrevia) }
         .onDisappear {
             locationTask?.cancel()
-            locationService.stopUpdating()
+            locationTask = nil
         }
     }
 
@@ -459,9 +470,12 @@ private struct MapaUbicacionPicker: View {
         locationTask?.cancel()
         locationTask = Task { @MainActor in
             let status = await locationService.requestPermission()
-            guard status.isAuthorized else { return }
+            guard !Task.isCancelled, status.isAuthorized else { return }
+            let lecturas = locationService.currentLocation()
             locationService.startUpdating()
-            for await location in locationService.currentLocation() {
+            for await location in lecturas {
+                guard !Task.isCancelled else { return }
+                guard UbicacionPuntual.esValida(location, ahora: Date()) else { continue }
                 let esPrimerFix = (userRealCoordinate == nil)
                 userRealCoordinate = location.coordinate
                 if esPrimerFix && autoCentrar {
@@ -575,5 +589,5 @@ struct GaleriaPicker: UIViewControllerRepresentable {
 }
 
 #Preview {
-    PublicarComunidadSheet()
+    PublicarComunidadSheet(locationService: LocationService())
 }

@@ -2,8 +2,7 @@
 //  SeguridadView.swift
 //  RutaUTP
 //
-//  Pantalla de seguridad. Layout ZStack(alignment: .bottom) + ignoresSafeArea.
-//  FAB anclado a navbarHeight + 12 para estar pegado encima de la navbar.
+//  Pantalla de seguridad; reserva la altura real de la barra inferior.
 //
 
 import SwiftUI
@@ -40,8 +39,15 @@ struct SeguridadView: View {
     @StateObject private var lugaresVM = SeguridadLugaresModel()
     @State private var selectedLugar: LugarGuardado?
     @State private var showElegirLugares = false
+    @State private var confirmarReinicioTiles = false
+    @State private var errorRecuperacionTiles = false
+    @State private var respaldoTiles: URL?
+    @State private var marcosTiles: [UUID: CGRect] = [:]
+    @GestureState private var arrastreActivo = false
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private let tabBarHeight: CGFloat = 64
+    @Environment(\.bottomNavBarHeight) private var tabBarHeight
 
     /// DEBUG: `--comunidad` deja solo la sección de comunidad y `--zonas` solo
     /// la de zonas seguras. Van bajo `#if DEBUG` para que la lectura de
@@ -172,6 +178,11 @@ struct SeguridadView: View {
             BottomNavBar()
         }
         .ignoresSafeArea(edges: .bottom)
+        .onDisappear { lugaresVM.arrastrando = nil }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { lugaresVM.arrastrando = nil }
+        }
+        .onChange(of: lugaresVM.modoEdicion) { _, _ in lugaresVM.arrastrando = nil }
         .onAppear {
             lugaresVM.cargar()
             #if DEBUG
@@ -210,7 +221,7 @@ struct SeguridadView: View {
         }
         // Mapa fullscreen de paraderos iluminados (desde el banner)
         .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { lugaresVM.cargar() }) {
-            ParaderosIluminadosView(paraderos: paraderosIluminados)
+            ParaderosIluminadosView(paraderos: paraderosIluminados, locationService: locationService)
         }
         .sheet(isPresented: $showReportarSheet) {
             ReportarSheet(locationService: locationService)
@@ -219,13 +230,32 @@ struct SeguridadView: View {
         // AÑADIR (Comunidad): sheet propio, distinto al de reportar, con foto
         // (cámara/galería) y ubicación en Apple Maps.
         .sheet(isPresented: $showPublicarComunidad) {
-            PublicarComunidadSheet()
+            PublicarComunidadSheet(locationService: locationService)
                 .presentationDetents([.large])
         }
         .sheet(item: $selectedReporte) { reporte in
             ReporteDetailSheet(reporte: reporte, reacciones: reacciones)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .alert(L.t("¿Restablecer tus accesos?", "Reset your shortcuts?"),
+               isPresented: $confirmarReinicioTiles) {
+            Button(L.t("Respaldar y restablecer", "Back up and reset"), role: .destructive) {
+                do {
+                    if let archivo = try lugaresVM.respaldarYReiniciarTiles() { respaldoTiles = archivo }
+                    lugaresVM.cargar()
+                } catch { errorRecuperacionTiles = true }
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(L.t("Se respaldarán la selección y el orden originales en tus documentos. Volverán los accesos iniciales; tus lugares guardados se conservan.",
+                     "The original selection and order will be backed up in your documents. Default shortcuts will return; your saved places will be preserved."))
+        }
+        .alert(L.t("No se pudo restablecer", "Couldn't reset"), isPresented: $errorRecuperacionTiles) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) {}
+        } message: {
+            Text(L.t("No se reiniciaron los datos. Reintenta la lectura y comprueba el espacio disponible.",
+                     "The data was not reset. Retry reading and check available storage."))
         }
         .alert(L.t("Llamar al 105", "Call 105"), isPresented: $showLlamarAlert) {
             Button(L.t("Llamar", "Call")) {
@@ -440,6 +470,7 @@ struct SeguridadView: View {
                     .foregroundStyle(lugaresVM.modoEdicion ? Color.appPrimary : Color.onSurfaceVariant)
                 }
                 .buttonStyle(.plain)
+                .disabled(lugaresVM.datosLugaresInvalidos || lugaresVM.datosTilesInvalidos)
             }
 
             if lugaresVM.datosLugaresInvalidos {
@@ -449,21 +480,39 @@ struct SeguridadView: View {
                     .foregroundStyle(.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if lugaresVM.datosTilesInvalidos {
+                Text(L.t("No se pudieron leer la selección o el orden de tus accesos. Se conservaron los datos originales.",
+                         "Your shortcut selection or order could not be read. The original data was preserved."))
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(L.t("Reintentar lectura", "Retry reading")) { lugaresVM.cargar() }
+                    .frame(minHeight: 44)
+                Button(L.t("Respaldar y restablecer accesos", "Back up and reset shortcuts")) {
+                    confirmarReinicioTiles = true
+                }
+                .frame(minHeight: 44)
+            }
+            if let respaldoTiles {
+                ShareLink(item: respaldoTiles) {
+                    Label(L.t("Compartir respaldo de accesos", "Share shortcut backup"),
+                          systemImage: "square.and.arrow.up")
+                        .frame(minHeight: 44)
+                }
+            }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
+                                    count: dynamicTypeSize.isAccessibilitySize ? 1 : (dynamicTypeSize >= .xxLarge ? 2 : 3)), spacing: 12) {
                 ForEach(lugaresVM.tilesActuales) { lugar in
                     lugarTileLugar(lugar)
-                        .onDrag {
-                            AppHaptics.impact(.light)
-                            lugaresVM.arrastrando = lugar
-                            return NSItemProvider(object: lugar.id.uuidString as NSString)
+                        .background {
+                            GeometryReader { geometry in
+                                Color.clear.preference(key: MarcosTilesPreferenceKey.self,
+                                    value: [lugar.id: geometry.frame(in: .named("seguridad.lugares"))])
+                            }
                         }
-                        .onDrop(of: [.text],
-                                delegate: TileDropDelegate(
-                                    destino: lugar,
-                                    tiles: $lugaresVM.tilesActuales,
-                                    arrastrando: $lugaresVM.arrastrando,
-                                    onPersistir: lugaresVM.persistirOrden))
+                        .highPriorityGesture(arrastreDeLugar(lugar),
+                            including: lugaresVM.modoEdicion && !lugar.esFijo ? .all : .subviews)
                         .accessibilityActions {
                             if lugaresVM.modoEdicion, !lugar.esFijo,
                                let indice = lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) {
@@ -478,8 +527,38 @@ struct SeguridadView: View {
                 }
                 lugarTileAñadir
             }
-            .disabled(lugaresVM.datosLugaresInvalidos)
+            .coordinateSpace(name: "seguridad.lugares")
+            .onPreferenceChange(MarcosTilesPreferenceKey.self) { marcosTiles = $0 }
+            .onChange(of: arrastreActivo) { _, activo in
+                if !activo { lugaresVM.arrastrando = nil }
+            }
+            .disabled(lugaresVM.datosLugaresInvalidos || lugaresVM.datosTilesInvalidos)
         }
+    }
+
+    /// GestureState vuelve a false tanto al terminar como al cancelar fuera de la cuadrícula.
+    /// El arrastre solo mueve accesos dentro de esta pantalla; no exporta datos.
+    private func arrastreDeLugar(_ lugar: LugarGuardado) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.25)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("seguridad.lugares")))
+            .updating($arrastreActivo) { value, activo, _ in
+                if case .second(true, _) = value { activo = true }
+            }
+            .onChanged { value in
+                guard lugaresVM.modoEdicion, !lugaresVM.datosLugaresInvalidos,
+                      !lugar.esFijo, case .second(true, let movimiento?) = value else { return }
+                if lugaresVM.arrastrando == nil {
+                    AppHaptics.impact(.light)
+                    lugaresVM.arrastrando = lugar
+                }
+                guard let destino = lugaresVM.tilesActuales.first(where: {
+                    $0.id != lugar.id && !$0.esFijo && marcosTiles[$0.id]?.contains(movimiento.location) == true
+                }) else { return }
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                    _ = lugaresVM.mover(lugar.id, sobre: destino.id)
+                }
+            }
+            .onEnded { _ in lugaresVM.arrastrando = nil }
     }
 
     /// Misma lista y persistencia que el arrastre; respeta el lugar fijo y los datos inválidos.
@@ -489,8 +568,7 @@ struct SeguridadView: View {
         let destino = indice + desplazamiento
         guard lugaresVM.tilesActuales.indices.contains(destino),
               !lugaresVM.tilesActuales[destino].esFijo else { return }
-        lugaresVM.tilesActuales.swapAt(indice, destino)
-        lugaresVM.persistirOrden()
+        _ = lugaresVM.mover(lugar.id, sobre: lugaresVM.tilesActuales[destino].id)
         if UIAccessibility.isVoiceOverRunning {
             UIAccessibility.post(notification: .announcement,
                 argument: L.t("\(lugar.nombre), posición \(destino + 1)", "\(lugar.nombre), position \(destino + 1)"))
@@ -594,8 +672,8 @@ struct SeguridadView: View {
                     .font(.labelCapsMd)
                     .foregroundStyle(.onSurface)
                     .appTracking(AppTracking.wideLabel)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)

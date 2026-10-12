@@ -336,6 +336,92 @@ final class GTFSFeedValidationTests: XCTestCase {
         XCTAssertTrue(rutas.isEmpty)
     }
 
+    func testViajeRepresentativoNoDependeDelOrdenDeFilas() throws {
+        let filas = ["viaje-2,ruta-1,shape-2", "viaje-1,ruta-1,shape-1"]
+        for orden in [filas, Array(filas.reversed())] {
+            var tablas = GTFSFixtureE10.tablas()
+            tablas["trips"] = GTFSCSV.parsear(texto: "trip_id,route_id,shape_id\n" + orden.joined(separator: "\n"))
+            tablas["shapes"] = GTFSCSV.parsear(texto: GTFSFixtureE10.textos["shapes"]!
+                + "shape-2,-8.2,-79.1,1\nshape-2,-8.3,-79.1,2\n")
+            let ruta = try XCTUnwrap(GTFSRepository.parsearFeed(tabla: { tablas[$0]! }).first)
+            XCTAssertEqual(ruta.shape.first?.latitude, GTFSRepository.coordenadaUTP.latitude)
+            XCTAssertEqual(ruta.paraderos.map(\.id), ["parada-1", "parada-2"])
+            XCTAssertEqual(ruta.headwayMin, 10)
+        }
+    }
+
+    func testIDsDuplicadosSeDiagnosticanSinSobrescribirFilas() {
+        for nombre in ["routes", "trips", "stops"] {
+            var tablas = GTFSFixtureE10.tablas()
+            let original = tablas[nombre]!
+            tablas[nombre] = GTFSTable(columns: original.columns.mapValues { $0 + [$0[0]] },
+                                      rowCount: original.rowCount + 1)
+            XCTAssertThrowsError(try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })) { error in
+                XCTAssertTrue(error.localizedDescription.contains(nombre))
+                XCTAssertTrue(error.localizedDescription.contains("duplicado"))
+            }
+        }
+    }
+
+    func testCoordenadasNoFinitasOFueraDeRangoNoPublicanCatalogosParciales() {
+        for (nombre, columna, valor) in [("shapes", "shape_pt_lat", "nan"),
+                                       ("shapes", "shape_pt_lon", "181"),
+                                       ("stops", "stop_lat", "91"),
+                                       ("stops", "stop_lon", "inf")] {
+            var tablas = GTFSFixtureE10.tablas()
+            let original = tablas[nombre]!
+            var columnas = original.columns
+            columnas[columna]![0] = valor
+            tablas[nombre] = GTFSTable(columns: columnas, rowCount: original.rowCount)
+            XCTAssertThrowsError(try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })) { error in
+                XCTAssertTrue(error.localizedDescription.contains(nombre))
+            }
+        }
+    }
+
+    func testReferenciasDesconocidasSeDiagnostican() {
+        for (nombre, columna) in [("trips", "route_id"), ("trips", "shape_id"),
+                                  ("stop_times", "trip_id"), ("stop_times", "stop_id"),
+                                  ("frequencies", "trip_id")] {
+            var tablas = GTFSFixtureE10.tablas()
+            let original = tablas[nombre]!
+            var columnas = original.columns
+            columnas[columna]![0] = "inexistente"
+            tablas[nombre] = GTFSTable(columns: columnas, rowCount: original.rowCount)
+            XCTAssertThrowsError(try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })) { error in
+                XCTAssertTrue(error.localizedDescription.contains(nombre))
+                XCTAssertTrue(error.localizedDescription.contains("desconocido"))
+            }
+        }
+    }
+
+    func testShapeOmitidoOAusenteUsaGeometriaDeRouteIDComoBackend() throws {
+        for declarado in ["", "inexistente"] {
+            var tablas = GTFSFixtureE10.tablas()
+            tablas["trips"] = GTFSCSV.parsear(texto: "trip_id,route_id,shape_id\nviaje-1,ruta-1,\(declarado)\n")
+            let shapes = tablas["shapes"]!
+            var columnas = shapes.columns
+            columnas["shape_id"] = Array(repeating: "ruta-1", count: shapes.rowCount)
+            tablas["shapes"] = GTFSTable(columns: columnas, rowCount: shapes.rowCount)
+            let rutas = try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })
+            XCTAssertEqual(rutas.first?.shape.count, 2)
+        }
+    }
+
+    func testSecuenciasDuplicadasNoEligenUnPuntoOParadaPorOrdenDeFilas() {
+        for (nombre, columna) in [("shapes", "shape_pt_sequence"), ("stop_times", "stop_sequence")] {
+            var tablas = GTFSFixtureE10.tablas()
+            let original = tablas[nombre]!
+            var columnas = original.columns
+            columnas[columna]![1] = columnas[columna]![0]
+            tablas[nombre] = GTFSTable(columns: columnas, rowCount: original.rowCount)
+            XCTAssertThrowsError(try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })) { error in
+                XCTAssertTrue(error.localizedDescription.contains(nombre))
+                XCTAssertTrue(error.localizedDescription.contains("duplicado"))
+            }
+        }
+    }
+
     func testFixtureConservaIdentidadMetadatosOrdenDeGeometriaYDistanciaAlInteriorE09() throws {
         let rutas = try GTFSFixtureE10.parsear()
         let ruta = try XCTUnwrap(rutas.first)

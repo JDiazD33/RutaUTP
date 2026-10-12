@@ -301,6 +301,56 @@ final class QRSinglePaymentTests: XCTestCase {
         XCTAssertEqual(store.saldo, 8.50)
     }
 
+    func testDañoPosteriorALaCargaBloqueaCobroYRecargaSinSobrescribir() throws {
+        for clave in [llaveSaldo, llaveMovimientos] {
+            defaults.removePersistentDomain(forName: dominio)
+            let store = MonederoStore(defaults: defaults)
+            XCTAssertTrue(store.recargar(5))
+            let historialAnterior = store.movimientos
+            defaults.set("formato incompatible", forKey: clave)
+            let original = snapshot()
+            XCTAssertFalse(store.cobrarPasaje())
+            XCTAssertFalse(store.recargar(5))
+            XCTAssertTrue(store.datosLocalesInvalidos)
+            XCTAssertEqual(store.saldo, 0)
+            XCTAssertEqual(store.movimientos, historialAnterior)
+            XCTAssertTrue(snapshot().isEqual(original))
+        }
+    }
+
+    func testDosInstanciasCalculanSobreElSaldoYHistorialVigentes() {
+        let primero = MonederoStore(defaults: defaults)
+        let segundo = MonederoStore(defaults: defaults)
+        XCTAssertTrue(primero.recargar(5))
+        XCTAssertTrue(segundo.cobrarPasaje())
+        XCTAssertEqual(segundo.saldo, 12.5)
+        XCTAssertEqual(segundo.movimientos.count, 2)
+        XCTAssertTrue(primero.recargar(5))
+        XCTAssertEqual(primero.saldo, 17.5)
+        XCTAssertEqual(primero.movimientos.count, 3)
+        XCTAssertEqual(Set(primero.movimientos.map(\.id)).count, 3)
+        XCTAssertTrue(segundo.reintentarLectura())
+        XCTAssertEqual(segundo.saldo, primero.saldo)
+        XCTAssertEqual(segundo.movimientos, primero.movimientos)
+    }
+
+    func testReintentarTrasReparacionReleeSinModificarLosOriginales() throws {
+        let store = MonederoStore(defaults: defaults)
+        XCTAssertTrue(store.recargar(5))
+        let saldo = defaults.object(forKey: llaveSaldo)
+        let historial = try XCTUnwrap(defaults.data(forKey: llaveMovimientos))
+        defaults.set(Data("ilegible".utf8), forKey: llaveMovimientos)
+        XCTAssertFalse(store.reintentarLectura())
+        defaults.set(historial, forKey: llaveMovimientos)
+        let reparado = snapshot()
+        XCTAssertTrue(store.reintentarLectura())
+        XCTAssertFalse(store.datosLocalesInvalidos)
+        XCTAssertEqual(store.saldo, 15)
+        XCTAssertEqual(store.movimientos.count, 1)
+        XCTAssertTrue(snapshot().isEqual(reparado))
+        XCTAssertTrue((defaults.object(forKey: llaveSaldo) as! NSObject).isEqual(saldo))
+    }
+
     func testHistorialCorruptoConservaOriginalYRechazoNoConsumeLectura() throws {
         let bytes = Data("[{\"id\":".utf8)
         defaults.set(10.0, forKey: llaveSaldo)
@@ -555,11 +605,11 @@ final class QRSinglePaymentTests: XCTestCase {
     }
 
     private func leer(_ texto: String, en modelo: EscanerQRModel) async throws -> ResultadoQR {
-        let recibida = expectation(description: "Lectura QR por el puente de cámara sin captura")
+        let recibida = expectation(description: "Lectura QR de ejemplo sin captura")
         let observador = modelo.$resultado.compactMap { $0 }.prefix(1).sink { _ in
             recibida.fulfill()
         }
-        modelo.camara.alLeer?(texto)
+        modelo.simularLectura(texto: texto)
         await fulfillment(of: [recibida], timeout: 2)
         observador.cancel()
         return try XCTUnwrap(modelo.resultado)
@@ -567,5 +617,20 @@ final class QRSinglePaymentTests: XCTestCase {
 
     private func snapshot() -> NSDictionary {
         NSDictionary(dictionary: defaults.persistentDomain(forName: dominio) ?? [:])
+    }
+}
+
+
+@MainActor
+final class QRIdentidadCallbackTests: XCTestCase {
+    func testCallbackSinCapturaVigenteNoReemplazaLecturaDelModelo() async {
+        let modelo = EscanerQRModel()
+        // Simula un aviso ya entregado por el delegado con una identidad anterior.
+        // No configura ni arranca la cámara, ni solicita permiso.
+        modelo.camara.alLeer?(PagoQR.cargaUtil(importe: nil), UUID())
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertNil(modelo.resultado)
+        modelo.simularLectura()
+        XCTAssertNotNil(modelo.resultado)
     }
 }

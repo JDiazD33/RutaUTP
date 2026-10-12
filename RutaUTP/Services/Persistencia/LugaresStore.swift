@@ -11,7 +11,8 @@
 //  de `UserDefaults` en el hilo principal, y había sitios que la llamaban dos
 //  y tres veces seguidas: marcar un paradero como guardado en Seguridad hacía
 //  tres lecturas completas por toque. Ahora se decodifica una sola vez por
-//  proceso y las escrituras mantienen la caché al día.
+//  versión de sus bytes y las escrituras mantienen la caché al día. Una
+//  modificación de la preferencia invalida esa copia antes de reutilizarla.
 //
 
 import Foundation
@@ -31,8 +32,7 @@ enum LugaresStore {
     // MARK: - Lectura
 
     /// Lugares guardados, ya normalizados (el campus UTP siempre presente y
-    /// primero). La primera llamada del proceso lee de disco; el resto, de la
-    /// caché.
+    /// primero). Reutiliza la lista decodificada mientras sus bytes no cambien.
     static func cargar() -> [LugarGuardado] {
         almacen.cargar()
     }
@@ -51,9 +51,7 @@ enum LugaresStore {
 
     /// Descarta la caché para que la próxima lectura vuelva a disco.
     ///
-    /// Existe por las pruebas: escriben y limpian `UserDefaults` directamente,
-    /// así que sin esto verían la lista que dejó la prueba anterior. En la app
-    /// no hace falta, porque toda mutación pasa por `guardar` o `eliminar`.
+    /// Permite forzar una nueva lectura, también desde el aviso de recuperación.
     static func invalidarCache() {
         almacen.invalidarCache()
     }
@@ -83,6 +81,7 @@ final class AlmacenLugares {
 
     private let candado = NSLock()
     private var cache: Carga?
+    private var datosCache: Data?
 
     init(defaults: UserDefaults) {
         self.defaults = defaults
@@ -121,22 +120,27 @@ final class AlmacenLugares {
         candado.lock()
         defer { candado.unlock() }
         cache = nil
+        datosCache = nil
     }
 
     private func cargarBajoCandado() -> Carga {
-        if let cache { return cache }
-        let carga = leerYNormalizar()
+        let original = defaults.object(forKey: LugaresStore.key)
+        // Comparar bytes evita que una copia legible antigua autorice guardar
+        // sobre un original que cambió de tipo o se volvió ilegible.
+        if let cache, let actuales = original as? Data,
+           actuales == datosCache { return cache }
+        datosCache = original as? Data
+        let carga = leerYNormalizar(original: original)
         cache = carga
         return carga
     }
 
-    /// Lee de disco y aplica el sembrado y la normalización. Se ejecuta una
-    /// sola vez por proceso, así que las escrituras de normalización de abajo
-    /// tampoco se repiten.
+    /// Lee y normaliza cuando cambia el original; los bytes ya normalizados
+    /// se cachean y no vuelven a migrarse mientras permanezcan iguales.
     ///
     /// Se llama con el candado tomado: no debe invocar métodos públicos.
-    private func leerYNormalizar() -> Carga {
-        guard let objeto = defaults.object(forKey: LugaresStore.key) else {
+    private func leerYNormalizar(original: Any?) -> Carga {
+        guard let objeto = original else {
             // Seed: UTP (fijo) + Plaza de Armas; el resto los agrega el usuario.
             let semillas = [LugaresStore.lugarUTP(),
                          LugarGuardado(nombre: "Plaza de Armas",
@@ -150,7 +154,8 @@ final class AlmacenLugares {
         // Un tipo distinto de Data también es un dato existente, nunca una
         // primera instalación. No escribir semillas ni borrar el original.
         guard let data = objeto as? Data,
-              let decodificados = try? JSONDecoder().decode([LugarGuardado].self, from: data) else {
+              let decodificados = try? JSONDecoder().decode([LugarGuardado].self, from: data),
+              lugaresValidos(decodificados) else {
             return Carga(lugares: [], datosInvalidos: true)
         }
         var resultado = decodificados
@@ -185,14 +190,30 @@ final class AlmacenLugares {
             // ya migrados. Los UUID y las referencias permanecen intactos.
             defaults.set(data, forKey: LugaresStore.respaldoKey)
             defaults.set(normalizados, forKey: LugaresStore.key)
+            datosCache = normalizados
         }
         return Carga(lugares: resultado, datosInvalidos: false)
     }
 
     private func escribirBajoCandado(_ lugares: [LugarGuardado]) -> Bool {
-        guard let data = try? JSONEncoder().encode(lugares) else { return false }
+        guard lugaresValidos(lugares),
+              let data = try? JSONEncoder().encode(lugares) else { return false }
         defaults.set(data, forKey: LugaresStore.key)
         cache = Carga(lugares: lugares, datosInvalidos: false)
+        datosCache = data
         return true
+    }
+
+    private func lugaresValidos(_ lugares: [LugarGuardado]) -> Bool {
+        guard Set(lugares.map(\.id)).count == lugares.count else { return false }
+        return lugares.allSatisfy { lugar in
+            switch (lugar.lat, lugar.lon) {
+            case (nil, nil): return true // Lugares antiguos sin coordenadas.
+            case let (lat?, lon?):
+                return lat.isFinite && lon.isFinite && (-90...90).contains(lat)
+                    && (-180...180).contains(lon)
+            default: return false
+            }
+        }
     }
 }

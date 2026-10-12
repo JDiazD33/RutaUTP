@@ -49,7 +49,7 @@ enum ProfileImageStore {
         return cache
     }()
     private static let cacheKey = "profile" as NSString
-    private static let readQueue = DispatchQueue(label: "RutaUTP.profileImage", qos: .userInitiated)
+    private static let ioQueue = DispatchQueue(label: "RutaUTP.profileImage", qos: .userInitiated)
     private static var revision = UUID()
     private static var cacheEpoch = UUID()
     private static var pending: PendingLoad?
@@ -67,17 +67,32 @@ enum ProfileImageStore {
     }
 
     @discardableResult
-    static func save(_ image: UIImage) -> Bool {
-        guard let data = image.jpegData(compressionQuality: 0.8) else { return false }
-        do {
-            try data.write(to: url, options: .atomic)
-            revision = UUID()
-            cache.removeAllObjects()
-            pending = nil
-            return true
-        } catch {
-            return false
+    static func save(_ image: UIImage) async -> Bool {
+        let fileURL = url
+        // Invalidar antes de suspender evita que una lectura previa publique
+        // su resultado mientras se está reemplazando la foto.
+        invalidarLecturas()
+        let saved = await inBackground {
+            autoreleasepool {
+                guard let data = image.jpegData(compressionQuality: 0.8) else { return false }
+                do {
+                    try data.write(to: fileURL, options: .atomic)
+                    return true
+                } catch {
+                    return false
+                }
+            }
         }
+        // La misma cola serial ordena lecturas y escrituras, incluso si dos
+        // consumidores guardan a la vez. La caché solo cambia en MainActor.
+        invalidarLecturas()
+        return saved
+    }
+
+    private static func invalidarLecturas() {
+        revision = UUID()
+        cache.removeAllObjects()
+        pending = nil
     }
 
     static func load() async -> UIImage? {
@@ -124,7 +139,7 @@ enum ProfileImageStore {
 
     private static func inBackground<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
         await withCheckedContinuation { continuation in
-            readQueue.async { continuation.resume(returning: work()) }
+            ioQueue.async { continuation.resume(returning: work()) }
         }
     }
 

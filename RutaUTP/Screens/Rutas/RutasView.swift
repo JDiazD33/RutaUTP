@@ -11,6 +11,7 @@ import SwiftUI
 
 // MARK: - Vista principal
 struct RutasView: View {
+    let locationService: LocationServiceProtocol
     @EnvironmentObject var router: AppRouter
     @StateObject private var viewModel = RutasViewModel()
     @State private var rutaSeleccionada: RutaOpcion? = nil
@@ -20,12 +21,12 @@ struct RutasView: View {
     @State private var debugNavegacion: Bool = false
     #endif
 
-    private let tabBarHeight: CGFloat = 64
+    @Environment(\.bottomNavBarHeight) private var tabBarHeight
 
     var body: some View {
         ZStack(alignment: .bottom) {
             if let ruta = rutaSeleccionada {
-                DetalleRutaView(ruta: ruta, onBack: {
+                DetalleRutaView(ruta: ruta, locationService: locationService, onBack: {
                     withAnimation(.spring(response: 0.3)) { rutaSeleccionada = nil }
                 })
                 .transition(.asymmetric(
@@ -58,7 +59,8 @@ struct RutasView: View {
         }
         .fullScreenCover(isPresented: $debugNavegacion) {
             if let ruta = rutaSeleccionada {
-                NavegacionRutaView(ruta: ruta, onFinish: { debugNavegacion = false })
+                NavegacionRutaView(ruta: ruta, locationService: locationService,
+                                   onFinish: { debugNavegacion = false })
             }
         }
         #endif
@@ -296,5 +298,5 @@ struct RutasView: View {
 }
 
 #Preview {
-    RutasView().environmentObject(AppRouter())
+    RutasView(locationService: LocationService()).environmentObject(AppRouter())
 }

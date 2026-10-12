@@ -31,6 +31,7 @@ struct SelectorTipoReporte: View {
 
     @Binding var tipo: TipoReporte
     var tiposDisponibles: [TipoReporte] = TipoReporte.allCases
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -39,9 +40,17 @@ struct SelectorTipoReporte: View {
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
 
-            HStack(spacing: 8) {
-                ForEach(tiposDisponibles) { t in
-                    tarjeta(t)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: 8) {
+                    ForEach(tiposDisponibles) { tarjeta($0) }
+                }
+            } else if dynamicTypeSize >= .xxLarge {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                    ForEach(tiposDisponibles) { tarjeta($0) }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    ForEach(tiposDisponibles) { tarjeta($0) }
                 }
             }
         }
@@ -57,12 +66,13 @@ struct SelectorTipoReporte: View {
                 Image(systemName: t.icono)
                     .font(.system(size: 17, weight: .semibold))
                 Text(t.titulo)
-                    .font(.system(size: 11, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .font(.caption.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(seleccionado ? t.foreground : Color.onSurfaceVariant)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.horizontal, 8)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -129,7 +139,7 @@ struct CampoDescripcionReporte: View {
                     .appTracking(AppTracking.wideLabel)
                 Spacer()
                 Text("\(restantes)")
-                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                    .font(.caption.weight(.semibold).monospacedDigit())
                     .foregroundStyle(restantes <= 20 ? Color.appError : Color.onSurfaceVariant)
                     .accessibilityLabel(L.t("\(restantes) caracteres restantes", "\(restantes) characters left"))
             }
@@ -183,11 +193,13 @@ private struct ChipsSugerencias: View {
                         Image(systemName: "plus")
                             .font(.system(size: 9, weight: .bold))
                         Text(texto)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.caption.weight(.medium))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .foregroundStyle(.appPrimary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
+                    .frame(minHeight: 44)
                     .background(Capsule().fill(Color.appPrimary.opacity(0.09)))
                     .overlay(Capsule().stroke(Color.appPrimary.opacity(0.25), lineWidth: 0.5))
                 }

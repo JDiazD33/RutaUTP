@@ -3,6 +3,7 @@ import UIKit
 
 /// Un solo vencimiento por canal. Sus callbacks usan el mismo contexto main
 /// que los delegados MQTT y vuelven a comprobar el reloj en el servicio.
+@MainActor
 final class ServiceDeadlineScheduler {
     private let clock: () -> TimeInterval
     private var action: (() -> Void)?
@@ -24,9 +25,11 @@ final class ServiceDeadlineScheduler {
         observers = [UIApplication.didBecomeActiveNotification,
                      UIApplication.significantTimeChangeNotification].map { name in
             NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                guard let self, self.lifecycleGeneration == generation, self.action != nil else { return }
-                self.cancel()
-                self.action?()
+                Task { @MainActor [weak self] in
+                    guard let self, self.lifecycleGeneration == generation, self.action != nil else { return }
+                    self.cancel()
+                    self.action?()
+                }
             }
         }
     }
@@ -44,10 +47,12 @@ final class ServiceDeadlineScheduler {
         // Un callback temprano se reprograma; evitar un bucle inmediato si
         // el reloj aún no alcanzó una frontera por unas fracciones de segundo.
         let timer = Timer(timeInterval: max(0.001, next - now), repeats: false) { [weak self] _ in
-            guard let self, self.timerGeneration == generation, self.action != nil else { return }
-            self.timer = nil
-            self.deadline = nil
-            self.action?()
+            Task { @MainActor [weak self] in
+                guard let self, self.timerGeneration == generation, self.action != nil else { return }
+                self.timer = nil
+                self.deadline = nil
+                self.action?()
+            }
         }
         timer.tolerance = 0
         self.timer = timer
@@ -69,5 +74,12 @@ final class ServiceDeadlineScheduler {
         observers.removeAll()
     }
 
-    deinit { stop() }
+    deinit {
+        let timer = timer
+        let observers = observers
+        Task { @MainActor in
+            timer?.invalidate()
+            observers.forEach { NotificationCenter.default.removeObserver($0) }
+        }
+    }
 }

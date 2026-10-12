@@ -1,11 +1,15 @@
 import Foundation
 import CocoaMQTT
 
+@MainActor
 final class MQTTTrackingProvider: VehicleTrackingProviding {
 
     let source: VehicleTrackingSource = .real
 
-    private let mqtt: CocoaMQTT
+    private var mqtt: CocoaMQTT?
+    private let configuration: MQTTConfiguration
+    private let conectar: @MainActor (CocoaMQTT) -> Bool
+    private var generation = UUID()
     private let topic = "rutautp/vehiculos/+/posicion"
 
     private var continuation:
@@ -64,12 +68,14 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             return
         }
 
+        let token = generation
         stalenessTimer = Timer.scheduledTimer(
             withTimeInterval: Self.stalenessSweepInterval,
             repeats: true
         ) { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.sweepStalePositions()
+            Task { @MainActor [weak self] in
+                guard let self, self.isRunning, self.generation == token else { return }
+                self.sweepStalePositions()
             }
         }
     }
@@ -102,10 +108,16 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         continuation?.yield(currentPositions)
     }
 
-    init(configuration: MQTTConfiguration) {
+    init(configuration: MQTTConfiguration,
+         conectar: @escaping @MainActor (CocoaMQTT) -> Bool = { $0.connect() }) {
+        self.configuration = configuration
+        self.conectar = conectar
+    }
+
+    private func makeClient() -> CocoaMQTT {
         let clientID = "rutautp-ios-\(UUID().uuidString)"
 
-        mqtt = CocoaMQTT(
+        let mqtt = CocoaMQTT(
             clientID: clientID,
             host: configuration.host,
             port: configuration.port
@@ -126,30 +138,44 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                 configuration.trustedCACertificates
         }
 
-        configureCallbacks()
+        return mqtt
     }
 
     func start() {
-        guard mqtt.connState == .disconnected else {
-            return
-        }
+        guard !isRunning else { return }
 
         prepareStreamIfNeeded()
-        startStalenessSweep()
-
+        generation = UUID()
+        let client = makeClient()
+        mqtt = client
+        configureCallbacks(for: client)
         isRunning = true
+        startStalenessSweep()
 
         #if DEBUG
         print("[MQTT] Intentando conectar con el broker...")
         #endif
 
-        _ = mqtt.connect()
+        let aceptado = conectar(client)
+        guard isRunning, mqtt === client else { return }
+        if !aceptado {
+            // Un fallo al iniciar el socket no debe bloquear un start posterior.
+            mqtt = nil
+            isRunning = false
+            generation = UUID()
+            client.autoReconnect = false
+            client.disconnect()
+            stopStalenessSweep()
+        }
     }
 
     func stop() {
         isRunning = false
-
-        mqtt.disconnect()
+        generation = UUID()
+        let previous = mqtt
+        mqtt = nil
+        previous?.autoReconnect = false
+        previous?.disconnect()
 
         stopStalenessSweep()
 
@@ -191,30 +217,30 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         }
     }
 
-    private func configureCallbacks() {
+    private func configureCallbacks(for mqtt: CocoaMQTT) {
         mqtt.didConnectAck = { [weak self] mqtt, acknowledgment in
-            guard let self else {
-                return
-            }
+            Task { @MainActor [weak self] in
+                guard let self, self.isRunning, self.mqtt === mqtt else { return }
 
-            guard acknowledgment == .accept else {
+                guard acknowledgment == .accept else {
+                    #if DEBUG
+                    print(
+                        "[MQTT] Conexión rechazada: \(acknowledgment)"
+                    )
+                    #endif
+                    return
+                }
+
                 #if DEBUG
-                print(
-                    "[MQTT] Conexión rechazada: \(acknowledgment)"
-                )
+                print("[MQTT] Conexión aceptada")
+                print("[MQTT] Suscribiendo a \(self.topic)")
                 #endif
-                return
+
+                mqtt.subscribe(
+                    self.topic,
+                    qos: .qos1
+                )
             }
-
-            #if DEBUG
-            print("[MQTT] Conexión aceptada")
-            print("[MQTT] Suscribiendo a \(self.topic)")
-            #endif
-
-            mqtt.subscribe(
-                self.topic,
-                qos: .qos1
-            )
         }
 
         mqtt.didSubscribeTopics = { _, success, failed in
@@ -227,18 +253,15 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             #endif
         }
 
-        mqtt.didReceiveMessage = { [weak self] _, message, _ in
-            guard
-                let self,
-                let json = message.string
-            else {
-                return
+        mqtt.didReceiveMessage = { [weak self] client, message, _ in
+            guard let json = message.string else { return }
+            let topic = message.topic
+            // La decodificación usa solo valores locales en la cola de CocoaMQTT.
+            guard let position = Self.decodePosition(json: json, topic: topic) else { return }
+            Task { @MainActor [weak self] in
+                guard let self, self.isRunning, self.mqtt === client else { return }
+                self.process(position: position, topic: topic)
             }
-
-            self.process(
-                json: json,
-                topic: message.topic
-            )
         }
 
         mqtt.didDisconnect = { _, error in
@@ -255,12 +278,12 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         }
     }
 
-    private func process(
+    nonisolated private static func decodePosition(
         json: String,
         topic: String
-    ) {
+    ) -> VehiclePosition? {
         guard let data = json.data(using: .utf8) else {
-            return
+            return nil
         }
 
         do {
@@ -269,7 +292,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                 from: data
             )
 
-            let position = VehiclePosition(
+            return VehiclePosition(
                 id: dto.vehicleId,
                 linea: dto.linea,
                 routeId: dto.routeId,
@@ -280,69 +303,64 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                 timestamp: dto.timestamp
             )
 
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.isRunning else {
-                    return
-                }
-
-                // El broker es un canal compartido: nada garantiza que
-                // el mensaje entrante sea razonable, así que se filtra
-                // antes de tocar el estado que alimenta el mapa.
-                guard let position = VehiclePositionSanitizer.sanitize(
-                    position
-                ) else {
-                    #if DEBUG
-                    print(
-                        "[MQTT] Posición inválida u obsoleta en \(topic): " +
-                        "\(position.id)"
-                    )
-                    #endif
-
-                    return
-                }
-
-                // Un mensaje atrasado no debe retroceder un vehículo ya
-                // actualizado. El broker no garantiza el orden entre
-                // publicaciones distintas, así que la comprobación es por
-                // marca de tiempo y no por orden de llegada.
-                if let conocida = self.positionsByID[position.id],
-                   position.timestamp <= conocida.timestamp {
-                    #if DEBUG
-                    print(
-                        "[MQTT] Posición atrasada ignorada: " +
-                        "\(position.id)"
-                    )
-                    #endif
-
-                    return
-                }
-
-                self.positionsByID[position.id] = position
-
-                self.refreshCurrentPositions(
-                    now: Date().timeIntervalSince1970
-                )
-
-                self.continuation?.yield(
-                    self.currentPositions
-                )
-
-                #if DEBUG
-                print(
-                    "[MQTT] Posición recibida: " +
-                    "\(position.id), línea \(position.linea), " +
-                    "\(position.lat), \(position.lon)"
-                )
-                #endif
-            }
         } catch {
             #if DEBUG
+            print("[MQTT] JSON inválido en \(topic): " + error.localizedDescription)
+            #endif
+            return nil
+        }
+    }
+
+    private func process(position: VehiclePosition, topic: String) {
+        // El broker es un canal compartido: nada garantiza que
+        // el mensaje entrante sea razonable, así que se filtra
+        // antes de tocar el estado que alimenta el mapa.
+        guard let position = VehiclePositionSanitizer.sanitize(
+            position
+        ) else {
+            #if DEBUG
             print(
-                "[MQTT] JSON inválido en \(topic): " +
-                error.localizedDescription
+                "[MQTT] Posición inválida u obsoleta en \(topic): " +
+                "\(position.id)"
             )
             #endif
+
+            return
         }
+
+        // Un mensaje atrasado no debe retroceder un vehículo ya
+        // actualizado. El broker no garantiza el orden entre
+        // publicaciones distintas, así que la comprobación es por
+        // marca de tiempo y no por orden de llegada.
+        if let conocida = self.positionsByID[position.id],
+           position.timestamp <= conocida.timestamp {
+            #if DEBUG
+            print(
+                "[MQTT] Posición atrasada ignorada: " +
+                "\(position.id)"
+            )
+            #endif
+
+            return
+        }
+
+        self.positionsByID[position.id] = position
+
+        self.refreshCurrentPositions(
+            now: Date().timeIntervalSince1970
+        )
+
+        self.continuation?.yield(
+            self.currentPositions
+        )
+
+        #if DEBUG
+        print(
+            "[MQTT] Posición recibida: " +
+            "\(position.id), línea \(position.linea), " +
+            "\(position.lat), \(position.lon)"
+        )
+        #endif
     }
 }
 

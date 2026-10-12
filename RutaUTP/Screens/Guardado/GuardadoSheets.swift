@@ -21,7 +21,8 @@ import CoreLocation
 struct LineaDetailSheet: View {
     let linea: RutaOpcion
     var onExplorar: () -> Void
-    var onQuitar: () -> Void
+    var onQuitar: () -> Bool
+    @State private var errorAlQuitar = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -126,8 +127,7 @@ struct LineaDetailSheet: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        onQuitar()
-                        dismiss()
+                        if onQuitar() { dismiss() } else { errorAlQuitar = true }
                     } label: {
                         HStack {
                             Image(systemName: "trash.fill")
@@ -145,6 +145,12 @@ struct LineaDetailSheet: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .alert(L.t("No se pudo quitar la línea", "Unable to remove line"), isPresented: $errorAlQuitar) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) {}
+        } message: {
+            Text(L.t("Los datos originales se conservan. Reintenta su lectura desde Guardado.",
+                     "The original data has been preserved. Retry reading it from Saved."))
         }
     }
 
@@ -707,10 +713,11 @@ struct AddLineaSheet: View {
     var errorCatalogo: FalloCargaGTFS? = nil
     var onRetry: () -> Void = {}
     let yaGuardadas: Set<String>
-    var onSave: (RutaOpcion) -> Void
+    var onSave: (RutaOpcion) -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var texto: String = ""
+    @State private var errorAlGuardar = false
 
     private var filtradas: [RutaOpcion] {
         let t = texto.trimmingCharacters(in: .whitespaces)
@@ -804,14 +811,23 @@ struct AddLineaSheet: View {
                 }
             }
         }
+        .alert(L.t("No se pudo guardar la línea", "Unable to save line"), isPresented: $errorAlGuardar) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) {}
+        } message: {
+            Text(L.t("Los datos originales se conservan. Reintenta su lectura desde Guardado.",
+                     "The original data has been preserved. Retry reading it from Saved."))
+        }
     }
 
     private func filaCatalogo(_ ruta: RutaOpcion) -> some View {
         let guardada = yaGuardadas.contains(ruta.id)
         return Button {
             guard !guardada else { return }
+            guard onSave(ruta) else {
+                errorAlGuardar = true
+                return
+            }
             AppHaptics.success()
-            onSave(ruta)
             dismiss()
         } label: {
             HStack(spacing: 12) {

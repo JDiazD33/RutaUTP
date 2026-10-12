@@ -31,7 +31,7 @@ final class RouteTrackingViewModel {
     /// Las referencias y sus claves señables viven en `DestinosFijos`,
     /// compartido con el Mapa: antes estaban escritos literales en los dos.
     var destinos: [DestinoDemo] {
-        let referencias = DestinosFijos.todos.filter { TransporteApp.busesUTPActivos || $0.id != 1 }.map {
+        let referencias = DestinosFijos.todos.filter { TransporteApp.utpComoReferencia || $0.id != 1 }.map {
             DestinoDemo(id: $0.id, label: $0.label, icon: $0.icono,
                         coordinate: $0.coordinate)
         }
@@ -88,6 +88,7 @@ final class RouteTrackingViewModel {
     /// SwiftUI: la vista lo resuelve con `Color.colorRuta(hex:)`, el mismo
     /// ajuste de presentación que usan las otras pantallas.
     private(set) var coloresPorLinea: [String: String] = [:]
+    private(set) var coloresPorRuta: [String: String] = [:]
 
     @ObservationIgnored private var tripRecorder: TripRecorder? {
         didSet { actualizarConteoPuntos() }
@@ -138,10 +139,13 @@ final class RouteTrackingViewModel {
         }
     }
 
-    private static func leer(_ preferencia: Preferencia) -> Double {
+    private static func leer(_ preferencia: Preferencia, defaults: UserDefaults) -> Double {
         // No reescribe el original si está dañado. Solo admite valores finitos
         // presentes en el selector, antes de usarlos en cálculos o convertir a Int.
-        guard let valor = UserDefaults.standard.object(forKey: preferencia.rawValue) as? Double,
+        guard let numero = defaults.object(forKey: preferencia.rawValue) as? NSNumber,
+              CFGetTypeID(numero) != CFBooleanGetTypeID() else { return preferencia.porDefecto }
+        let valor = numero.doubleValue
+        guard
               valor.isFinite, preferencia.valoresPermitidos.contains(valor) else {
             return preferencia.porDefecto
         }
@@ -149,8 +153,14 @@ final class RouteTrackingViewModel {
     }
 
     /// Multiplicador del modo demo (1× / 3× / 10×). Persistido.
-    var velocidadDemo: Double = RouteTrackingViewModel.leer(.velocidad) {
-        didSet { UserDefaults.standard.set(velocidadDemo, forKey: Preferencia.velocidad.rawValue) }
+    private var velocidadPreferida: Double
+    var velocidadDemo: Double {
+        get { velocidadPreferida }
+        set {
+            guard newValue.isFinite, Preferencia.velocidad.valoresPermitidos.contains(newValue) else { return }
+            defaults.set(newValue, forKey: Preferencia.velocidad.rawValue)
+            velocidadPreferida = newValue
+        }
     }
     /// Velocidad estimada por vehículo (m/s), calculada entre snapshots del
     /// provider para el popup en vivo.
@@ -166,8 +176,14 @@ final class RouteTrackingViewModel {
     private(set) var resumen: ResumenViaje?
 
     /// Radio de búsqueda de paraderos, en metros. Persistido (ver `Preferencia`).
-    var radioParadero: Double = RouteTrackingViewModel.leer(.radio) {
-        didSet { UserDefaults.standard.set(radioParadero, forKey: Preferencia.radio.rawValue) }
+    private var radioPreferido: Double
+    var radioParadero: Double {
+        get { radioPreferido }
+        set {
+            guard newValue.isFinite, Preferencia.radio.valoresPermitidos.contains(newValue) else { return }
+            defaults.set(newValue, forKey: Preferencia.radio.rawValue)
+            radioPreferido = newValue
+        }
     }
     private(set) var installedItinerary: InstalledTransitItinerary?
     var itinerary: TransitItinerary? { installedItinerary?.plan }
@@ -242,6 +258,7 @@ final class RouteTrackingViewModel {
     private let routeService: RouteCalculationService
     private let vehicleProvider: VehicleTrackingProviding
     private let repositorioGTFS: RutasGTFSProviding
+    @ObservationIgnored private let defaults: UserDefaults
 
     // Shape completo: conserva todas las esquinas de la calle para matching y simulación.
     private var polyCoords: [CLLocationCoordinate2D] = []
@@ -267,13 +284,18 @@ final class RouteTrackingViewModel {
 
     init(locationService: LocationServiceProtocol,
          routeService: RouteCalculationService = RouteCalculationService(),
-         vehicleProvider: VehicleTrackingProviding = SimulatedTrackingProvider(),
-         repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio) {
+         vehicleProvider: VehicleTrackingProviding? = nil,
+         repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio,
+         defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.velocidadPreferida = Self.leer(.velocidad, defaults: defaults)
+        self.radioPreferido = Self.leer(.radio, defaults: defaults)
         self.locationService = locationService
         self.routeService = routeService
-        self.vehicleProvider = vehicleProvider
+        let provider = vehicleProvider ?? SimulatedTrackingProvider()
+        self.vehicleProvider = provider
         self.repositorioGTFS = repositorioGTFS
-        self.fuenteVehiculos = vehicleProvider.source
+        self.fuenteVehiculos = provider.source
 
         authCancellable = locationService.authorizationPublisher
             .receive(on: DispatchQueue.main)
@@ -286,7 +308,8 @@ final class RouteTrackingViewModel {
         locationTask?.cancel()
         vehiculoTask?.cancel()
         demoTask?.cancel()
-        vehicleProvider.stop()
+        let provider = vehicleProvider
+        Task { @MainActor in provider.stop() }
         // Cancelar nuestro stream deja que onTermination libere solo este
         // consumidor. No cambia la demanda global de Mapa o del rastreo.
     }
@@ -345,12 +368,12 @@ final class RouteTrackingViewModel {
         var seen = Set<String>()
         allStops = feed.flatMap(\.paraderos).filter { seen.insert($0.id).inserted }
         idsRutasDisponibles = Set(feed.map(\.id))
-        // Varias rutas pueden compartir `linea`: en este feed 12 de los 90
-        // nombres son variantes de la misma línea. Como `VehiclePosition` solo
-        // trae la línea y no el route_id, el mapa no puede distinguirlas, así
-        // que se queda un color por línea. Se resuelve de forma DETERMINISTA
-        // (la ruta de id menor) para que no dependa del orden en que llegue el
-        // feed, que va ordenado por cercanía al campus.
+        // El route_id distingue ramales que comparten nombre y distinto color.
+        coloresPorRuta = feed.reduce(into: [String: String]()) { mapa, ruta in
+            mapa[ruta.id] = ruta.colorHex
+        }
+        // Solo los proveedores antiguos sin route_id necesitan este fallback.
+        // Elegir el id menor mantiene su resultado independiente del orden.
         coloresPorLinea = feed
             .sorted { $0.id < $1.id }
             .reduce(into: [String: String]()) { mapa, ruta in
@@ -369,6 +392,8 @@ final class RouteTrackingViewModel {
                 // así deinit también puede cancelar y liberar el consumidor.
                 guard !Task.isCancelled, let self, self.startGuard.isCurrent(token) else { break }
                 if self.modoDemo { continue }   // el demo simulado toma el control
+                guard UbicacionPuntual.esValida(location, ahora: Date(),
+                                               antiguedadMaxima: 30, precisionMaxima: 65) else { continue }
                 self.procesar(coordenada: location.coordinate, rumbo: location.course)
             }
         }
@@ -517,7 +542,7 @@ final class RouteTrackingViewModel {
         do {
             // Iniciar/recalcular es una acción concreta; no tratar el fallo
             // de lectura como ausencia de paraderos dentro del radio.
-            catalog = try await TransporteApp.repositorio.cargarCatalogo(reintentar: true)
+            catalog = try await repositorioGTFS.cargarCatalogo(reintentar: true)
             guard revision == routeRevision, !Task.isCancelled else { return }
         } catch {
             guard revision == routeRevision, !Task.isCancelled else { return }
@@ -744,7 +769,10 @@ final class RouteTrackingViewModel {
                 let visibles = TransporteApp.busesUTPActivos
                     ? positions.filter { self.idsRutasDisponibles.contains($0.routeId) } : positions
 
-                var velocidades = self.velocidadesVehiculos
+                // El snapshot del proveedor es completo: retirar también su historial.
+                let idsVisibles = Set(visibles.map(\.id))
+                var velocidades = self.velocidadesVehiculos.filter { idsVisibles.contains($0.key) }
+                self.snapshotVehiculosAnterior = self.snapshotVehiculosAnterior.filter { idsVisibles.contains($0.key) }
                 for vehiculo in visibles {
                     if let previa = self.snapshotVehiculosAnterior[vehiculo.id] {
                         let dt = vehiculo.timestamp - previa.t

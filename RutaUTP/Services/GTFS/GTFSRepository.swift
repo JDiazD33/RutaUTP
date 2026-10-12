@@ -21,6 +21,7 @@ protocol RutasGTFSProviding {
     func rutas() async -> [RutaGTFS]
     func rutasQuePasanPor(_ punto: CLLocationCoordinate2D, radioMetros: Double) async -> [RutaGTFS]
     func cargarRutas(reintentar: Bool) async throws -> [RutaGTFS]
+    func cargarCatalogo(reintentar: Bool) async throws -> GTFSRouteCatalog
     func consultarRutasQuePasanPor(_ punto: CLLocationCoordinate2D,
                                  radioMetros: Double, reintentar: Bool) async throws -> [RutaGTFS]
     func consultarRutasQuePasanPorConAmpliacion(_ punto: CLLocationCoordinate2D,
@@ -28,6 +29,12 @@ protocol RutasGTFSProviding {
 }
 
 extension RutasGTFSProviding {
+    /// Cada consumidor calcula con el catálogo del proveedor que recibió.
+    /// GTFSRepository conserva su implementación con caché e identidad estable.
+    func cargarCatalogo(reintentar: Bool = false) async throws -> GTFSRouteCatalog {
+        GTFSRouteCatalog(routes: try await cargarRutas(reintentar: reintentar))
+    }
+
     // Los proveedores locales existentes siguen controlando sus consultas;
     // el repositorio productivo implementa estas versiones con diagnóstico.
     func cargarRutas(reintentar: Bool = false) async throws -> [RutaGTFS] {
@@ -231,6 +238,20 @@ extension GTFSRepository {
             }
             return datos
         }
+        func id(_ valor: String) -> String { valor.trimmingCharacters(in: .whitespacesAndNewlines) }
+        func invalidos(_ archivo: String, _ indice: Int, _ motivo: String) -> GTFSCSV.GTFSError {
+            .datosInvalidos(archivo, fila: indice + 2, motivo: motivo)
+        }
+        func validarIDs(_ valores: [String], archivo: String, campo: String) throws -> Set<String> {
+            var vistos = Set<String>()
+            for (indice, valor) in valores.enumerated() {
+                guard !valor.isEmpty else { throw invalidos(archivo, indice, "\(campo) vacío") }
+                guard vistos.insert(valor).inserted else {
+                    throw invalidos(archivo, indice, "\(campo) duplicado: \(valor)")
+                }
+            }
+            return vistos
+        }
         // 1. Agencias
         // Una sola agencia ya se enlaza mediante la clave vacía cuando ambos
         // archivos omiten agency_id. Conservar esa alternativa existente.
@@ -240,43 +261,73 @@ extension GTFSRepository {
 
         // 2. Rutas
         let routes = try leer("routes", requeridas: ["route_id"])
-        let routeIds    = routes.columna("route_id")
+        let routeIds    = routes.columna("route_id").map(id)
+        let rutasValidas = try validarIDs(routeIds, archivo: "routes", campo: "route_id")
         let routeAgency = routes.columna("agency_id")
         let routeShort  = routes.columna("route_short_name")
         let routeLong   = routes.columna("route_long_name")
         let routeColor  = routes.columna("route_color")
 
-        // 3. Trips (en este feed: 1 trip por ruta, trip_id == route_id)
+        // 3. Viaje representativo: menor trip_id, igual que el backend.
+        // Esto no interpreta calendarios, sentidos ni horarios de servicio.
         let trips = try leer("trips", requeridas: ["trip_id", "route_id"])
-        let tripRoute = diccionario(trips.columna("trip_id"), trips.columna("route_id"))
-        let tripShape = diccionario(trips.columna("trip_id"), trips.columna("shape_id"))
+        let tripIds = trips.columna("trip_id").map(id)
+        let viajesValidos = try validarIDs(tripIds, archivo: "trips", campo: "trip_id")
+        let tripRoutes = trips.columna("route_id").map(id)
+        let tripShapes = trips.columna("shape_id").map(id)
+        for i in 0..<trips.rowCount where !rutasValidas.contains(tripRoutes[i]) {
+            throw invalidos("trips", i, "route_id desconocido: \(tripRoutes[i])")
+        }
+        let tripRoute = diccionario(tripIds, tripRoutes)
+        let tripShape = diccionario(tripIds, tripShapes)
         // route_id → trip_id
         var routeTrip: [String: String] = [:]
-        for (trip, route) in tripRoute { routeTrip[route] = trip }
+        for trip in tripIds.sorted() {
+            if let route = tripRoute[trip], routeTrip[route] == nil { routeTrip[route] = trip }
+        }
 
         // 4. Shapes ordenados por secuencia
         let shapes = try leer("shapes", requeridas: ["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"])
         var shapesPorId: [String: [Int: CLLocationCoordinate2D]] = [:]
-        let shapeIds  = shapes.columna("shape_id")
+        let shapeIds  = shapes.columna("shape_id").map(id)
         let shapeLats = shapes.columna("shape_pt_lat")
         let shapeLons = shapes.columna("shape_pt_lon")
         let shapeSeqs = shapes.columna("shape_pt_sequence")
         for i in 0..<shapes.rowCount {
-            guard let lat = Double(shapeLats[i]), let lon = Double(shapeLons[i]),
-                  let seq = Int(shapeSeqs[i]) else { continue }
+            guard !shapeIds[i].isEmpty,
+                  let lat = Double(shapeLats[i]), let lon = Double(shapeLons[i]),
+                  lat.isFinite, lon.isFinite,
+                  CLLocationCoordinate2DIsValid(CLLocationCoordinate2D(latitude: lat, longitude: lon)),
+                  let seq = Int(shapeSeqs[i]), seq >= 0 else {
+                throw invalidos("shapes", i, "identificador, coordenada o secuencia inválidos")
+            }
+            guard shapesPorId[shapeIds[i]]?[seq] == nil else {
+                throw invalidos("shapes", i, "shape_pt_sequence duplicado para \(shapeIds[i])")
+            }
             shapesPorId[shapeIds[i], default: [:]][seq] =
                 CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        }
+        for i in 0..<trips.rowCount {
+            let declarado = tripShapes[i]
+            if !declarado.isEmpty, shapesPorId[declarado] == nil, shapesPorId[tripRoutes[i]] == nil {
+                throw invalidos("trips", i, "shape_id desconocido: \(declarado)")
+            }
         }
 
         // 5. Paraderos
         let stops = try leer("stops", requeridas: ["stop_id", "stop_lat", "stop_lon"])
         var paraderosPorId: [String: ParaderoGTFS] = [:]
-        let stopIds    = stops.columna("stop_id")
+        let stopIds    = stops.columna("stop_id").map(id)
+        let paraderosValidos = try validarIDs(stopIds, archivo: "stops", campo: "stop_id")
         let stopNames  = stops.columna("stop_name")
         let stopLats   = stops.columna("stop_lat")
         let stopLons   = stops.columna("stop_lon")
         for i in 0..<stops.rowCount {
-            guard let lat = Double(stopLats[i]), let lon = Double(stopLons[i]) else { continue }
+            guard let lat = Double(stopLats[i]), let lon = Double(stopLons[i]),
+                  lat.isFinite, lon.isFinite,
+                  CLLocationCoordinate2DIsValid(CLLocationCoordinate2D(latitude: lat, longitude: lon)) else {
+                throw invalidos("stops", i, "coordenada inválida para \(stopIds[i])")
+            }
             paraderosPorId[stopIds[i]] = ParaderoGTFS(id: stopIds[i], nombre: stopNames[i],
                                                       lat: lat, lon: lon)
         }
@@ -287,13 +338,20 @@ extension GTFSRepository {
         // hacía cuatro búsquedas en el diccionario de columnas — con 20 171
         // filas en este feed son unas 80 000 búsquedas evitables.
         let stopTimes = try leer("stop_times", requeridas: ["trip_id", "stop_id", "stop_sequence"])
-        let stTripId = stopTimes.columna("trip_id")
+        let stTripId = stopTimes.columna("trip_id").map(id)
         let stSeq = stopTimes.columna("stop_sequence")
-        let stStopId = stopTimes.columna("stop_id")
+        let stStopId = stopTimes.columna("stop_id").map(id)
         let stDeparture = stopTimes.columna("departure_time")
         var paradasPorTrip: [String: [(seq: Int, stopId: String, departure: Int)]] = [:]
+        var secuenciasPorTrip: [String: Set<Int>] = [:]
         for i in 0..<stopTimes.rowCount {
-            guard let seq = Int(stSeq[i]) else { continue }
+            guard viajesValidos.contains(stTripId[i]), paraderosValidos.contains(stStopId[i]) else {
+                throw invalidos("stop_times", i, "trip_id o stop_id desconocido")
+            }
+            guard let seq = Int(stSeq[i]), seq >= 0,
+                  secuenciasPorTrip[stTripId[i], default: []].insert(seq).inserted else {
+                throw invalidos("stop_times", i, "stop_sequence inválido o duplicado para \(stTripId[i])")
+            }
             paradasPorTrip[stTripId[i], default: []]
                 .append((seq, stStopId[i], segundos(stDeparture[i])))
         }
@@ -301,9 +359,12 @@ extension GTFSRepository {
         // 7. Frecuencias (headway)
         let frequencies = try leer("frequencies", requeridas: ["trip_id"])
         var headwayPorTrip: [String: Int] = [:]
-        let freqTrips = frequencies.columna("trip_id")
+        let freqTrips = frequencies.columna("trip_id").map(id)
         let freqHeadways = frequencies.columna("headway_secs")
         for i in 0..<frequencies.rowCount {
+            guard viajesValidos.contains(freqTrips[i]) else {
+                throw invalidos("frequencies", i, "trip_id desconocido: \(freqTrips[i])")
+            }
             guard let h = Int(freqHeadways[i]) else { continue }
             headwayPorTrip[freqTrips[i]] = h
         }
@@ -333,7 +394,10 @@ extension GTFSRepository {
             let (linea, variante) = GTFSNombreParser.lineaYVariante(shortName: shortName)
 
             let tripId = routeTrip[routeId] ?? routeId
-            let shapeId = tripShape[tripId] ?? routeId
+            let declarado = tripShape[tripId] ?? ""
+            // Conservar el fallback a route_id que admite el backend cuando
+            // no se declara shape o no existe el declarado.
+            let shapeId = declarado.isEmpty || shapesPorId[declarado] == nil ? routeId : declarado
             let shapePuntos = (shapesPorId[shapeId] ?? [:])
                 .sorted { $0.key < $1.key }
                 .map(\.value)
@@ -375,7 +439,10 @@ extension GTFSRepository {
             ))
         }
 
-        return rutas.sorted { $0.distanciaUTPMetros < $1.distanciaUTPMetros }
+        return rutas.sorted {
+            if $0.distanciaUTPMetros == $1.distanciaUTPMetros { return $0.id < $1.id }
+            return $0.distanciaUTPMetros < $1.distanciaUTPMetros
+        }
     }
 }
 
@@ -394,7 +461,9 @@ private extension GTFSRepository {
     static func segundos(_ hhmmss: String) -> Int {
         let partes = hhmmss.split(separator: ":")
         guard partes.count == 3,
-              let h = Int(partes[0]), let m = Int(partes[1]), let s = Int(partes[2]) else { return 0 }
+              let h = Int(partes[0]), let m = Int(partes[1]), let s = Int(partes[2]),
+              h >= 0, h <= (Int.max - 3599) / 3600,
+              (0..<60).contains(m), (0..<60).contains(s) else { return 0 }
         return h * 3600 + m * 60 + s
     }
 

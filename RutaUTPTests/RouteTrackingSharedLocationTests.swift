@@ -1,7 +1,9 @@
 import XCTest
 import CoreLocation
 import Combine
+import Observation
 import SwiftUI
+import CocoaMQTT
 @testable import RutaUTP
 
 /// El mismo GPS sirve a Tracking y a un segundo consumidor. Las continuaciones
@@ -15,7 +17,7 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
         let vm = modelo(gps, provider)
         defer { vm.stop() }
         let recibido = expectation(description: "primer fix inmediato")
-        let observador = vm.$posicion.compactMap { $0 }.prefix(1).sink { _ in recibido.fulfill() }
+        let observador = ExpectativaObservada(recibido) { vm.posicion?.latitude == -8.101 }
 
         await vm.requestPermissionAndStart()
         await fulfillment(of: [recibido], timeout: 2)
@@ -136,8 +138,7 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
         // demo. Intentarlo antes no debe reemplazar ni apagar el GPS compartido.
         XCTAssertFalse(vm.modoDemo)
         let recibido = expectation(description: "GPS continúa sin viaje demo")
-        let observador = vm.$posicion.compactMap { $0 }
-            .filter { $0.latitude == -8.105 }.prefix(1).sink { _ in recibido.fulfill() }
+        let observador = ExpectativaObservada(recibido) { vm.posicion?.latitude == -8.105 }
         gps.emitir(lectura(-8.105))
         await fulfillment(of: [recibido], timeout: 2)
         XCTAssertEqual(vm.posicion?.latitude, -8.105)
@@ -154,7 +155,7 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
         let vm = modelo(gps, provider)
         defer { vm.stop() }
         let recibido = expectation(description: "flota demo sin GPS")
-        let observador = vm.$vehiculos.filter { !$0.isEmpty }.prefix(1).sink { _ in recibido.fulfill() }
+        let observador = ExpectativaObservada(recibido) { !vm.vehiculos.isEmpty }
 
         await vm.requestPermissionAndStart()
         await fulfillment(of: [recibido], timeout: 2)
@@ -330,7 +331,7 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
         await primera.value
 
         let recibido = expectation(description: "nueva entrada recibe ubicación")
-        let observador = vm.$posicion.compactMap { $0 }.prefix(1).sink { _ in recibido.fulfill() }
+        let observador = ExpectativaObservada(recibido) { vm.posicion?.latitude == -8.106 }
         gps.emitir(lectura(-8.106))
         await fulfillment(of: [recibido], timeout: 2)
         XCTAssertEqual(vm.posicion?.latitude, -8.106)
@@ -358,7 +359,7 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
 
         gps.primeraLectura = lectura(-8.107)
         let recibido = expectation(description: "primer fix tras reentrada")
-        let observador = vm.$posicion.compactMap { $0 }.prefix(1).sink { _ in recibido.fulfill() }
+        let observador = ExpectativaObservada(recibido) { vm.posicion?.latitude == -8.107 }
         await vm.requestPermissionAndStart()
         await fulfillment(of: [recibido], timeout: 2)
         XCTAssertEqual(vm.posicion?.latitude, -8.107)
@@ -375,8 +376,7 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
         defer { vm.stop() }
         await vm.requestPermissionAndStart()
         let anterior = expectation(description: "primera flota")
-        let observadorAnterior = vm.$vehiculos.filter { $0.first?.id == "anterior" }
-            .prefix(1).sink { _ in anterior.fulfill() }
+        let observadorAnterior = ExpectativaObservada(anterior) { vm.vehiculos.first?.id == "anterior" }
         provider.emitir([vehiculo("anterior")])
         await fulfillment(of: [anterior], timeout: 2)
 
@@ -384,8 +384,7 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
         // Solo cancelar el primer task daría al segundo un stream terminado.
         await vm.requestPermissionAndStart()
         let nuevo = expectation(description: "flota de la segunda entrada")
-        let observadorNuevo = vm.$vehiculos.filter { $0.first?.id == "nuevo" }
-            .prefix(1).sink { _ in nuevo.fulfill() }
+        let observadorNuevo = ExpectativaObservada(nuevo) { vm.vehiculos.first?.id == "nuevo" }
         provider.emitir([vehiculo("nuevo")])
         await fulfillment(of: [nuevo], timeout: 2)
 
@@ -424,9 +423,10 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
     }
 
     private func modelo(_ gps: TrackingGPSMock,
-                        _ provider: TrackingVehiculosMock = TrackingVehiculosMock(),
+                        _ provider: TrackingVehiculosMock? = nil,
                         _ catalogo: TrackingCatalogoMock = TrackingCatalogoMock()) -> RouteTrackingViewModel {
-        RouteTrackingViewModel(locationService: gps, vehicleProvider: provider, repositorioGTFS: catalogo)
+        RouteTrackingViewModel(locationService: gps, vehicleProvider: provider ?? TrackingVehiculosMock(),
+                               repositorioGTFS: catalogo)
     }
 
     private func lectura(_ latitude: Double) -> CLLocation {
@@ -443,6 +443,34 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
         RutaGTFS(id: linea, linea: linea, variante: "", recorrido: "Prueba", empresa: "Prueba",
                  colorHex: color, color: .green, shape: [], paraderos: [], duracionMin: 1,
                  headwayMin: 1, precio: 1, distanciaKm: 1, distanciaUTPMetros: 0)
+    }
+}
+
+/// Observation notifica antes de la escritura. El salto a MainActor comprueba
+/// el estado ya actualizado y vuelve a registrar si aún no cumple la condición.
+/// Cada expectativa se satisface una vez y el callback no retiene al observador.
+@MainActor
+private final class ExpectativaObservada {
+    private var expectativa: XCTestExpectation?
+    private let condicion: @MainActor () -> Bool
+
+    init(_ expectativa: XCTestExpectation, condicion: @escaping @MainActor () -> Bool) {
+        self.expectativa = expectativa
+        self.condicion = condicion
+        comprobar()
+    }
+
+    private func comprobar() {
+        guard let expectativa else { return }
+        let cumple = withObservationTracking {
+            condicion()
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in self?.comprobar() }
+        }
+        if cumple {
+            self.expectativa = nil
+            expectativa.fulfill()
+        }
     }
 }
 
@@ -632,4 +660,167 @@ private final class RegistroTracking<Element>: @unchecked Sendable {
     }
     func emitir(_ element: Element) { activas.forEach { $0.yield(element) } }
     func finalizar() { activas.forEach { $0.finish() } }
+}
+
+
+@MainActor
+final class PreferenciasTrackingTests: XCTestCase {
+    private func conPreferencias(_ comprobar: (UserDefaults) throws -> Void) throws {
+        let suite = "RutaUTPTests.TrackingPreferencias.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        try comprobar(defaults)
+    }
+
+    private func modelo(_ defaults: UserDefaults) -> RouteTrackingViewModel {
+        RouteTrackingViewModel(locationService: TrackingGPSMock(),
+            vehicleProvider: TrackingVehiculosMock(), defaults: defaults)
+    }
+
+    func testValoresInvalidosNoCambianEstadoNiPreferencias() throws {
+        try conPreferencias { defaults in
+            defaults.set(3.0, forKey: "tracking.velocidadDemo")
+            defaults.set(800.0, forKey: "tracking.radioParadero")
+            let vm = modelo(defaults)
+            for valor in [0.0, -1, 2, Double.nan, .infinity, -.infinity] {
+                vm.velocidadDemo = valor
+                vm.radioParadero = valor
+                XCTAssertEqual(vm.velocidadDemo, 3)
+                XCTAssertEqual(vm.radioParadero, 800)
+                XCTAssertEqual(defaults.double(forKey: "tracking.velocidadDemo"), 3)
+                XCTAssertEqual(defaults.double(forKey: "tracking.radioParadero"), 800)
+            }
+        }
+    }
+
+    func testOpcionesPermitidasPersistenYElCambioSigueSiendoObservable() throws {
+        try conPreferencias { defaults in
+            let vm = modelo(defaults)
+            let cambio = expectation(description: "Cambio observado del multiplicador")
+            withObservationTracking { _ = vm.velocidadDemo } onChange: { cambio.fulfill() }
+            vm.velocidadDemo = 3
+            wait(for: [cambio], timeout: 1)
+            for velocidad in RouteTrackingViewModel.Preferencia.velocidad.valoresPermitidos {
+                vm.velocidadDemo = velocidad
+                XCTAssertEqual(modelo(defaults).velocidadDemo, velocidad)
+            }
+            for radio in RouteTrackingViewModel.Preferencia.radio.valoresPermitidos {
+                vm.radioParadero = radio
+                XCTAssertEqual(modelo(defaults).radioParadero, radio)
+            }
+        }
+    }
+
+    func testOriginalIncompatibleNoSeSobrescribeAlLeerYSeConfirmaExplicitamente() throws {
+        try conPreferencias { defaults in
+            defaults.set(true, forKey: "tracking.velocidadDemo")
+            defaults.set("radio futuro", forKey: "tracking.radioParadero")
+            let vm = modelo(defaults)
+            XCTAssertEqual(vm.velocidadDemo, 1)
+            XCTAssertEqual(vm.radioParadero, 500)
+            XCTAssertEqual(PreferenciasApp.boolGuardado(para: "tracking.velocidadDemo", defaults: defaults), true)
+            XCTAssertEqual(defaults.string(forKey: "tracking.radioParadero"), "radio futuro")
+            vm.velocidadDemo = 1
+            vm.radioParadero = 500
+            XCTAssertNil(PreferenciasApp.boolGuardado(para: "tracking.velocidadDemo", defaults: defaults))
+            XCTAssertEqual(defaults.double(forKey: "tracking.velocidadDemo"), 1)
+            XCTAssertEqual(defaults.double(forKey: "tracking.radioParadero"), 500)
+        }
+    }
+}
+
+
+/// Clientes reales con conexión sustituida: no se abre un socket ni se usa un broker.
+@MainActor
+final class MQTTTrackingCicloTests: XCTestCase {
+    private let configuracion = MQTTConfiguration(host: "localhost", port: 1883,
+        username: "dispositivo-prueba", password: "prueba-local")
+
+    private func mensaje(_ id: String) throws -> CocoaMQTTMessage {
+        let datos = try JSONSerialization.data(withJSONObject: [
+            "vehicleId": id, "routeId": "ruta-prueba", "linea": "10",
+            "lat": -8.1, "lon": -79.03, "heading": 90, "speed": 4,
+            "timestamp": Date().timeIntervalSince1970
+        ])
+        return CocoaMQTTMessage(topic: "rutautp/vehiculos/\(id)/posicion",
+            string: try XCTUnwrap(String(data: datos, encoding: .utf8)))
+    }
+
+    func testPublicadorPuedeReintentarLaMismaSesionTrasFalloInicial() {
+        var clientes: [CocoaMQTT] = []
+        let publisher = MQTTObservationPublisher(configuration: configuracion) { client in
+            clientes.append(client)
+            return clientes.count > 1
+        }
+        defer { publisher.stop() }
+        publisher.start(sessionID: "sesion-prueba", linea: "10")
+        if case .failed = publisher.state {} else { XCTFail("El fallo de socket debe ser visible") }
+        XCTAssertEqual(clientes.count, 1)
+        XCTAssertFalse(clientes[0].autoReconnect)
+        publisher.start(sessionID: "sesion-prueba", linea: "10")
+        XCTAssertEqual(clientes.count, 2)
+        XCTAssertEqual(publisher.state, .connecting)
+        publisher.start(sessionID: "sesion-prueba", linea: "10")
+        XCTAssertEqual(clientes.count, 2)
+    }
+
+    func testStartPuedeReintentarSiElSocketNoAceptoElIntento() {
+        var clientes: [CocoaMQTT] = []
+        let provider = MQTTTrackingProvider(configuration: configuracion) { client in
+            clientes.append(client)
+            return clientes.count > 1
+        }
+        defer { provider.stop() }
+        provider.start()
+        XCTAssertEqual(clientes.count, 1)
+        XCTAssertFalse(clientes[0].autoReconnect)
+        provider.start()
+        XCTAssertEqual(clientes.count, 2)
+        provider.start()
+        XCTAssertEqual(clientes.count, 2)
+    }
+
+    func testMensajeDeClienteAnteriorNoEntraEnLaNuevaSesion() async throws {
+        var clientes: [CocoaMQTT] = []
+        let provider = MQTTTrackingProvider(configuration: configuracion) { client in
+            clientes.append(client)
+            return true
+        }
+        defer { provider.stop() }
+        provider.start()
+        let anterior = try XCTUnwrap(clientes.first)
+        anterior.didReceiveMessage(anterior, try mensaje("anterior"), 1)
+        provider.stop()
+        XCTAssertFalse(anterior.autoReconnect)
+        provider.start()
+        let actual = try XCTUnwrap(clientes.last)
+        XCTAssertFalse(anterior === actual)
+        let recibido = expectation(description: "Snapshot solo de la nueva sesión")
+        let stream = provider.positions()
+        let lector = Task { @MainActor in
+            for await posiciones in stream {
+                if posiciones.map(\.id) == ["actual"] { recibido.fulfill(); break }
+            }
+        }
+        defer { lector.cancel() }
+        actual.didReceiveMessage(actual, try mensaje("actual"), 1)
+        await fulfillment(of: [recibido], timeout: 1)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(provider.currentPositions.map(\.id), ["actual"])
+    }
+
+    func testMensajeEncoladoAntesDeStopNoRepueblaSnapshot() async throws {
+        var clientes: [CocoaMQTT] = []
+        let provider = MQTTTrackingProvider(configuration: configuracion) { client in
+            clientes.append(client)
+            return true
+        }
+        provider.start()
+        let client = try XCTUnwrap(clientes.first)
+        client.didReceiveMessage(client, try mensaje("tardio"), 1)
+        provider.stop()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(provider.currentPositions.isEmpty)
+        XCTAssertFalse(client.autoReconnect)
+    }
 }

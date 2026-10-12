@@ -29,12 +29,12 @@ final class PreferenciasVisualesPerfilStore {
     @ObservationIgnored private let defaults: UserDefaults
     private var valores: [String: Bool] = [:]
 
-    private init() {
-        defaults = .standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         for empresa in TematicaEmpresa.todas {
             for carnet in CarnetPerfil.allCases {
                 let clave = Self.clave(carnet, empresa: empresa)
-                if let valor = defaults.object(forKey: clave) as? Bool {
+                if let valor = PreferenciasApp.boolGuardado(para: clave, defaults: defaults) {
                     valores[clave] = valor
                 }
             }

@@ -28,12 +28,11 @@ final class SedeTrabajoStore: Observable {
         return valorReferenciaUTP
     }
 
-    private init() {
-        defaults = .standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         let idGuardado = defaults.string(forKey: Self.llave)
         let sedeGuardada = idGuardado.flatMap(CatalogoSedesTrabajo.sede(id:))
-        let referenciaGuardada = defaults.object(forKey: Self.llaveReferenciaUTP) == nil
-            ? nil : defaults.bool(forKey: Self.llaveReferenciaUTP)
+        let referenciaGuardada = PreferenciasApp.boolGuardado(para: Self.llaveReferenciaUTP, defaults: defaults)
         // Mantener sedes y elecciones explícitas anteriores. Un regreso a UTP
         // de la versión previa se refleja también en la sede mostrada.
         let usarUTP = (referenciaGuardada ?? (idGuardado == nil)) || sedeGuardada?.empresa == .utp
@@ -59,11 +58,6 @@ final class SedeTrabajoStore: Observable {
             candado.unlock()
             guardarSede(nueva)
         }
-    }
-
-    @MainActor
-    func usarCampusUTP() {
-        seleccionar(id: CatalogoSedesTrabajo.campusUTP.id)
     }
 
     private func guardarSede(_ sede: SedeTrabajo?) {

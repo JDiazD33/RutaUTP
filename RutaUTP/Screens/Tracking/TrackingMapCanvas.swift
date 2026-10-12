@@ -94,7 +94,7 @@ struct TrackingMapCanvas: View {
                         }
                     } label: {
                         AnimatedBusMarker(linea: vehiculo.linea,
-                                          color: colorDeLinea(vehiculo.linea), heading: vehiculo.heading)
+                                          color: colorDeVehiculo(vehiculo), heading: vehiculo.heading)
                             .scaleEffect(vehiculoSeleccionadoID == vehiculo.id ? 1.15 : 1.0)
                             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: vehiculoSeleccionadoID)
                     }
@@ -150,14 +150,12 @@ struct TrackingMapCanvas: View {
         // Las cards se cierran con su botón X o tocando otra burbuja.
     }
 
-    /// Color de la línea, tomado del `route_color` del feed GTFS.
-    ///
-    /// Antes se derivaba de un hash del nombre de la línea, así que la misma
-    /// línea aparecía con un color en Rutas y en el Mapa y con otro aquí. El
-    /// gris neutro solo salta si la línea no está en el feed, que no debería
-    /// ocurrir: los vehículos se generan a partir de rutas del propio feed.
-    private func colorDeLinea(_ linea: String) -> Color {
-        guard let hex = vm.coloresPorLinea[linea] else { return .secondary }
+    /// Color del ramal GTFS; el nombre solo se usa si falta el route_id.
+    private func colorDeVehiculo(_ vehiculo: VehiclePosition) -> Color {
+        let hex = vehiculo.routeId.isEmpty
+            ? vm.coloresPorLinea[vehiculo.linea]
+            : vm.coloresPorRuta[vehiculo.routeId]
+        guard let hex else { return .secondary }
         return Color.colorRuta(hex: hex)
     }
 }

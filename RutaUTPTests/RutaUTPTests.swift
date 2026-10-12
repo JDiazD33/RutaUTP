@@ -24,6 +24,7 @@ import XCTest
 import CoreLocation
 import MapKit
 import SwiftUI
+import Observation
 import Combine
 @testable import RutaUTP
 
@@ -1041,6 +1042,41 @@ final class LugaresStoreRecuperacionTests: XCTestCase {
         XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.orden.v1"), seleccion)
     }
 
+    func testSeleccionUOrdenIlegiblesBloqueanMutacionesYConservanOriginales() throws {
+        let anterior = lugar("Anterior")
+        XCTAssertTrue(almacen.guardar([lugar("UTP", fijo: true), anterior]))
+        let lista = try JSONEncoder().encode([anterior.id])
+        let originalLugares = defaults.data(forKey: LugaresStore.key)
+        for clave in ["seguridad.tiles.v1", "seguridad.tiles.orden.v1"] {
+            defaults.set(lista, forKey: "seguridad.tiles.v1")
+            defaults.set(lista, forKey: "seguridad.tiles.orden.v1")
+            let modelo = SeguridadLugaresModel(almacen: almacen)
+            modelo.cargar()
+            // También debe proteger una pantalla que cargó antes del daño.
+            defaults.set("formato incompatible", forKey: clave)
+            XCTAssertFalse(modelo.reconstruirTiles(seleccion: []))
+            XCTAssertFalse(modelo.persistirOrden())
+            XCTAssertFalse(modelo.eliminar(anterior))
+            modelo.alternarEdicion()
+            XCTAssertTrue(modelo.datosTilesInvalidos)
+            XCTAssertFalse(modelo.modoEdicion)
+            XCTAssertEqual(defaults.string(forKey: clave), "formato incompatible")
+            XCTAssertEqual(defaults.data(forKey: LugaresStore.key), originalLugares)
+        }
+    }
+
+    func testIDsRepetidosEnTilesSeConservanSinGenerarAccesosDuplicados() throws {
+        let anterior = lugar("Anterior")
+        XCTAssertTrue(almacen.guardar([lugar("UTP", fijo: true), anterior]))
+        let original = try JSONEncoder().encode([anterior.id, anterior.id])
+        defaults.set(original, forKey: "seguridad.tiles.v1")
+        let modelo = SeguridadLugaresModel(almacen: almacen)
+        modelo.cargar()
+        XCTAssertTrue(modelo.datosTilesInvalidos)
+        XCTAssertTrue(modelo.tilesActuales.isEmpty)
+        XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.v1"), original)
+    }
+
     func testGuardadoConservaLugaresAñadidosDesdeOtraPantalla() {
         let campus = lugar("UTP", fijo: true)
         let primero = lugar("Primero")
@@ -1057,6 +1093,64 @@ final class LugaresStoreRecuperacionTests: XCTestCase {
         XCTAssertEqual(Set(almacen.cargar().map(\.id)), [campus.id, externo.id, nuevo.id])
     }
 
+    func testCambioIlegiblePosteriorALaCacheBloqueaGuardarYEliminar() throws {
+        let inicial = [lugar("UTP", fijo: true), lugar("Anterior")]
+        let originales: [Any] = [Data("ilegible".utf8), "formato incompatible"]
+        for original in originales {
+            defaults.set(try JSONEncoder().encode(inicial), forKey: LugaresStore.key)
+            XCTAssertEqual(almacen.cargar(), inicial)
+            defaults.set(original, forKey: LugaresStore.key)
+            // No se invalida manualmente: la protección debe ser automática.
+            XCTAssertFalse(almacen.guardar(inicial + [lugar("Nuevo")]))
+            XCTAssertFalse(almacen.eliminar(inicial[1]))
+            XCTAssertTrue(almacen.datosLocalesInvalidos)
+            XCTAssertTrue(almacen.cargar().isEmpty)
+            XCTAssertTrue((defaults.object(forKey: LugaresStore.key) as! NSObject).isEqual(original))
+            XCTAssertNil(defaults.object(forKey: LugaresStore.respaldoKey))
+        }
+    }
+
+    func testOtraInstanciaActualizaLaListaCacheadaSinInvalidacionManual() {
+        let inicial = [lugar("UTP", fijo: true), lugar("Anterior")]
+        XCTAssertTrue(almacen.guardar(inicial))
+        let otra = AlmacenLugares(defaults: defaults)
+        let nuevo = lugar("Desde otra instancia")
+        XCTAssertTrue(otra.guardar(inicial + [nuevo]))
+        XCTAssertEqual(almacen.cargar(), inicial + [nuevo])
+        XCTAssertTrue(almacen.eliminar(inicial[1]))
+        XCTAssertEqual(otra.cargar(), [inicial[0], nuevo])
+    }
+
+    func testIDsRepetidosYCoordenadasInvalidasConservanElOriginal() throws {
+        let campus = lugar("UTP", fijo: true)
+        let anterior = lugar("Anterior")
+        var fueraDeRango = anterior
+        fueraDeRango.lat = 91
+        var incompleto = anterior
+        incompleto.lon = nil
+        for lista in [[campus, anterior, anterior], [campus, fueraDeRango], [campus, incompleto]] {
+            let original = try JSONEncoder().encode(lista)
+            defaults.set(original, forKey: LugaresStore.key)
+            XCTAssertTrue(almacen.cargar().isEmpty)
+            XCTAssertTrue(almacen.datosLocalesInvalidos)
+            XCTAssertFalse(almacen.guardar([campus]))
+            XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+            XCTAssertNil(defaults.object(forKey: LugaresStore.respaldoKey))
+        }
+    }
+
+    func testLugarAnteriorSinCoordenadasSigueSiendoLegible() throws {
+        var anterior = lugar("Sin coordenadas")
+        anterior.lat = nil
+        anterior.lon = nil
+        let lista = [lugar("UTP", fijo: true), anterior]
+        let original = try JSONEncoder().encode(lista)
+        defaults.set(original, forKey: LugaresStore.key)
+        XCTAssertEqual(almacen.cargar(), lista)
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
+    }
+
     func testErrorDeCodificacionNoCambiaDiscoNiCache() {
         let inicial = [lugar("UTP", fijo: true), lugar("Anterior")]
         XCTAssertTrue(almacen.guardar(inicial))
@@ -1067,6 +1161,129 @@ final class LugaresStoreRecuperacionTests: XCTestCase {
         XCTAssertEqual(almacen.cargar(), inicial)
         XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
         XCTAssertFalse(almacen.datosLocalesInvalidos)
+    }
+}
+
+// MARK: - Referencias de tarjetas: persistencia aislada, sin llavero real
+
+@MainActor
+final class TarjetasStoreRecuperacionTests: XCTestCase {
+    private final class LlaveroMemoria: ReferenciasTarjetasPersistiendo {
+        var data: Data?
+        var fallarLectura = false
+        var fallarEscritura = false
+        var escrituras = 0
+
+        func leer() throws -> Data? {
+            if fallarLectura { throw CocoaError(.fileReadNoPermission) }
+            return data
+        }
+
+        func guardar(_ data: Data) throws {
+            if fallarEscritura { throw CocoaError(.fileWriteNoPermission) }
+            escrituras += 1
+            self.data = data
+        }
+    }
+
+    private func tarjeta(_ nombre: String) -> TarjetaGuardada {
+        TarjetaGuardada(nombre: nombre, red: "Visa", ultimos4: "1234")
+    }
+
+    func testLecturaFallidaPosteriorALaCargaBloqueaTodasLasMutaciones() throws {
+        let llave = LlaveroMemoria()
+        let anterior = tarjeta("Anterior")
+        let original = try JSONEncoder().encode([anterior])
+        llave.data = original
+        let store = TarjetasStore(persistencia: llave)
+        llave.fallarLectura = true
+        XCTAssertFalse(store.cargar())
+        XCTAssertFalse(store.agregar(tarjeta("Nuevo")))
+        XCTAssertFalse(store.hacerPrincipal(anterior))
+        XCTAssertFalse(store.eliminar(anterior))
+        XCTAssertTrue(store.lecturaFallida)
+        XCTAssertEqual(llave.data, original)
+        XCTAssertEqual(llave.escrituras, 0)
+        llave.fallarLectura = false
+        XCTAssertTrue(store.cargar())
+        XCTAssertFalse(store.lecturaFallida)
+        XCTAssertNil(store.error)
+        XCTAssertEqual(store.tarjetas, [anterior])
+    }
+
+    func testDatosIlegiblesRepetidosOIncompletosNoSeSobrescriben() throws {
+        let llave = LlaveroMemoria()
+        let anterior = tarjeta("Anterior")
+        var incompleta = anterior
+        incompleta.ultimos4 = "12"
+        let store = TarjetasStore(persistencia: llave)
+        for original in [Data("ilegible".utf8),
+                         try JSONEncoder().encode([anterior, anterior]),
+                         try JSONEncoder().encode([incompleta])] {
+            llave.data = original
+            XCTAssertFalse(store.agregar(tarjeta("Nuevo")))
+            XCTAssertTrue(store.lecturaFallida)
+            XCTAssertEqual(llave.data, original)
+            XCTAssertEqual(llave.escrituras, 0)
+        }
+    }
+
+    func testAusenciaPosteriorALaCargaNoResucitaReferenciasEliminadas() throws {
+        let llave = LlaveroMemoria()
+        let anterior = tarjeta("Anterior")
+        llave.data = try JSONEncoder().encode([anterior])
+        let store = TarjetasStore(persistencia: llave)
+        llave.data = nil
+        XCTAssertFalse(store.hacerPrincipal(anterior))
+        XCTAssertTrue(store.tarjetas.isEmpty)
+        XCTAssertNil(llave.data)
+        XCTAssertEqual(llave.escrituras, 0)
+        let nueva = tarjeta("Nueva")
+        XCTAssertTrue(store.agregar(nueva))
+        XCTAssertEqual(store.tarjetas, [nueva])
+        XCTAssertEqual(try JSONDecoder().decode([TarjetaGuardada].self, from: XCTUnwrap(llave.data)), [nueva])
+    }
+
+    func testDosAlmacenesConservanCambiosDeLaOtraInstancia() throws {
+        let llave = LlaveroMemoria()
+        let anterior = tarjeta("Anterior")
+        llave.data = try JSONEncoder().encode([anterior])
+        let primero = TarjetasStore(persistencia: llave)
+        let segundo = TarjetasStore(persistencia: llave)
+        let nueva = tarjeta("Desde otra pantalla")
+        XCTAssertTrue(primero.agregar(nueva))
+        XCTAssertTrue(segundo.eliminar(anterior))
+        XCTAssertEqual(segundo.tarjetas, [nueva])
+        XCTAssertTrue(primero.cargar())
+        XCTAssertEqual(primero.tarjetas, [nueva])
+    }
+
+    func testElegirPrincipalUsaLaReferenciaVigenteEnLugarDeSuCopiaAnterior() throws {
+        let llave = LlaveroMemoria()
+        let anterior = tarjeta("Anterior")
+        let otra = tarjeta("Otra")
+        llave.data = try JSONEncoder().encode([otra, anterior])
+        let store = TarjetasStore(persistencia: llave)
+        var actualizada = anterior
+        actualizada.nombre = "Nombre actualizado"
+        llave.data = try JSONEncoder().encode([otra, actualizada])
+        XCTAssertTrue(store.hacerPrincipal(anterior))
+        XCTAssertEqual(store.tarjetas, [actualizada, otra])
+        XCTAssertEqual(try JSONDecoder().decode([TarjetaGuardada].self, from: XCTUnwrap(llave.data)), [actualizada, otra])
+    }
+
+    func testFalloDeEscrituraNoPublicaNiPersisteUnCambioExitoso() throws {
+        let llave = LlaveroMemoria()
+        let anterior = tarjeta("Anterior")
+        let original = try JSONEncoder().encode([anterior])
+        llave.data = original
+        let store = TarjetasStore(persistencia: llave)
+        llave.fallarEscritura = true
+        XCTAssertFalse(store.agregar(tarjeta("Nuevo")))
+        XCTAssertEqual(store.tarjetas, [anterior])
+        XCTAssertEqual(llave.data, original)
+        XCTAssertEqual(llave.escrituras, 0)
+        XCTAssertNotNil(store.error)
     }
 }
 
@@ -1686,5 +1903,295 @@ final class MapaPanelLineasTests: XCTestCase {
                        L.t("No encontramos líneas cerca de este punto", "No lines were found near this point"))
         let consultas = await repositorio.consultasCercanas
         XCTAssertEqual(consultas.map(\.radio), [400, 800])
+    }
+}
+
+
+/// Suites aisladas y escritor simulado: no usan preferencias ni documentos reales.
+@MainActor
+final class RecuperacionPreferenciasTests: XCTestCase {
+    private let archivoSimulado = URL(fileURLWithPath: "/tmp/respaldo-simulado.plist")
+
+    private func conPreferencias(_ comprobar: (UserDefaults) throws -> Void) throws {
+        let dominio = "RutaUTPTests.Recuperacion.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: dominio))
+        defer { defaults.removePersistentDomain(forName: dominio) }
+        try comprobar(defaults)
+    }
+
+    private func valores(_ copia: Data?) throws -> [String: Any] {
+        let raiz = try XCTUnwrap(try PropertyListSerialization.propertyList(
+            from: XCTUnwrap(copia), options: [], format: nil) as? [String: Any])
+        XCTAssertEqual(raiz["version"] as? Int, 1)
+        return try XCTUnwrap(raiz["valores"] as? [String: Any])
+    }
+
+    func testRespaldoConservaTiposBytesYClavesAusentes() throws {
+        try conPreferencias { defaults in
+            let original = Data([0, 255, 1, 2])
+            defaults.set(original, forKey: "datos")
+            defaults.set(["texto", "anterior"], forKey: "lista")
+            defaults.set("conservar", forKey: "otra")
+            var copia: Data?
+            let archivo = try RecuperacionPreferencias.reiniciar(
+                claves: ["datos", "lista", "ausente"], valoresNuevos: ["datos": Data("[]".utf8)],
+                nombre: "prueba", defaults: defaults) { copia = $0; return self.archivoSimulado }
+            XCTAssertEqual(archivo, archivoSimulado)
+            let originales = try valores(copia)
+            XCTAssertEqual(originales["datos"] as? Data, original)
+            XCTAssertEqual(originales["lista"] as? [String], ["texto", "anterior"])
+            XCTAssertNil(originales["ausente"])
+            let raiz = try XCTUnwrap(try PropertyListSerialization.propertyList(
+                from: XCTUnwrap(copia), options: [], format: nil) as? [String: Any])
+            XCTAssertEqual(raiz["claves"] as? [String], ["datos", "lista", "ausente"])
+            XCTAssertEqual(defaults.data(forKey: "datos"), Data("[]".utf8))
+            XCTAssertNil(defaults.object(forKey: "lista"))
+            XCTAssertNil(defaults.object(forKey: "ausente"))
+            XCTAssertEqual(defaults.string(forKey: "otra"), "conservar")
+        }
+    }
+
+    func testFalloDeRespaldoNoModificaNingunaClave() throws {
+        try conPreferencias { defaults in
+            let datos = Data("ilegible".utf8)
+            defaults.set(datos, forKey: "datos")
+            defaults.set("original", forKey: "orden")
+            XCTAssertThrowsError(try RecuperacionPreferencias.reiniciar(
+                claves: ["datos", "orden"], valoresNuevos: [:], nombre: "prueba", defaults: defaults) { _ in
+                    throw CocoaError(.fileWriteOutOfSpace)
+                })
+            XCTAssertEqual(defaults.data(forKey: "datos"), datos)
+            XCTAssertEqual(defaults.string(forKey: "orden"), "original")
+        }
+    }
+
+    func testCambioDuranteRespaldoImpideReinicioDeAmbasClaves() throws {
+        try conPreferencias { defaults in
+            let original = Data("ilegible".utf8)
+            defaults.set(original, forKey: "datos")
+            var copia: Data?
+            XCTAssertThrowsError(try RecuperacionPreferencias.reiniciar(
+                claves: ["datos", "antesAusente"], valoresNuevos: [:], nombre: "prueba", defaults: defaults) {
+                    copia = $0
+                    defaults.set("nuevo", forKey: "antesAusente")
+                    return self.archivoSimulado
+                }) { error in
+                    XCTAssertTrue(error is RecuperacionPreferencias.Fallo)
+                }
+            XCTAssertEqual(try valores(copia)["datos"] as? Data, original)
+            XCTAssertEqual(defaults.data(forKey: "datos"), original)
+            XCTAssertEqual(defaults.string(forKey: "antesAusente"), "nuevo")
+        }
+    }
+
+    func testCuponesIlegiblesSeRespaldanAntesDeReiniciar() throws {
+        try conPreferencias { defaults in
+            let clave = "negocios.cupones.guardados"
+            let original = Data("formato desconocido".utf8)
+            defaults.set(original, forKey: clave)
+            let servicio = NegociosService(defaults: defaults)
+            XCTAssertTrue(servicio.datosCuponesInvalidos)
+            var copia: Data?
+            XCTAssertNotNil(try servicio.respaldarYReiniciarCupones { copia = $0; return self.archivoSimulado })
+            XCTAssertEqual(try valores(copia)[clave] as? Data, original)
+            XCTAssertEqual(defaults.stringArray(forKey: clave), [])
+            XCTAssertFalse(servicio.datosCuponesInvalidos)
+        }
+    }
+
+    func testFalloDeRespaldoDeCuponesConservaOriginal() throws {
+        try conPreferencias { defaults in
+            let clave = "negocios.cupones.guardados"
+            defaults.set(123, forKey: clave)
+            let servicio = NegociosService(defaults: defaults)
+            XCTAssertThrowsError(try servicio.respaldarYReiniciarCupones { _ in
+                throw CocoaError(.fileWriteOutOfSpace)
+            })
+            XCTAssertEqual(defaults.integer(forKey: clave), 123)
+            XCTAssertTrue(servicio.datosCuponesInvalidos)
+        }
+    }
+
+    func testCuponesValidosOReparadosNoSeReinician() throws {
+        try conPreferencias { defaults in
+            let clave = "negocios.cupones.guardados"
+            defaults.set("ilegible", forKey: clave)
+            let servicio = NegociosService(defaults: defaults)
+            XCTAssertTrue(servicio.datosCuponesInvalidos)
+            // Una reparación mientras se confirmaba no debe vaciar una lista válida.
+            defaults.set(["negocio-anterior", "fuera-del-catalogo"], forKey: clave)
+            XCTAssertNil(try servicio.respaldarYReiniciarCupones { _ in
+                XCTFail("No corresponde crear un respaldo de una lista válida")
+                return self.archivoSimulado
+            })
+            XCTAssertEqual(defaults.stringArray(forKey: clave), ["negocio-anterior", "fuera-del-catalogo"])
+        }
+    }
+
+    func testRestablecerAccesosRespaldaAmbasClavesYConservaLugares() throws {
+        try conPreferencias { defaults in
+            let almacen = AlmacenLugares(defaults: defaults)
+            let lugares = almacen.cargar()
+            let datosLugares = defaults.data(forKey: LugaresStore.key)
+            let seleccion = "formato desconocido"
+            let orden = try JSONEncoder().encode([try XCTUnwrap(lugares.last?.id)])
+            defaults.set(seleccion, forKey: "seguridad.tiles.v1")
+            defaults.set(orden, forKey: "seguridad.tiles.orden.v1")
+            let modelo = SeguridadLugaresModel(almacen: almacen)
+            modelo.cargar()
+            XCTAssertTrue(modelo.datosTilesInvalidos)
+            var copia: Data?
+            XCTAssertNotNil(try modelo.respaldarYReiniciarTiles { copia = $0; return self.archivoSimulado })
+            let originales = try valores(copia)
+            XCTAssertEqual(originales["seguridad.tiles.v1"] as? String, seleccion)
+            XCTAssertEqual(originales["seguridad.tiles.orden.v1"] as? Data, orden)
+            XCTAssertNil(defaults.object(forKey: "seguridad.tiles.v1"))
+            XCTAssertNil(defaults.object(forKey: "seguridad.tiles.orden.v1"))
+            XCTAssertEqual(defaults.data(forKey: LugaresStore.key), datosLugares)
+            XCTAssertEqual(modelo.tilesActuales.map(\.id), lugares.map(\.id))
+            XCTAssertFalse(modelo.datosTilesInvalidos)
+            XCTAssertFalse(modelo.modoEdicion)
+            XCTAssertNil(modelo.arrastrando)
+        }
+    }
+
+    func testFalloDeRespaldoDeAccesosConservaSeleccionYOrden() throws {
+        try conPreferencias { defaults in
+            let almacen = AlmacenLugares(defaults: defaults)
+            let modelo = SeguridadLugaresModel(almacen: almacen)
+            let original = Data("ilegible".utf8)
+            defaults.set(original, forKey: "seguridad.tiles.orden.v1")
+            let seleccion = try JSONEncoder().encode([UUID]())
+            defaults.set(seleccion, forKey: "seguridad.tiles.v1")
+            modelo.cargar()
+            XCTAssertThrowsError(try modelo.respaldarYReiniciarTiles { _ in
+                throw CocoaError(.fileWriteOutOfSpace)
+            })
+            XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.orden.v1"), original)
+            XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.v1"), seleccion)
+            XCTAssertTrue(modelo.datosTilesInvalidos)
+        }
+    }
+
+    func testAccesosValidosNoSeRestablecen() throws {
+        try conPreferencias { defaults in
+            let almacen = AlmacenLugares(defaults: defaults)
+            let id = try XCTUnwrap(almacen.cargar().last?.id)
+            let orden = try JSONEncoder().encode([id])
+            defaults.set(orden, forKey: "seguridad.tiles.v1")
+            defaults.set(orden, forKey: "seguridad.tiles.orden.v1")
+            let modelo = SeguridadLugaresModel(almacen: almacen)
+            modelo.cargar()
+            XCTAssertNil(try modelo.respaldarYReiniciarTiles { _ in
+                XCTFail("Los accesos válidos no se restablecen")
+                return self.archivoSimulado
+            })
+            XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.v1"), orden)
+            XCTAssertEqual(defaults.data(forKey: "seguridad.tiles.orden.v1"), orden)
+        }
+    }
+}
+
+
+@MainActor
+final class PreferenciasSimplesTests: XCTestCase {
+    private func conPreferencias(_ comprobar: (UserDefaults) throws -> Void) throws {
+        let suite = "RutaUTPTests.PreferenciasSimples.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        try comprobar(defaults)
+    }
+
+    func testBooleanosRealesSeDistinguenDeAusenciaStringsYNumeros() throws {
+        try conPreferencias { defaults in
+            let clave = "preferencia"
+            XCTAssertNil(PreferenciasApp.boolGuardado(para: clave, defaults: defaults))
+            let incompatibles: [Any] = [NSNumber(value: 1), NSNumber(value: 0), NSNumber(value: 2), "YES", "false", Data([1])]
+            for original in incompatibles {
+                defaults.set(original, forKey: clave)
+                XCTAssertNil(PreferenciasApp.boolGuardado(para: clave, defaults: defaults))
+                XCTAssertTrue(try XCTUnwrap(original as? NSObject).isEqual(defaults.object(forKey: clave)))
+            }
+            for valor in [true, false] {
+                defaults.set(valor, forKey: clave)
+                XCTAssertEqual(PreferenciasApp.boolGuardado(para: clave, defaults: defaults), valor)
+            }
+        }
+    }
+
+    func testConfirmarTematicaDeRespaldoReparaClaveSinEscrituraInicial() throws {
+        try conPreferencias { defaults in
+            defaults.set("empresa-futura", forKey: TematicaEmpresaStore.llave)
+            let store = TematicaEmpresaStore(defaults: defaults)
+            XCTAssertEqual(store.seleccion, .utp)
+            XCTAssertEqual(defaults.string(forKey: TematicaEmpresaStore.llave), "empresa-futura")
+            store.seleccionar(.utp)
+            XCTAssertEqual(defaults.string(forKey: TematicaEmpresaStore.llave), "utp")
+            store.seleccionar(.interbank)
+            XCTAssertEqual(TematicaEmpresaStore(defaults: defaults).seleccion, .interbank)
+        }
+    }
+
+    func testIdiomaDesconocidoSeConservaHastaUnaEleccionValida() throws {
+        try conPreferencias { defaults in
+            defaults.set("fr", forKey: "idioma.app")
+            let store = IdiomaManager(defaults: defaults, argumentos: [])
+            XCTAssertEqual(store.codigo, "es")
+            XCTAssertEqual(defaults.string(forKey: "idioma.app"), "fr")
+            store.seleccionar(codigo: "desconocido")
+            XCTAssertEqual(defaults.string(forKey: "idioma.app"), "fr")
+            store.seleccionar(codigo: "es")
+            XCTAssertEqual(defaults.string(forKey: "idioma.app"), "es")
+            store.alternar()
+            XCTAssertEqual(store.codigo, "en")
+            XCTAssertTrue(IdiomaManager(defaults: defaults, argumentos: []).esIngles)
+        }
+    }
+
+    func testIdiomaSigueRegistrandoCambiosConObservation() throws {
+        try conPreferencias { defaults in
+            let store = IdiomaManager(defaults: defaults, argumentos: [])
+            let cambio = expectation(description: "Cambio observado del idioma")
+            withObservationTracking { _ = store.esIngles } onChange: { cambio.fulfill() }
+            store.alternar()
+            XCTAssertEqual(store.codigo, "en")
+            XCTAssertEqual(defaults.string(forKey: "idioma.app"), "en")
+            // El callback de Observation se entrega sin esperar otro render.
+            wait(for: [cambio], timeout: 1)
+        }
+    }
+
+    func testReferenciaIncompatibleNoSustituyeSedeEmpresarial() throws {
+        try conPreferencias { defaults in
+            let id = "interbank-centro-gamarra"
+            defaults.set(id, forKey: SedeTrabajoStore.llave)
+            defaults.set("YES", forKey: SedeTrabajoStore.llaveReferenciaUTP)
+            let store = SedeTrabajoStore(defaults: defaults)
+            XCTAssertFalse(store.utpComoReferencia)
+            XCTAssertEqual(store.sede?.id, id)
+            XCTAssertEqual(defaults.string(forKey: SedeTrabajoStore.llaveReferenciaUTP), "YES")
+            store.seleccionar(id: id)
+            XCTAssertEqual(PreferenciasApp.boolGuardado(para: SedeTrabajoStore.llaveReferenciaUTP, defaults: defaults), false)
+            defaults.set(true, forKey: SedeTrabajoStore.llaveReferenciaUTP)
+            let campus = SedeTrabajoStore(defaults: defaults)
+            XCTAssertTrue(campus.utpComoReferencia)
+            XCTAssertEqual(campus.sede?.id, CatalogoSedesTrabajo.campusUTP.id)
+        }
+    }
+
+    func testVisibilidadNoCoerceNumerosYConservaEleccionPorEmpresa() throws {
+        try conPreferencias { defaults in
+            let clave = "perfil.carnet.foto.interbank.visible.v1"
+            defaults.set(2, forKey: clave)
+            let store = PreferenciasVisualesPerfilStore(defaults: defaults)
+            XCTAssertFalse(store.visible(.foto, empresa: .interbank))
+            XCTAssertTrue(store.visible(.foto, empresa: .utp))
+            XCTAssertEqual(defaults.integer(forKey: clave), 2)
+            store.establecer(true, carnet: .foto, empresa: .interbank)
+            XCTAssertEqual(PreferenciasApp.boolGuardado(para: clave, defaults: defaults), true)
+            let nuevo = PreferenciasVisualesPerfilStore(defaults: defaults)
+            XCTAssertTrue(nuevo.visible(.foto, empresa: .interbank))
+            XCTAssertFalse(nuevo.visible(.foto, empresa: .bembos))
+        }
     }
 }

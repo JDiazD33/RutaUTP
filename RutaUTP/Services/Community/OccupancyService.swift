@@ -43,6 +43,7 @@ private struct OccupancyReceipt: Decodable {
 }
 
 /// Canal independiente: no modifica posiciones, rutas ni estimaciones de buses.
+@MainActor
 final class OccupancyService: ObservableObject {
     private let configurationProvider: () -> MQTTConfiguration?
     private let clock: () -> TimeInterval
@@ -113,27 +114,36 @@ final class OccupancyService: ObservableObject {
             client.trustedServerCertificates = config.trustedCACertificates
         }
         client.didConnectAck = { [weak self] client, ack in
-            guard let self, self.running, self.mqtt === client, ack == .accept else { return }
-            self.subscribed = false
-            self.refresh()
-            client.subscribe([( "rutautp/ocupacion/estado", .qos1),
-                              ("rutautp/ocupacion/\(self.principal)/recibo", .qos1)])
+            Task { @MainActor [weak self] in
+                guard let self, self.running, self.mqtt === client, ack == .accept else { return }
+                self.subscribed = false
+                self.refresh()
+                client.subscribe([( "rutautp/ocupacion/estado", .qos1),
+                                  ("rutautp/ocupacion/\(self.principal)/recibo", .qos1)])
+            }
         }
         client.didSubscribeTopics = { [weak self] client, success, failed in
-            guard let self, self.running, self.mqtt === client else { return }
-            self.subscribed = failed.isEmpty && success.count == 2
-            self.refresh()
+            Task { @MainActor [weak self] in
+                guard let self, self.running, self.mqtt === client else { return }
+                self.subscribed = failed.isEmpty && success.count == 2
+                self.refresh()
+            }
         }
         client.didReceiveMessage = { [weak self] client, message, _ in
-            guard let self, self.running, self.mqtt === client, let json = message.string,
-                  let data = json.data(using: .utf8) else { return }
-            self.receive(data, topic: message.topic)
+            guard let json = message.string, let data = json.data(using: .utf8) else { return }
+            let topic = message.topic
+            Task { @MainActor [weak self] in
+                guard let self, self.running, self.mqtt === client else { return }
+                self.receive(data, topic: topic)
+            }
         }
         client.didDisconnect = { [weak self] client, _ in
-            guard let self, self.mqtt === client else { return }
-            self.subscribed = false
-            self.lastSnapshot = nil
-            self.refresh()
+            Task { @MainActor [weak self] in
+                guard let self, self.mqtt === client else { return }
+                self.subscribed = false
+                self.lastSnapshot = nil
+                self.refresh()
+            }
         }
         mqtt = client
         deadlineScheduler.start { [weak self] in self?.refresh() }

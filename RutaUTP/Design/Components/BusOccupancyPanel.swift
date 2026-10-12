@@ -47,6 +47,9 @@ struct TripContributionPanel: View {
     @State private var showDetails = false
     @State private var choosingLine = false
     @State private var confirmEndTrip = false
+    @State private var confirmarReinicioSubidas = false
+    @State private var errorRecuperacionSubidas = false
+    @State private var respaldoSubidas: URL?
 
     var body: some View {
         if let route = coordinator.selectedTripRoute {
@@ -114,8 +117,30 @@ struct TripContributionPanel: View {
                             Label(L.t("Subiste en: ", "Boarded at: ") + place, systemImage: "mappin")
                         }
                         if coordinator.boardingPoint != nil {
-                            Label(L.t("Punto de subida guardado", "Boarding point saved"), systemImage: "mappin.and.ellipse")
+                            Label(coordinator.falloAlGuardarSubida
+                                  ? L.t("Punto de subida seleccionado", "Boarding point selected")
+                                  : L.t("Punto de subida guardado", "Boarding point saved"), systemImage: "mappin.and.ellipse")
                                 .foregroundStyle(.secondary)
+                        }
+                        if coordinator.falloAlGuardarSubida {
+                            Label(L.t("No pudimos guardar esta referencia de subida. Tus datos anteriores se conservan; puedes seguir ayudando durante este viaje.",
+                                      "We couldn't save this boarding reference. Your previous data has been preserved; you can keep contributing during this trip."),
+                                  systemImage: "exclamationmark.triangle")
+                                .foregroundStyle(Color.appError)
+                            Button(L.t("Reintentar guardado", "Retry saving")) {
+                                coordinator.reintentarGuardarSubida()
+                            }
+                            if BoardingPlaceStore.datosInvalidos() {
+                                Button(L.t("Respaldar y reiniciar notas de subida", "Back up and reset boarding notes")) {
+                                    confirmarReinicioSubidas = true
+                                }
+                            }
+                        }
+                        if let respaldoSubidas {
+                            ShareLink(item: respaldoSubidas) {
+                                Label(L.t("Compartir respaldo de subidas", "Share boarding backup"),
+                                      systemImage: "square.and.arrow.up")
+                            }
                         }
                     }
                     Section(L.t("Ocupación del micro", "Bus occupancy")) {
@@ -157,6 +182,25 @@ struct TripContributionPanel: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L.t("Listo", "Done")) { showDetails = false }
                 }
+            }
+            .alert(L.t("¿Empezar un nuevo historial de subidas?", "Start a new boarding history?"),
+                   isPresented: $confirmarReinicioSubidas) {
+                Button(L.t("Respaldar y reiniciar", "Back up and reset"), role: .destructive) {
+                    do {
+                        if let archivo = try BoardingPlaceStore.respaldarYReiniciar() { respaldoSubidas = archivo }
+                        coordinator.reintentarGuardarSubida()
+                    } catch { errorRecuperacionSubidas = true }
+                }
+                Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+            } message: {
+                Text(L.t("Se guardará una copia del historial original en tus documentos y se reintentará guardar la subida de este viaje.",
+                         "A copy of the original history will be saved in your documents and saving this trip's boarding reference will be retried."))
+            }
+            .alert(L.t("No se pudo reiniciar", "Couldn't reset"), isPresented: $errorRecuperacionSubidas) {
+                Button(L.t("Aceptar", "OK"), role: .cancel) {}
+            } message: {
+                Text(L.t("No se reiniciaron los datos. Reintenta la lectura y comprueba el espacio disponible.",
+                         "The data was not reset. Retry reading and check available storage."))
             }
             .confirmationDialog(L.t("¿Finalizar este viaje?", "End this trip?"),
                                 isPresented: $confirmEndTrip, titleVisibility: .visible) {

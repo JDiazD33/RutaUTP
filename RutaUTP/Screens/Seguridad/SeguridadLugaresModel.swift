@@ -25,6 +25,7 @@ final class SeguridadLugaresModel: ObservableObject {
     /// Lugares guardados tal como están en `LugaresStore`.
     @Published private(set) var lugares: [LugarGuardado] = []
     @Published private(set) var datosLugaresInvalidos = false
+    @Published private(set) var datosTilesInvalidos = false
 
     private let almacen: AlmacenLugares
 
@@ -34,8 +35,7 @@ final class SeguridadLugaresModel: ObservableObject {
 
     /// Tiles visibles: el fijo (UTP) primero y después los elegidos.
     ///
-    /// Es asignable y no `private(set)` porque el delegado de arrastre lo
-    /// reordena a través de un `Binding` (`$lugaresVM.tilesActuales`).
+    /// La vista conserva acceso al orden; el movimiento se centraliza en `mover`.
     @Published var tilesActuales: [LugarGuardado] = []
 
     /// Modo edición (estilo Springboard): jiggle, borrar y reordenar.
@@ -46,6 +46,7 @@ final class SeguridadLugaresModel: ObservableObject {
 
     private static let tilesKey = "seguridad.tiles.v1"
     private static let ordenKey = "seguridad.tiles.orden.v1"
+    private enum ErrorConfiguracion: Error { case datosInvalidos }
 
     // MARK: - Carga
 
@@ -57,7 +58,8 @@ final class SeguridadLugaresModel: ObservableObject {
     }
 
     func alternarEdicion() {
-        guard !datosLugaresInvalidos else { return }
+        guard !almacen.datosLocalesInvalidos, leerConfiguracion() != nil else { return }
+        arrastrando = nil
         modoEdicion.toggle()
     }
 
@@ -66,6 +68,7 @@ final class SeguridadLugaresModel: ObservableObject {
     /// Quita un lugar de guardados, lo saca de los tiles y persiste el orden.
     @discardableResult
     func eliminar(_ lugar: LugarGuardado) -> Bool {
+        guard leerConfiguracion() != nil else { return false }
         guard almacen.eliminar(lugar) else {
             cargar()
             return false
@@ -78,22 +81,44 @@ final class SeguridadLugaresModel: ObservableObject {
 
     // MARK: - Tiles
 
+    /// Movimiento local: después del destino al avanzar y antes al retroceder.
+    @discardableResult
+    func mover(_ origen: UUID, sobre destino: UUID) -> Bool {
+        guard modoEdicion, !almacen.datosLocalesInvalidos, origen != destino,
+              let desde = tilesActuales.firstIndex(where: { $0.id == origen }),
+              let hasta = tilesActuales.firstIndex(where: { $0.id == destino }),
+              !tilesActuales[desde].esFijo, !tilesActuales[hasta].esFijo else { return false }
+        var nuevoOrden = tilesActuales
+        let tile = nuevoOrden.remove(at: desde)
+        guard let nuevoDestino = nuevoOrden.firstIndex(where: { $0.id == destino }) else { return false }
+        nuevoOrden.insert(tile, at: desde < hasta ? nuevoDestino + 1 : nuevoDestino)
+        guard guardarOrden(nuevoOrden) else { return false }
+        tilesActuales = nuevoOrden
+        return true
+    }
+
     /// UTP fijo primero + extras en el orden guardado por el usuario.
-    func reconstruirTiles(seleccion: Set<UUID>? = nil) {
+    @discardableResult
+    func reconstruirTiles(seleccion: Set<UUID>? = nil) -> Bool {
         datosLugaresInvalidos = almacen.datosLocalesInvalidos
         guard !datosLugaresInvalidos else {
             tilesActuales = []
             modoEdicion = false
-            return
+            arrastrando = nil
+            return false
+        }
+        guard let configuracion = leerConfiguracion() else {
+            tilesActuales = []
+            return false
         }
         let utp = lugares.first(where: { $0.esFijo })
         let noFijos = lugares.filter { !$0.esFijo }
 
         let elegidos: [LugarGuardado]
         if let seleccion {
-            guardarTilesSeleccion(seleccion)
+            guard guardarTilesSeleccion(seleccion) else { return false }
             elegidos = noFijos.filter { seleccion.contains($0.id) }
-        } else if let idsGuardados = idsTilesGuardados() {
+        } else if let idsGuardados = configuracion.seleccion {
             let porId = Dictionary(uniqueKeysWithValues: noFijos.map { ($0.id, $0) })
             elegidos = idsGuardados.compactMap { porId[$0] }
         } else {
@@ -103,7 +128,7 @@ final class SeguridadLugaresModel: ObservableObject {
         // Orden guardado por el usuario (arrastrar en modo edición)
         var resultado: [LugarGuardado] = []
         if let utp { resultado.append(utp) }
-        if let orden = idsOrdenGuardados(), !orden.isEmpty {
+        if let orden = configuracion.orden, !orden.isEmpty {
             let porId = Dictionary(uniqueKeysWithValues: elegidos.map { ($0.id, $0) })
             var ordenados = orden.compactMap { porId[$0] }
             // Los que no tenían posición guardada van al final, en su orden natural.
@@ -113,30 +138,58 @@ final class SeguridadLugaresModel: ObservableObject {
             resultado += elegidos
         }
         tilesActuales = resultado
+        return true
     }
 
-    private func idsTilesGuardados() -> [UUID]? {
-        guard let data = almacen.defaults.data(forKey: Self.tilesKey),
-              let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
+    private func idsGuardados(para clave: String) throws -> [UUID]? {
+        guard let original = almacen.defaults.object(forKey: clave) else { return nil }
+        guard let data = original as? Data,
+              let ids = try? JSONDecoder().decode([UUID].self, from: data),
+              Set(ids).count == ids.count else { throw ErrorConfiguracion.datosInvalidos }
         return ids
     }
 
-    private func idsOrdenGuardados() -> [UUID]? {
-        guard let data = almacen.defaults.data(forKey: Self.ordenKey),
-              let ids = try? JSONDecoder().decode([UUID].self, from: data) else { return nil }
-        return ids
-    }
-
-    func persistirOrden() {
-        guard !almacen.datosLocalesInvalidos else { return }
-        let ids = tilesActuales.filter { !$0.esFijo }.map(\.id)
-        if let data = try? JSONEncoder().encode(ids) {
-            almacen.defaults.set(data, forKey: Self.ordenKey)
+    /// La ausencia usa los valores iniciales; un original ilegible bloquea
+    /// todas las escrituras de selección/orden, también desde una vista abierta.
+    private func leerConfiguracion() -> (seleccion: [UUID]?, orden: [UUID]?)? {
+        do {
+            let seleccion = try idsGuardados(para: Self.tilesKey)
+            let orden = try idsGuardados(para: Self.ordenKey)
+            datosTilesInvalidos = false
+            return (seleccion, orden)
+        } catch {
+            datosTilesInvalidos = true
+            modoEdicion = false
+            arrastrando = nil
+            return nil
         }
     }
 
-    private func guardarTilesSeleccion(_ ids: Set<UUID>) {
-        guard !almacen.datosLocalesInvalidos else { return }
+    /// Restablece la selección inicial y su orden, sin modificar los lugares.
+    func respaldarYReiniciarTiles(crearRespaldo: ((Data) throws -> URL)? = nil) throws -> URL? {
+        guard leerConfiguracion() == nil else { return nil }
+        let archivo = try RecuperacionPreferencias.reiniciar(
+            claves: [Self.tilesKey, Self.ordenKey], valoresNuevos: [:], nombre: "accesos",
+            defaults: almacen.defaults, crearRespaldo: crearRespaldo)
+        modoEdicion = false
+        arrastrando = nil
+        cargar()
+        return archivo
+    }
+
+    @discardableResult
+    func persistirOrden() -> Bool { guardarOrden(tilesActuales) }
+
+    private func guardarOrden(_ tiles: [LugarGuardado]) -> Bool {
+        guard !almacen.datosLocalesInvalidos, leerConfiguracion() != nil else { return false }
+        let ids = tiles.filter { !$0.esFijo }.map(\.id)
+        guard let data = try? JSONEncoder().encode(ids) else { return false }
+        almacen.defaults.set(data, forKey: Self.ordenKey)
+        return true
+    }
+
+    private func guardarTilesSeleccion(_ ids: Set<UUID>) -> Bool {
+        guard !almacen.datosLocalesInvalidos, leerConfiguracion() != nil else { return false }
         // Se guarda en el ORDEN de `lugares`, no en el del `Set`.
         //
         // Un `Set` no tiene orden estable, así que persistir `Array(ids)` tal
@@ -144,8 +197,8 @@ final class SeguridadLugaresModel: ObservableObject {
         // selección se recordaba bien, pero en un orden distinto cada vez. Lo
         // destapó una prueba de la regla de orden (M-04), no un usuario.
         let ordenados = lugares.filter { ids.contains($0.id) }.map(\.id)
-        if let data = try? JSONEncoder().encode(ordenados) {
-            almacen.defaults.set(data, forKey: Self.tilesKey)
-        }
+        guard let data = try? JSONEncoder().encode(ordenados) else { return false }
+        almacen.defaults.set(data, forKey: Self.tilesKey)
+        return true
     }
 }

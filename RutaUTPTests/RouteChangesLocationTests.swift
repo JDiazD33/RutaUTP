@@ -424,10 +424,10 @@ final class RouteChangesLocationTests: XCTestCase {
     }
 }
 
-/// El permiso y los métodos del protocolo se usan desde MainActor. Solo
+/// El protocolo exige MainActor para el permiso y sus métodos. Solo
 /// onTermination y los callbacks de Combine pueden llegar desde otro ejecutor;
 /// todo el registro que tocan queda protegido en RegistroGPSPuntual.
-private final class GPSPuntualMock: LocationServiceProtocol, @unchecked Sendable {
+private final class GPSPuntualMock: LocationServiceProtocol {
     private let permisos: CurrentValueSubject<CLAuthorizationStatus, Never>
     private let registro: RegistroGPSPuntual
     private var permisoPendiente: CheckedContinuation<CLAuthorizationStatus, Never>?
@@ -573,4 +573,92 @@ private final class RegistroGPSPuntual: @unchecked Sendable {
     }
 
     func finalizar() { activas.forEach { $0.finish() } }
+}
+
+
+@MainActor
+final class EsperasPermisoUbicacionTests: XCTestCase {
+    func testRespuestaSincronaNoSePierdeYNoSeResuelveDosVeces() async {
+        let esperas = EsperasPermisoUbicacion()
+        let estado = await esperas.esperar(estado: .notDetermined) {
+            esperas.resolver(.authorizedWhenInUse)
+        }
+        XCTAssertEqual(estado, .authorizedWhenInUse)
+        XCTAssertEqual(esperas.cantidadPendiente, 0)
+        esperas.resolver(.denied)
+        XCTAssertEqual(esperas.cantidadPendiente, 0)
+    }
+
+    func testCancelacionLiberaEsperaSinRespuestaDeIOS() async {
+        let esperas = EsperasPermisoUbicacion()
+        let registrada = expectation(description: "Espera registrada")
+        let liberada = expectation(description: "Cancelación completada")
+        let tarea = Task { @MainActor in
+            let estado = await esperas.esperar(estado: .notDetermined) { registrada.fulfill() }
+            XCTAssertEqual(estado, .notDetermined)
+            liberada.fulfill()
+        }
+        await fulfillment(of: [registrada], timeout: 1)
+        XCTAssertEqual(esperas.cantidadPendiente, 1)
+        tarea.cancel()
+        await fulfillment(of: [liberada], timeout: 1)
+        XCTAssertEqual(esperas.cantidadPendiente, 0)
+        // También limpia una implementación fallida para no dejar tareas vivas.
+        esperas.resolver(.denied)
+    }
+
+    func testCancelarUnConsumidorConservaLaEsperaDelOtro() async {
+        let esperas = EsperasPermisoUbicacion()
+        var solicitudes = 0
+        let liberada = expectation(description: "Primer consumidor cancelado")
+        let resuelta = expectation(description: "Segundo consumidor autorizado")
+        let primera = Task { @MainActor in
+            let estado = await esperas.esperar(estado: .notDetermined) { solicitudes += 1 }
+            XCTAssertEqual(estado, .notDetermined)
+            liberada.fulfill()
+        }
+        let segunda = Task { @MainActor in
+            let estado = await esperas.esperar(estado: .notDetermined) { solicitudes += 1 }
+            XCTAssertEqual(estado, .authorizedAlways)
+            resuelta.fulfill()
+        }
+        for _ in 0..<100 {
+            if esperas.cantidadPendiente == 2 { break }
+            await Task.yield()
+        }
+        XCTAssertEqual(esperas.cantidadPendiente, 2)
+        XCTAssertEqual(solicitudes, 1)
+        primera.cancel()
+        await fulfillment(of: [liberada], timeout: 1)
+        XCTAssertEqual(esperas.cantidadPendiente, 1)
+        esperas.resolver(.authorizedAlways)
+        await fulfillment(of: [resuelta], timeout: 1)
+        XCTAssertEqual(esperas.cantidadPendiente, 0)
+        segunda.cancel()
+    }
+
+    func testTareaYaCanceladaNoSolicitaPermiso() async {
+        let esperas = EsperasPermisoUbicacion()
+        let terminada = expectation(description: "Tarea cancelada retorna")
+        var solicitudes = 0
+        let tarea = Task { @MainActor in
+            let estado = await esperas.esperar(estado: .notDetermined) { solicitudes += 1 }
+            XCTAssertEqual(estado, .notDetermined)
+            terminada.fulfill()
+        }
+        tarea.cancel()
+        await fulfillment(of: [terminada], timeout: 1)
+        XCTAssertEqual(solicitudes, 0)
+        XCTAssertEqual(esperas.cantidadPendiente, 0)
+        esperas.resolver(.denied)
+    }
+
+    func testPermisoResueltoRetornaSinCrearEsperaNiSolicitar() async {
+        let esperas = EsperasPermisoUbicacion()
+        for estado in [CLAuthorizationStatus.authorizedWhenInUse, .authorizedAlways, .denied, .restricted] {
+            let resultado = await esperas.esperar(estado: estado) { XCTFail("El permiso ya estaba resuelto") }
+            XCTAssertEqual(resultado, estado)
+            XCTAssertEqual(esperas.cantidadPendiente, 0)
+        }
+    }
 }

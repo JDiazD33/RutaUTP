@@ -16,7 +16,7 @@ import MapKit
 struct MapaView: View {
     @StateObject private var store: ScreenModelStore<MapaViewModel>
 
-    init(locationService: LocationServiceProtocol = LocationService()) {
+    init(locationService: LocationServiceProtocol? = nil) {
         _store = StateObject(wrappedValue: ScreenModelStore(
             MapaViewModel(locationService: locationService)
         ))
@@ -63,7 +63,7 @@ private struct MapaScreenContent: View {
         MapaViewModel.regionDeReferencia(TransporteApp.referenciaInicio)
     )
 
-    private let tabBarHeight: CGFloat = 64
+    @Environment(\.bottomNavBarHeight) private var tabBarHeight
 
     /// Distancia a la que se empujan los paneles para retirarlos del mapa.
     ///

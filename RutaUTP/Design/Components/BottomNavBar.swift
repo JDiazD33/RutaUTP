@@ -2,13 +2,28 @@
 //  BottomNavBar.swift
 //  RutaUTP
 //
-//  CORREGIDO V5: Diseño nativo y flexible.
-//  - Control de altura simple mediante padding inferior.
-//  - Eliminado cálculo manual de safe area para evitar iconos caídos.
+//  Etiquetas escalables y altura medida para reservar espacio en las pantallas.
 //
 
 import SwiftUI
-import UIKit
+
+struct BottomNavBarHeightPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct BottomNavBarHeightEnvironmentKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 64
+}
+
+extension EnvironmentValues {
+    var bottomNavBarHeight: CGFloat {
+        get { self[BottomNavBarHeightEnvironmentKey.self] }
+        set { self[BottomNavBarHeightEnvironmentKey.self] = newValue }
+    }
+}
 
 // MARK: - Tab enum
 enum NavTab: CaseIterable, Hashable {
@@ -68,11 +83,12 @@ struct NavTabItem: View {
                     isActive ? Color.appPrimary : Color.onSurfaceVariant.opacity(0.65)
                 )
             Text(tab.label)
-                .font(.system(size: 10, weight: .medium))
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(
                     isActive ? Color.appPrimary : Color.onSurfaceVariant.opacity(0.65)
                 )
-                .lineLimit(1)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .contentShape(Rectangle())
     }
@@ -89,7 +105,7 @@ struct BottomNavBar: View {
                 .fill(Color.outlineVariant.opacity(0.20))
                 .frame(height: 0.5)
 
-            HStack(alignment: .center, spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
                 ForEach(NavTab.allCases, id: \.self) { tab in
                     Button {
                         router.navigate(to: tab.screen)
@@ -107,10 +123,14 @@ struct BottomNavBar: View {
             }
             .padding(.top, 8)
             .padding(.horizontal, 4)
-            // 💡 MODIFICA ESTE NÚMERO:
-            // 12 es un excelente estándar. Si quieres los iconos más altos, súbelo a 16 o 20.
-            // SwiftUI se encargará de sumarle el espacio de la barra del iPhone automáticamente.
             .padding(.bottom, 12)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .background {
+            GeometryReader { geometry in
+                Color.clear.preference(key: BottomNavBarHeightPreferenceKey.self,
+                                       value: geometry.size.height)
+            }
         }
         // El fondo blanco se extiende hasta abajo del todo (borde físico),
         // pero gracias a SwiftUI, el contenido de arriba respeta la barra del iPhone de forma segura.

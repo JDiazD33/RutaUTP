@@ -72,15 +72,20 @@ final class TematicaEmpresaStore: Observable {
         return valor
     }
 
-    private init() {
-        defaults = .standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         valor = defaults.string(forKey: Self.llave)
             .flatMap(TematicaEmpresa.init(rawValue:)) ?? .utp
     }
 
     @MainActor
     func seleccionar(_ nueva: TematicaEmpresa) {
-        guard seleccion != nueva else { return }
+        guard seleccion != nueva else {
+            // Confirmar UTP también debe reparar una clave desconocida que
+            // ya estaba usando UTP como valor efectivo en memoria.
+            defaults.set(nueva.rawValue, forKey: Self.llave)
+            return
+        }
         observacion.withMutation(of: self, keyPath: \.seleccion) {
             candado.lock()
             valor = nueva

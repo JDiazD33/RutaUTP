@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 struct PerfilView: View {
+    @Environment(\.bottomNavBarHeight) private var tabBarHeight
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
@@ -92,7 +93,7 @@ struct PerfilView: View {
                         Spacer(minLength: 140)
                     }
                 }
-                .padding(.bottom, 64)
+                .padding(.bottom, tabBarHeight)
 
                 BottomNavBar()
             }

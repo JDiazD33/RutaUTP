@@ -81,6 +81,8 @@ struct NegocioDetailCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var cuponGuardado: Bool
     @State private var codigoCopiado: Bool = false
+    @State private var datosCuponesInvalidos = false
+    @State private var errorGuardado = false
 
     init(negocio: Negocio,
          ubicacion: CLLocationCoordinate2D?,
@@ -103,6 +105,15 @@ struct NegocioDetailCard: View {
             if let cupon = negocio.cupon {
                 cuponView(cupon)
             }
+            if datosCuponesInvalidos {
+                Text(L.t("No se pudieron leer tus cupones guardados. Se conservaron los datos originales.",
+                         "Your saved coupons could not be read. The original data was preserved."))
+                    .font(.bodySm)
+                    .foregroundStyle(Color.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(L.t("Reintentar lectura", "Retry reading"), action: actualizarCupon)
+                    .frame(minHeight: 44)
+            }
         }
         .padding(14)
         .background(
@@ -114,10 +125,24 @@ struct NegocioDetailCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(negocio.categoria.color.opacity(0.45), lineWidth: 1)
         )
+        .onAppear(perform: actualizarCupon)
         .onReceive(NotificationCenter.default.publisher(for: NegociosService.cuponesActualizados)
             .receive(on: RunLoop.main)) { _ in
-                cuponGuardado = NegociosService.shared.cuponGuardado(negocio)
-            }
+                actualizarCupon()
+        }
+        .alert(L.t("No se pudo guardar el cupón", "Couldn't save coupon"), isPresented: $errorGuardado) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) {}
+        } message: {
+            Text(L.t("Los cupones guardados no se pueden leer. Se conservaron los datos originales.",
+                     "Saved coupons could not be read. The original data was preserved."))
+        }
+    }
+
+    private func actualizarCupon() {
+        datosCuponesInvalidos = NegociosService.shared.datosCuponesInvalidos
+        if !datosCuponesInvalidos {
+            cuponGuardado = NegociosService.shared.cuponGuardado(negocio)
+        }
     }
 
     // MARK: Encabezado (icono, nombre, rating, cerrar)
@@ -367,8 +392,13 @@ struct NegocioDetailCard: View {
 
     private var botonGuardar: some View {
         Button {
-            AppHaptics.impact(.medium)
-            cuponGuardado = NegociosService.shared.alternarCupon(negocio)
+            do {
+                cuponGuardado = try NegociosService.shared.alternarCupon(negocio)
+                AppHaptics.impact(.medium)
+            } catch {
+                actualizarCupon()
+                errorGuardado = true
+            }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: cuponGuardado ? "checkmark.circle.fill" : "bookmark.fill")

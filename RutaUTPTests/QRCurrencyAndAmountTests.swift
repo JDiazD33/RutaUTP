@@ -456,7 +456,7 @@ final class QRCurrencyAndAmountTests: XCTestCase {
         let observador = modelo.$resultado.compactMap { $0 }.prefix(1).sink { _ in
             recibida.fulfill()
         }
-        modelo.camara.alLeer?(texto)
+        modelo.simularLectura(texto: texto)
         await fulfillment(of: [recibida], timeout: 2)
         observador.cancel()
         return try XCTUnwrap(modelo.resultado)

@@ -18,6 +18,7 @@ import Combine
 import Observation
 
 // MARK: - ViewModel
+@MainActor
 @Observable
 final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
@@ -35,7 +36,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// error: si uno de los tres se desincroniza, el usuario ve "no encontramos
     /// ruta a menos de 1 600 m" junto a un plan que el filtro ya descartó, y no
     /// hay forma de saber cuál de los dos va bien.
-    static let radioBusquedaRuta: Double = 1600
+    nonisolated static let radioBusquedaRuta: Double = 1600
 
     let busesUTPActivos = TransporteApp.busesUTPActivos
     private(set) var utpComoReferencia = TransporteApp.utpComoReferencia
@@ -84,7 +85,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         mensajeRuta = nil
         calculandoItinerario = false
         etaMinutos = nil
-        distanciaKm = nil
         busSeleccionado = nil
         completer.queryFragment = ""
         sugerenciasBusqueda = []
@@ -106,7 +106,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     private(set) var mensajeRuta: String?
     private(set) var itinerarioFocusTick = 0
     var etaMinutos: Int? = nil
-    var distanciaKm: Double? = nil
 
     // Buses Animados en Tiempo Real
     /// Estado VIVO de la simulación: avanza en cada tick (10 Hz) y NO se
@@ -244,21 +243,21 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
     private let routeService: RouteCalculationService
     private let repositorioGTFS: RutasGTFSProviding
-    private let crearProveedorReal: () -> VehicleTrackingProviding?
+    private let crearProveedorReal: @MainActor () -> VehicleTrackingProviding?
     private let completer = MKLocalSearchCompleter()
     @ObservationIgnored private var locationTask: Task<Void, Never>?
 
     init(
-        locationService: LocationServiceProtocol = LocationService(),
+        locationService: LocationServiceProtocol? = nil,
         routeService: RouteCalculationService = RouteCalculationService(),
         repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio,
-        crearProveedorReal: @escaping () -> VehicleTrackingProviding? = {
+        crearProveedorReal: @escaping @MainActor () -> VehicleTrackingProviding? = {
             guard !TransporteApp.rutasUTPPendientes else { return nil }
             guard MQTTConfiguration.fromEnvironment() != nil else { return nil }
             return TrackingProviderFactory.makeDefault()
         }
     ) {
-        self.locationService = locationService
+        self.locationService = locationService ?? LocationService()
         self.routeService = routeService
         self.repositorioGTFS = repositorioGTFS
         self.crearProveedorReal = crearProveedorReal
@@ -312,15 +311,17 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         routeTask?.cancel()
         lineasTask?.cancel()
         activeSearch?.cancel()
-        locationService.stopUpdating()
-        detenerSimulacionBuses()
+        busSimulationTask?.cancel()
+        vehicleTrackingTask?.cancel()
+        if let provider = vehicleProvider {
+            Task { @MainActor in provider.stop() }
+        }
     }
 
     /// Libera el trabajo de esta pantalla aunque el ViewModel siga en memoria.
     func detener() {
         locationTask?.cancel()
         locationTask = nil
-        locationService.stopUpdating()
         detenerSimulacionBuses()
         invalidarSeleccionAnterior()
         // Al volver, el primer fix recalcula el destino que siga seleccionado.
@@ -341,6 +342,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                     // Retener la pantalla solo mientras se procesa este fix,
                     // nunca durante la espera del siguiente.
                     guard !Task.isCancelled, let self else { return }
+                    guard UbicacionPuntual.esValida(location, ahora: Date()) else { continue }
                     let isInitialFix = (self.userRealCoordinate == nil)
                     self.userRealCoordinate = location.coordinate
                     if isInitialFix {
@@ -895,13 +897,14 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         }
     }
 
-    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        DispatchQueue.main.async {
-            self.sugerenciasBusqueda = completer.results
+    nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.sugerenciasBusqueda = self.completer.results
         }
     }
 
-    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+    nonisolated func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
         #if DEBUG
         print("[MapaViewModel] MKLocalSearchCompleter error: \(error.localizedDescription)")
         #endif
@@ -1016,7 +1019,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         itinerarioInstalado = nil
         routePolyline = nil
         etaMinutos = nil
-        distanciaKm = nil
         mensajeRuta = nil
         calculandoItinerario = false
         guard !TransporteApp.rutasUTPPendientes else {
@@ -1030,10 +1032,11 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         }
 
         calculandoItinerario = true
+        let repositorioGTFS = repositorioGTFS
         routeTask = Task { @MainActor [weak self] in
             let catalog: GTFSRouteCatalog
             do {
-                catalog = try await TransporteApp.repositorio.cargarCatalogo(reintentar: true)
+                catalog = try await repositorioGTFS.cargarCatalogo(reintentar: true)
             } catch {
                 guard !Task.isCancelled, let self, self.routeRevision == revision else { return }
                 self.mensajeRuta = ((error as? FalloCargaGTFS)
@@ -1061,7 +1064,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 let coordinates = plan.coordinates
                 self.routePolyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
                 self.etaMinutos = max(1, Int(ceil(metrics.totalSeconds / 60)))
-                self.distanciaKm = (metrics.walkToBoardMeters + metrics.busMeters + metrics.transferWalkMeters + metrics.walkToDestinationMeters) / 1000
                 self.itinerarioFocusTick += 1
                 return
             }
@@ -1079,7 +1081,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         completer.queryFragment = ""
         routePolyline = nil
         etaMinutos = nil
-        distanciaKm = nil
         // Sin destino: volver a la sede o al punto disponible, sin elegir viaje.
         recargarLineas(cercaDe: nil)
 

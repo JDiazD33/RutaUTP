@@ -18,6 +18,7 @@ import Foundation
 import CoreLocation
 import Combine
 
+@MainActor
 protocol LocationServiceProtocol: AnyObject {
     /// Estado de permiso observable para que la UI reaccione.
     var authorizationStatus: CLAuthorizationStatus { get }
@@ -30,6 +31,9 @@ protocol LocationServiceProtocol: AnyObject {
     func currentLocation() -> AsyncStream<CLLocation>
 
     /// El requisito pertenece a este stream y se libera con su terminación.
+    /// Cada consumidor cancela la tarea que lo recorre al dejar de necesitarlo;
+    /// no llama stopUpdating para cerrar una pantalla. El servicio administra
+    /// el gestor y lo detiene cuando termina el último stream.
     @MainActor
     func currentLocation(requirement: LocationRequirement) -> AsyncStream<CLLocation>
 
@@ -39,7 +43,8 @@ protocol LocationServiceProtocol: AnyObject {
     /// Comienza a recibir updates. Idempotente.
     func startUpdating()
 
-    /// Solicita detener updates; cada consumidor libera su stream al terminar.
+    /// API de compatibilidad. No libera el stream de quien llama; los
+    /// consumidores normales terminan su propia tarea/stream.
     func stopUpdating()
 }
 

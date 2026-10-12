@@ -13,6 +13,7 @@
 
 import Foundation
 
+@MainActor
 protocol VehicleTrackingProviding: AnyObject {
     /// Marca la fuente de los datos. Útil para badges en UI ("En vivo" real vs "Demo").
     var source: VehicleTrackingSource { get }

@@ -15,39 +15,65 @@ import Observation
 
 /// Gestor del idioma activo (ES/EN).
 ///
-/// Es `@Observable` y NO `ObservableObject` a propósito. Con el framework
+/// Usa Observation a propósito. Con el framework
 /// Observation, leer `codigo` o `esIngles` mientras se evalúa el `body` de una
 /// vista registra la dependencia automáticamente — aunque el acceso venga de
 /// `L.t()`, que es una función estática, o de este singleton. Esa es la pieza
 /// que permite que el texto se actualice solo al cambiar de idioma, sin
 /// reconstruir el árbol de vistas con `.id()`.
-@Observable
-final class IdiomaManager {
+/// Las lecturas de traducción pueden venir de servicios; el valor queda bajo
+/// candado y las elecciones de la interfaz se publican desde MainActor.
+final class IdiomaManager: Observable {
     static let shared = IdiomaManager()
+    private let defaults: UserDefaults
+    private let observacion = ObservationRegistrar()
+    private let candado = NSLock()
+    private var valor: String
 
     var codigo: String {
-        didSet { UserDefaults.standard.set(codigo, forKey: "idioma.app") }
+        observacion.access(self, keyPath: \.codigo)
+        candado.lock()
+        defer { candado.unlock() }
+        return valor
     }
 
-    init() {
+    init(defaults: UserDefaults = .standard,
+         argumentos: [String] = ProcessInfo.processInfo.arguments) {
+        self.defaults = defaults
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--idioma") {
+        if argumentos.contains("--idioma") {
             // Para pruebas visuales: --idioma en|es
-            let args = ProcessInfo.processInfo.arguments
-            if let i = args.firstIndex(of: "--idioma"), i + 1 < args.count {
-                codigo = args[i + 1] == "en" ? "en" : "es"
+            if let i = argumentos.firstIndex(of: "--idioma"), i + 1 < argumentos.count {
+                valor = argumentos[i + 1] == "en" ? "en" : "es"
                 return
             }
         }
         #endif
-        codigo = UserDefaults.standard.string(forKey: "idioma.app") ?? "es"
+        let guardado = defaults.string(forKey: "idioma.app")
+        valor = guardado == "en" ? "en" : "es"
     }
 
     var esIngles: Bool { codigo == "en" }
     var etiqueta: String { esIngles ? "EN" : "ES" }
 
+    @MainActor
     func alternar() {
-        codigo = esIngles ? "es" : "en"
+        seleccionar(codigo: esIngles ? "es" : "en")
+    }
+
+    @MainActor
+    func seleccionar(codigo: String) {
+        guard codigo == "es" || codigo == "en" else { return }
+        guard self.codigo != codigo else {
+            defaults.set(codigo, forKey: "idioma.app")
+            return
+        }
+        observacion.withMutation(of: self, keyPath: \.codigo) {
+            candado.lock()
+            valor = codigo
+            candado.unlock()
+            defaults.set(codigo, forKey: "idioma.app")
+        }
     }
 }
 

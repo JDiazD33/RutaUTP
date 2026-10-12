@@ -117,6 +117,7 @@ struct RecargarSaldoSheet: View {
                                  "Wallet data could not be recovered. Operations are blocked and the original data has been preserved."))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
+                        Button(L.t("Reintentar lectura", "Retry reading")) { store.reintentarLectura() }
                     }
                     selectorImporte
                     metodosDePago
@@ -134,10 +135,12 @@ struct RecargarSaldoSheet: View {
             }
         }
         .seguirTemaForzado()
+        .onAppear { store.reintentarLectura() }
         .alert(L.t("No se pudo recargar", "Unable to top up"), isPresented: $errorRecarga) {
             Button(L.t("Aceptar", "OK"), role: .cancel) {}
         } message: {
-            Text(L.t("El importe debe ser válido y el saldo no puede superar S/ 1 000 000. No se hicieron cambios.",
+            Text(store.datosLocalesInvalidos ? ErrorCobroPasaje.datosLocalesInvalidos.mensaje :
+                 L.t("El importe debe ser válido y el saldo no puede superar S/ 1 000 000. No se hicieron cambios.",
                      "The amount must be valid and the balance cannot exceed S/ 1,000,000. No changes were made."))
         }
     }
@@ -401,6 +404,7 @@ struct QRPasajeSheet: View {
                                  "Wallet data could not be recovered. Operations are blocked and the original data has been preserved."))
                             .font(.bodySm)
                             .foregroundStyle(.onSurfaceVariant)
+                        Button(L.t("Reintentar lectura", "Retry reading")) { store.reintentarLectura() }
                     }
                     seccionPagar
                 }
@@ -414,6 +418,7 @@ struct QRPasajeSheet: View {
                 }
             }
             .onAppear {
+                store.reintentarLectura()
                 // QR estático (sin importe): quien paga escribe cuánto envía,
                 // que es lo que se espera de un QR de cuenta personal.
                 if qr == nil {

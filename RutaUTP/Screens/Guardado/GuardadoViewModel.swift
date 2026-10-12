@@ -49,6 +49,7 @@ final class GuardadoViewModel: ObservableObject {
 
     /// Referencias persistidas a líneas del feed (solo el `route_id`).
     @Published private(set) var lineaRefs: [LineaGuardadaRef] = []
+    @Published private(set) var datosLineasInvalidos = false
 
     private static let lineasKey = "lineas.guardadas.v1"
 
@@ -73,10 +74,25 @@ final class GuardadoViewModel: ObservableObject {
     /// Lugares y referencias de líneas desde el almacenamiento local.
     func cargar() {
         cargarLugares()
-        if let data = almacen.defaults.data(forKey: Self.lineasKey),
-           let refs = try? JSONDecoder().decode([LineaGuardadaRef].self, from: data) {
-            lineaRefs = refs
+        cargarLineas()
+    }
+
+    @discardableResult
+    func cargarLineas() -> Bool {
+        guard let original = almacen.defaults.object(forKey: Self.lineasKey) else {
+            lineaRefs = []
+            datosLineasInvalidos = false
+            return true
         }
+        guard let data = original as? Data,
+              let refs = try? JSONDecoder().decode([LineaGuardadaRef].self, from: data) else {
+            // Conservar bytes y última lista legible; no sustituirlos por vacío.
+            datosLineasInvalidos = true
+            return false
+        }
+        lineaRefs = refs
+        datosLineasInvalidos = false
+        return true
     }
 
     /// Catálogo del feed. Marca `catalogoCargado` incluso si llega vacío, para
@@ -129,25 +145,50 @@ final class GuardadoViewModel: ObservableObject {
         datosLugaresInvalidos = almacen.datosLocalesInvalidos
     }
 
+    /// Solo se llama tras una confirmación explícita en la interfaz.
+    /// Si falla el respaldo, se conserva la clave original y se lanza el error.
+    func respaldarYReiniciarLineas() throws -> URL? {
+        guard !cargarLineas() else { return nil }
+        guard let original = almacen.defaults.object(forKey: Self.lineasKey) else { return nil }
+        let vacias = try JSONEncoder().encode([LineaGuardadaRef]())
+        let copia = try PropertyListSerialization.data(fromPropertyList: [
+            "clave": Self.lineasKey, "valor": original, "fecha": Date()
+        ], format: .binary, options: 0)
+        let directorio = try FileManager.default.url(for: .documentDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("Recuperacion", isDirectory: true)
+        try FileManager.default.createDirectory(at: directorio, withIntermediateDirectories: true)
+        let archivo = directorio.appendingPathComponent("lineas-\(UUID().uuidString).plist")
+        try copia.write(to: archivo, options: [.atomic, .completeFileProtection])
+        almacen.defaults.set(vacias, forKey: Self.lineasKey)
+        lineaRefs = []
+        datosLineasInvalidos = false
+        return archivo
+    }
+
     // MARK: - Líneas
 
     /// Idempotente: guardar dos veces la misma línea no duplica la fila.
     /// Antes el `append` se hacía sin comprobación y dependía de que el
     /// selector ocultara las ya guardadas.
-    func añadirLinea(_ ruta: RutaOpcion) {
-        guard !lineaRefs.contains(where: { $0.routeId == ruta.id }) else { return }
-        lineaRefs.append(LineaGuardadaRef(routeId: ruta.id))
-        persistirLineas()
+    @discardableResult
+    func añadirLinea(_ ruta: RutaOpcion) -> Bool {
+        guard cargarLineas() else { return false }
+        guard !lineaRefs.contains(where: { $0.routeId == ruta.id }) else { return true }
+        return persistirLineas(lineaRefs + [LineaGuardadaRef(routeId: ruta.id)])
     }
 
-    func eliminarLinea(_ ruta: RutaOpcion) {
-        lineaRefs.removeAll { $0.routeId == ruta.id }
-        persistirLineas()
+    @discardableResult
+    func eliminarLinea(_ ruta: RutaOpcion) -> Bool {
+        guard cargarLineas() else { return false }
+        return persistirLineas(lineaRefs.filter { $0.routeId != ruta.id })
     }
 
-    private func persistirLineas() {
-        if let data = try? JSONEncoder().encode(lineaRefs) {
-            almacen.defaults.set(data, forKey: Self.lineasKey)
-        }
+    private func persistirLineas(_ referencias: [LineaGuardadaRef]) -> Bool {
+        guard !datosLineasInvalidos,
+              let data = try? JSONEncoder().encode(referencias) else { return false }
+        almacen.defaults.set(data, forKey: Self.lineasKey)
+        lineaRefs = referencias
+        return true
     }
 }

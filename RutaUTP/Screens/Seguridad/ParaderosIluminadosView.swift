@@ -30,6 +30,7 @@ enum ParaderosIluminados {
 
 struct ParaderosIluminadosView: View {
     let paraderos: [ParaderoGTFS]
+    let locationService: LocationServiceProtocol
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var router: AppRouter
     @AppStorage("isDarkMode") private var dark = false
@@ -53,8 +54,8 @@ struct ParaderosIluminadosView: View {
     @State private var locating = false
     @State private var location: CLLocationCoordinate2D?
     @State private var locationMessage: String?
-    @StateObject private var locationService = LocationService()
     @State private var locationTask: Task<Void, Never>?
+    @State private var solicitudUbicacion: UUID?
     @State private var walkingTask: Task<Void, Never>?
     @State private var walkingLine: MKPolyline?
     @State private var walkingDistance: Double?
@@ -151,8 +152,10 @@ struct ParaderosIluminadosView: View {
         .onChange(of: radius) { _, _ in reconcileSelection(); fitAll() }
         .onDisappear {
             locationTask?.cancel()
+            locationTask = nil
+            solicitudUbicacion = nil
+            locating = false
             walkingTask?.cancel()
-            locationService.stopUpdating()
         }
         .alert(L.t("No se pudieron cambiar tus guardados", "Unable to update saved places"), isPresented: $errorAlGuardar) {
             Button(L.t("Aceptar", "OK"), role: .cancel) { }
@@ -402,31 +405,23 @@ struct ParaderosIluminadosView: View {
         guard !locating else { return }
         locating = true; locationMessage = nil
         locationTask?.cancel()
+        let solicitud = UUID()
+        solicitudUbicacion = solicitud
         locationTask = Task { @MainActor in
-            let status = await locationService.requestPermission()
-            guard !Task.isCancelled else { return }
-            guard status.isAuthorized else {
-                locating = false
-                locationMessage = L.t("Activa Ubicación en Ajustes para calcular distancias desde tu posición.", "Enable Location in Settings to calculate distances from your position.")
+            let fix = await UbicacionPuntual.obtener(desde: locationService, timeout: 12)
+            guard !Task.isCancelled, solicitudUbicacion == solicitud else { return }
+            locating = false
+            solicitudUbicacion = nil
+            locationTask = nil
+            guard let fix else {
+                locationMessage = locationService.authorizationStatus.isAuthorized
+                    ? L.t("No recibimos señal GPS. Inténtalo de nuevo.", "No GPS signal received. Please try again.")
+                    : L.t("Activa Ubicación en Ajustes para calcular distancias desde tu posición.", "Enable Location in Settings to calculate distances from your position.")
                 return
             }
-            locationService.startUpdating()
-            let timeout = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 12_000_000_000)
-                guard !Task.isCancelled else { return }
-                locating = false
-                locationMessage = L.t("No recibimos señal GPS. Inténtalo de nuevo.", "No GPS signal received. Please try again.")
-                locationService.stopUpdating()
-            }
-            defer { timeout.cancel(); locating = false }
-            for await fix in locationService.currentLocation() {
-                guard !Task.isCancelled else { return }
-                location = fix.coordinate; locating = false
-                walkingTask?.cancel(); walkingLine = nil; walkingDistance = nil; walkingLoading = false
-                if let first = visible.first { select(first) } else { reconcileSelection() }
-                locationService.stopUpdating()
-                break
-            }
+            location = fix.coordinate
+            walkingTask?.cancel(); walkingLine = nil; walkingDistance = nil; walkingLoading = false
+            if let first = visible.first { select(first) } else { reconcileSelection() }
         }
     }
     private func walk(to stop: ParaderoGTFS) {
@@ -488,5 +483,5 @@ private struct SafetyStopPin: View {
 }
 
 #Preview {
-    ParaderosIluminadosView(paraderos: []).environmentObject(AppRouter())
+    ParaderosIluminadosView(paraderos: [], locationService: LocationService()).environmentObject(AppRouter())
 }

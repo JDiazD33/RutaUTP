@@ -3,6 +3,62 @@ import CoreLocation
 import Combine
 import UIKit
 
+/// Estado de presentación; no cambia valores persistidos ni mensajes MQTT.
+private enum ContributionStatus {
+    case disabled, tripEnded, mqttNotConfigured, feedPending, preparing, needsPermission
+    case catalogFailure(FalloCargaGTFS?), emptyCatalog, analyzing, noNearbyRoutes
+    case waitingForLine(String), probableBoarding(String), detected(String), possibleBoarding(String)
+    case alightingTripEnded, alighting, mqttTest(String), pausedBackground
+    case noTrip, approachingStop, possibleAlighting
+
+    var message: String {
+        switch self {
+        case .disabled:
+            return L.t("Contribución desactivada", "Contribution off")
+        case .waitingForLine(let line):
+            return L.t("Esperando detectar el viaje en la línea \(line)", "Waiting to detect a trip on line \(line)")
+        case .tripEnded:
+            return L.t("Viaje terminado. Indica tu próximo micro para volver a ayudar.", "Trip ended. Select your next bus to contribute again.")
+        case .mqttNotConfigured:
+            return L.t("Canal MQTT no configurado", "MQTT channel not configured")
+        case .feedPending:
+            return TransporteApp.mensajePendiente
+        case .preparing:
+            return L.t("Preparando detección pasiva", "Preparing passive detection")
+        case .needsPermission:
+            return L.t("Se necesita permiso de ubicación", "Location permission is required")
+        case .catalogFailure(let error):
+            return error?.mensajeUsuario ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+        case .emptyCatalog:
+            return L.t("El catálogo GTFS no contiene rutas", "The GTFS catalog contains no routes")
+        case .analyzing:
+            return L.t("Analizando movilidad", "Analysing movement")
+        case .noNearbyRoutes:
+            return L.t("Sin rutas próximas", "No nearby routes")
+        case .probableBoarding(let line):
+            return L.t("Abordaje probable: línea " + line, "Probable boarding: line " + line)
+        case .alightingTripEnded:
+            return L.t("Descenso detectado. Viaje terminado.", "Alighting detected. Trip ended.")
+        case .alighting:
+            return L.t("Descenso detectado", "Alighting detected")
+        case .mqttTest(let line):
+            return L.t("Prueba MQTT activa: línea " + line, "MQTT test active: line " + line)
+        case .pausedBackground:
+            return L.t("Publicación pausada: app en segundo plano", "Uploads paused: app in background")
+        case .detected(let line):
+            return L.t("Viaje detectado en \(line)", "Trip detected on \(line)")
+        case .noTrip:
+            return L.t("Sin viaje detectado", "No trip detected")
+        case .approachingStop:
+            return L.t("Cerca de un paradero", "Near a stop")
+        case .possibleBoarding(let line):
+            return L.t("Posible abordaje en \(line)", "Possible boarding on \(line)")
+        case .possibleAlighting:
+            return L.t("Comprobando posible descenso", "Checking possible alighting")
+        }
+    }
+}
+
 @MainActor
 final class PassiveTrackingCoordinator: ObservableObject {
 
@@ -16,9 +72,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var motionActivity:
         DetectedMotionActivity = .unknown
 
-    @Published private(set) var candidateLine: String?
     @Published private(set) var confirmedLine: String?
-    @Published private(set) var distanceToRoute: Double?
     @Published private(set) var shouldPublish = false
 
     /// Estado actual del canal utilizado para publicar observaciones.
@@ -28,8 +82,10 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var observationPublisherState:
         ObservationPublisherState = .inactive
 
-    @Published private(set) var statusMessage =
-        "Contribución desactivada"
+    @Published private var contributionStatus: ContributionStatus = .disabled
+
+    /// Traducir al leer registra el idioma actual sin recrear el viaje.
+    var statusMessage: String { contributionStatus.message }
 
     /// Indica si esta instalación tiene un canal MQTT utilizable.
     /// Sin publicador no se deben encender GPS ni Core Motion, porque ninguna
@@ -41,6 +97,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var selectedTripRoute: DetectionRouteGeometry?
     @Published private(set) var tripStartedAt: Date?
     @Published private(set) var boardingPlace: String?
+    @Published private(set) var falloAlGuardarSubida = false
     @Published private(set) var boardingPoint: BoardingPoint?
     @Published private(set) var latestLocation: CLLocation?
     let tripOccupancy: OccupancyService
@@ -59,11 +116,18 @@ final class PassiveTrackingCoordinator: ObservableObject {
         tripStartedAt = Date()
         self.boardingPlace = BoardingPlaceStore.normalized(boardingPlace)
         self.boardingPoint = boardingPoint
-        BoardingPlaceStore.save(routeID: route.id, line: route.linea,
+        falloAlGuardarSubida = !BoardingPlaceStore.save(routeID: route.id, line: route.linea,
                                 place: self.boardingPlace ?? "", point: boardingPoint)
         waitingForNewTrip = false
-        statusMessage = "Esperando detectar el viaje en la línea \(route.linea)"
+        contributionStatus = .waitingForLine(route.linea)
         if let occupancy { updateTripOccupancy(occupancy) }
+    }
+
+    /// Reintenta únicamente la referencia pendiente; no reinicia el viaje ni GPS/MQTT.
+    func reintentarGuardarSubida() {
+        guard falloAlGuardarSubida, let route = selectedTripRoute else { return }
+        falloAlGuardarSubida = !BoardingPlaceStore.save(routeID: route.id, line: route.linea,
+            place: boardingPlace ?? "", point: boardingPoint)
     }
 
     func updateTripOccupancy(_ state: BusOccupancyState) {
@@ -77,14 +141,14 @@ final class PassiveTrackingCoordinator: ObservableObject {
         selectedTripRoute = nil
         tripStartedAt = nil
         boardingPlace = nil
+        falloAlGuardarSubida = false
         boardingPoint = nil
         detectionEngine.reset()
         detectionState = .idle
         confirmedLine = nil
-        candidateLine = nil
         shouldPublish = false
         waitingForNewTrip = true
-        statusMessage = "Viaje terminado. Indica tu próximo micro para volver a ayudar."
+        contributionStatus = .tripEnded
     }
 
     private let locationService:
@@ -184,19 +248,18 @@ private let isForcedOnboardForMQTTTest =
     /// Las credenciales nunca se encuentran escritas directamente en el código.
     init(
         locationService: LocationServiceProtocol,
-        motionService: MotionActivityProviding =
-            CoreMotionActivityService(),
+        motionService: MotionActivityProviding? = nil,
         repository: GTFSRepository = TransporteApp.repositorio,
         initialRoutes: [DetectionRouteGeometry] = [],
         observationPublisher: ObservationPublishing? = nil,
-        tripOccupancy: OccupancyService = OccupancyService(),
+        tripOccupancy: OccupancyService? = nil,
         detectionClock: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 },
         configurationProvider: () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment
     ) {
         self.locationService = locationService
-        self.motionService = motionService
+        self.motionService = motionService ?? CoreMotionActivityService()
         self.repository = repository
-        self.tripOccupancy = tripOccupancy
+        self.tripOccupancy = tripOccupancy ?? OccupancyService()
         self.detectionEngine = PassengerDetectionEngine(now: detectionClock)
 
         // En producción permanece vacío y las rutas se cargan desde GTFS.
@@ -218,16 +281,14 @@ private let isForcedOnboardForMQTTTest =
             self.observationPublisher = nil
         }
 
-        let storedConsent = UserDefaults.standard.bool(
-            forKey: consentStorageKey
-        )
+        let storedConsent = PreferenciasApp.boolGuardado(para: consentStorageKey) ?? false
         // Consultar el publicador resuelto, no el parámetro opcional: en el
         // arranque normal ese parámetro es nil aunque se haya creado MQTT.
         isEnabled = storedConsent && self.observationPublisher != nil
 
         if storedConsent && self.observationPublisher == nil {
             UserDefaults.standard.set(false, forKey: consentStorageKey)
-            statusMessage = "Canal MQTT no configurado"
+            contributionStatus = .mqttNotConfigured
         }
 
         // El estado del canal se propaga en el momento en que cambia,
@@ -256,7 +317,7 @@ private let isForcedOnboardForMQTTTest =
         routes = []
         errorCargaRutas = nil
         if TransporteApp.rutasUTPPendientes {
-            statusMessage = TransporteApp.mensajePendiente
+            contributionStatus = .feedPending
         } else if isEnabled {
             beginStart()
         }
@@ -268,7 +329,7 @@ private let isForcedOnboardForMQTTTest =
         guard !enabled || observationPublisher != nil else {
             UserDefaults.standard.set(false, forKey: consentStorageKey)
             isEnabled = false
-            statusMessage = "Canal MQTT no configurado"
+            contributionStatus = .mqttNotConfigured
             return
         }
 
@@ -313,7 +374,7 @@ private let isForcedOnboardForMQTTTest =
         }
 
         guard !TransporteApp.rutasUTPPendientes else {
-            statusMessage = TransporteApp.mensajePendiente
+            contributionStatus = .feedPending
             return
         }
 
@@ -324,7 +385,7 @@ private let isForcedOnboardForMQTTTest =
         // El intento explícito ya está en curso; no ofrecer otro botón
         // mientras el permiso o el catálogo siguen pendientes.
         errorCargaRutas = nil
-        statusMessage = "Preparando detección pasiva"
+        contributionStatus = .preparing
 
         let authorization =
             await locationService.requestPermission()
@@ -341,8 +402,8 @@ private let isForcedOnboardForMQTTTest =
                 forKey: consentStorageKey
             )
 
-            statusMessage =
-                "Se necesita permiso de ubicación"
+            contributionStatus =
+                .needsPermission
 
             return
         }
@@ -358,8 +419,7 @@ private let isForcedOnboardForMQTTTest =
             } catch {
                 guard !Task.isCancelled, startGuard.isCurrent(token), isEnabled else { return }
                 errorCargaRutas = error as? FalloCargaGTFS
-                statusMessage = errorCargaRutas?.mensajeUsuario
-                    ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+                contributionStatus = .catalogFailure(errorCargaRutas)
                 return
             }
 
@@ -373,14 +433,14 @@ private let isForcedOnboardForMQTTTest =
         }
 
         guard !routes.isEmpty else {
-            statusMessage =
-                L.t("El catálogo GTFS no contiene rutas", "The GTFS catalog contains no routes")
+            contributionStatus =
+                .emptyCatalog
             return
         }
 
         isRunning = true
         appEnSegundoPlano = UIApplication.shared.applicationState == .background
-        statusMessage = "Analizando movilidad"
+        contributionStatus = .analyzing
 
         observeAppLifecycle()
         startMotionObservation()
@@ -474,11 +534,9 @@ private let isForcedOnboardForMQTTTest =
                 routes: candidateRoutes
             )
         else {
-            candidateLine = nil
-            distanceToRoute = nil
-            shouldPublish = false
-            statusMessage =
-                "Sin rutas próximas"
+                shouldPublish = false
+            contributionStatus =
+                .noNearbyRoutes
             return
         }
 
@@ -540,14 +598,13 @@ if isForcedOnboardForMQTTTest {
                 observationPublisher?.start(sessionID: sessionID, linea: candidate.linea)
             }
 
-            statusMessage =
-                "Abordaje probable: línea " +
-                candidate.linea
+            contributionStatus =
+                .probableBoarding(candidate.linea)
 
         } else if decision.didConfirmAlighting {
             if selectedTripRoute != nil {
                 endTrip()
-                statusMessage = "Descenso detectado. Viaje terminado."
+                contributionStatus = .alightingTripEnded
                 return
             }
             // El descenso confirmado finaliza inmediatamente la conexión
@@ -556,11 +613,11 @@ if isForcedOnboardForMQTTTest {
 
             confirmedLine = nil
 
-            statusMessage =
-                "Descenso detectado"
+            contributionStatus =
+                .alighting
 
         } else {
-            statusMessage = message(
+            contributionStatus = message(
                 for: decision.state,
                 candidateLine: candidate.linea
             )
@@ -626,18 +683,17 @@ if isForcedOnboardForMQTTTest {
         isRunning = false
         detectionState = .idle
         motionActivity = .unknown
-        candidateLine = nil
         confirmedLine = nil
-        distanceToRoute = nil
         shouldPublish = false
         selectedTripRoute = nil
         tripStartedAt = nil
         boardingPlace = nil
+        falloAlGuardarSubida = false
         boardingPoint = nil
         tripOccupancy.clearTripReport()
         waitingForNewTrip = false
-        statusMessage =
-            "Contribución desactivada"
+        contributionStatus =
+            .disabled
 
         #if DEBUG
         print("[PassiveTracking] Detenido")
@@ -694,9 +750,8 @@ private func processForcedOnboardForMQTTTest(
 
     refreshObservationPublisherState()
 
-    statusMessage =
-        "Prueba MQTT activa: línea " +
-        candidate.linea
+    contributionStatus =
+        .mqttTest(candidate.linea)
 
     print(
         "[PassiveTracking][DEBUG] " +
@@ -801,8 +856,8 @@ private func processForcedOnboardForMQTTTest(
 
         refreshObservationPublisherState()
 
-        statusMessage =
-            "Publicación pausada: app en segundo plano"
+        contributionStatus =
+            .pausedBackground
     }
 
     /// Reanuda la publicación si el viaje detectado sigue vigente.
@@ -838,8 +893,8 @@ private func processForcedOnboardForMQTTTest(
 
         refreshObservationPublisherState()
 
-        statusMessage =
-            "Viaje detectado en \(linea)"
+        contributionStatus =
+            .detected(linea)
     }
 
     /// Actualiza la propiedad observable con el estado real del publicador.
@@ -856,22 +911,13 @@ private func processForcedOnboardForMQTTTest(
     private func message(
         for state: PassengerDetectionState,
         candidateLine: String
-    ) -> String {
+    ) -> ContributionStatus {
         switch state {
-        case .idle:
-            return "Sin viaje detectado"
-
-        case .approachingStop:
-            return "Cerca de un paradero"
-
-        case .boardingCandidate:
-            return "Posible abordaje en \(candidateLine)"
-
-        case .onboard:
-            return "Viaje detectado en \(candidateLine)"
-
-        case .alightingCandidate:
-            return "Comprobando posible descenso"
+        case .idle: return .noTrip
+        case .approachingStop: return .approachingStop
+        case .boardingCandidate: return .possibleBoarding(candidateLine)
+        case .onboard: return .detected(candidateLine)
+        case .alightingCandidate: return .possibleAlighting
         }
     }
 }
@@ -905,30 +951,51 @@ struct BoardingPlaceNote: Codable, Identifiable {
     let recordedAt: Date
 }
 
+@MainActor
 enum BoardingPlaceStore {
     static let key = "rutautp.boarding-place-notes.v1"
 
-    static func normalized(_ text: String) -> String? {
+    nonisolated static func normalized(_ text: String) -> String? {
         let value = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
         return value.isEmpty ? nil : value
     }
 
     static func notes(defaults: UserDefaults = .standard) -> [BoardingPlaceNote] {
-        guard let data = defaults.data(forKey: key),
-              let notes = try? JSONDecoder().decode([BoardingPlaceNote].self, from: data) else { return [] }
-        return notes
+        readableNotes(defaults: defaults) ?? []
     }
 
+    static func datosInvalidos(defaults: UserDefaults = .standard) -> Bool {
+        readableNotes(defaults: defaults) == nil
+    }
+
+    @MainActor
+    static func respaldarYReiniciar(defaults: UserDefaults = .standard,
+                                    crearRespaldo: ((Data) throws -> URL)? = nil) throws -> URL? {
+        guard datosInvalidos(defaults: defaults) else { return nil }
+        let vacias = try JSONEncoder().encode([BoardingPlaceNote]())
+        return try RecuperacionPreferencias.reiniciar(claves: [key],
+            valoresNuevos: [key: vacias], nombre: "subidas", defaults: defaults,
+            crearRespaldo: crearRespaldo)
+    }
+
+    /// nil indica almacenamiento ilegible; [] indica ausencia o lista vacía válida.
+    private static func readableNotes(defaults: UserDefaults) -> [BoardingPlaceNote]? {
+        guard let original = defaults.object(forKey: key) else { return [] }
+        guard let data = original as? Data else { return nil }
+        return try? JSONDecoder().decode([BoardingPlaceNote].self, from: data)
+    }
+
+    @discardableResult
     static func save(routeID: String, line: String, place: String, point: BoardingPoint? = nil,
-                     defaults: UserDefaults = .standard) {
+                     defaults: UserDefaults = .standard) -> Bool {
         let place = normalized(place)
-        guard place != nil || point != nil else { return }
-        var records = notes(defaults: defaults)
+        guard place != nil || point != nil else { return true }
+        guard var records = readableNotes(defaults: defaults) else { return false }
         records.append(BoardingPlaceNote(id: UUID(), routeID: routeID, line: line,
                                          place: place ?? "", point: point, recordedAt: Date()))
         // Historial local acotado para preparar el futuro catálogo de paraderos.
-        if let data = try? JSONEncoder().encode(Array(records.suffix(200))) {
-            defaults.set(data, forKey: key)
-        }
+        guard let data = try? JSONEncoder().encode(Array(records.suffix(200))) else { return false }
+        defaults.set(data, forKey: key)
+        return true
     }
 }

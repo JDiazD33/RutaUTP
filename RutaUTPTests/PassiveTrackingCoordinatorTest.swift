@@ -146,6 +146,48 @@ final class PassiveTrackingCoordinatorTests:
         XCTAssertEqual(BoardingPlaceStore.notes(defaults: defaults).count, 2)
     }
 
+    func testRecuperacionDeSubidasRespaldaOriginalYPermiteGuardarDeNuevo() throws {
+        let suite = "rutautp.boarding-recovery.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let original = Data("JSON truncado".utf8)
+        defaults.set(original, forKey: BoardingPlaceStore.key)
+        XCTAssertFalse(BoardingPlaceStore.save(routeID: "route-10", line: "10", place: "Campus", defaults: defaults))
+        var copia: Data?
+        XCTAssertNotNil(try BoardingPlaceStore.respaldarYReiniciar(defaults: defaults) {
+            copia = $0
+            return URL(fileURLWithPath: "/tmp/respaldo-subidas-simulado.plist")
+        })
+        let raiz = try XCTUnwrap(try PropertyListSerialization.propertyList(
+            from: XCTUnwrap(copia), options: [], format: nil) as? [String: Any])
+        let valores = try XCTUnwrap(raiz["valores"] as? [String: Any])
+        XCTAssertEqual(valores[BoardingPlaceStore.key] as? Data, original)
+        XCTAssertFalse(BoardingPlaceStore.datosInvalidos(defaults: defaults))
+        XCTAssertTrue(BoardingPlaceStore.notes(defaults: defaults).isEmpty)
+        XCTAssertTrue(BoardingPlaceStore.save(routeID: "route-10", line: "10", place: "Campus", defaults: defaults))
+        XCTAssertEqual(BoardingPlaceStore.notes(defaults: defaults).map(\.place), ["Campus"])
+    }
+
+    func testRecuperacionDeSubidasNoBorraSiFallaRespaldoONotasValidas() throws {
+        let suite = "rutautp.boarding-recovery.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("formato desconocido", forKey: BoardingPlaceStore.key)
+        XCTAssertThrowsError(try BoardingPlaceStore.respaldarYReiniciar(defaults: defaults) { _ in
+            throw CocoaError(.fileWriteOutOfSpace)
+        })
+        XCTAssertEqual(defaults.string(forKey: BoardingPlaceStore.key), "formato desconocido")
+        XCTAssertTrue(BoardingPlaceStore.datosInvalidos(defaults: defaults))
+        let validas = try JSONEncoder().encode([BoardingPlaceNote(id: UUID(), routeID: "route-10", line: "10",
+            place: "Campus", point: nil, recordedAt: Date())])
+        defaults.set(validas, forKey: BoardingPlaceStore.key)
+        XCTAssertNil(try BoardingPlaceStore.respaldarYReiniciar(defaults: defaults) { _ in
+            XCTFail("Las notas válidas no se reinician")
+            return URL(fileURLWithPath: "/tmp/respaldo-subidas-simulado.plist")
+        })
+        XCTAssertEqual(defaults.data(forKey: BoardingPlaceStore.key), validas)
+    }
+
     private func withStoredConsent<Resultado>(_ enabled: Bool, body: () throws -> Resultado) rethrows -> Resultado {
         let key = "rutautp.passive-tracking-consent"
         let previous = UserDefaults.standard.object(forKey: key)
@@ -748,16 +790,16 @@ final class PassiveTrackingCoordinatorTests:
         publisher: MockObservationPublisher,
         consent: Bool = true,
         routes: [DetectionRouteGeometry]? = nil,
-        occupancy: OccupancyService = OccupancyService(configurationProvider: { nil }),
-        locationService: LocationServiceProtocol = MockLocationService()
+        occupancy: OccupancyService? = nil,
+        locationService: LocationServiceProtocol? = nil
     ) -> PassiveTrackingCoordinator {
         withStoredConsent(consent) {
             PassiveTrackingCoordinator(
-                locationService: locationService,
+                locationService: locationService ?? MockLocationService(),
                 motionService: MockMotionActivityService(),
                 initialRoutes: routes ?? [testRoute()],
                 observationPublisher: publisher,
-                tripOccupancy: occupancy,
+                tripOccupancy: occupancy ?? OccupancyService(configurationProvider: { nil }),
                 detectionClock: { [reloj] in reloj.ahora }
             )
         }

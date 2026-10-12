@@ -77,7 +77,7 @@ final class MonederoStore: ObservableObject {
     /// o que excedan el límite. Un rechazo no modifica saldo ni historial.
     @discardableResult
     func recargar(_ importe: Double) -> Bool {
-        guard !datosLocalesInvalidos,
+        guard cargar(),
               let centimos = Self.centimos(importe), centimos > 0,
               centimos <= Self.maximoCentimos - saldoCentimos else { return false }
         return registrar(importe: Double(centimos) / 100, saldoNuevo: saldoCentimos + centimos)
@@ -88,7 +88,7 @@ final class MonederoStore: ObservableObject {
 
     @discardableResult
     func cobrarPasaje(_ importe: Double) -> Bool {
-        guard errorParaCobrarPasaje(importe) == nil,
+        guard cargar(), errorParaCobrarPasaje(importe) == nil,
               let centimos = Self.centimos(importe) else { return false }
         return registrar(importe: -Double(centimos) / 100, saldoNuevo: saldoCentimos - centimos)
     }
@@ -128,32 +128,49 @@ final class MonederoStore: ObservableObject {
         return true
     }
 
-    private func cargar() {
+    /// Reintenta sin borrar ni migrar preferencias. Las operaciones releen
+    /// también antes de calcular el nuevo saldo sobre el estado vigente.
+    @discardableResult
+    func reintentarLectura() -> Bool { cargar() }
+
+    private struct Carga {
+        var saldoCentimos: Int
+        var movimientos: [MovimientoMonedero] = []
+    }
+
+    @discardableResult
+    private func cargar() -> Bool {
+        guard let carga = leer() else {
+            if saldoCentimos != 0 { saldoCentimos = 0 }
+            datosLocalesInvalidos = true
+            return false
+        }
+        if saldoCentimos != carga.saldoCentimos { saldoCentimos = carga.saldoCentimos }
+        if movimientos != carga.movimientos { movimientos = carga.movimientos }
+        datosLocalesInvalidos = false
+        return true
+    }
+
+    /// Validar ambas claves antes de publicar una lectura evita estados
+    /// parciales y permite detectar daños posteriores a la inicialización.
+    private func leer() -> Carga? {
+        var carga = Carga(saldoCentimos: Self.saldoInicialCentimos)
         if let almacenado = defaults.object(forKey: Self.llaveSaldo) {
-            if let numero = almacenado as? NSNumber,
-               CFGetTypeID(numero) != CFBooleanGetTypeID(),
-               let centimos = Self.centimos(numero.doubleValue) {
-                saldoCentimos = centimos
-            } else {
-                saldoCentimos = 0
-                datosLocalesInvalidos = true
-            }
+            guard let numero = almacenado as? NSNumber,
+                  CFGetTypeID(numero) != CFBooleanGetTypeID(),
+                  let centimos = Self.centimos(numero.doubleValue) else { return nil }
+            carga.saldoCentimos = centimos
         }
         if let almacenado = defaults.object(forKey: Self.llaveMovimientos) {
-            if let data = almacenado as? Data,
-               let guardados = try? JSONDecoder().decode([MovimientoMonedero].self, from: data),
-               Set(guardados.map(\.id)).count == guardados.count,
-               guardados.allSatisfy({
-                   $0.fecha.timeIntervalSinceReferenceDate.isFinite &&
-                   (Self.centimos(abs($0.importe)) ?? 0) > 0
-               }), defaults.object(forKey: Self.llaveSaldo) != nil {
-                movimientos = Array(guardados.prefix(20))
-            } else {
-                datosLocalesInvalidos = true
-            }
+            guard let data = almacenado as? Data,
+                  let guardados = try? JSONDecoder().decode([MovimientoMonedero].self, from: data),
+                  Set(guardados.map(\.id)).count == guardados.count,
+                  guardados.allSatisfy({
+                      $0.fecha.timeIntervalSinceReferenceDate.isFinite &&
+                      (Self.centimos(abs($0.importe)) ?? 0) > 0
+                  }), defaults.object(forKey: Self.llaveSaldo) != nil else { return nil }
+            carga.movimientos = Array(guardados.prefix(20))
         }
-        // Conserva los originales si están dañados; no permite sobrescribirlos
-        // con operaciones sobre un saldo que no se pudo recuperar con seguridad.
-        if datosLocalesInvalidos { saldoCentimos = 0 }
+        return carga
     }
 }

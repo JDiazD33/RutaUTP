@@ -18,10 +18,12 @@ final class NegociosService {
     static let shared = NegociosService()
 
     private let catalogo: CatalogoNegocios?
+    private let defaults: UserDefaults
 
     // MARK: - Init
 
-    private init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         // servicios/negocios/negocios_promocionados.json
         if let url = Bundle.main.url(forResource: "negocios_promocionados", withExtension: "json"),
            let data = try? Data(contentsOf: url) {
@@ -98,37 +100,48 @@ final class NegociosService {
 
     private static let llaveCupones = "negocios.cupones.guardados"
 
-    private static func idsGuardados() -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: llaveCupones) ?? [])
+    enum ErrorCupones: Error {
+        case datosGuardadosInvalidos
     }
+
+    private func idsGuardados() -> Set<String>? {
+        guard let original = defaults.object(forKey: Self.llaveCupones) else { return [] }
+        guard let ids = original as? [String] else { return nil }
+        return Set(ids)
+    }
+
+    var datosCuponesInvalidos: Bool { idsGuardados() == nil }
 
     /// true si el usuario ya guardó el cupón de este negocio.
     func cuponGuardado(_ negocio: Negocio) -> Bool {
-        Self.idsGuardados().contains(negocio.id)
+        idsGuardados()?.contains(negocio.id) ?? false
     }
 
     /// Comparte con Perfil los cupones guardados desde cualquier mapa.
     func cuponesGuardados() -> [Negocio] {
-        let ids = Self.idsGuardados()
+        guard let ids = idsGuardados() else { return [] }
         return todos().filter { ids.contains($0.id) && $0.cupon != nil }
             .sorted { $0.nombre.localizedStandardCompare($1.nombre) == .orderedAscending }
     }
 
-    func quitarCupon(_ negocio: Negocio) {
-        var ids = Self.idsGuardados()
+    @MainActor
+    func quitarCupon(_ negocio: Negocio) throws {
+        guard var ids = idsGuardados() else { throw ErrorCupones.datosGuardadosInvalidos }
         ids.remove(negocio.id)
         guardarCupones(ids)
     }
 
+    @MainActor
     private func guardarCupones(_ ids: Set<String>) {
-        UserDefaults.standard.set(Array(ids).sorted(), forKey: Self.llaveCupones)
+        defaults.set(Array(ids).sorted(), forKey: Self.llaveCupones)
         NotificationCenter.default.post(name: Self.cuponesActualizados, object: nil)
     }
 
     /// Alterna el cupón (guardar / quitar) y devuelve el nuevo estado.
     @discardableResult
-    func alternarCupon(_ negocio: Negocio) -> Bool {
-        var ids = Self.idsGuardados()
+    @MainActor
+    func alternarCupon(_ negocio: Negocio) throws -> Bool {
+        guard var ids = idsGuardados() else { throw ErrorCupones.datosGuardadosInvalidos }
         if ids.contains(negocio.id) {
             ids.remove(negocio.id)
         } else {
@@ -136,5 +149,16 @@ final class NegociosService {
         }
         guardarCupones(ids)
         return ids.contains(negocio.id)
+    }
+
+    /// Solo reinicia originales ilegibles y después de conservar una copia.
+    @MainActor
+    func respaldarYReiniciarCupones(crearRespaldo: ((Data) throws -> URL)? = nil) throws -> URL? {
+        guard datosCuponesInvalidos else { return nil }
+        let archivo = try RecuperacionPreferencias.reiniciar(claves: [Self.llaveCupones],
+            valoresNuevos: [Self.llaveCupones: [String]()], nombre: "cupones",
+            defaults: defaults, crearRespaldo: crearRespaldo)
+        NotificationCenter.default.post(name: Self.cuponesActualizados, object: nil)
+        return archivo
     }
 }

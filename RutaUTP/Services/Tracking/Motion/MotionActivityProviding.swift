@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 protocol MotionActivityProviding: AnyObject {
 
     var currentActivity: DetectedMotionActivity { get }

@@ -24,6 +24,7 @@
 //
 
 import Foundation
+import CoreFoundation
 
 enum Persistencia {
 
@@ -95,4 +96,12 @@ enum PreferenciasApp {
     static let notificaciones = "perfil_notificaciones"
     static let compartirUbicacion = "perfil_compartirUbicacion"
     static let busesUTP = "transporte.buses.utp.v1"
+
+    /// No convierte strings ni números ordinarios en consentimiento o activación.
+    /// Una ausencia o tipo desconocido no reescribe el original.
+    static func boolGuardado(para clave: String, defaults: UserDefaults = .standard) -> Bool? {
+        guard let numero = defaults.object(forKey: clave) as? NSNumber,
+              CFGetTypeID(numero) == CFBooleanGetTypeID() else { return nil }
+        return numero.boolValue
+    }
 }

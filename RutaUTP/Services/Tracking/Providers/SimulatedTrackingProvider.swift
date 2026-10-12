@@ -5,6 +5,7 @@ import CoreLocation
 /// Conserva su ciclo de publicación mediante VehicleTrackingProviding; Mapa
 /// usa shapes reducidos y otro umbral de publicación. Ambos comparten el
 /// cálculo de rumbo en PolylineMatching.headingDegrees.
+@MainActor
 final class SimulatedTrackingProvider: VehicleTrackingProviding {
     let source: VehicleTrackingSource = .simulated
     private(set) var currentPositions: [VehiclePosition] = []
@@ -165,7 +166,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
         }
     }
 
-    private static func makeFleet(routes: [RutaGTFS], center: CLLocationCoordinate2D,
+    nonisolated private static func makeFleet(routes: [RutaGTFS], center: CLLocationCoordinate2D,
                                   preferredRouteID: String?) -> [Motion] {
         var matches: [(RutaGTFS, PolylineMatching.MatchResult?)] = []
         for route in routes {
@@ -244,6 +245,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
             let fraction = length > 0 ? min(1, max(0, (motion.distance - motion.cumulative[j]) / length)) : 0
 
             positions.append(VehiclePosition(id: "SIM-\(motion.route.id)", linea: motion.route.linea,
+                routeId: motion.route.id,
                 lat: a.latitude + (b.latitude - a.latitude) * fraction,
                 lon: a.longitude + (b.longitude - a.longitude) * fraction,
                 heading: PolylineMatching.headingDegrees(from: a, to: b,

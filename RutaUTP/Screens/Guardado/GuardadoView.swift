@@ -17,6 +17,7 @@ import CoreLocation
 
 struct GuardadoView: View {
     @EnvironmentObject private var router: AppRouter
+    @Environment(\.bottomNavBarHeight) private var tabBarHeight
     @StateObject private var vm = GuardadoViewModel()
     @State private var selectedTab: Tab = .lugares
 
@@ -28,6 +29,9 @@ struct GuardadoView: View {
     @State private var showAddLinea = false
     @State private var selectedLinea: RutaOpcion?
     @State private var rutaParaExplorar: RutaOpcion?
+    @State private var confirmarReinicioLineas = false
+    @State private var errorReinicioLineas = false
+    @State private var respaldoLineas: URL?
 
     enum Tab: String, CaseIterable, Identifiable {
         case lugares = "Lugares"
@@ -52,7 +56,7 @@ struct GuardadoView: View {
                     .padding(.bottom, 90)
                 }
             }
-            .padding(.bottom, 64)
+            .padding(.bottom, tabBarHeight)
 
             BottomNavBar()
         }
@@ -62,6 +66,23 @@ struct GuardadoView: View {
             procesarHookDebug()
         }
         .task { await vm.cargarCatalogo() }
+        .alert(L.t("¿Empezar una nueva lista de líneas?", "Start a new saved lines list?"),
+               isPresented: $confirmarReinicioLineas) {
+            Button(L.t("Respaldar y reiniciar", "Back up and reset"), role: .destructive) {
+                do { respaldoLineas = try vm.respaldarYReiniciarLineas() }
+                catch { errorReinicioLineas = true }
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(L.t("Se guardará una copia de los datos originales en tus documentos y la lista de líneas quedará vacía. Tus lugares no cambian.",
+                     "A copy of the original data will be saved in your documents and the saved lines list will be empty. Your saved places stay the same."))
+        }
+        .alert(L.t("No se pudo crear el respaldo", "Unable to create backup"), isPresented: $errorReinicioLineas) {
+            Button(L.t("Aceptar", "OK"), role: .cancel) {}
+        } message: {
+            Text(L.t("Los datos originales se conservan. Comprueba el espacio disponible e inténtalo de nuevo.",
+                     "The original data has been preserved. Check available storage and try again."))
+        }
         .sheet(isPresented: $showAddLugar) {
             AddLugarSheet { vm.añadirLugar($0) }
             .presentationDetents([.medium, .large])
@@ -206,7 +227,7 @@ struct GuardadoView: View {
             )
         }
         .buttonStyle(PressableCapsuleStyle())
-        .disabled(selectedTab == .lugares && vm.datosLugaresInvalidos)
+        .disabled(selectedTab == .lugares ? vm.datosLugaresInvalidos : vm.datosLineasInvalidos)
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .accessibilityLabel(selectedTab == .lugares ? L.t("Añadir lugar guardado", "Add saved place") : L.t("Añadir línea guardada", "Add saved line"))
         .seniable(selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea", conGesto: false)
@@ -361,6 +382,26 @@ struct GuardadoView: View {
     // MARK: - Lineas section (líneas GTFS guardadas)
     private var lineasSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let respaldoLineas {
+                Text(L.t("El original se guardó antes de reiniciar las líneas.",
+                         "The original data was backed up before resetting saved lines."))
+                    .font(.bodySm)
+                ShareLink(item: respaldoLineas) {
+                    Label(L.t("Compartir respaldo", "Share backup"), systemImage: "square.and.arrow.up")
+                }
+            }
+            if vm.datosLineasInvalidos {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(L.t("No se pudieron leer tus líneas guardadas. Los datos originales se conservan y los cambios están bloqueados.",
+                             "Your saved lines could not be read. The original data has been preserved and changes are blocked."))
+                        .font(.bodySm)
+                    Button(L.t("Reintentar lectura", "Retry reading")) { vm.cargarLineas() }
+                    Button(L.t("Respaldar y reiniciar líneas", "Back up and reset saved lines")) {
+                        confirmarReinicioLineas = true
+                    }
+                }
+                .padding(20)
+            }
             Text(vm.lineasGuardadas.isEmpty
                  ? L.t("Guarda líneas oficiales del feed para tenerlas a la mano.", "Save official feed lines to have them handy.")
                  : String(format: L.t("%d línea(s) guardada(s) del feed oficial.", "%d saved line(s) from the official feed."), vm.lineasGuardadas.count))

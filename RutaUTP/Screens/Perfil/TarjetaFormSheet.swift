@@ -7,49 +7,44 @@ struct TarjetaGuardada: Identifiable, Codable, Equatable {
     var red: String
     var ultimos4: String
     var etiqueta: String { "\(red) •••• \(ultimos4)" }
+
+    var esValida: Bool {
+        !nombre.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !red.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && ultimos4.count == 4 && ultimos4.allSatisfy { $0.isASCII && $0.isNumber }
+    }
 }
 
-/// Referencias de tarjetas: nunca almacena el número completo ni el CVV.
-final class TarjetasStore: ObservableObject {
-    @Published private(set) var tarjetas: [TarjetaGuardada] = []
-    @Published var error: String?
-    private var cargado = false
-    private let service = "RutaUTP.tarjetas.referencias.v1"
+/// Adaptador inyectable para comprobar fallos sin tocar el llavero del usuario.
+protocol ReferenciasTarjetasPersistiendo {
+    func leer() throws -> Data?
+    func guardar(_ data: Data) throws
+}
 
-    init() { cargar() }
-    var principal: TarjetaGuardada? { tarjetas.first }
+struct LlaveroReferenciasTarjetas: ReferenciasTarjetasPersistiendo {
+    private let service = "RutaUTP.tarjetas.referencias.v1"
     private var consulta: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
          kSecAttrAccount as String: "local"]
     }
 
-    func cargar() {
+    func leer() throws -> Data? {
         var query = consulta
         query[kSecReturnData as String] = true
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound { cargado = true; return }
-        guard status == errSecSuccess, let data = result as? Data,
-              let saved = try? JSONDecoder().decode([TarjetaGuardada].self, from: data) else {
-            error = L.t("No se pudieron leer las tarjetas guardadas. Inténtalo de nuevo.", "Couldn't read saved cards. Try again.")
-            return
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
         }
-        tarjetas = saved
-        cargado = true
+        guard let data = result as? Data else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(errSecDecode))
+        }
+        return data
     }
 
-    @discardableResult private func guardar(_ nuevas: [TarjetaGuardada]) -> Bool {
-        // La rama de lectura previa ya publica su propio error desde `cargar()`.
-        guard cargado else { cargar(); return false }
-        // Esta era la única ruta realmente silenciosa: si fallaba la
-        // codificación, el botón "Guardar tarjeta" no hacía nada y el usuario
-        // no tenía forma de saber por qué.
-        guard let data = try? JSONEncoder().encode(nuevas) else {
-            error = L.t("No se pudo preparar el cambio para guardarlo. Inténtalo de nuevo.",
-                        "Couldn't prepare the change to be saved. Try again.")
-            return false
-        }
+    func guardar(_ data: Data) throws {
         var status = SecItemUpdate(consulta as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if status == errSecItemNotFound {
             var query = consulta
@@ -58,19 +53,86 @@ final class TarjetasStore: ObservableObject {
             status = SecItemAdd(query as CFDictionary, nil)
         }
         guard status == errSecSuccess else {
-            error = L.t("No se pudo guardar el cambio. Tus tarjetas anteriores se conservan.", "Couldn't save the change. Your previous cards are preserved.")
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
+    }
+}
+
+/// Referencias de tarjetas: nunca almacena el número completo ni el CVV.
+@MainActor
+final class TarjetasStore: ObservableObject {
+    @Published private(set) var tarjetas: [TarjetaGuardada] = []
+    @Published private(set) var lecturaFallida = false
+    @Published var error: String?
+    private let persistencia: ReferenciasTarjetasPersistiendo
+
+    init(persistencia: ReferenciasTarjetasPersistiendo = LlaveroReferenciasTarjetas()) {
+        self.persistencia = persistencia
+        cargar()
+    }
+
+    var principal: TarjetaGuardada? { tarjetas.first }
+
+    @discardableResult
+    func cargar() -> Bool {
+        do {
+            let data = try persistencia.leer()
+            let guardadas = try data.map { try JSONDecoder().decode([TarjetaGuardada].self, from: $0) } ?? []
+            guard Set(guardadas.map(\.id)).count == guardadas.count,
+                  guardadas.allSatisfy(\.esValida) else { throw CocoaError(.coderReadCorrupt) }
+            tarjetas = guardadas // Ausencia real limpia la copia en memoria.
+            lecturaFallida = false
+            error = nil
+            return true
+        } catch {
+            // Incluso después de una lectura válida, este fallo bloquea la
+            // operación actual y mantiene intacto el original del llavero.
+            lecturaFallida = true
+            self.error = L.t("No se pudieron leer las tarjetas guardadas. Los originales se conservan. Inténtalo de nuevo.",
+                             "Couldn't read saved cards. The originals have been preserved. Try again.")
+            return false
+        }
+    }
+
+    private func guardar(_ nuevas: [TarjetaGuardada]) -> Bool {
+        do {
+            let data = try JSONEncoder().encode(nuevas)
+            try persistencia.guardar(data)
+        } catch {
+            self.error = L.t("No se pudo guardar el cambio. Tus tarjetas anteriores se conservan.", "Couldn't save the change. Your previous cards are preserved.")
             return false
         }
         tarjetas = nuevas
         return true
     }
 
-    func agregar(_ tarjeta: TarjetaGuardada) -> Bool { guardar(tarjetas + [tarjeta]) }
-    func hacerPrincipal(_ tarjeta: TarjetaGuardada) {
-        guardar([tarjeta] + tarjetas.filter { $0.id != tarjeta.id })
+    func agregar(_ tarjeta: TarjetaGuardada) -> Bool {
+        guard cargar() else { return false }
+        guard tarjeta.esValida, !tarjetas.contains(where: { $0.id == tarjeta.id }) else {
+            error = L.t("La referencia no es válida o ya está guardada.", "The reference is invalid or already saved.")
+            return false
+        }
+        return guardar(tarjetas + [tarjeta])
     }
+
+    @discardableResult
+    func hacerPrincipal(_ tarjeta: TarjetaGuardada) -> Bool {
+        guard cargar(), let vigente = referenciaVigente(tarjeta.id) else { return false }
+        return guardar([vigente] + tarjetas.filter { $0.id != vigente.id })
+    }
+
     func eliminar(_ tarjeta: TarjetaGuardada) -> Bool {
-        guardar(tarjetas.filter { $0.id != tarjeta.id })
+        guard cargar(), referenciaVigente(tarjeta.id) != nil else { return false }
+        return guardar(tarjetas.filter { $0.id != tarjeta.id })
+    }
+
+    private func referenciaVigente(_ id: UUID) -> TarjetaGuardada? {
+        guard let tarjeta = tarjetas.first(where: { $0.id == id }) else {
+            error = L.t("Esta referencia ya no está guardada. Vuelve a la lista de tarjetas.",
+                        "This reference is no longer saved. Return to the card list.")
+            return nil
+        }
+        return tarjeta
     }
 }
 
@@ -92,7 +154,11 @@ struct MetodosPagoSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 Section {
-                    if store.tarjetas.isEmpty {
+                    if store.lecturaFallida {
+                        Text(L.t("No se pudieron leer las referencias. Los cambios están bloqueados y los originales se conservan.",
+                                 "References could not be read. Changes are blocked and the originals have been preserved."))
+                        Button(L.t("Reintentar lectura", "Retry reading")) { store.cargar() }
+                    } else if store.tarjetas.isEmpty {
                         ContentUnavailableView(L.t("Sin referencias guardadas", "No saved references"), systemImage: "creditcard", description: Text(L.t("Añade una referencia para identificar tus tarjetas aquí.", "Add a reference to identify your cards here.")))
                     }
                     ForEach(store.tarjetas) { tarjeta in
@@ -113,6 +179,7 @@ struct MetodosPagoSheet: View {
                     Button { agregar = true } label: {
                         Label(L.t("Añadir referencia", "Add reference"), systemImage: "plus.circle.fill")
                     }
+                    .disabled(store.lecturaFallida)
                 } footer: {
                     Text(L.t("Son referencias guardadas en este dispositivo. No habilitan pagos ni verifican la tarjeta con el banco.", "These are references saved on this device. They don't enable payments or verify cards with the bank."))
                 }
@@ -120,6 +187,7 @@ struct MetodosPagoSheet: View {
             .navigationTitle(L.t("Mis tarjetas", "My cards"))
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L.t("Listo", "Done")) { dismiss() } } }
             .sheet(isPresented: $agregar) { TarjetaFormSheet(store: store) }
+            .onAppear { store.cargar() }
             .alert(L.t("Tarjetas", "Cards"), isPresented: Binding(get: { store.error != nil && !agregar }, set: { if !$0 { store.error = nil } })) {
                 Button(L.t("Aceptar", "OK"), role: .cancel) { store.error = nil }
             } message: { Text(store.error ?? "") }
@@ -136,6 +204,9 @@ private struct TarjetaDetalleView: View {
     var body: some View {
         List {
             Section {
+                if store.lecturaFallida {
+                    Button(L.t("Reintentar lectura", "Retry reading")) { store.cargar() }
+                }
                 LabeledContent(L.t("Nombre", "Name"), value: tarjeta.nombre)
                 LabeledContent(L.t("Red", "Network"), value: tarjeta.red)
                 LabeledContent(L.t("Últimos 4 dígitos", "Last 4 digits"), value: "•••• \(tarjeta.ultimos4)")
@@ -145,8 +216,10 @@ private struct TarjetaDetalleView: View {
                     Label(L.t("Referencia principal", "Primary reference"), systemImage: "checkmark.circle.fill")
                 } else {
                     Button(L.t("Elegir como principal", "Set as default")) { store.hacerPrincipal(tarjeta) }
+                        .disabled(store.lecturaFallida)
                 }
                 Button(L.t("Eliminar referencia", "Delete reference"), role: .destructive) { confirmar = true }
+                    .disabled(store.lecturaFallida)
             }
         }
         .navigationTitle(tarjeta.etiqueta)

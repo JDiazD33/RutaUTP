@@ -42,7 +42,9 @@ final class MQTTObservationPublisher:
         (@MainActor (ObservationPublisherState) -> Void)?
 
     /// Cliente MQTT proporcionado por CocoaMQTT.
-    private let mqtt: CocoaMQTT
+    private var mqtt: CocoaMQTT?
+    private let configuration: MQTTConfiguration
+    private let conectar: @MainActor (CocoaMQTT) -> Bool
 
     /// Identidad autenticada que la ACL obliga a incluir en el tópico.
     private let principal: String
@@ -86,13 +88,19 @@ final class MQTTObservationPublisher:
     ///
     /// La dirección y las credenciales proceden de variables
     /// configuradas en el Scheme de Xcode, no del repositorio.
-    init(configuration: MQTTConfiguration) {
+    init(configuration: MQTTConfiguration,
+         conectar: @escaping @MainActor (CocoaMQTT) -> Bool = { $0.connect() }) {
         principal = configuration.username
+        self.configuration = configuration
+        self.conectar = conectar
+    }
 
+    /// Cada conexión nueva tiene identidad propia; los callbacks viejos se ignoran.
+    private func makeClient() -> CocoaMQTT {
         let clientID =
             "rutautp-observer-" + UUID().uuidString
 
-        mqtt = CocoaMQTT(
+        let mqtt = CocoaMQTT(
             clientID: clientID,
             host: configuration.host,
             port: configuration.port
@@ -113,7 +121,7 @@ final class MQTTObservationPublisher:
                 configuration.trustedCACertificates
         }
 
-        configureCallbacks()
+        return mqtt
     }
 
     /// Inicia una sesión de viaje vinculada a la cuenta MQTT y conecta con Mosquitto.
@@ -123,16 +131,19 @@ final class MQTTObservationPublisher:
         sessionID: String,
         linea: String
     ) {
+        if isActive, self.sessionID == sessionID, self.linea == linea, mqtt != nil {
+            if state == .connected { publishPendingIfPossible(force: true) }
+            return
+        }
+        stop()
         self.sessionID = sessionID
         self.linea = linea
         self.isActive = true
-
-        if state == .connected {
-            publishPendingIfPossible(force: true)
-            return
-        }
-
+        let client = makeClient()
+        mqtt = client
+        configureCallbacks(for: client)
         setState(.connecting)
+        guard isActive, mqtt === client else { return }
 
         #if DEBUG
         print(
@@ -141,7 +152,17 @@ final class MQTTObservationPublisher:
         )
         #endif
 
-        _ = mqtt.connect()
+        let aceptado = conectar(client)
+        guard isActive, mqtt === client else { return }
+        if !aceptado {
+            // No conservar un cliente que no inició el socket: start debe
+            // poder reintentar incluso con la misma sesión y línea.
+            mqtt = nil
+            client.autoReconnect = false
+            client.disconnect()
+            setState(.failed(L.t("No se pudo iniciar la conexión MQTT.",
+                                 "Couldn't start the MQTT connection.")))
+        }
     }
 
     /// Almacena y publica una ubicación aprobada por el detector.
@@ -213,7 +234,10 @@ final class MQTTObservationPublisher:
         stopFlushTimer()
         throttle.reset()
 
-        mqtt.disconnect()
+        let anterior = mqtt
+        mqtt = nil
+        anterior?.autoReconnect = false
+        anterior?.disconnect()
         setState(.inactive)
 
         #if DEBUG
@@ -226,14 +250,12 @@ final class MQTTObservationPublisher:
 
     /// Configura las respuestas que CocoaMQTT ejecutará ante cambios
     /// de conexión, publicaciones y errores.
-    private func configureCallbacks() {
+    private func configureCallbacks(for mqtt: CocoaMQTT) {
         mqtt.didConnectAck = {
-            [weak self] _, acknowledgment in
+            [weak self] client, acknowledgment in
 
             Task { @MainActor [weak self] in
-                guard let self else {
-                    return
-                }
+                guard let self, self.isActive, self.mqtt === client else { return }
 
                 guard acknowledgment == .accept else {
                     self.setState(
@@ -253,6 +275,7 @@ final class MQTTObservationPublisher:
                 }
 
                 self.setState(.connected)
+                guard self.isActive, self.mqtt === client else { return }
                 self.startFlushTimer()
 
                 #if DEBUG
@@ -283,12 +306,10 @@ final class MQTTObservationPublisher:
         }
 
         mqtt.didDisconnect = {
-            [weak self] _, error in
+            [weak self] client, error in
 
             Task { @MainActor [weak self] in
-                guard let self else {
-                    return
-                }
+                guard let self, self.isActive, self.mqtt === client else { return }
 
                 self.stopFlushTimer()
 
@@ -331,6 +352,7 @@ final class MQTTObservationPublisher:
         guard
             isActive,
             state == .connected,
+            let mqtt,
             let sessionID,
             let linea,
             let observation = pendingObservation
@@ -461,18 +483,17 @@ final class MQTTObservationPublisher:
 
     /// Activa el reenvío periódico de la última muestra.
     private func startFlushTimer() {
-        guard flushTimer == nil else {
-            return
-        }
+        guard isActive, state == .connected, flushTimer == nil, let mqtt else { return }
+        let conexion = ObjectIdentifier(mqtt)
 
         flushTimer = Timer.scheduledTimer(
             withTimeInterval: minimumPublishInterval,
             repeats: true
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.publishPendingIfPossible(
-                    force: false
-                )
+                guard let self, let client = self.mqtt,
+                      self.isActive, ObjectIdentifier(client) == conexion else { return }
+                self.publishPendingIfPossible(force: false)
             }
         }
     }

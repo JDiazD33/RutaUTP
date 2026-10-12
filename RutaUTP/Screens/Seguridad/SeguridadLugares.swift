@@ -15,10 +15,11 @@ struct ElegirLugaresSheet: View {
     let lugares: [LugarGuardado]          // sin incluir UTP (fijo, siempre está)
     let seleccion: Set<UUID>
     var irAGuardado: () -> Void
-    var onGuardar: (Set<UUID>) -> Void
+    var onGuardar: (Set<UUID>) -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @State private var elegidos: Set<UUID> = []
+    @State private var errorGuardado = false
 
     var body: some View {
         NavigationStack {
@@ -70,6 +71,12 @@ struct ElegirLugaresSheet: View {
                 }
             }
             .onAppear { elegidos = seleccion }
+            .alert(L.t("No se pudo guardar la selección", "Couldn't save selection"), isPresented: $errorGuardado) {
+                Button(L.t("Aceptar", "OK"), role: .cancel) {}
+            } message: {
+                Text(L.t("No se pudieron leer tus lugares o accesos. Se conservaron los datos originales.",
+                         "Your places or shortcuts could not be read. The original data was preserved."))
+            }
         }
     }
 
@@ -123,9 +130,12 @@ struct ElegirLugaresSheet: View {
 
     private var botonListo: some View {
         Button {
-            AppHaptics.success()
-            onGuardar(elegidos)
-            dismiss()
+            if onGuardar(elegidos) {
+                AppHaptics.success()
+                dismiss()
+            } else {
+                errorGuardado = true
+            }
         } label: {
             Text(L.t("Guardar selección", "Save selection"))
                 .font(.headlineSm)
@@ -145,14 +155,17 @@ struct JiggleEffect: ViewModifier {
     var indice: Int = 0
 
     func body(content: Content) -> some View {
-        content
-            .rotationEffect(.degrees(active ? jiggleAngle : 0))
-            .animation(
-                active
-                ? Animation.easeInOut(duration: 0.12).repeatForever(autoreverses: true)
-                : .default,
-                value: active
-            )
+        DecorativeAnimationScope { permitirAnimacion in
+            let animar = active && permitirAnimacion
+            content
+                .rotationEffect(.degrees(animar ? jiggleAngle : 0))
+                .animation(
+                    animar
+                    ? Animation.easeInOut(duration: 0.12).repeatForever(autoreverses: true)
+                    : nil,
+                    value: animar
+                )
+        }
     }
 
     /// Ángulo del temblor.
@@ -171,39 +184,11 @@ struct JiggleEffect: ViewModifier {
     }
 }
 
-// MARK: - Drop delegate para reordenar tiles
-struct TileDropDelegate: DropDelegate {
-    let destino: LugarGuardado
-    @Binding var tiles: [LugarGuardado]
-    @Binding var arrastrando: LugarGuardado?
-    var onPersistir: () -> Void
+/// Marcos de los accesos en la cuadrícula para resolver el destino del arrastre local.
+struct MarcosTilesPreferenceKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] { [:] }
 
-    func dropEntered(info: DropInfo) {
-        guard let arrastrando,
-              arrastrando.id != destino.id,
-              !destino.esFijo, !arrastrando.esFijo,
-              let desde = tiles.firstIndex(where: { $0.id == arrastrando.id }),
-              let hasta = tiles.firstIndex(where: { $0.id == destino.id })
-        else { return }
-
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-            let movido = tiles.remove(at: desde)
-            // Tras remover, el índice destino puede correrse: recalculamos.
-            if let nuevoHasta = tiles.firstIndex(where: { $0.id == destino.id }) {
-                tiles.insert(movido, at: nuevoHasta)
-            } else {
-                tiles.insert(movido, at: hasta)
-            }
-        }
-        onPersistir()
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        DispatchQueue.main.async { arrastrando = nil }
-        return true
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, nuevo in nuevo })
     }
 }

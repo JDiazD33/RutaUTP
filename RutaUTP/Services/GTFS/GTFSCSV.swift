@@ -28,6 +28,7 @@ enum GTFSCSV {
     enum GTFSError: LocalizedError {
         case archivoNoEncontrado(String)
         case encabezadosAusentes(String, [String])
+        case datosInvalidos(String, fila: Int, motivo: String)
 
         var errorDescription: String? {
             switch self {
@@ -35,6 +36,8 @@ enum GTFSCSV {
                 return "No se encontró \(nombre).txt en el bundle (carpeta gtfs)."
             case .encabezadosAusentes(let nombre, let columnas):
                 return "Faltan encabezados en \(nombre).txt: \(columnas.joined(separator: ", "))."
+            case .datosInvalidos(let nombre, let fila, let motivo):
+                return "Datos inválidos en \(nombre).txt, fila \(fila): \(motivo)."
             }
         }
     }

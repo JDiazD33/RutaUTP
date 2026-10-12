@@ -2,8 +2,11 @@ import Combine
 
 /// Conserva la creación diferida de StateObject y una instancia por contexto de pantalla.
 /// La UI observa las propiedades del modelo; este contenedor no reenvía cambios.
+@MainActor
 final class ScreenModelStore<Model: AnyObject>: ObservableObject {
-    let objectWillChange = ObservableObjectPublisher()
+    // Combine consulta este requisito sin aislamiento. La referencia es
+    // constante; send y la sustitución del modelo ocurren en MainActor.
+    nonisolated(unsafe) let objectWillChange = ObservableObjectPublisher()
     private(set) var model: Model
 
     init(_ model: Model) {

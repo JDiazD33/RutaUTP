@@ -535,6 +535,7 @@ struct EditorFotoPerfilModifier: ViewModifier {
     @State private var editor: FotoParaEncuadrar?
     @State private var selectorCerrado = true
     @State private var errorGuardado = false
+    @State private var guardando = false
 
     func body(content: Content) -> some View {
         content
@@ -556,11 +557,27 @@ struct EditorFotoPerfilModifier: ViewModifier {
             }
             .fullScreenCover(item: $editor) { seleccion in
                 EncuadreFotoView(image: seleccion.image, esPerfil: true) { imagen in
-                    if ProfileImageStore.save(imagen) {
-                        onGuardar(imagen)
-                        editor = nil
-                    } else {
-                        errorGuardado = true
+                    guard !guardando else { return }
+                    guardando = true
+                    Task { @MainActor in
+                        let saved = await ProfileImageStore.save(imagen)
+                        guardando = false
+                        guard editor?.id == seleccion.id else { return }
+                        if saved {
+                            onGuardar(imagen)
+                            editor = nil
+                        } else {
+                            errorGuardado = true
+                        }
+                    }
+                }
+                .disabled(guardando)
+                .interactiveDismissDisabled(guardando)
+                .overlay {
+                    if guardando {
+                        ProgressView(L.t("Guardando foto…", "Saving photo…"))
+                            .padding(20)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                     }
                 }
                 .alert(L.t("No se pudo guardar la foto", "Couldn't save photo"), isPresented: $errorGuardado) {

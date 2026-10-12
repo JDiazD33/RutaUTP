@@ -4,11 +4,12 @@ import UIKit
 // MARK: - Detalle de la ruta (sub-vista con back)
 struct DetalleRutaView: View {
     let ruta: RutaOpcion
+    let locationService: LocationServiceProtocol
     let onBack: () -> Void
 
     @State private var showCarPlay: Bool = false
     @State private var showExplorador: Bool = false
-    private let tabBarHeight: CGFloat = 64
+    @Environment(\.bottomNavBarHeight) private var tabBarHeight
 
     var body: some View {
         VStack(spacing: 0) {
@@ -136,7 +137,7 @@ struct DetalleRutaView: View {
                     .padding(.bottom, 24)
                 }
             }
-            .padding(.bottom, bottomSafeArea() > 0 ? bottomSafeArea() + 64 : 68)
+            .padding(.bottom, tabBarHeight + max(4, bottomSafeArea()))
         }
         .background(Color.appBackground.ignoresSafeArea())
         // Explorador del recorrido (se abre tocando el mapa)
@@ -147,6 +148,7 @@ struct DetalleRutaView: View {
         .fullScreenCover(isPresented: $showCarPlay) {
             NavegacionRutaView(
                 ruta: ruta,
+                locationService: locationService,
                 onFinish: { showCarPlay = false }
             )
         }
