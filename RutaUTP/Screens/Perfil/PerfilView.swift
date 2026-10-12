@@ -35,6 +35,7 @@ struct PerfilView: View {
     @State private var showDatosPersonales: Bool = false
     @State private var showVoiceOverHelp: Bool = false
     @State private var showRespaldos: Bool = false
+    @State private var mostrarIdiomas = false
     //  CORREGIDO V3: estado para Wallet
     @State private var showTarjetaSheet: Bool = false
     @State private var showRecargarSaldo: Bool = false
@@ -101,6 +102,11 @@ struct PerfilView: View {
 
         }
         .ignoresSafeArea(edges: .bottom)
+        .sheet(isPresented: $mostrarIdiomas) {
+            SelectorIdioma()
+                .presentationDetents([.medium, .large])
+                .seguirTemaForzado()
+        }
         // Foto de perfil: recargar al entrar y al volver de Datos Personales.
         .onAppear {
             // Solo DEBUG: abre directo el Carné Digital, p.ej.
@@ -157,7 +163,7 @@ struct PerfilView: View {
         .alert(ubicacionPopupMensaje, isPresented: $showUbicacionPopup) {
             Button(L.t("Entendido", "Got it"), role: .cancel) { }
         } message: {
-            Text(ubicacionPopupSubtitulo)
+            Text(L.aviso(ubicacionPopupSubtitulo))
         }
         // Sheet de Tarjeta
         .sheet(isPresented: $showTarjetaSheet) {
@@ -468,6 +474,11 @@ struct PerfilView: View {
                 .accessibilityAddTraits(.isHeader)
 
             VStack(spacing: 0) {
+                chevronRow(icon: "globe", iconColor: .appPrimary,
+                           label: L.t("Idioma", "Language") + " · " + IdiomaManager.shared.idioma.nombreNativo) {
+                    mostrarIdiomas = true
+                }
+                Divider().padding(.leading, 56).accessibilityHidden(true)
                 toggleRow(icon: "bell.fill", iconColor: .appPrimary,
                           label: L.t("Preferencia de notificaciones", "Notification preference"), isOn: $notifOn)
                 Divider().padding(.leading, 56).accessibilityHidden(true)

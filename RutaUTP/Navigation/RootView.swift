@@ -88,6 +88,7 @@ struct RootView: View {
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
         .environmentObject(router)
+        .environment(\.locale, IdiomaManager.shared.idioma.locale)
         .environment(\.bottomNavBarHeight, bottomNavBarHeight)
         .onPreferenceChange(BottomNavBarHeightPreferenceKey.self) { height in
             guard height.isFinite, height > 0, abs(height - bottomNavBarHeight) > 0.5 else { return }

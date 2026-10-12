@@ -12,6 +12,7 @@ struct BienvenidaView: View {
     @State private var selectedPage = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showLegalSheet = false
+    @State private var mostrarIdiomas = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -87,6 +88,11 @@ struct BienvenidaView: View {
             LegalSheet()
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $mostrarIdiomas) {
+            SelectorIdioma()
+                .presentationDetents([.medium, .large])
+                .seguirTemaForzado()
+        }
     }
 
     // MARK: - Sub-vistas
@@ -106,6 +112,16 @@ struct BienvenidaView: View {
                 .font(.headlineLgMobile)
                 .foregroundStyle(.appPrimary)
             Spacer()
+            Button {
+                mostrarIdiomas = true
+            } label: {
+                Image(systemName: "globe")
+                    .font(.bodyMdMedium)
+                    .foregroundStyle(Color.appPrimary)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.f("Cambiar idioma. Idioma actual: {0}", "Change language. Current language: {0}", [IdiomaManager.shared.idioma.nombreNativo]))
             Button {
                 router.navigate(to: .mapaPrincipal, claveSenia: "bienvenida.saltar")
             } label: {
@@ -209,7 +225,7 @@ struct BienvenidaView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(L.t("Página \(page + 1) de 3", "Page \(page + 1) of 3"))
+                    .accessibilityLabel(L.f("Página {0} de 3", "Page {0} of 3", ["\(page + 1)"]))
                     .accessibilityAddTraits(selectedPage == page ? .isSelected : [])
                 }
             }

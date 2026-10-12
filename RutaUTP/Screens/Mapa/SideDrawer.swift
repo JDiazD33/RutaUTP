@@ -15,6 +15,7 @@ import SwiftUI
 import UIKit
 // MARK: - Menu Item Identifier
 enum DrawerItem: String, Identifiable {
+    case idioma
     case notificaciones
     case ciudad
     case ajustes
@@ -112,6 +113,7 @@ struct SideDrawer: View {
     @ViewBuilder
     private func sheetContent(for item: DrawerItem) -> some View {
         switch item {
+        case .idioma:         SelectorIdioma()
         case .notificaciones: NotificacionesSheet()
         case .ciudad:         CiudadSheet()
         case .ajustes:        AjustesSheet()
@@ -189,11 +191,11 @@ struct SideDrawer: View {
 
             // Items
             VStack(spacing: 0) {
-                // Cambio de idioma ES/EN (aplica al instante en toda la app)
+                // Selección explícita entre los seis idiomas de la app.
                 Button {
                     AppHaptics.impact(.medium)
                     SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "perfil.idioma") {
-                        IdiomaManager.shared.alternar()
+                        activeSheet = .idioma
                     }
                 } label: {
                     HStack(spacing: 14) {
@@ -209,7 +211,7 @@ struct SideDrawer: View {
                             Text(L.signable("perfil.idioma", "Idioma", "Language"))
                                 .font(.bodyMdMedium)
                                 .foregroundStyle(.onSurface)
-                            Text(IdiomaManager.shared.esIngles ? "Switch to Español" : "Switch to English")
+                            Text(IdiomaManager.shared.idioma.nombreNativo)
                                 .font(.bodySm)
                                 .foregroundStyle(.onSurfaceVariant)
                         }
@@ -229,7 +231,7 @@ struct SideDrawer: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Cambiar idioma", "Change language"))
+                .accessibilityLabel(L.f("Cambiar idioma. Idioma actual: {0}", "Change language. Current language: {0}", [IdiomaManager.shared.idioma.nombreNativo]))
                 .seniable("perfil.idioma", conGesto: false)
                 .padding(.horizontal, 8)
 
@@ -254,7 +256,7 @@ struct SideDrawer: View {
                 // TEMPORAL: botón para abrir la pantalla de prueba de tracking real.
                 // No aparece en el README ni en la doc oficial — se quita cuando tracking
                 // esté integrado en el flujo principal.
-                DrawerItemRow(icon: "location.fill", iconColor: .secondary, label: "Tracking Demo") {
+                DrawerItemRow(icon: "location.fill", iconColor: .secondary, label: L.t("Demo de seguimiento", "Tracking demo")) {
                     router.navigate(to: .trackingDemo)
                 }
                 Spacer()

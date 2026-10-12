@@ -5,7 +5,7 @@
 //  Punto de entrada de la aplicación.
 //  - Modo oscuro/claro persistido con @AppStorage; se APLICA en RootView
 //    (@AppStorage dentro del App no siempre invalida la escena).
-//  - Idioma ES/EN vía IdiomaManager. NO se usa `.id(idioma.codigo)`: el gestor
+//  - Seis idiomas vía IdiomaManager. NO se usa `.id(idioma.codigo)`: el gestor
 //    es `@Observable`, así que cada vista que llama a `L.t()` en su body
 //    registra la dependencia y se actualiza sola. Reconstruir el árbol tenía
 //    un efecto secundario que se notaba: al recrear `RootView` se recreaba
