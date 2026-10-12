@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B7E0C5037B014557A9E34CAA /* RespaldosRecuperacionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */; };
 		30C8E60E781443809B689068 /* RecuperacionPreferencias.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C49D29E23E644F8A533D0B6 /* RecuperacionPreferencias.swift */; };
 		BD5200000000000000000002 /* IndiceBusquedaRuta.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5200000000000000000001 /* IndiceBusquedaRuta.swift */; };
 		BD5400000000000000000002 /* FotoComunidadViales.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5400000000000000000001 /* FotoComunidadViales.swift */; };
@@ -197,6 +198,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RespaldosRecuperacionSheet.swift; sourceTree = "<group>"; };
 		4C49D29E23E644F8A533D0B6 /* RecuperacionPreferencias.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecuperacionPreferencias.swift; sourceTree = "<group>"; };
 		BD5200000000000000000001 /* IndiceBusquedaRuta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndiceBusquedaRuta.swift; sourceTree = "<group>"; };
 		BD5400000000000000000001 /* FotoComunidadViales.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FotoComunidadViales.swift; sourceTree = "<group>"; };
@@ -630,6 +632,7 @@
 				0AC4E0A220260907004E1676 /* CarneDigitalView.swift */,
 				0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */,
 				0A8004D6300AD9FE004E1676 /* PerfilView.swift */,
+				9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */,
 				0A800440300AD9FE004E1676 /* MonederoView.swift */,
 				AA9900000000000000000A03 /* EscanerQRView.swift */,
 				0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */,
@@ -1115,6 +1118,7 @@
 				0A800424300AD9FE004E1676 /* DrawerSheets.swift in Sources */,
 				0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */,
 				0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */,
+				B7E0C5037B014557A9E34CAA /* RespaldosRecuperacionSheet.swift in Sources */,
 				0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */,
 				0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */,
 				AA9900000000000000000A02 /* PagoQR.swift in Sources */,

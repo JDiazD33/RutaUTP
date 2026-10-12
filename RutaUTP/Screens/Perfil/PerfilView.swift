@@ -34,6 +34,7 @@ struct PerfilView: View {
     @State private var ubicacionPopupSubtitulo: String = ""
     @State private var showDatosPersonales: Bool = false
     @State private var showVoiceOverHelp: Bool = false
+    @State private var showRespaldos: Bool = false
     //  CORREGIDO V3: estado para Wallet
     @State private var showTarjetaSheet: Bool = false
     @State private var showRecargarSaldo: Bool = false
@@ -207,6 +208,12 @@ struct PerfilView: View {
         // Sheet con instrucciones para activar VoiceOver
         .sheet(isPresented: $showVoiceOverHelp) {
             VoiceOverHelpSheet()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .seguirTemaForzado()
+        }
+        .sheet(isPresented: $showRespaldos) {
+            RespaldosRecuperacionSheet()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .seguirTemaForzado()
@@ -477,6 +484,12 @@ struct PerfilView: View {
                            label: L.t("Editar perfil", "Edit profile")) {
                     AppHaptics.impact(.light)
                     showDatosPersonales = true
+                }
+                Divider().padding(.leading, 56).accessibilityHidden(true)
+                chevronRow(icon: "archivebox", iconColor: .onSurfaceVariant,
+                           label: L.t("Respaldos guardados", "Saved backups")) {
+                    AppHaptics.impact(.light)
+                    showRespaldos = true
                 }
             }
             .background(

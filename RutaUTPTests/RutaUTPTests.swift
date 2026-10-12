@@ -2195,3 +2195,90 @@ final class PreferenciasSimplesTests: XCTestCase {
         }
     }
 }
+
+/// Solo directorios temporales aislados; no lee documentos ni preferencias reales.
+final class ListadoRespaldosTests: XCTestCase {
+    private func carpetaTemporal() throws -> URL {
+        let carpeta = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RutaUTPTests.Respaldos.\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: carpeta, withIntermediateDirectories: true)
+        return carpeta
+    }
+
+    func testDirectorioAusenteDevuelveVacioSinCrearlo() async throws {
+        let raiz = try carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: raiz) }
+        let ausente = raiz.appendingPathComponent("no-creado", isDirectory: true)
+        let copias = try await RecuperacionPreferencias.listar(directorio: ausente)
+        XCTAssertTrue(copias.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: ausente.path))
+    }
+
+    func testListadoConservaCopiasAntiguasActualesEIlegiblesYExcluyeEnlaces() async throws {
+        let carpeta = try carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+        let originales: [String: Data] = [
+            "a-lineas.plist": try PropertyListSerialization.data(fromPropertyList: [
+                "clave": "lineas.guardadas.v1", "valor": Data([255]), "fecha": Date()
+            ], format: .binary, options: 0),
+            "b-cupones.plist": try PropertyListSerialization.data(fromPropertyList: [
+                "version": 1, "claves": ["negocios.cupones.guardados"],
+                "valores": ["negocios.cupones.guardados": "ilegible"], "fecha": Date()
+            ], format: .binary, options: 0),
+            "c-danado.plist": Data([0, 255, 1])
+        ]
+        let fecha = Date(timeIntervalSince1970: 1_000)
+        for (nombre, data) in originales {
+            let url = carpeta.appendingPathComponent(nombre)
+            try data.write(to: url)
+            try FileManager.default.setAttributes([.modificationDate: fecha], ofItemAtPath: url.path)
+        }
+        try Data("conservar".utf8).write(to: carpeta.appendingPathComponent("otro.txt"))
+        try FileManager.default.createDirectory(at: carpeta.appendingPathComponent("carpeta.plist"),
+                                                withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: carpeta.appendingPathComponent("enlace.plist"),
+                                                   withDestinationURL: carpeta.appendingPathComponent("a-lineas.plist"))
+        let copias = try await RecuperacionPreferencias.listar(directorio: carpeta)
+        XCTAssertEqual(copias.map { $0.url.lastPathComponent }, originales.keys.sorted())
+        for copia in copias {
+            let original = try XCTUnwrap(originales[copia.url.lastPathComponent])
+            XCTAssertEqual(try Data(contentsOf: copia.url), original)
+            XCTAssertEqual(copia.bytes, original.count)
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: carpeta.appendingPathComponent("otro.txt").path))
+    }
+
+    func testCadaListadoReleeDiscoYOrdenaPorFecha() async throws {
+        let carpeta = try carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+        let anterior = carpeta.appendingPathComponent("anterior.plist")
+        try Data([1]).write(to: anterior)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 1_000)],
+                                              ofItemAtPath: anterior.path)
+        let primero = try await RecuperacionPreferencias.listar(directorio: carpeta)
+        XCTAssertEqual(primero.map(\.url), [anterior])
+        let nuevo = carpeta.appendingPathComponent("nuevo.plist")
+        try Data([2]).write(to: nuevo)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 2_000)],
+                                              ofItemAtPath: nuevo.path)
+        let segundo = try await RecuperacionPreferencias.listar(directorio: carpeta)
+        XCTAssertEqual(segundo.map(\.url), [nuevo, anterior])
+        try FileManager.default.removeItem(at: anterior)
+        let tercero = try await RecuperacionPreferencias.listar(directorio: carpeta)
+        XCTAssertEqual(tercero.map(\.url), [nuevo])
+    }
+
+    func testFalloDeLecturaNoSePresentaComoListadoVacio() async throws {
+        let carpeta = try carpetaTemporal()
+        defer { try? FileManager.default.removeItem(at: carpeta) }
+        let archivo = carpeta.appendingPathComponent("no-es-directorio")
+        let original = Data([0, 1, 2])
+        try original.write(to: archivo)
+        do {
+            _ = try await RecuperacionPreferencias.listar(directorio: archivo)
+            XCTFail("Un archivo no puede leerse como directorio de respaldos")
+        } catch {
+            XCTAssertEqual(try Data(contentsOf: archivo), original)
+        }
+    }
+}
