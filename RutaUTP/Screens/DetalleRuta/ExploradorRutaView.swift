@@ -253,7 +253,7 @@ struct ExploradorRutaView: View {
             NavigationStack {
                 List(Array(ruta.paraderos.enumerated()), id: \.offset) { indice, paradero in
                     Text(paradero.nombre)
-                        .accessibilityLabel(L.t("Paradero \(indice + 1): ", "Stop \(indice + 1): ") + paradero.nombre)
+                        .accessibilityLabel(L.f("Paradero {0}: ", "Stop {0}: ", ["\(indice + 1)"]) + paradero.nombre)
                 }
                 .navigationTitle(L.t("Paraderos de ", "Stops for ") + ruta.linea)
                 .toolbar {
@@ -282,7 +282,7 @@ struct ExploradorRutaView: View {
                     Text("\(ruta.linea) · \(ruta.empresa)")
                         .font(.headlineSm)
                         .foregroundStyle(.onSurface)
-                    Text(ruta.recorrido)
+                    Text(ruta.recorridoLocalizado)
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .lineLimit(1)
@@ -305,7 +305,7 @@ struct ExploradorRutaView: View {
                 datoLeyenda(icono: "mappin.and.ellipse", valor: "\(ruta.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
                 divisor
                 datoLeyenda(icono: "point.topleft.down.curvedto.point.bottomright.up",
-                            valor: String(format: "%.1f km", ruta.distanciaKm), etiqueta: L.t("Longitud", "Length"))
+                            valor: FormatoNumero.decimal(ruta.distanciaKm) + " km", etiqueta: L.t("Longitud", "Length"))
             }
         }
         .padding(16)

@@ -85,7 +85,7 @@ struct NavegacionRutaView: View {
             guard voiceOverOn, scenePhase == .active, pantallaVisible else { return }
             enfocarLlegada = viewModel.estado == .finalizado
             if !enfocarLlegada {
-                UIAccessibility.post(notification: .announcement, argument: instruccion + ". " + subtitulo)
+                AccesibilidadIdioma.anunciar(instruccion + ". " + subtitulo)
             }
         }
         .accessibilityAction(.escape) { onFinish() }
@@ -214,11 +214,11 @@ struct NavegacionRutaView: View {
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L.t("Avance de la línea, tiempos estimados", "Route progress, estimated times"))
-            .accessibilityValue(L.t("\(Int(viewModel.progreso * 100)) por ciento", "\(Int(viewModel.progreso * 100)) percent"))
+            .accessibilityValue(L.f("{0} por ciento", "{0} percent", ["\(Int(viewModel.progreso * 100))"]))
 
             // Stats
             HStack(spacing: 0) {
-                stat(icono: "clock.fill", valor: viewModel.posicion == nil || ruta.duracionMin <= 0 ? "—" : "~\(viewModel.minutosRestantes) min", etiqueta: L.t("Restante", "Remaining"))
+                stat(icono: "clock.fill", valor: viewModel.posicion == nil || ruta.duracionMin <= 0 ? "—" : "~" + L.f("{0} min", "{0} min", ["\(viewModel.minutosRestantes)"]), etiqueta: L.t("Restante", "Remaining"))
                     .frame(maxWidth: .infinity)
                 Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 34)
                 stat(icono: "point.topleft.down.curvedto.point.bottomright.up",
@@ -327,7 +327,7 @@ struct NavegacionRutaView: View {
                 : L.t("Continúa por el recorrido", "Continue along the route")
         case .fueraDeRuta(let metros):
             return viewModel.haEntradoEnRuta
-                ? L.t("Fuera del recorrido · \(Int(metros)) m", "Off route · \(Int(metros)) m")
+                ? L.f("Fuera del recorrido · {0} m", "Off route · {0} m", ["\(Int(metros))"])
                 : L.t("Acércate a un paradero", "Head to a stop")
         case .cercaDestino:
             return L.t("Prepárate para bajar", "Get ready to get off")
@@ -351,7 +351,7 @@ struct NavegacionRutaView: View {
             guard let paradero = viewModel.paraderoCercano, let metros = viewModel.distanciaParaderoM else {
                 return L.t("Busca un paradero de la línea ", "Look for a stop on line ") + ruta.linea
             }
-            let distancia = metros >= 1000 ? String(format: "%.1f km", metros / 1000) : "\(Int(metros)) m"
+            let distancia = metros >= 1000 ? FormatoNumero.decimal(metros / 1000) + " km" : "\(Int(metros)) m"
             return paradero.nombre + " · " + distancia + L.t(" en línea recta", " straight-line distance")
         case .cercaDestino, .finalizado:
             return ruta.paradaFin

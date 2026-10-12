@@ -199,14 +199,14 @@ final class NavegacionRutaViewModel: ObservableObject {
 
     var distanciaRestanteTexto: String {
         distanciaRestanteM >= 1000
-            ? String(format: "%.1f km", distanciaRestanteM / 1000)
+            ? FormatoNumero.decimal(distanciaRestanteM / 1000) + " km"
             : "\(Int(distanciaRestanteM)) m"
     }
 
     var distanciaProximoParaderoTexto: String? {
         guard let proximo = fraccionesParaderos.first(where: { $0.fraccion > progreso + 0.001 }) else { return nil }
         let metros = max(0, (proximo.fraccion - progreso) * distanciaTotalM)
-        return metros >= 1000 ? String(format: "%.1f km", metros / 1000) : "\(Int(metros)) m"
+        return metros >= 1000 ? FormatoNumero.decimal(metros / 1000) + " km" : "\(Int(metros)) m"
     }
 
     private func reiniciarProgreso() {
