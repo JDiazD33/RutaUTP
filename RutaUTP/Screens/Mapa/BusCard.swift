@@ -30,7 +30,7 @@ struct BusCard: View {
                         RoundedRectangle(cornerRadius: 6)
                             .fill(colorLinea == .appPrimary ? Color.primaryContainer : Color.secondaryContainer)
                     )
-                Text("\(tipo) • \(placa)")
+                Text("\(L.tipoVehiculo(tipo)) • \(placa)")
                     .font(.bodySm)
                     .foregroundStyle(.onSurfaceVariant)
                     .lineLimit(1)
@@ -57,6 +57,6 @@ struct BusCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(linea + ", " + empresa)
-        .accessibilityValue([minutos, tipo, placa].filter { !$0.isEmpty }.joined(separator: ". "))
+        .accessibilityValue([minutos, L.tipoVehiculo(tipo), placa].filter { !$0.isEmpty }.joined(separator: ". "))
     }
 }

@@ -26,11 +26,12 @@ struct BusPanelItem: Identifiable, Equatable {
     }
 
     var ramalTexto: String {
-        variante.isEmpty ? L.t("S/D", "N/A") : L.t("Ramal \(variante)", "Branch \(variante)")
+        variante.isEmpty ? L.t("S/D", "N/A") : L.f("Ramal {0}", "Branch {0}", ["\(variante)"])
     }
 
     var etiquetaLlegada: String {
         guard let minutosLlegada else { return L.t("SIN ETA", "NO ETA") }
-        return fuente == .real ? "~\(minutosLlegada) MIN" : "\(minutosLlegada) MIN"
+        let tiempo = L.f("{0} min", "{0} min", ["\(minutosLlegada)"]).uppercased()
+        return fuente == .real ? "~" + tiempo : tiempo
     }
 }

@@ -31,7 +31,7 @@ struct BusDetailPopup: View {
                             .padding(.vertical, 3)
                             .background(Capsule().fill(bus.color))
                     }
-                    Text("\(bus.empresa) • \(bus.tipo) (\(bus.ramalTexto))")
+                    Text("\(bus.empresa) • \(L.tipoVehiculo(bus.tipo)) (\(bus.ramalTexto))")
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .lineLimit(1)
