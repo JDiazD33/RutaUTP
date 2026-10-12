@@ -102,8 +102,7 @@ struct PerfilPreferenciasVisuales: View {
                     .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
             }
 
-            Text(L.t("Elige los carnets que aparecen en tu billetera de \(empresa.nombre). Se recuerda para cada empresa; ocultarlos conserva tus fotos.",
-                     "Choose the cards shown in your \(empresa.nombre) wallet. Choices are remembered for each company; hiding cards keeps your photos."))
+            Text(L.f("Elige los carnets que aparecen en tu billetera de {0}. Se recuerda para cada empresa; ocultarlos conserva tus fotos.", "Choose the cards shown in your {0} wallet. Choices are remembered for each company; hiding cards keeps your photos.", ["\(empresa.nombre)"]))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)

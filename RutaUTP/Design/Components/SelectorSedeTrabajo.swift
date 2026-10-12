@@ -122,8 +122,7 @@ struct SedeTrabajoSheet: View {
                         Text(empresa == .popeyes
                              ? L.t("Próximamente. Aún no hay sedes de Popeyes disponibles para elegir en Trujillo.",
                                    "Coming soon. There are no Popeyes workplaces available to select in Trujillo yet.")
-                             : L.t("No hay sedes verificadas de \(empresa.nombre) disponibles para elegir en Trujillo por ahora.",
-                                   "There are no verified \(empresa.nombre) workplaces available to select in Trujillo at present."))
+                             : L.f("No hay sedes verificadas de {0} disponibles para elegir en Trujillo por ahora.", "There are no verified {0} workplaces available to select in Trujillo at present.", ["\(empresa.nombre)"]))
                             .font(.body).foregroundStyle(.onSurfaceVariant)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(L.t("Tu referencia actual del mapa se conserva hasta que elijas una sede disponible.",
@@ -131,7 +130,7 @@ struct SedeTrabajoSheet: View {
                             .font(.caption).foregroundStyle(.onSurfaceVariant)
                             .fixedSize(horizontal: false, vertical: true)
                         if TematicaEmpresaStore.shared.seleccion != empresa {
-                            Button(L.t("Aplicar colores de \(empresa.nombre)", "Apply \(empresa.nombre) colors")) {
+                            Button(L.f("Aplicar colores de {0}", "Apply {0} colors", ["\(empresa.nombre)"])) {
                                 TransporteApp.seleccionarEmpresa(empresa)
                                 dismiss()
                             }
