@@ -194,6 +194,11 @@ struct SeniasOverlay: View {
             }
         }
         .animation(.easeOut(duration: 0.22), value: presenter.claveVisible)
+        .environment(\.locale, IdiomaManager.shared.idioma.locale)
+        .onChange(of: IdiomaManager.shared.codigo) { _, _ in
+            presenter.cancelarAccionPendiente()
+            presenter.ocultar()
+        }
     }
 
     private func tarjetaActivacion(clave: String, id: UUID) -> some View {
@@ -288,7 +293,7 @@ struct SeniasOverlay: View {
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(motivo)
+                    Text(L.aviso(motivo))
                         .font(.caption2)
                         .foregroundStyle(.onSurfaceVariant)
                         .multilineTextAlignment(.center)

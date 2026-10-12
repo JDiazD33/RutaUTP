@@ -37,7 +37,7 @@ final class CatalogoSenias {
         lock.lock()
         defer { lock.unlock() }
         guard let par = textos[clave] else { return nil }
-        return IdiomaManager.shared.esIngles ? par.en : par.es
+        return L.t(par.es, par.en)
     }
 
     var claves: [String] {

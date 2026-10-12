@@ -63,23 +63,23 @@ final class SeniasService {
     /// Nunca inventa una seña ni recicla la del otro idioma.
     func estado(para clave: String) -> EstadoSenia {
         guard let manifesto else {
-            return .pendiente(motivo: "No se encontró senias/manifest.json en el bundle")
+            return .pendiente(motivo: L.t("No se encontró senias/manifest.json en el bundle", "senias/manifest.json was not found in the app bundle"))
         }
         guard let senia = manifesto.senia(para: clave) else {
-            return .pendiente(motivo: "La clave «\(clave)» no está en el manifiesto")
+            return .pendiente(motivo: L.f("La clave «{0}» no está en el manifiesto", "Key “{0}” is not in the manifest", [clave]))
         }
         guard let carpeta = carpetaClips else {
-            return .pendiente(motivo: "No se encontró senias/clips/ en el bundle")
+            return .pendiente(motivo: L.t("No se encontró senias/clips/ en el bundle", "senias/clips/ was not found in the app bundle"))
         }
 
-        let idioma = IdiomaManager.shared.codigo // "es" | "en"
+        let idioma = IdiomaManager.shared.codigo
         let carpetaIdioma = carpeta.appendingPathComponent(idioma)
         guard FileManager.default.fileExists(atPath: carpetaIdioma.path) else {
-            return .pendiente(motivo: "No se encontró senias/clips/\(idioma)/ en el bundle")
+            return .pendiente(motivo: L.t("No hay video de señas disponible para este idioma.", "No sign language video is available for this language."))
         }
         let archivo = carpetaIdioma.appendingPathComponent(senia.archivo)
         guard FileManager.default.fileExists(atPath: archivo.path) else {
-            return .pendiente(motivo: "Falta el archivo \(idioma)/\(senia.archivo)")
+            return .pendiente(motivo: L.f("Falta el archivo {0}", "File {0} is missing", ["\(idioma)/\(senia.archivo)"]))
         }
         return .clip(archivo, senia: senia)
     }
