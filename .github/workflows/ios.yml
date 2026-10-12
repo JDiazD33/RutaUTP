@@ -63,6 +63,34 @@ jobs:
             exit 1
           fi
 
+      - name: Set up Python for backend compilation
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Compile Python backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 --version 2>&1 | tee artifacts/python.log
+          python3 -m compileall -f backend/rutautp_backend backend/tests \
+            2>&1 | tee artifacts/backend-compile.log
+
+      - name: Build Release for generic iOS Simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project RutaUTP.xcodeproj \
+            -scheme RutaUTP \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -disableAutomaticPackageResolution \
+            -onlyUsePackageVersionsFromResolvedFile \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee artifacts/release-build.log
+
       - name: Build and test
         shell: bash
         env:
