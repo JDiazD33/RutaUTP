@@ -83,6 +83,9 @@ class VehicleAggregator:
         #: `sessionId` -> `vehicle_id`. Permite que un pasajero no cambie de
         #: unidad a mitad de viaje.
         self._vehicle_by_session: dict[str, str] = {}
+        #: Última observación de cada vínculo, independiente de la actividad
+        #: del resto de pasajeros del vehículo.
+        self._session_last_seen: dict[str, float] = {}
 
     # ── Entrada ───────────────────────────────────────────────────────────
 
@@ -118,7 +121,18 @@ class VehicleAggregator:
 
         self._apply(vehicle, observation, authenticated_principal)
 
+        previous_id = self._vehicle_by_session.get(observation.session_id)
+        if previous_id is not None and previous_id != vehicle.vehicle_id:
+            previous = self._vehicles.get(previous_id)
+            if previous is not None:
+                previous.sessions.discard(observation.session_id)
+            self._session_last_seen.pop(observation.session_id, None)
+
         self._vehicle_by_session[observation.session_id] = vehicle.vehicle_id
+        self._session_last_seen[observation.session_id] = max(
+            self._session_last_seen.get(observation.session_id, float("-inf")),
+            observation.timestamp,
+        )
 
         return vehicle, created
 
@@ -165,8 +179,8 @@ class VehicleAggregator:
     ) -> EstimatedVehicle | None:
         """Vehículo al que ya está vinculada esta sesión, si sigue vivo.
 
-        Se exige la misma ventana temporal que en la vía por proximidad: un
-        vínculo a un vehículo que ya no se considera reciente no debe resucitarlo.
+        Se exige la ventana temporal tanto al vehículo como a esta sesión:
+        otros pasajeros no prolongan indefinidamente un vínculo abandonado.
         """
         vehicle_id = self._vehicle_by_session.get(observation.session_id)
 
@@ -181,8 +195,10 @@ class VehicleAggregator:
             vehicle is None
             or vehicle.route_id != observation.route_id
             or now - vehicle.last_seen > self.config.merge_window_s
+            or now - self._session_last_seen.get(observation.session_id, float("-inf"))
+            > self.config.merge_window_s
         ):
-            self._vehicle_by_session.pop(observation.session_id, None)
+            self._forget_session(observation.session_id)
 
             return None
 
@@ -322,6 +338,7 @@ class VehicleAggregator:
         por ciclo para una sola unidad. La corroboración se cuenta por principal
         MQTT autenticado, no por sesión controlada por el cliente.
         """
+        self._prune_contributors(vehicle, now)
         active_principals = sum(
             1
             for seen_at in vehicle.principals.values()
@@ -337,7 +354,7 @@ class VehicleAggregator:
         vehicle.last_published_at = now
 
     def expire(self, now: float) -> list[str]:
-        """Retira los vehículos que dejaron de recibir observaciones.
+        """Retira vehículos y asociaciones que dejaron de recibir observaciones.
 
         Se mide contra el `timestamp` de la última observación, no contra el
         momento en que se procesó: así una ráfaga de mensajes viejos no mantiene
@@ -355,7 +372,46 @@ class VehicleAggregator:
         if expired:
             self._forget_sessions_of(expired)
 
+        for vehicle in self._vehicles.values():
+            self._prune_contributors(vehicle, now)
+
         return expired
+
+    def _prune_contributors(self, vehicle: EstimatedVehicle, now: float) -> None:
+        """Conserva solo corroboración y vínculos dentro de la ventana activa.
+
+        El quorum ya ignoraba principales antiguos; retirarlos no cambia esa
+        regla. Las sesiones caducan por su propia última lectura, aunque el
+        vehículo siga activo gracias a otras cuentas.
+        """
+        inactive_principals = [
+            principal
+            for principal, seen_at in vehicle.principals.items()
+            if now - seen_at > self.config.merge_window_s
+        ]
+        for principal in inactive_principals:
+            del vehicle.principals[principal]
+
+        inactive_sessions = [
+            session
+            for session in vehicle.sessions
+            if self._vehicle_by_session.get(session) != vehicle.vehicle_id
+            or now - self._session_last_seen.get(session, float("-inf"))
+            > self.config.merge_window_s
+        ]
+        for session in inactive_sessions:
+            if self._vehicle_by_session.get(session) == vehicle.vehicle_id:
+                self._forget_session(session)
+            else:
+                vehicle.sessions.discard(session)
+
+    def _forget_session(self, session: str) -> None:
+        vehicle_id = self._vehicle_by_session.pop(session, None)
+        self._session_last_seen.pop(session, None)
+        if vehicle_id is not None:
+            vehicle = self._vehicles.get(vehicle_id)
+            if vehicle is not None:
+                vehicle.sessions.discard(session)
 
     def _forget_sessions_of(self, vehicle_ids: list[str]) -> None:
         """Olvida los vínculos de las sesiones que apuntaban a esos vehículos.
@@ -373,7 +429,7 @@ class VehicleAggregator:
         ]
 
         for session in huerfanos:
-            del self._vehicle_by_session[session]
+            self._forget_session(session)
 
     def snapshot(self) -> list[EstimatedVehicle]:
         """Vehículos actuales, ordenados por identificador para que sea estable."""
@@ -391,7 +447,7 @@ class VehicleAggregator:
 
     @property
     def bound_session_count(self) -> int:
-        """Sesiones con vínculo a un vehículo vivo."""
+        """Vínculos conservados desde la última limpieza por publicación/expire."""
         return len(self._vehicle_by_session)
 
     def sessions_on(self, vehicle_id: str) -> set[str]:

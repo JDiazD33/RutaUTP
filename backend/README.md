@@ -144,6 +144,14 @@ Los ajustes propios del servicio llevan el prefijo `BACKEND_`.
 | `BACKEND_MIN_PUBLISH_PRINCIPALS` | `2` | Instalaciones MQTT autenticadas distintas requeridas antes de publicar un vehículo. No cuenta sesiones rotadas de un mismo principal |
 | `BACKEND_VEHICLE_NAMESPACE` | aleatorio por arranque | Espacio de nombres del `vehicleId`. Fijarlo da identificadores reproducibles; vacío genera uno nuevo en cada arranque, que es lo que evita heredar la identidad visible de un proceso anterior |
 
+La ventana `BACKEND_MERGE_WINDOW_S` también acota la retención en memoria de
+sesiones y principales de cada vehículo. La limpieza se realiza al evaluar una
+publicación y en `expire`, aunque otros pasajeros mantengan vivo el vehículo.
+Una sesión que vuelve después de esa ventana debe coincidir de nuevo por
+proximidad/coherencia; ya no conserva un vínculo indefinido. Los principales
+caducados tampoco cuentan para el quorum. Esto no elimina el histórico SQLite,
+que conserva su propia política de retención.
+
 ### Tópicos
 
 Se pueden cambiar para apuntar a otro espacio de nombres, pero **la ACL del

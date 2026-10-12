@@ -144,9 +144,11 @@ class EstimatedVehicle:
     #: con haversine.
     route_length_m: float = 0.0
 
+    #: Sesiones con vínculo vigente; se podan al publicar o expirar.
     sessions: set[str] = field(default_factory=set)
     #: Principales MQTT autenticados que corroboraron esta estimación. Es una
     #: identidad más fuerte que `sessionId`, que el cliente puede regenerar.
+    #: Solo se retienen las que corroboraron dentro de la ventana activa.
     principals: dict[str, float] = field(default_factory=dict)
     sample_count: int = 0
     last_published_at: float = 0.0

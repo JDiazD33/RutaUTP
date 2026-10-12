@@ -231,6 +231,71 @@ class TestPosicion:
 
 
 class TestCaducidad:
+    def test_un_vehiculo_activo_no_conserva_pasajeros_antiguos(
+        self, aggregator, sample_route, config
+    ):
+        vehicle, _ = aggregator.ingest(
+            make_observation(sample_route, session="antigua"),
+            NOW,
+            principal="cuenta-antigua",
+        )
+        for step in range(1, 5):
+            now = NOW + step * config.merge_window_s / 2
+            current, created = aggregator.ingest(
+                make_observation(sample_route, session="vigente", now=now),
+                now,
+                principal="cuenta-vigente",
+            )
+            assert created is False
+            assert current is vehicle
+            assert aggregator.expire(now) == []
+
+        assert vehicle.sessions == {"vigente"}
+        assert set(vehicle.principals) == {"cuenta-vigente"}
+        assert aggregator.bound_session_count == 1
+        assert set(aggregator._session_last_seen) == {"vigente"}
+
+    def test_caducidad_de_corroboracion_respeta_la_frontera_y_el_quorum(
+        self, config, feed, sample_route
+    ):
+        secure = Config(**{**config.__dict__, "min_publish_principals": 2})
+        aggregator = VehicleAggregator(secure, feed)
+        vehicle, _ = aggregator.ingest(
+            make_observation(sample_route, session="a"), NOW, principal="cuenta-a"
+        )
+        aggregator.ingest(
+            make_observation(sample_route, session="b", now=NOW + 1),
+            NOW + 1,
+            principal="cuenta-b",
+        )
+        boundary = NOW + secure.merge_window_s
+        assert aggregator.should_publish(vehicle, boundary) is True
+        assert vehicle.sessions == {"a", "b"}
+        assert aggregator.should_publish(vehicle, boundary + 0.001) is False
+        assert vehicle.sessions == {"b"}
+        assert set(vehicle.principals) == {"cuenta-b"}
+
+    def test_una_sesion_caducada_debe_volver_a_coincidir_por_proximidad(
+        self, aggregator, sample_route, config
+    ):
+        original, _ = aggregator.ingest(make_observation(sample_route), NOW)
+        for step in range(1, 4):
+            now = NOW + step * config.merge_window_s / 2
+            aggregator.ingest(
+                make_observation(sample_route, session="otro-pasajero", now=now),
+                now,
+            )
+        # El vehículo sigue vivo, pero la sesión antigua no puede usar ese
+        # vínculo para saltarse los filtros de proximidad/coherencia.
+        now += 1
+        returned, created = aggregator.ingest(
+            make_observation(sample_route, now=now, offset_north_m=5000), now
+        )
+        assert created is True
+        assert returned.vehicle_id != original.vehicle_id
+        assert "session-0001" not in original.sessions
+        assert "session-0001" in returned.sessions
+
     def test_el_vehiculo_caduca_al_superar_el_ttl(
         self, aggregator, sample_route, config
     ):
