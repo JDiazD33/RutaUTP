@@ -353,7 +353,7 @@ struct DatosPersonalesSheet: View {
                     }
                     .accessibilityHidden(true)
                     if editandoDatos {
-                        TextField("correo@ejemplo.com", text: $correoPersonalInput)
+                        TextField(L.t("correo@ejemplo.com", "email@example.com"), text: $correoPersonalInput)
                             .font(.bodyMd)
                             .foregroundStyle(.onSurface)
                             .keyboardType(.emailAddress)
