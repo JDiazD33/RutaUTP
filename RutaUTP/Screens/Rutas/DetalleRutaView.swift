@@ -58,7 +58,7 @@ struct DetalleRutaView: View {
                                         .foregroundStyle(.onSurface)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
-                                Text(ruta.recorrido)
+                                Text(ruta.recorridoLocalizado)
                                     .font(.bodySm)
                                     .foregroundStyle(.onSurfaceVariant)
                             }
@@ -104,7 +104,7 @@ struct DetalleRutaView: View {
                                 .seniable("rutas.paraderos")
                             StatTile(icon: "point.topleft.down.curvedto.point.bottomright.up",
                                      iconColor: .secondary,
-                                     label: L.signable("rutas.recorrido", "RECORRIDO", "DISTANCE"), value: String(format: "%.1f km", ruta.distanciaKm))
+                                     label: L.signable("rutas.recorrido", "RECORRIDO", "DISTANCE"), value: FormatoNumero.decimal(ruta.distanciaKm) + " km")
                                 .seniable("rutas.recorrido")
                         }
 
@@ -116,13 +116,13 @@ struct DetalleRutaView: View {
                                 .seniable("rutas.guia", distintivoDx: 10)
 
                             VStack(spacing: 0) {
-                                pasoRow("1", L.t("Ve al paradero \(ruta.paradaInicio)", "Go to \(ruta.paradaInicio) stop"),
-                                        L.t("Sale uno \(ruta.frecuenciaTexto)", "One departs \(ruta.frecuenciaTexto)"),
+                                pasoRow("1", L.f("Ve al paradero {0}", "Go to {0} stop", ["\(ruta.paradaInicio)"]),
+                                        L.f("Sale uno {0}", "One departs {0}", ["\(ruta.frecuenciaTexto)"]),
                                         "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
-                                pasoRow("2", L.t("Sube a la línea \(ruta.lineaConLetra)", "Board line \(ruta.lineaConLetra)"),
-                                        L.t("\(ruta.empresa) • \(ruta.tiempoTexto) de viaje", "\(ruta.empresa) • \(ruta.tiempoTexto) trip"),
+                                pasoRow("2", L.f("Sube a la línea {0}", "Board line {0}", ["\(ruta.lineaConLetra)"]),
+                                        L.f("{0} • {1} de viaje", "{0} • {1} trip", ["\(ruta.empresa)", "\(ruta.tiempoTexto)"]),
                                         "bus.fill", ruta.colorLinea, .white, isLast: false)
-                                pasoRow("3", L.t("Baja en \(ruta.paradaFin)", "Get off at \(ruta.paradaFin)"),
+                                pasoRow("3", L.f("Baja en {0}", "Get off at {0}", ["\(ruta.paradaFin)"]),
                                         L.t("Fin del recorrido", "End of the route"),
                                         "flag.checkered.fill", .tertiary, .white, isLast: true)
                             }

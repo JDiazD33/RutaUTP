@@ -72,8 +72,8 @@ struct RutaOpcionCard: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.t("Línea ", "Line ") + ruta.lineaConLetra + ", " + ruta.empresa)
-        .accessibilityValue([ruta.recorrido, distanciaLugar, L.t("Pasaje ", "Fare ") + ruta.costo,
-                             L.t("\(ruta.numParaderos) paraderos", "\(ruta.numParaderos) stops"),
+        .accessibilityValue([ruta.recorridoLocalizado, distanciaLugar, L.t("Pasaje ", "Fare ") + ruta.costo,
+                             L.f("{0} paraderos", "{0} stops", ["\(ruta.numParaderos)"]),
                              ruta.frecuenciaMin > 0 ? ruta.frecuenciaTexto : nil]
             .compactMap { $0 }.joined(separator: ". "))
     }
@@ -91,7 +91,7 @@ struct RutaOpcionCard: View {
         Label(ruta.costo, systemImage: "banknote")
             .fontWeight(.semibold)
             .foregroundStyle(Color.onSurface)
-        Label(L.t("\(ruta.numParaderos) paraderos", "\(ruta.numParaderos) stops"), systemImage: "mappin")
+        Label(L.f("{0} paraderos", "{0} stops", ["\(ruta.numParaderos)"]), systemImage: "mappin")
         if ruta.frecuenciaMin > 0 {
             Label(ruta.frecuenciaTexto, systemImage: "clock")
         }

@@ -41,9 +41,8 @@ final class RutasViewModel: ObservableObject {
     /// Texto "a X m del lugar" para la card bajo el filtro.
     func distanciaTexto(ruta: RutaOpcion) -> String? {
         guard filtroCerca != nil, let d = distanciaALugar[ruta.id] else { return nil }
-        return d < 1000 ? L.t("a \(Int((d / 10).rounded() * 10)) m del lugar", "\(Int((d / 10).rounded() * 10)) m from place")
-                        : L.t(String(format: "a %.1f km del lugar", d / 1000),
-                             String(format: "%.1f km from place", d / 1000))
+        return d < 1000 ? L.f("a {0} m del lugar", "{0} m from place", ["\(Int((d / 10).rounded() * 10))"])
+                        : L.f("a {0} km del lugar", "{0} km from place", [(d / 1000).formatted(.number.precision(.fractionLength(1)).locale(FormatoFecha.localeActivo))])
     }
 
     func cargar(reintentar: Bool = false) async {

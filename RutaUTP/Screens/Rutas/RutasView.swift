@@ -136,7 +136,7 @@ struct RutasView: View {
                                 .foregroundStyle(Color.onPrimaryContainer)
                                 .padding(12)
                                 .background(Color.primaryContainer, in: Capsule())
-                                .accessibilityLabel(L.t("\(rutas.count) rutas encontradas", "\(rutas.count) routes found"))
+                                .accessibilityLabel(L.f("{0} rutas encontradas", "{0} routes found", ["\(rutas.count)"]))
                         }
                     }
                     .padding(.vertical, 6)
@@ -171,7 +171,7 @@ struct RutasView: View {
                     } else if rutas.isEmpty {
                         estadoVacio(viewModel.textoBusqueda.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                     && viewModel.filtroCerca != nil
-                                    ? L.t("No hay líneas con paradero a menos de \(Int(RutasViewModel.radioCercaMetros)) m de este lugar.", "No routes have a stop within \(Int(RutasViewModel.radioCercaMetros)) m of this place.")
+                                    ? L.f("No hay líneas con paradero a menos de {0} m de este lugar.", "No routes have a stop within {0} m of this place.", ["\(Int(RutasViewModel.radioCercaMetros))"])
                                     : L.t("No encontramos rutas para ", "No routes found for ") + "“\(viewModel.textoBusqueda)”")
                     } else {
                         ForEach(rutas) { ruta in
@@ -199,7 +199,7 @@ struct RutasView: View {
             Image(systemName: "bus")
                 .font(.system(size: 28))
                 .accessibilityHidden(true)
-            Text(mensaje)
+            Text(L.aviso(mensaje))
                 .font(.bodySm)
                 .multilineTextAlignment(.center)
         }

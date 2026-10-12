@@ -40,9 +40,15 @@ struct ConsultaRuta {
     let terminos: [String]
 
     init(_ texto: String, letras: Set<String>) {
-        var palabras = IndiceBusquedaRuta.normalizar(texto).split(separator: " ").map(String.init)
+        var consultaNormalizada = IndiceBusquedaRuta.normalizar(texto)
+        // En chino es habitual escribir «字母A» o «线路M-34» sin espacios.
+        for indicador in ["字母", "线路", "公司", "大道", "街道"] {
+            consultaNormalizada = consultaNormalizada.replacingOccurrences(of: indicador, with: " \(indicador) ")
+        }
+        var palabras = consultaNormalizada.split(separator: " ").map(String.init)
         var letraElegida: String?
-        if let indice = palabras.firstIndex(where: { $0 == "letra" || $0 == "letter" }),
+        let indicadoresLetra: Set<String> = ["letra", "letter", "lettre", "buchstabe", "字母"]
+        if let indice = palabras.firstIndex(where: { indicadoresLetra.contains($0) }),
            palabras.indices.contains(indice + 1) {
             let siguientes = Array(palabras.dropFirst(indice + 1))
             let cantidad = Self.longitudLetra(siguientes, letras: letras) ?? 1
@@ -58,7 +64,9 @@ struct ConsultaRuta {
             palabras.removeFirst()
         }
         letra = letraElegida
-        let calificadores: Set<String> = ["linea", "line", "empresa", "company", "avenida", "av", "calle"]
+        let calificadores: Set<String> = ["linea", "line", "empresa", "company", "avenida", "av", "calle",
+            "ligne", "compagnie", "entreprise", "avenue", "rue", "linha", "rua",
+            "linie", "unternehmen", "firma", "straße", "strasse", "allee", "线路", "公司", "大道", "街道"]
         terminos = palabras.filter { !calificadores.contains($0) }
     }
 
