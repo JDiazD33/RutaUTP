@@ -50,10 +50,9 @@ struct RouteSummaryPanel: View {
                 }
                 Label(L.t("Baja en ", "Get off at ") + plan.alight.nombre,
                       systemImage: "mappin.and.ellipse")
-                Text(L.t("Luego camina \(Int(ceil(metrics.walkToDestinationMeters))) m hasta tu destino.",
-                         "Then walk \(Int(ceil(metrics.walkToDestinationMeters))) m to your destination."))
+                Text(L.f("Luego camina {0} m hasta tu destino.", "Then walk {0} m to your destination.", ["\(Int(ceil(metrics.walkToDestinationMeters)))"]))
                     .foregroundStyle(Color.onSurfaceVariant)
-                Text(L.t("··· A pie   ━ En bus", "··· Walk   ━ Bus") + " · ~\(vm.etaMinutos ?? 0) min")
+                Text(L.t("··· A pie   ━ En bus", "··· Walk   ━ Bus") + " · ~" + L.f("{0} min", "{0} min", ["\(vm.etaMinutos ?? 0)"]))
                     .foregroundStyle(Color.onSurfaceVariant)
                 if plan.walkingApproximate {
                     AvisoRutaAproximada()
@@ -62,7 +61,7 @@ struct RouteSummaryPanel: View {
                     invitacionConfirmarViaje
                 }
             } else if let mensaje = vm.mensajeRuta {
-                Text(mensaje).foregroundStyle(Color.onSurfaceVariant)
+                Text(L.aviso(mensaje)).foregroundStyle(Color.onSurfaceVariant)
             }
         }
         .font(.system(size: 11, weight: .medium))

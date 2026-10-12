@@ -173,14 +173,14 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         guard cantidad > 0 else { return mensajePanelSinBuses }
         if let destino = busquedaResultado {
             return cantidad == 1
-                ? String(format: L.t("1 línea pasa por %@", "1 line passes by %@"), destino.titulo)
-                : String(format: L.t("%d líneas pasan por %@", "%d lines pass by %@"), cantidad, destino.titulo)
+                ? L.f("1 línea pasa por {0}", "1 line passes by {0}", [destino.titulo])
+                : L.f("{0} líneas pasan por {1}", "{0} lines pass by {1}", ["\(cantidad)", destino.titulo])
         }
         let referencia = utpComoReferencia ? L.t("Campus UTP Trujillo", "UTP Trujillo campus")
             : sedeTrabajo?.nombre ?? L.t("este punto", "this point")
         return cantidad == 1
-            ? String(format: L.t("1 línea cerca de %@", "1 line near %@"), referencia)
-            : String(format: L.t("%d líneas cerca de %@", "%d lines near %@"), cantidad, referencia)
+            ? L.f("1 línea cerca de {0}", "1 line near {0}", [referencia])
+            : L.f("{0} líneas cerca de {1}", "{0} lines near {1}", ["\(cantidad)", referencia])
     }
 
     var busSeleccionado: BusAnimado? = nil
@@ -1067,8 +1067,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 self.itinerarioFocusTick += 1
                 return
             }
-            self.mensajeRuta = L.t("No encontramos una ruta directa ni con un transbordo con paraderos a menos de \(Int(radio)) m de ambos extremos. Prueba otro destino.",
-                                   "No direct or one-transfer route has stops within \(Int(radio)) m of both ends. Try another destination.")
+            self.mensajeRuta = L.f("No encontramos una ruta directa ni con un transbordo con paraderos a menos de {0} m de ambos extremos. Prueba otro destino.", "No direct or one-transfer route has stops within {0} m of both ends. Try another destination.", ["\(Int(radio))"])
         }
     }
 
