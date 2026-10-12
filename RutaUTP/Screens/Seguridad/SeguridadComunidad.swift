@@ -93,7 +93,7 @@ struct ReporteCard: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(L.t("\(reporte.comentarios) comentarios", "\(reporte.comentarios) comments"))
+                .accessibilityLabel(L.f("{0} comentarios", "{0} comments", ["\(reporte.comentarios)"]))
 
                 Spacer()
                 Image(systemName: "arrow.up.right")
@@ -149,7 +149,7 @@ struct ReporteCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(esUtil ? L.t("Me es útil", "Helpful") : L.t("No me es útil", "Not helpful"))
-        .accessibilityValue(L.t("\(cantidad) votos", "\(cantidad) votes"))
+        .accessibilityValue(L.f("{0} votos", "{0} votes", ["\(cantidad)"]))
         .accessibilityAddTraits(activo ? .isSelected : [])
     }
 }
@@ -230,7 +230,7 @@ struct ReporteDetailSheet: View {
                     Divider()
 
                     // Comentarios
-                    Text(L.t("COMENTARIOS (\(reporte.comentarios))", "COMMENTS (\(reporte.comentarios))"))
+                    Text(L.f("COMENTARIOS ({0})", "COMMENTS ({0})", ["\(reporte.comentarios)"]))
                         .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
                         .appTracking(AppTracking.wideLabel)

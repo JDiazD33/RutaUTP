@@ -80,14 +80,13 @@ struct ReporteComunidad: Identifiable, Equatable {
     var avatarColor: Color { estiloAvatar.fondo }
     var avatarForeground: Color { estiloAvatar.texto }
 
-    var cuerpoLocalizado: String { L.esIngles ? (cuerpoIngles ?? cuerpo) : cuerpo }
+    var cuerpoLocalizado: String { L.t(cuerpo, cuerpoIngles ?? cuerpo) }
     var tiempoLocalizado: String {
-        guard L.esIngles else { return hace }
         let translations = ["HACE 3 MIN": "3 MIN AGO", "HACE 8 MIN": "8 MIN AGO",
                             "HACE 12 MIN": "12 MIN AGO", "HACE 20 MIN": "20 MIN AGO",
                             "HACE 35 MIN": "35 MIN AGO", "HACE 1 HORA": "1 HOUR AGO",
                             "HACE 2 HORAS": "2 HOURS AGO"]
-        return translations[hace] ?? hace
+        return L.t(hace, translations[hace] ?? hace)
     }
 
     init(id: UUID = UUID(),
@@ -132,7 +131,7 @@ struct FotoComunidad: Equatable {
     var fechaEsPublicacion = false
     var descripcion: String = ""
     var descripcionIngles: String = ""
-    var descripcionLocalizada: String { L.esIngles ? descripcionIngles : descripcion }
+    var descripcionLocalizada: String { L.t(descripcion, descripcionIngles.isEmpty ? descripcion : descripcionIngles) }
     var atribucion: String {
         let fechaVisible = fechaEsPublicacion ? L.t("Publicada: ", "Published: ") + fecha : fecha
         return [autor, fechaVisible, licencia].compactMap { $0 }.joined(separator: " · ")
