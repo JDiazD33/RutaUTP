@@ -347,7 +347,7 @@ private struct TrackingScreenContent: View {
             .accessibilityLabel(L.t("Cerrar demo", "Close demo"))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("TRACKING DEMO")
+                Text(L.t("DEMO DE SEGUIMIENTO", "TRACKING DEMO"))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.onSurface.opacity(0.6))
                     .appTracking(AppTracking.wideLabel)
@@ -384,7 +384,7 @@ private struct TrackingScreenContent: View {
     /// Fuente de los vehículos del mapa (VehicleTrackingProviding.source).
     private var badgeFuente: some View {
         let enVivo = vm.fuenteVehiculos == .real
-        return Text(enVivo ? L.t("EN VIVO", "LIVE") : "DEMO")
+        return Text(enVivo ? L.t("EN VIVO", "LIVE") : L.t("DEMO", "DEMO"))
             .font(.system(size: 9, weight: .bold))
             .foregroundStyle(enVivo ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
             .appTracking(AppTracking.wideLabel)
@@ -397,8 +397,8 @@ private struct TrackingScreenContent: View {
         let status = vm.authStatus
         let (text, color): (String, Color) = {
             switch status {
-            case .authorizedAlways, .authorizedWhenInUse: return ("GPS ON", Color(light: "#087C55", dark: "#8affc1"))
-            case .denied, .restricted:                    return ("GPS OFF", .appError)
+            case .authorizedAlways, .authorizedWhenInUse: return (L.t("GPS ACTIVO", "GPS ON"), Color(light: "#087C55", dark: "#8affc1"))
+            case .denied, .restricted:                    return (L.t("GPS DESACTIVADO", "GPS OFF"), .appError)
             case .notDetermined:                          return (L.t("SIN GPS", "NO GPS"), .gray)
             @unknown default:                             return ("GPS", .gray)
             }
@@ -544,8 +544,7 @@ private struct TrackingScreenContent: View {
                 }
             }
             .pickerStyle(.segmented)
-            Text(L.t("Paraderos a menos de \(Int(vm.radioParadero)) m del origen y destino",
-                     "Stops within \(Int(vm.radioParadero)) m of origin and destination"))
+            Text(L.f("Paraderos a menos de {0} m del origen y destino", "Stops within {0} m of origin and destination", ["\(Int(vm.radioParadero))"]))
                 .font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)
             HStack(spacing: 8) {
                 ForEach(vm.destinos) { destino in
@@ -588,8 +587,7 @@ private struct TrackingScreenContent: View {
                             .font(.system(size: 15, weight: .heavy))
                     } else {
                         Image(systemName: "play.fill")
-                        Text(L.t("Iniciar viaje a \(destinoActual.label)",
-                                 "Start trip to \(destinoActual.label)"))
+                        Text(L.f("Iniciar viaje a {0}", "Start trip to {0}", ["\(destinoActual.label)"]))
                             .font(.system(size: 15, weight: .heavy))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -668,8 +666,7 @@ private struct TrackingScreenContent: View {
                     .background(Capsule().fill(Color.onSurface.opacity(0.10)))
                     .accessibilityLabel(L.t("Velocidad de la simulación", "Simulation speed"))
 
-                    Text(L.t("1× = ritmo real (~\(vm.velocidadSimKmh) km/h)",
-                             "1× = real pace (~\(vm.velocidadSimKmh) km/h)"))
+                    Text(L.f("1× = ritmo real (~{0} km/h)", "1× = real pace (~{0} km/h)", ["\(vm.velocidadSimKmh)"]))
                         .font(.system(size: 9))
                         .foregroundStyle(Color.onSurface.opacity(0.45))
                 }
@@ -729,7 +726,7 @@ private struct TrackingScreenContent: View {
                 .disabled(vm.buscandoDestino || destinoTexto.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 if let error = destinationSearchError {
-                    Text(error)
+                    Text(L.aviso(error))
                         .font(.callout)
                         .foregroundStyle(Color.appError)
                 } else {

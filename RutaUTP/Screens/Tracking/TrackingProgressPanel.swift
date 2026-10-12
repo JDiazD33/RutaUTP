@@ -43,7 +43,7 @@ struct TrackingProgressPanel: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.t("Avance del recorrido", "Trip progress"))
-        .accessibilityValue(L.t("\(Int(vm.progreso * 100)) por ciento", "\(Int(vm.progreso * 100)) percent"))
+        .accessibilityValue(L.f("{0} por ciento", "{0} percent", ["\(Int(vm.progreso * 100))"]))
     }
 
     private var statsRow: some View {
@@ -54,7 +54,7 @@ struct TrackingProgressPanel: View {
                 .frame(maxWidth: .infinity)
             Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
             stat(icono: "clock.fill",
-                 valor: "\(vm.minutosRestantes) min",
+                 valor: L.f("{0} min", "{0} min", ["\(vm.minutosRestantes)"]),
                  etiqueta: L.t("Restante", "Remaining"))
                 .frame(maxWidth: .infinity)
             Rectangle().fill(Color.onSurface.opacity(0.12)).frame(width: 1, height: 34)
@@ -74,7 +74,7 @@ struct TrackingProgressPanel: View {
     private var horaLlegadaTexto: String {
         guard vm.etaTotalSeg != nil else { return "—" }
         let fecha = Date().addingTimeInterval(vm.remainingSeconds)
-        return FormatoFecha.formateador(patron: "HH:mm", locale: .current)
+        return FormatoFecha.formateador(patron: "HH:mm", locale: FormatoFecha.localeActivo)
             .string(from: fecha)
     }
 

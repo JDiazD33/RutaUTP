@@ -17,9 +17,22 @@ final class RouteTrackingViewModel {
 
     struct DestinoDemo: Identifiable, Equatable {
         let id: Int
-        let label: String
+        private let etiquetaOriginal: String
+        var label: String {
+            if let fijo = DestinosFijos.todos.first(where: { $0.id == id && $0.coordinate.latitude == coordinate.latitude && $0.coordinate.longitude == coordinate.longitude }) {
+                return fijo.label
+            }
+            return etiquetaOriginal
+        }
         let icon: String
         let coordinate: CLLocationCoordinate2D
+
+        init(id: Int, label: String, icon: String, coordinate: CLLocationCoordinate2D) {
+            self.id = id
+            self.etiquetaOriginal = label
+            self.icon = icon
+            self.coordinate = coordinate
+        }
 
         static func == (lhs: DestinoDemo, rhs: DestinoDemo) -> Bool { lhs.id == rhs.id }
     }
@@ -582,8 +595,7 @@ final class RouteTrackingViewModel {
             let sugerencia = radio < maximo
                 ? L.t("Prueba un radio mayor u otro destino.", "Try a larger radius or another destination.")
                 : L.t("Prueba otro destino.", "Try another destination.")
-            errorMessage = L.t("No encontramos una ruta directa ni con un transbordo con paraderos a menos de \(Int(radio)) m de ambos extremos. ",
-                               "No direct or one-transfer route has stops within \(Int(radio)) m of both ends. ") + sugerencia
+            errorMessage = L.f("No encontramos una ruta directa ni con un transbordo con paraderos a menos de {0} m de ambos extremos. ", "No direct or one-transfer route has stops within {0} m of both ends. ", ["\(Int(radio))"]) + sugerencia
             return
         }
         errorMessage = nil
@@ -665,7 +677,7 @@ final class RouteTrackingViewModel {
 
     var distanciaRestanteTexto: String {
         distanciaRestanteM >= 1000
-            ? String(format: "%.1f km", distanciaRestanteM / 1000)
+            ? FormatoNumero.decimal(distanciaRestanteM / 1000) + " km"
             : "\(Int(distanciaRestanteM)) m"
     }
 

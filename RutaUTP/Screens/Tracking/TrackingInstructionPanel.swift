@@ -33,7 +33,7 @@ struct TrackingInstructionPanel: View {
         .accessibilityValue(subtitulo)
         .onChange(of: claveAnuncio) { _, _ in
             guard voiceOverOn, scenePhase == .active else { return }
-            UIAccessibility.post(notification: .announcement, argument: instruccion + ". " + subtitulo)
+            AccesibilidadIdioma.anunciar(instruccion + ". " + subtitulo)
         }
     }
 
@@ -87,14 +87,13 @@ struct TrackingInstructionPanel: View {
         case .enRuta:
             switch vm.journeyLeg {
             case .walkingToBoard: return L.t("Camina al paradero de subida", "Walk to your boarding stop")
-            case .riding: return L.t("Toma el micro \(vm.rutaGTFS?.linea ?? "")", "Take bus \(vm.rutaGTFS?.linea ?? "")")
+            case .riding: return L.f("Toma el micro {0}", "Take bus {0}", ["\(vm.rutaGTFS?.linea ?? "")"])
             case .transferring: return L.t("Camina al segundo micro", "Walk to the second bus")
             case .ridingSecond: return L.t("Toma el micro ", "Take bus ") + (vm.itinerary?.transfer?.route.linea ?? "")
             case .walkingToDestination: return L.t("Baja y camina a tu destino", "Get off and walk to your destination")
             }
         case .fueraDeRuta(let metros):
-            return L.t("Te alejaste de la ruta (\(Int(metros)) m)",
-                       "You went off route (\(Int(metros)) m)")
+            return L.f("Te alejaste de la ruta ({0} m)", "You went off route ({0} m)", ["\(Int(metros))"])
         case .cercaDestino:
             return L.t("Prepárate para llegar", "Get ready to arrive")
         case .finalizado:
@@ -122,8 +121,7 @@ struct TrackingInstructionPanel: View {
         case .fueraDeRuta:
             return L.t("Recalculando automáticamente", "Recalculating automatically")
         case .cercaDestino:
-            return L.t("Llegando a \(vm.destinoSeleccionado?.label ?? "…")",
-                       "Arriving at \(vm.destinoSeleccionado?.label ?? "…")")
+            return L.f("Llegando a {0}", "Arriving at {0}", ["\(vm.destinoSeleccionado?.label ?? "…")"])
         case .finalizado:
             return vm.destinoSeleccionado?.label ?? L.t("Destino", "Destination")
         }

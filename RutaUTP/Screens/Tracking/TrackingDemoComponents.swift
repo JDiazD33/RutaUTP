@@ -206,11 +206,11 @@ struct VehiclePopupCard: View {
     }
 
     @ViewBuilder private var tituloYEstado: some View {
-        Text(L.t("Unidad \(vehiculo.id)", "Unit \(vehiculo.id)"))
+        Text(L.f("Unidad {0}", "Unit {0}", ["\(vehiculo.id)"]))
             .font(.subheadline.bold())
             .foregroundStyle(Color.onSurface)
             .fixedSize(horizontal: false, vertical: true)
-        Text(enVivo ? L.t("EN VIVO", "LIVE") : "DEMO")
+        Text(enVivo ? L.t("EN VIVO", "LIVE") : L.t("DEMO", "DEMO"))
             .font(.caption2.bold())
             .foregroundStyle(enVivo ? .black : Color.onSurface)
             .appTracking(AppTracking.wideLabel)
@@ -231,8 +231,7 @@ struct VehiclePopupCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         if let d = distanciaM {
-            Label(L.t("a \(Self.formatoDistancia(d)) de ti",
-                      "\(Self.formatoDistancia(d)) away"), systemImage: "figure.walk")
+            Label(L.f("a {0} de ti", "{0} away", ["\(Self.formatoDistancia(d))"]), systemImage: "figure.walk")
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -256,14 +255,15 @@ struct VehiclePopupCard: View {
 
     /// Rumbo en grados → punto cardinal (N, NE, E, …).
     private func cardinal(_ grados: Double) -> String {
-        let direcciones = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"]
+        let direcciones = [L.t("N", "N"), L.t("NE", "NE"), L.t("E", "E"), L.t("SE", "SE"),
+                           L.t("S", "S"), L.t("SO", "SW"), L.t("O", "W"), L.t("NO", "NW")]
         let normalizado = (grados.truncatingRemainder(dividingBy: 360) + 360 + 22.5) / 45
         return direcciones[Int(normalizado) % direcciones.count]
     }
 
     static func formatoDistancia(_ metros: Double) -> String {
         metros >= 1000
-            ? String(format: "%.1f km", metros / 1000)
+            ? FormatoNumero.decimal(metros / 1000) + " km"
             : "\(Int(metros)) m"
     }
 }
