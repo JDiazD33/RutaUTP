@@ -176,7 +176,7 @@ private struct PerfilCuponCard: View {
                 if let fecha = cupon.fechaVencimiento {
                     Text(L.t("Vence: ", "Expires: ") + fecha.formatted(
                         .dateTime.day().month(.abbreviated).year()
-                            .locale(Locale(identifier: IdiomaManager.shared.esIngles ? "en_US" : "es_PE"))))
+                            .locale(FormatoFecha.localeActivo)))
                         .font(.caption).foregroundStyle(Color.onSurfaceVariant)
                 }
                 Rectangle().fill(negocio.categoria.color.opacity(0.25)).frame(height: 1)

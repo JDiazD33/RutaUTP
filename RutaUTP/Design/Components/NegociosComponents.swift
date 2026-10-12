@@ -218,7 +218,7 @@ struct NegocioDetailCard: View {
                 Image(systemName: "star.fill")
                     .font(.system(size: 9))
                     .foregroundStyle(.yellow)
-                Text(String(format: "%.1f", rating))
+                Text(FormatoNumero.decimal(rating))
                     .font(.labelCapsMd)
                     .foregroundStyle(.onSurfaceVariant)
             }
@@ -279,10 +279,9 @@ struct NegocioDetailCard: View {
         guard let ubicacion else { return nil }
         let metros = NegociosService.distanciaMetros(ubicacion, negocio.coordinate)
         if metros < 1000 {
-            return L.t("a \(Int(metros)) m", "\(Int(metros)) m away")
+            return L.f("a {0} m", "{0} m away", ["\(Int(metros))"])
         }
-        return L.t(String(format: "a %.1f km", metros / 1000),
-                   String(format: "%.1f km away", metros / 1000))
+        return L.f("a {0} km", "{0} km away", [(metros / 1000).formatted(.number.precision(.fractionLength(1)).locale(FormatoFecha.localeActivo))])
     }
 
     // MARK: Promo
@@ -435,7 +434,7 @@ struct NegocioDetailCard: View {
         let texto = FormatoFecha.formateador(patron: "d MMM yyyy",
                                              locale: FormatoFecha.localeActivo)
             .string(from: fecha)
-        return L.t("Válido hasta \(texto)", "Valid until \(texto)")
+        return L.f("Válido hasta {0}", "Valid until {0}", ["\(texto)"])
     }
 }
 

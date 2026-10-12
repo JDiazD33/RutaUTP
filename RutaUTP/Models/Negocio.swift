@@ -15,15 +15,15 @@ import SwiftUI
 
 // MARK: - Modelo
 
-/// Texto en dos idiomas para el contenido del catálogo (promos, cupones,
-/// horarios). ES es la fuente de verdad; si falta EN se degrada a ES.
+/// Base ES/EN compatible con el JSON existente (promos, cupones, horarios).
+/// Los otros idiomas se resuelven en el catálogo local; el formato Codable se conserva.
 /// Se resuelve en el idioma activo al momento de renderizar, igual que L.t.
 struct TextoBilingue: Codable {
     let es: String
     let en: String?
 
     var texto: String {
-        IdiomaManager.shared.esIngles ? (en ?? es) : es
+        L.t(es, en ?? es)
     }
 }
 
