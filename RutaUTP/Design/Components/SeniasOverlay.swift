@@ -163,6 +163,7 @@ struct SeniasPlayerView: UIViewRepresentable {
 struct SeniasOverlay: View {
 
     @ObservedObject private var presenter = SeniasPresenter.shared
+    @Environment(\.dynamicTypeSize) private var textSize
 
     private let servicio = SeniasService.shared
 
@@ -180,7 +181,9 @@ struct SeniasOverlay: View {
                     } else {
                         HStack {
                             Spacer()
-                            tarjeta(clave: clave, id: id)
+                            tarjeta(clave: clave, id: id,
+                                    ancho: textSize.isAccessibilitySize
+                                        ? min(320, max(180, geometria.size.width - 28)) : 180)
                         }
                         .padding(.trailing, 14)
                         .padding(.bottom, 104)
@@ -215,32 +218,37 @@ struct SeniasOverlay: View {
         .accessibilityIdentifier("senias.activacion")
     }
 
-    private func tarjeta(clave: String, id: UUID) -> some View {
+    private func tarjeta(clave: String, id: UUID, ancho: CGFloat) -> some View {
         VStack(spacing: 8) {
-            encabezado(clave: clave)
+            HStack(alignment: .top, spacing: 4) {
+                encabezado(clave: clave)
+                Spacer(minLength: 0)
+                botonCerrar
+            }
             contenido(clave: clave, id: id, activacion: false)
-                .frame(width: 156, height: 156)
+                .frame(maxWidth: .infinity)
+                .frame(height: 156)
         }
         .padding(12)
-        .frame(width: 180)
+        .frame(width: ancho)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
         )
-        .overlay(alignment: .topTrailing) { botonCerrar }
         .accessibilityElement(children: .contain)
     }
 
     private func encabezado(clave: String) -> some View {
-        HStack(spacing: 5) {
+        HStack(alignment: .top, spacing: 5) {
             Image(systemName: "hand.raised.fill")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.appPrimary)
+                .accessibilityHidden(true)
 
             Text(servicio.texto(clave: clave))
-                .font(.system(size: 14, weight: .semibold))
-                .lineLimit(1)
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.primary)
         }
     }
@@ -265,23 +273,31 @@ struct SeniasOverlay: View {
             }
 
         case .pendiente(let motivo):
-            VStack(spacing: 8) {
-                Image(systemName: "video.slash.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(.onSurfaceVariant.opacity(0.5))
+            // El vídeo mantiene su encuadre; los mensajes pueden desplazarse
+            // dentro de ese espacio cuando crece el texto.
+            ScrollView {
+                VStack(spacing: 8) {
+                    Image(systemName: "video.slash.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.onSurfaceVariant.opacity(0.5))
+                        .accessibilityHidden(true)
 
-                Text(L.t("Seña pendiente de grabación", "Sign not recorded yet"))
-                    .font(.system(size: 12, weight: .medium))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.primary)
+                    Text(L.t("Seña pendiente de grabación", "Sign not recorded yet"))
+                        .font(.footnote.weight(.medium))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text(motivo)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.onSurfaceVariant)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
+                    Text(motivo)
+                        .font(.caption2)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity)
             }
-            .padding(8)
+            .scrollBounceBehavior(.basedOnSize)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -296,7 +312,9 @@ struct SeniasOverlay: View {
     private func etiqueta(_ texto: String, sistema: String, color: Color) -> some View {
         HStack(spacing: 4) {
             Image(systemName: sistema).font(.system(size: 8, weight: .semibold))
-            Text(texto).font(.system(size: 9, weight: .medium))
+                .accessibilityHidden(true)
+            Text(texto).font(.caption2.weight(.medium))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(color)
         .padding(.horizontal, 8)
@@ -311,8 +329,10 @@ struct SeniasOverlay: View {
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.onSurfaceVariant)
                 .background(Circle().fill(Color(.systemBackground)))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
-        .padding(6)
+        .buttonStyle(.plain)
         .accessibilityLabel(L.t("Cerrar", "Close"))
         .accessibilityHint(L.t("Continúa con la acción pendiente, si la hay", "Continues the pending action, if any"))
     }

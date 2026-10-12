@@ -388,6 +388,9 @@ struct NegocioDetailCard: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Copiar código del cupón", "Copy coupon code"))
+        .accessibilityValue(codigoCopiado ? L.t("Copiado", "Copied") : cupon.codigo)
+        .accessibilityHint(L.t("Copia el código al portapapeles", "Copies the code to the clipboard"))
     }
 
     private var botonGuardar: some View {

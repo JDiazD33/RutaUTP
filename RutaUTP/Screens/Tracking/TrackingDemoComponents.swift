@@ -129,75 +129,26 @@ struct VehiclePopupCard: View {
     let enVivo: Bool
     let onClose: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var textSize
+
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.primaryContainer)
-                    .frame(width: 42, height: 42)
-                Image(systemName: "bus.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.onPrimaryFill)
-            }
-            .overlay(alignment: .top) {
-                Text("L-\(vehiculo.linea)")
-                    .font(.system(size: 9, weight: .heavy))
-                    .foregroundStyle(.onPrimaryFill)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.primaryContainer))
-                    .offset(y: -10)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(L.t("Unidad \(vehiculo.id)", "Unit \(vehiculo.id)"))
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.onSurface)
-                        .lineLimit(1)
-                    Text(enVivo ? L.t("EN VIVO", "LIVE") : "DEMO")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(enVivo ? .black : Color.onSurface)
-                        .appTracking(AppTracking.wideLabel)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(enVivo ? Color(hex: "#8affc1")
-                                                           : Color.onSurface.opacity(0.14)))
+        Group {
+            if textSize >= .xxxLarge {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        iconoLinea
+                        Spacer()
+                        botonCerrar
+                    }
+                    datosVehiculo
                 }
-
-                HStack(spacing: 10) {
-                    if vehiculo.heading >= 0 {
-                        Label(cardinal(vehiculo.heading), systemImage: "location.north.fill")
-                    }
-                    if let v = velocidadKmh {
-                        Label("\(v) km/h", systemImage: "speedometer")
-                    }
-                    if let d = distanciaM {
-                        Label(L.t("a \(Self.formatoDistancia(d)) de ti",
-                                  "\(Self.formatoDistancia(d)) away"), systemImage: "figure.walk")
-                    }
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    iconoLinea
+                    datosVehiculo
+                    botonCerrar
                 }
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.onSurface.opacity(0.7))
-                .lineLimit(1)
-
-                (Text(L.t("Actualizado ", "Updated "))
-                    .foregroundStyle(Color.onSurface.opacity(0.45))
-                 + Text(Date(timeIntervalSince1970: vehiculo.timestamp), style: .relative)
-                    .bold()
-                    .foregroundStyle(Color.onSurface.opacity(0.7)))
-                    .font(.system(size: 10))
             }
-
-            Spacer(minLength: 0)
-
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color.onSurface.opacity(0.5))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Cerrar", "Close"))
         }
         .padding(12)
         .background(
@@ -209,6 +160,93 @@ struct VehiclePopupCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.onSurface.opacity(0.1), lineWidth: 1)
         )
+    }
+
+    private var iconoLinea: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "bus.fill")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.onPrimaryFill)
+                .frame(width: 42, height: 42)
+                .background(Circle().fill(Color.primaryContainer))
+                .accessibilityHidden(true)
+            Text("L-\(vehiculo.linea)")
+                .font(.caption2.weight(.heavy))
+                .foregroundStyle(.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Línea ", "Line ") + vehiculo.linea)
+    }
+
+    private var datosVehiculo: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) { tituloYEstado }
+                    .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 4) { tituloYEstado }
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { metricas }
+                    .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 4) { metricas }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color.onSurface.opacity(0.7))
+
+            (Text(L.t("Actualizado ", "Updated "))
+                .foregroundStyle(Color.onSurface.opacity(0.45))
+             + Text(Date(timeIntervalSince1970: vehiculo.timestamp), style: .relative)
+                .bold()
+                .foregroundStyle(Color.onSurface.opacity(0.7)))
+                .font(.caption2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private var tituloYEstado: some View {
+        Text(L.t("Unidad \(vehiculo.id)", "Unit \(vehiculo.id)"))
+            .font(.subheadline.bold())
+            .foregroundStyle(Color.onSurface)
+            .fixedSize(horizontal: false, vertical: true)
+        Text(enVivo ? L.t("EN VIVO", "LIVE") : "DEMO")
+            .font(.caption2.bold())
+            .foregroundStyle(enVivo ? .black : Color.onSurface)
+            .appTracking(AppTracking.wideLabel)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(enVivo ? Color(hex: "#8affc1")
+                                               : Color.onSurface.opacity(0.14)))
+    }
+
+    @ViewBuilder private var metricas: some View {
+        if vehiculo.heading >= 0 {
+            Label(cardinal(vehiculo.heading), systemImage: "location.north.fill")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        if let v = velocidadKmh {
+            Label("\(v) km/h", systemImage: "speedometer")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        if let d = distanciaM {
+            Label(L.t("a \(Self.formatoDistancia(d)) de ti",
+                      "\(Self.formatoDistancia(d)) away"), systemImage: "figure.walk")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var botonCerrar: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Color.onSurface.opacity(0.5))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Cerrar", "Close"))
     }
 
     private var velocidadKmh: Int? {
@@ -235,6 +273,9 @@ struct VehiclePopupCard: View {
 /// Alerta de fin de viaje con las métricas de la sesión: duración,
 /// distancia recorrida, velocidad media y puntos GPS registrados.
 struct ResumenLlegadaCard: View {
+    @Environment(\.dynamicTypeSize) private var textSize
+
+    private var apilarContenido: Bool { textSize >= .xxxLarge }
     let resumen: RouteTrackingViewModel.ResumenViaje
     let destino: String
     let onCerrar: () -> Void
@@ -247,21 +288,27 @@ struct ResumenLlegadaCard: View {
 
             VStack(spacing: 4) {
                 Text(L.t("¡Llegaste a tu destino!", "You arrived!"))
-                    .font(.system(size: 20, weight: .heavy))
+                    .font(.title3.weight(.heavy))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(Color.onSurface)
                 Text(destino)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(Color.appPrimary)
             }
 
-            HStack(spacing: 8) {
+            (apilarContenido ? AnyLayout(VStackLayout(spacing: 8))
+                              : AnyLayout(HStackLayout(spacing: 8))) {
                 celda("clock.fill", formatoDuracion(resumen.duracionS),
                       L.t("Duración", "Duration"))
                 celda("point.topleft.down.curvedto.point.bottomright.up",
                       VehiclePopupCard.formatoDistancia(resumen.distanciaM),
                       L.t("Recorrido", "Distance"))
             }
-            HStack(spacing: 8) {
+            (apilarContenido ? AnyLayout(VStackLayout(spacing: 8))
+                              : AnyLayout(HStackLayout(spacing: 8))) {
                 celda("speedometer", "\(Int(resumen.velocidadKmh)) km/h",
                       L.t("Vel. media", "Avg. speed"))
                 celda("record.circle", "\(resumen.puntos)",
@@ -270,9 +317,10 @@ struct ResumenLlegadaCard: View {
 
             Button(action: onCerrar) {
                 Text(L.t("Terminar", "Done"))
-                    .font(.system(size: 15, weight: .heavy))
+                    .font(.headline.weight(.heavy))
                     .foregroundStyle(.onPrimaryFill)
-                    .frame(maxWidth: .infinity)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, minHeight: 44)
                     .padding(.vertical, 13)
                     .background(Capsule().fill(Color.primaryFill))
             }
@@ -297,15 +345,21 @@ struct ResumenLlegadaCard: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.onSurface.opacity(0.5))
             Text(valor)
-                .font(.system(size: 15, weight: .heavy))
+                .font(.headline.weight(.heavy))
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(Color.onSurface)
             Text(etiqueta.uppercased())
-                .font(.system(size: 8, weight: .semibold))
+                .font(.caption2.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.center)
                 .foregroundStyle(Color.onSurface.opacity(0.5))
                 .appTracking(AppTracking.wideLabel)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(etiqueta)
+        .accessibilityValue(valor)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.onSurface.opacity(0.06)))
     }
 
@@ -370,7 +424,7 @@ struct TransitStopMarker: View {
                 Image(systemName: "bus.fill")
                 Text(number.isEmpty ? title : number + " · " + title)
             }
-            .font(.system(size: 10, weight: .heavy))
+            .font(.caption2.weight(.heavy))
             .foregroundStyle(.white)
             .padding(.horizontal, 10).padding(.vertical, 8)
             .background(Capsule().fill(color))
@@ -379,6 +433,7 @@ struct TransitStopMarker: View {
             Circle().fill(color).frame(width: 7, height: 7)
         }
         .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-        .accessibilityLabel(title)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(number.isEmpty ? title : number + ", " + title)
     }
 }

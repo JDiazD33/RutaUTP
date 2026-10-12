@@ -49,16 +49,19 @@ struct AvisoRutaAproximada: View {
                 Image(systemName: "wifi.slash")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(Color.appError)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(motivo.titulo)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.onSurface)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(L.t("El recorrido del bus sí es el oficial: va dentro de la app. Toca para ver qué funciona sin conexión.",
                              "The bus route is the official one: it ships with the app. Tap to see what works offline."))
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundStyle(Color.onSurfaceVariant)
                         .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 0)
@@ -66,9 +69,10 @@ struct AvisoRutaAproximada: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.onSurfaceVariant)
+                    .accessibilityHidden(true)
             }
             .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Color.surfaceContainerHigh.opacity(0.55))
@@ -77,6 +81,8 @@ struct AvisoRutaAproximada: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(motivo.titulo)
+        .accessibilityValue(L.t("El recorrido del bus es el oficial y está incluido en la app.",
+                               "The bus route is official and included in the app."))
         .accessibilityHint(L.t("Muestra qué funciona sin conexión", "Shows what works offline"))
         .sheet(isPresented: $mostrarDetalle) {
             OfflineMapSheet()

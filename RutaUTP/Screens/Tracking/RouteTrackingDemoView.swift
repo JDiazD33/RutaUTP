@@ -124,20 +124,14 @@ private struct TrackingScreenContent: View {
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if let vehiculo = vehiculoSeleccionado {
-                    VehiclePopupCard(
-                        vehiculo: vehiculo,
-                        velocidadMs: vm.velocidadesVehiculos[vehiculo.id],
-                        distanciaM: vm.posicion.map {
-                            PolylineMatching.distanceMeters($0, vehiculo.coordinate)
-                        },
-                        enVivo: vm.fuenteVehiculos == .real,
-                        onClose: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                vehiculoSeleccionadoID = nil
-                            }
+                    ViewThatFits(in: .vertical) {
+                        fichaVehiculo(vehiculo).fixedSize(horizontal: false, vertical: true)
+                        ScrollView {
+                            fichaVehiculo(vehiculo)
                         }
-                    )
-                    .padding(.horizontal, 14)
+                        .scrollBounceBehavior(.basedOnSize)
+                    }
+                    .frame(maxHeight: 240)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -153,11 +147,15 @@ private struct TrackingScreenContent: View {
             if vm.estado == .finalizado, let resumen = vm.resumen {
                 ZStack {
                     Color.black.opacity(0.45).ignoresSafeArea()
-                    ResumenLlegadaCard(
-                        resumen: resumen,
-                        destino: vm.destinoSeleccionado?.label ?? L.t("tu destino", "your destination"),
-                        onCerrar: { vm.cancelTrip() }
-                    )
+                    ViewThatFits(in: .vertical) {
+                        resumenLlegada(resumen).fixedSize(horizontal: false, vertical: true)
+                        ScrollView {
+                            resumenLlegada(resumen)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                    }
+                    .padding(16)
                     .transition(.scale(scale: 0.92).combined(with: .opacity))
                 }
             }
@@ -227,6 +225,29 @@ private struct TrackingScreenContent: View {
             }
             Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
         }
+    }
+
+    private func fichaVehiculo(_ vehiculo: VehiclePosition) -> some View {
+        VehiclePopupCard(
+            vehiculo: vehiculo,
+            velocidadMs: vm.velocidadesVehiculos[vehiculo.id],
+            distanciaM: vm.posicion.map {
+                PolylineMatching.distanceMeters($0, vehiculo.coordinate)
+            },
+            enVivo: vm.fuenteVehiculos == .real,
+            onClose: {
+                withAnimation(.easeInOut(duration: 0.2)) { vehiculoSeleccionadoID = nil }
+            }
+        )
+        .padding(.horizontal, 14)
+    }
+
+    private func resumenLlegada(_ resumen: RouteTrackingViewModel.ResumenViaje) -> some View {
+        ResumenLlegadaCard(
+            resumen: resumen,
+            destino: vm.destinoSeleccionado?.label ?? L.t("tu destino", "your destination"),
+            onCerrar: { vm.cancelTrip() }
+        )
     }
 
     // MARK: - Cámara: seguimiento suave con rumbo

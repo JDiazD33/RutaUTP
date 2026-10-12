@@ -381,6 +381,9 @@ struct QRPasajeSheet: View {
 
     @ObservedObject var store: MonederoStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var textSize
+
+    private var apilarContenido: Bool { textSize >= .xxxLarge }
 
     @State private var billeteraCobro: BilleteraPago = .yape
     @State private var qr: UIImage?
@@ -450,7 +453,8 @@ struct QRPasajeSheet: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 10) {
+            (apilarContenido ? AnyLayout(VStackLayout(spacing: 10))
+                              : AnyLayout(HStackLayout(spacing: 10))) {
                 ForEach(BilleteraPago.allCases) { opcion in
                     selectorBilletera(opcion)
                 }
@@ -520,7 +524,7 @@ struct QRPasajeSheet: View {
                 Text(opcion.nombre)
                     .font(.bodySmMedium)
                     .foregroundStyle(.onSurface)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Image(systemName: seleccionada ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 17, weight: .semibold))
@@ -551,17 +555,23 @@ struct QRPasajeSheet: View {
     }
 
     private func filaDato(_ etiqueta: String, _ valor: String) -> some View {
-        HStack(spacing: 12) {
+        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                          : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
             Text(etiqueta)
                 .font(.bodyXs)
                 .foregroundStyle(.onSurfaceVariant)
-            Spacer(minLength: 8)
+                .fixedSize(horizontal: false, vertical: true)
+            if !apilarContenido { Spacer(minLength: 8) }
             Text(valor)
                 .font(.bodySmMedium)
                 .foregroundStyle(.onSurface)
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(etiqueta)
+        .accessibilityValue(valor)
     }
 
     private var aviso: some View {

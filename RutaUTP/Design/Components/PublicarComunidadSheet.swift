@@ -23,6 +23,7 @@ struct PublicarComunidadSheet: View {
     let locationService: LocationServiceProtocol
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var textSize
 
     // Contenido base (mismos campos que ReportarSheet)
     @State private var tipo: TipoReporte = .alerta
@@ -149,6 +150,7 @@ struct PublicarComunidadSheet: View {
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
                         )
+                        .accessibilityLabel(L.t("Foto del aporte", "Post photo"))
                     Button {
                         AppHaptics.impact(.light)
                         withAnimation(.easeInOut(duration: 0.2)) { self.foto = nil }
@@ -156,6 +158,8 @@ struct PublicarComunidadSheet: View {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(.white, .black.opacity(0.55))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .padding(8)
@@ -200,6 +204,9 @@ struct PublicarComunidadSheet: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L.t("Añadir foto", "Add photo"))
+                .accessibilityHint(L.t("Toma una foto o elige de tu galería", "Take a photo or pick from your library"))
             }
         }
     }
@@ -234,21 +241,26 @@ struct PublicarComunidadSheet: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(L.t("Editar ubicación en el mapa", "Edit location on map"))
 
-                HStack(spacing: 6) {
-                    if geocodificacion.buscando {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "mappin.and.ellipse")
-                            .font(.system(size: 13, weight: .semibold))
+                (textSize >= .xxxLarge
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                    : AnyLayout(HStackLayout(alignment: .top, spacing: 6))) {
+                    HStack(alignment: .top, spacing: 6) {
+                        if geocodificacion.buscando {
+                            ProgressView().controlSize(.small)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.system(size: 13, weight: .semibold))
+                                .accessibilityHidden(true)
+                        }
+                        Text(geocodificacion.buscando
+                             ? L.t("Buscando dirección…", "Looking up address…")
+                             : (geocodificacion.direccion ?? coordenadasTexto(ubi)))
+                            .font(.bodySm)
+                            .foregroundStyle(.onSurfaceVariant)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(geocodificacion.buscando
-                         ? L.t("Buscando dirección…", "Looking up address…")
-                         : (geocodificacion.direccion ?? coordenadasTexto(ubi)))
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .lineLimit(1)
-                    Spacer()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         AppHaptics.impact(.light)
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -259,8 +271,11 @@ struct PublicarComunidadSheet: View {
                         Text(L.t("Quitar", "Remove"))
                             .font(.bodySmMedium)
                             .foregroundStyle(.appError)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Quitar ubicación", "Remove location"))
                 }
             } else {
                 Button {
@@ -302,6 +317,8 @@ struct PublicarComunidadSheet: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L.t("Marcar ubicación en el mapa", "Mark location on the map"))
             }
         }
     }
@@ -322,6 +339,7 @@ struct PublicarComunidadSheet: View {
                     .font(.system(size: 15, weight: .bold))
                 Text(L.t("Publicar en la comunidad", "Post to the community"))
                     .font(.headlineSm)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 54)
@@ -499,7 +517,7 @@ private struct MapaUbicacionPicker: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.onSurface)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 44, height: 44)
                     .background(Circle().fill(.regularMaterial))
             }
             .buttonStyle(.plain)
@@ -508,8 +526,7 @@ private struct MapaUbicacionPicker: View {
             Text(L.t("Arrastra el mapa para marcar el lugar", "Drag the map to mark the location"))
                 .font(.bodySmMedium)
                 .foregroundStyle(.onSurface)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer()
         }
         .padding(.horizontal, 16)
@@ -521,8 +538,10 @@ private struct MapaUbicacionPicker: View {
             HStack(spacing: 6) {
                 Image(systemName: "location.circle.fill")
                     .font(.system(size: 14, weight: .semibold))
+                    .accessibilityHidden(true)
                 Text(String(format: "%.4f, %.4f", centro.latitude, centro.longitude))
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .font(.footnote.weight(.semibold).monospacedDigit())
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
             .foregroundStyle(.onSurfaceVariant)
@@ -534,6 +553,7 @@ private struct MapaUbicacionPicker: View {
             } label: {
                 Text(L.t("Confirmar ubicación", "Confirm location"))
                     .font(.headlineSm)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.onPrimaryFill)
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primaryFill))

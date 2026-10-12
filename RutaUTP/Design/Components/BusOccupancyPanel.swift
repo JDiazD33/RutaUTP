@@ -219,6 +219,7 @@ struct TripContributionPanel: View {
 }
 
 private struct TripOccupancyControls: View {
+    @Environment(\.dynamicTypeSize) private var textSize
     @ObservedObject var service: OccupancyService
     let onSelect: (BusOccupancyState) -> Void
 
@@ -226,9 +227,16 @@ private struct TripOccupancyControls: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(L.t("¿Qué tan lleno va ahora?", "How full is it now?"))
                 .font(.caption)
-            HStack {
+            // No comprimir las tres respuestas en una fila con letra grande.
+            (textSize >= .xxxLarge
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(spacing: 8))) {
                 ForEach(BusOccupancyState.allCases, id: \.self) { state in
-                    Button(state.title) { onSelect(state) }
+                    Button { onSelect(state) } label: {
+                        Text(state.title)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
                         .buttonStyle(.bordered)
                         .disabled(service.sending)
                 }

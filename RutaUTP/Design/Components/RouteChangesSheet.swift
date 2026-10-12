@@ -364,8 +364,10 @@ private struct LeyendaCoherencia: View {
         HStack(spacing: 5) {
             Image(systemName: "circle.dashed")
                 .font(.system(size: 10, weight: .bold))
+                .accessibilityHidden(true)
             Text(L.t("Zona válida de la ruta", "Route's valid area"))
-                .font(.system(size: 10, weight: .semibold))
+                .font(.caption2.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 9)
