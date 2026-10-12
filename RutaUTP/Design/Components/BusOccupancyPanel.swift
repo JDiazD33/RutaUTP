@@ -22,7 +22,7 @@ struct BusOccupancyPanel: View {
                     .fontWeight(.semibold)
             }
             if let reading {
-                Text(L.t("\(reading.confirmations) personas coinciden", "\(reading.confirmations) people agree"))
+                Text(L.f("{0} personas coinciden", "{0} people agree", ["\(reading.confirmations)"]))
                     .font(.caption).foregroundStyle(.secondary)
             }
             Text(vehicleID == nil
@@ -155,7 +155,7 @@ struct TripContributionPanel: View {
                                    "Waiting for movement matching your line."))
                         if let statusMessage {
                             Label {
-                                Text(statusMessage)
+                                Text(L.aviso(statusMessage))
                             } icon: {
                                 Circle().fill(statusColor).frame(width: 8, height: 8)
                             }
@@ -474,7 +474,7 @@ private struct TripSelectionSheet: View {
                         if loading {
                             ProgressView(L.t("Cargando líneas…", "Loading lines…"))
                         } else if let errorCargaRutas {
-                            Text(errorCargaRutas).foregroundStyle(.secondary)
+                            Text(L.aviso(errorCargaRutas)).foregroundStyle(.secondary)
                             Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
                         } else if filtered.isEmpty {
                             Text(routes.isEmpty
@@ -716,7 +716,7 @@ private struct BoardingPointMap: View {
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 12) {
                     if let mensajeUbicacion {
-                        Text(mensajeUbicacion)
+                        Text(L.aviso(mensajeUbicacion))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)

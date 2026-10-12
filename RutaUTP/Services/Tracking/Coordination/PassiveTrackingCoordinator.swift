@@ -16,7 +16,7 @@ private enum ContributionStatus {
         case .disabled:
             return L.t("Contribución desactivada", "Contribution off")
         case .waitingForLine(let line):
-            return L.t("Esperando detectar el viaje en la línea \(line)", "Waiting to detect a trip on line \(line)")
+            return L.f("Esperando detectar el viaje en la línea {0}", "Waiting to detect a trip on line {0}", ["\(line)"])
         case .tripEnded:
             return L.t("Viaje terminado. Indica tu próximo micro para volver a ayudar.", "Trip ended. Select your next bus to contribute again.")
         case .mqttNotConfigured:
@@ -36,23 +36,23 @@ private enum ContributionStatus {
         case .noNearbyRoutes:
             return L.t("Sin rutas próximas", "No nearby routes")
         case .probableBoarding(let line):
-            return L.t("Abordaje probable: línea " + line, "Probable boarding: line " + line)
+            return L.f("Abordaje probable: línea {0}", "Probable boarding: line {0}", [line])
         case .alightingTripEnded:
             return L.t("Descenso detectado. Viaje terminado.", "Alighting detected. Trip ended.")
         case .alighting:
             return L.t("Descenso detectado", "Alighting detected")
         case .mqttTest(let line):
-            return L.t("Prueba MQTT activa: línea " + line, "MQTT test active: line " + line)
+            return L.f("Prueba MQTT activa: línea {0}", "MQTT test active: line {0}", [line])
         case .pausedBackground:
             return L.t("Publicación pausada: app en segundo plano", "Uploads paused: app in background")
         case .detected(let line):
-            return L.t("Viaje detectado en \(line)", "Trip detected on \(line)")
+            return L.f("Viaje detectado en {0}", "Trip detected on {0}", ["\(line)"])
         case .noTrip:
             return L.t("Sin viaje detectado", "No trip detected")
         case .approachingStop:
             return L.t("Cerca de un paradero", "Near a stop")
         case .possibleBoarding(let line):
-            return L.t("Posible abordaje en \(line)", "Possible boarding on \(line)")
+            return L.f("Posible abordaje en {0}", "Possible boarding on {0}", ["\(line)"])
         case .possibleAlighting:
             return L.t("Comprobando posible descenso", "Checking possible alighting")
         }
