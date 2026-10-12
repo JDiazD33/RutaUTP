@@ -404,7 +404,7 @@ struct GuardadoView: View {
             }
             Text(vm.lineasGuardadas.isEmpty
                  ? L.t("Guarda líneas oficiales del feed para tenerlas a la mano.", "Save official feed lines to have them handy.")
-                 : String(format: L.t("%d línea(s) guardada(s) del feed oficial.", "%d saved line(s) from the official feed."), vm.lineasGuardadas.count))
+                 : L.f("{0} línea(s) guardada(s) del feed oficial.", "{0} saved line(s) from the official feed.", ["\(vm.lineasGuardadas.count)"]))
                 .font(.bodySm)
                 .foregroundStyle(.onSurfaceVariant)
                 .padding(.horizontal, 20)
@@ -462,7 +462,7 @@ struct GuardadoView: View {
                         .font(.bodyMdMedium)
                         .foregroundStyle(.onSurface)
                         .lineLimit(1)
-                    Text(linea.recorrido)
+                    Text(linea.recorridoLocalizado)
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .lineLimit(1)

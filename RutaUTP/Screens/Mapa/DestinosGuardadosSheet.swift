@@ -63,7 +63,7 @@ struct DestinosGuardadosSheet: View {
                         }
                     } else if let errorCatalogo {
                         Section {
-                            Text(errorCatalogo).font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                            Text(L.aviso(errorCatalogo)).font(.caption).foregroundStyle(Color.onSurfaceVariant)
                             Button(L.t("Reintentar carga de paraderos", "Retry loading stops")) {
                                 revisionCatalogo += 1
                             }

@@ -68,7 +68,7 @@ struct LineaDetailSheet: View {
                         .font(.labelCapsMd)
                         .foregroundStyle(.onSurfaceVariant)
                         .appTracking(AppTracking.wideLabel)
-                    Text(linea.recorrido)
+                    Text(linea.recorridoLocalizado)
                         .font(.bodyMd)
                         .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(.onSurface)
@@ -166,7 +166,7 @@ struct LineaDetailSheet: View {
         dato(icono: "creditcard.fill", valor: linea.costo, etiqueta: L.t("Tarifa", "Fare"))
         dato(icono: "mappin.and.ellipse", valor: "\(linea.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
         dato(icono: "point.topleft.down.curvedto.point.bottomright.up",
-             valor: String(format: "%.1f km", linea.distanciaKm), etiqueta: L.t("Longitud", "Length"))
+             valor: FormatoNumero.decimal(linea.distanciaKm) + " km", etiqueta: L.t("Longitud", "Length"))
     }
 
     private func dato(icono: String, valor: String, etiqueta: String) -> some View {
@@ -416,7 +416,7 @@ struct AddLugarSheet: View {
                 .font(.labelCapsMd)
                 .foregroundStyle(.onSurfaceVariant)
                 .appTracking(AppTracking.wideLabel)
-            Picker("Categoría", selection: $categoria) {
+            Picker(L.t("Categoría", "Category"), selection: $categoria) {
                 ForEach(CategoriaLugar.allCases) { c in
                     Text(c.label).tag(c)
                 }
@@ -847,7 +847,7 @@ struct AddLineaSheet: View {
                         .font(.bodyMdMedium)
                         .foregroundStyle(.onSurface)
                         .lineLimit(1)
-                    Text(ruta.recorrido)
+                    Text(ruta.recorridoLocalizado)
                         .font(.bodySm)
                         .foregroundStyle(.onSurfaceVariant)
                         .lineLimit(1)
@@ -878,7 +878,7 @@ struct AddLineaSheet: View {
         .opacity(guardada ? 0.55 : 1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.t("Línea ", "Line ") + ruta.linea + ", " + ruta.empresa)
-        .accessibilityValue(ruta.recorrido + (guardada ? L.t(", guardada", ", saved") : ""))
+        .accessibilityValue(ruta.recorridoLocalizado + (guardada ? L.t(", guardada", ", saved") : ""))
         .accessibilityHint(guardada ? "" : L.t("Añade esta línea a Guardado", "Adds this line to Saved"))
         .accessibilityAddTraits(guardada ? .isSelected : [])
     }
