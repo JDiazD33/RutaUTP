@@ -152,7 +152,7 @@ struct BannerParaderosPreview: View {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.white)
-                Text(L.t("\(cantidad) paraderos por explorar", "\(cantidad) stops to explore"))
+                Text(L.f("{0} paraderos por explorar", "{0} stops to explore", ["\(cantidad)"]))
                     .font(.bodySm)
                     .foregroundStyle(.white)
                 Spacer()

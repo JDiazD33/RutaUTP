@@ -278,7 +278,7 @@ struct SeguridadView: View {
                 Text(zona.descripcion).font(.bodyMd).foregroundStyle(Color.onSurfaceVariant)
                 Label(L.t("Referencia de demostración · verifica las condiciones del lugar", "Demo reference · check conditions at the location"), systemImage: "info.circle")
                     .font(.system(size: 12)).foregroundStyle(Color.onSurfaceVariant)
-                if let errorZona { Text(errorZona).foregroundStyle(Color.appError).font(.bodySm) }
+                if let errorZona { Text(L.aviso(errorZona)).foregroundStyle(Color.appError).font(.bodySm) }
                 Button {
                     buscarZona(zona)
                 } label: {
@@ -375,17 +375,16 @@ struct SeguridadView: View {
                 // Sin concatenar ni Markdown: el texto se resuelve como un
                 // String de runtime, así que "**2**" se dibujaba con los
                 // asteriscos literales a la vista.
-                Text(L.t("Alertas hoy: \(Self.alertasEnFeed)",
-                         "Alerts today: \(Self.alertasEnFeed)"))
+                Text(L.f("Alertas hoy: {0}", "Alerts today: {0}", ["\(Self.alertasEnFeed)"]))
                     .font(.bodySmMedium)
                 if cargandoParaderos {
                     Text(L.t("Cargando paraderos…", "Loading stops…")).font(.bodySmMedium)
                 } else if let errorCargaParaderos {
-                    Text(errorCargaParaderos).font(.bodyXs).foregroundStyle(Color.appError)
+                    Text(L.aviso(errorCargaParaderos)).font(.bodyXs).foregroundStyle(Color.appError)
                     Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
                         .font(.bodyXsMedium)
                 } else {
-                    Text(L.t("Paraderos para explorar: \(paraderosIluminados.count)", "Stops to explore: \(paraderosIluminados.count)"))
+                    Text(L.f("Paraderos para explorar: {0}", "Stops to explore: {0}", ["\(paraderosIluminados.count)"]))
                         .font(.bodySmMedium)
                 }
             }
@@ -570,8 +569,7 @@ struct SeguridadView: View {
               !lugaresVM.tilesActuales[destino].esFijo else { return }
         _ = lugaresVM.mover(lugar.id, sobre: lugaresVM.tilesActuales[destino].id)
         if UIAccessibility.isVoiceOverRunning {
-            UIAccessibility.post(notification: .announcement,
-                argument: L.t("\(lugar.nombre), posición \(destino + 1)", "\(lugar.nombre), position \(destino + 1)"))
+            AccesibilidadIdioma.anunciar(L.f("{0}, posición {1}", "{0}, position {1}", ["\(lugar.nombre)", "\(destino + 1)"]))
         }
     }
 
@@ -623,7 +621,7 @@ struct SeguridadView: View {
                     .buttonStyle(.plain)
                     .offset(x: -7, y: -7)
                     .transition(.scale(scale: 0.3).combined(with: .opacity))
-                    .accessibilityLabel(L.t("Eliminar \(lugar.nombre)", "Remove \(lugar.nombre)"))
+                    .accessibilityLabel(L.f("Eliminar {0}", "Remove {0}", ["\(lugar.nombre)"]))
                 }
             }
         }
@@ -883,9 +881,7 @@ struct SeguridadView: View {
     }
 
     private func fechaActual() -> String {
-        let patron = L.esIngles ? "EEEE, MMMM d" : "EEEE d 'de' MMMM"
-        return FormatoFecha.formateador(patron: patron, locale: FormatoFecha.localeActivo)
-            .string(from: Date())
+        return FormatoFecha.fecha(Date())
             .capitalized
     }
 }

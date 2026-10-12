@@ -241,7 +241,7 @@ struct ParaderosIluminadosView: View {
                 HStack { ProgressView(); Text(L.t("Cargando paraderos…", "Loading stops…")) }.padding(18)
             } else if let errorCargaRutas {
                 VStack(spacing: 8) {
-                    Text(errorCargaRutas).font(.system(size: 14)).multilineTextAlignment(.center)
+                    Text(L.aviso(errorCargaRutas)).font(.system(size: 14)).multilineTextAlignment(.center)
                     Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
                 }.frame(maxWidth: .infinity).padding(16)
             } else if visible.isEmpty {
@@ -319,7 +319,7 @@ struct ParaderosIluminadosView: View {
                     .frame(width: 44, height: 44).background(RoundedRectangle(cornerRadius: 14).fill(accent.opacity(0.1)))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(stop.nombre).font(.system(size: 15, weight: .bold)).lineLimit(2)
-                    Text(L.t("\(Int(distance(stop))) m en línea recta", "\(Int(distance(stop))) m straight-line distance"))
+                    Text(L.f("{0} m en línea recta", "{0} m straight-line distance", ["\(Int(distance(stop)))"]))
                         .font(.system(size: 11)).foregroundStyle(Color.onSurfaceVariant)
                 }
                 Spacer(minLength: 0)
@@ -339,10 +339,10 @@ struct ParaderosIluminadosView: View {
                 Text(L.t("Paradero del feed", "Feed stop")).font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)
             }
             if selectedID == stop.id, let meters = walkingDistance {
-                Label(L.t("\(Int(ceil(meters / 84))) min a pie · \(Int(meters)) m", "\(Int(ceil(meters / 84))) min walk · \(Int(meters)) m"), systemImage: "figure.walk")
+                Label(L.f("{0} min a pie · {1} m", "{0} min walk · {1} m", ["\(Int(ceil(meters / 84)))", "\(Int(meters))"]), systemImage: "figure.walk")
                     .font(.system(size: 11, weight: .semibold)).foregroundStyle(accent)
             } else {
-                Text(selectedID == stop.id ? (walkingMessage ?? L.t("Desliza para explorar más paraderos", "Swipe to explore more stops")) : L.t("Toca para ver este paradero", "Tap to view this stop"))
+                Text(selectedID == stop.id ? (walkingMessage.map(L.aviso) ?? L.t("Desliza para explorar más paraderos", "Swipe to explore more stops")) : L.t("Toca para ver este paradero", "Tap to view this stop"))
                     .font(.system(size: 11)).foregroundStyle(Color.onSurfaceVariant).lineLimit(2)
             }
             Spacer(minLength: 0)
