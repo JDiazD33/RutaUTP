@@ -1,0 +1,5 @@
+/* Textos de permisos de iOS. El sistema elige su idioma. */
+"NSCameraUsageDescription" = "RutaUTP benötigt Zugriff auf die Kamera, damit Sie Ihr Profilfoto aufnehmen können.";
+"NSLocalNetworkUsageDescription" = "RutaUTP benötigt Zugriff auf das lokale Netzwerk, um während der Tests mit dem MQTT-Broker zu kommunizieren.";
+"NSLocationWhenInUseUsageDescription" = "RutaUTP benötigt Ihren Standort, um die Karte anzuzeigen, Routen zum UTP-Campus zu berechnen und Ihren Fortschritt während der Fahrt zu verfolgen.";
+"NSMotionUsageDescription" = "RutaUTP verwendet Aktivitätsdaten, um zu unterscheiden, ob Sie zu Fuß oder mit öffentlichen Verkehrsmitteln unterwegs sind.";

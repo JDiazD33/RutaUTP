@@ -185,6 +185,10 @@
 		138A3ACA984045F4AA1F474A /* UbicacionPuntual.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9058D0AE1CE448A195DBA526 /* UbicacionPuntual.swift */; };
 		510C1CB5C9E34F8BA6A20187 /* RouteChangesLocationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62EE7C67585548A1BC4EB681 /* RouteChangesLocationModel.swift */; };
 		7B4D5CC587BB45169BBDAB06 /* RoutePointValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F2D1B0673A747118C28ADAE /* RoutePointValidation.swift */; };
+		72F10BD211DD4114B39C7B9D /* CatalogoTraducciones.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7CA4A15B9204A9CA8F731D7 /* CatalogoTraducciones.swift */; };
+		32D6FD0A1037475D93EA92B7 /* SelectorIdioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7CF8EC6FD44D9D8BAE522B /* SelectorIdioma.swift */; };
+		011AA33A80B14650A13C1445 /* Traducciones.json in Resources */ = {isa = PBXBuildFile; fileRef = A1F8BF18949842559B4A8E8B /* Traducciones.json */; };
+		E60A8B46C22E426A9D19981D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6520C31517244C6592B6433F /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -378,6 +382,15 @@
 		9058D0AE1CE448A195DBA526 /* UbicacionPuntual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UbicacionPuntual.swift; sourceTree = "<group>"; };
 		62EE7C67585548A1BC4EB681 /* RouteChangesLocationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesLocationModel.swift; sourceTree = "<group>"; };
 		8F2D1B0673A747118C28ADAE /* RoutePointValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePointValidation.swift; sourceTree = "<group>"; };
+		D7CA4A15B9204A9CA8F731D7 /* CatalogoTraducciones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogoTraducciones.swift; sourceTree = "<group>"; };
+		4D7CF8EC6FD44D9D8BAE522B /* SelectorIdioma.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectorIdioma.swift; sourceTree = "<group>"; };
+		A1F8BF18949842559B4A8E8B /* Traducciones.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Traducciones.json; sourceTree = "<group>"; };
+		A1A0603109E146CB9E3C63D6 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "es"; path = "es.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		3DDCD589F3394ADAB6D523E9 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "en"; path = "en.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		7C45DCC789D64C2DAEF64CF5 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "fr"; path = "fr.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		27F0702B5F114D50BE7B5476 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		0B7DCBD5D6944741A7DD7112 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "de"; path = "de.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A00D7225DE064607AB5DD784 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -492,6 +505,7 @@
 			children = (
 				BD3000000000000000000001 /* SelectorTematicasSheet.swift */,
 				BD2000000000000000000003 /* ModoBusesUTPSection.swift */,
+				4D7CF8EC6FD44D9D8BAE522B /* SelectorIdioma.swift */,
                 BD1000000000000000000001 /* AccesibilidadMapa.swift */,
 				BD0900000000000000000005 /* SelectorSedeTrabajo.swift */,
 				BD0500000000000000000005 /* SelectorTematicaEmpresa.swift */,
@@ -780,6 +794,7 @@
 				0A800437300AD9FE004E1676 /* RejillaEspacial.swift */,
 				0A800400300AD9FE004E1676 /* DestinosFijos.swift */,
 				AA6600000000000000000F01 /* Idioma.swift */,
+				D7CA4A15B9204A9CA8F731D7 /* CatalogoTraducciones.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -787,6 +802,7 @@
 		0A8004F6300AD9FE004E1676 /* RutaUTP */ = {
 			isa = PBXGroup;
 			children = (
+				D2E2F49613884D9984BE49C5 /* Localization */,
 				BD3000000000000000000003 /* sedes-empresas-trujillo.json */,
 				0A8004BC300AD9FE004E1676 /* Design */,
 				0A8004C0300AD9FE004E1676 /* Models */,
@@ -881,6 +897,15 @@
 			path = Community;
 			sourceTree = "<group>";
 		};
+		D2E2F49613884D9984BE49C5 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				A1F8BF18949842559B4A8E8B /* Traducciones.json */,
+				6520C31517244C6592B6433F /* InfoPlist.strings */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -946,7 +971,12 @@
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				es,
 				en,
+				fr,
+				"pt-BR",
+				de,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = 0A40D90B2FDE5E7D00F79FBC;
@@ -968,6 +998,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				011AA33A80B14650A13C1445 /* Traducciones.json in Resources */,
+				E60A8B46C22E426A9D19981D /* InfoPlist.strings in Resources */,
 				BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */,
 				BD2000000000000000000006 /* gtfs-utp in Resources */,
 				0A800502300AD9FE004E1676 /* Preview Assets.xcassets in Resources */,
@@ -1084,6 +1116,8 @@
 				AA6600000000000000000B05 /* NavegacionRutaView.swift in Sources */,
 				AA6600000000000000000B06 /* ParaderosIluminadosView.swift in Sources */,
 				AA6600000000000000000F02 /* Idioma.swift in Sources */,
+				72F10BD211DD4114B39C7B9D /* CatalogoTraducciones.swift in Sources */,
+				32D6FD0A1037475D93EA92B7 /* SelectorIdioma.swift in Sources */,
 				AA7700000000000000000002 /* Negocio.swift in Sources */,
 				AA7700000000000000000004 /* NegociosService.swift in Sources */,
 				AA7700000000000000000009 /* NegociosComponents.swift in Sources */,
@@ -1181,6 +1215,22 @@
 			targetProxy = 0A80041E300AD9FE004E1676 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		6520C31517244C6592B6433F /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A1A0603109E146CB9E3C63D6 /* es */,
+				3DDCD589F3394ADAB6D523E9 /* en */,
+				7C45DCC789D64C2DAEF64CF5 /* fr */,
+				27F0702B5F114D50BE7B5476 /* pt-BR */,
+				0B7DCBD5D6944741A7DD7112 /* de */,
+				A00D7225DE064607AB5DD784 /* zh-Hans */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		0A40D9202FDE5E7F00F79FBC /* Debug */ = {

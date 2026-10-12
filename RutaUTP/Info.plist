@@ -7,6 +7,10 @@
 		<string>es</string>
 		<string>es-PE</string>
 		<string>en</string>
+		<string>fr</string>
+		<string>pt-BR</string>
+		<string>de</string>
+		<string>zh-Hans</string>
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
