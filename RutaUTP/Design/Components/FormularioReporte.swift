@@ -141,12 +141,12 @@ struct CampoDescripcionReporte: View {
                 Text("\(restantes)")
                     .font(.caption.weight(.semibold).monospacedDigit())
                     .foregroundStyle(restantes <= 20 ? Color.appError : Color.onSurfaceVariant)
-                    .accessibilityLabel(L.t("\(restantes) caracteres restantes", "\(restantes) characters left"))
+                    .accessibilityLabel(L.f("{0} caracteres restantes", "{0} characters left", ["\(restantes)"]))
             }
 
             TextField(tipo.placeholder, text: $descripcion, axis: .vertical)
                 .accessibilityLabel(L.t("Descripción del reporte", "Report description"))
-                .accessibilityHint(L.t("Máximo \(FormularioReporte.maxCaracteres) caracteres", "Maximum \(FormularioReporte.maxCaracteres) characters"))
+                .accessibilityHint(L.f("Máximo {0} caracteres", "Maximum {0} characters", ["\(FormularioReporte.maxCaracteres)"]))
                 .lineLimit(4...7)
                 .padding(12)
                 .background(

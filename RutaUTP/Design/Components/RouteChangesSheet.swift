@@ -106,9 +106,9 @@ struct RouteChangesSheet: View {
                                 Text(routeTitle(alert.routeId)).font(.headline)
                                 Label(reasonTitle(alert.reason), systemImage: "arrow.triangle.branch")
                                 Text(alert.place)
-                                Text(L.t("\(alert.confirmations) cuentas · vigente hasta ",
-                                         "\(alert.confirmations) accounts · valid until ")
-                                     + Date(timeIntervalSince1970: alert.expiresAt).formatted(date: .omitted, time: .shortened))
+                                Text(L.f("{0} cuentas · vigente hasta ", "{0} accounts · valid until ", ["\(alert.confirmations)"])
+                                     + Date(timeIntervalSince1970: alert.expiresAt).formatted(
+                                        Date.FormatStyle(date: .omitted, time: .shortened).locale(FormatoFecha.localeActivo)))
                                     .font(.caption).foregroundStyle(.secondary)
                                 Button(L.t("Ver lugar y confirmar", "View location and confirm")) {
                                     routeID = alert.routeId
@@ -128,7 +128,7 @@ struct RouteChangesSheet: View {
                         if cargandoRutas {
                             ProgressView(L.t("Cargando rutas…", "Loading routes…"))
                         } else if let errorCargaRutas {
-                            Text(errorCargaRutas).foregroundStyle(.secondary)
+                            Text(L.aviso(errorCargaRutas)).foregroundStyle(.secondary)
                             Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
                         } else if routes.isEmpty {
                             Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
@@ -149,7 +149,7 @@ struct RouteChangesSheet: View {
                         })) {
                             Text(L.t("Selecciona una ruta", "Select a route")).tag("")
                             ForEach(routes) { route in
-                                Text("\(route.linea) · \(route.variante) · \(route.recorrido)").tag(route.id)
+                                Text("\(route.linea) · \(route.variante) · \(route.recorridoLocalizado)").tag(route.id)
                             }
                         }
                         .pickerStyle(.navigationLink)
@@ -390,12 +390,10 @@ private struct AvisoCoherencia: View {
                              "The point is on ") + rutaCorta(route),
                          icono: "checkmark.circle.fill", tono: .green)
             case .limite(let d):
-                etiqueta(L.t("A \(Int(d.rounded())) m del recorrido. Se aceptará, pero revisa que sea el lugar correcto.",
-                             "\(Int(d.rounded())) m from the route. It'll be accepted, but check it's the right spot."),
+                etiqueta(L.f("A {0} m del recorrido. Se aceptará, pero revisa que sea el lugar correcto.", "{0} m from the route. It'll be accepted, but check it's the right spot.", ["\(Int(d.rounded()))"]),
                          icono: "exclamationmark.triangle.fill", tono: .orange)
             case .fueraDeRuta(let d):
-                etiqueta(L.t("Este punto está a \(Int(d.rounded())) m de la ruta \(rutaCorta(route)). No corresponde a esta línea: toca el recorrido azul.",
-                             "This point is \(Int(d.rounded())) m from route \(rutaCorta(route)). It doesn't belong to this line: tap the blue path."),
+                etiqueta(L.f("Este punto está a {0} m de la ruta {1}. No corresponde a esta línea: toca el recorrido azul.", "This point is {0} m from route {1}. It doesn't belong to this line: tap the blue path.", ["\(Int(d.rounded()))", "\(rutaCorta(route))"]),
                          icono: "xmark.octagon.fill", tono: .red)
             }
         }
