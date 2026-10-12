@@ -40,7 +40,7 @@ struct OfflineMapSheet: View {
                     if comprobando {
                         ProgressView().frame(maxWidth: .infinity)
                     } else if numeroRutas > 0 {
-                        Label(L.t("\(numeroRutas) rutas cargadas desde la app", "\(numeroRutas) routes loaded from the app"), systemImage: "bus.fill")
+                        Label(L.f("{0} rutas cargadas desde la app", "{0} routes loaded from the app", ["\(numeroRutas)"]), systemImage: "bus.fill")
                         Text(L.t("Los recorridos y paraderos vienen incluidos en la app. No necesitas descargarlos ni activar un interruptor para consultarlos sin internet.", "Routes and stops are included in the app. No download or switch is needed to view them offline."))
                             .foregroundStyle(.secondary)
                     } else {
