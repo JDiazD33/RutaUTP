@@ -62,7 +62,7 @@ struct EscanerQRView: View {
         }
         .onChange(of: mensajePago) { _, mensaje in
             guard voiceOverOn, scenePhase == .active, let mensaje else { return }
-            UIAccessibility.post(notification: .announcement, argument: mensaje)
+            AccesibilidadIdioma.anunciar(mensaje)
         }
         .accessibilityAction(.escape) { dismiss() }
     }
@@ -355,8 +355,7 @@ struct EscanerQRView: View {
                             .font(.system(size: 14, weight: .bold))
                         Text(modelo.pagoRealizado
                              ? L.t("Pasaje pagado (simulado)", "Fare paid (simulated)")
-                             : L.t("Pagar \(String(format: "S/ %.2f", importe)) (simulado)",
-                                   "Pay \(String(format: "S/ %.2f", importe)) (simulated)"))
+                             : L.f("Pagar {0} (simulado)", "Pay {0} (simulated)", ["\(FormatoNumero.soles(importe))"]))
                             .font(.bodySmMedium)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -374,7 +373,7 @@ struct EscanerQRView: View {
             }
 
             if let mensajePago {
-                Text(mensajePago)
+                Text(L.aviso(mensajePago))
                     .font(.bodyXs)
                     .foregroundStyle(.onSurfaceVariant)
             }
@@ -406,7 +405,7 @@ struct EscanerQRView: View {
         }
 
         if let billetera = resultado.campos.billetera {
-            return L.t("QR de pago · \(billetera)", "Payment QR · \(billetera)")
+            return L.f("QR de pago · {0}", "Payment QR · {0}", ["\(billetera)"])
         }
 
         return L.t("QR de pago", "Payment QR")

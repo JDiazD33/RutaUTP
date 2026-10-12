@@ -36,8 +36,7 @@ struct MonederoCard: View {
                 .monospacedDigit()
                 .foregroundStyle(tinta)
 
-            Text(L.t("≈ \(store.pasajesDisponibles) pasajes a \(store.tarifaTexto)",
-                     "≈ \(store.pasajesDisponibles) fares at \(store.tarifaTexto)"))
+            Text(L.f("≈ {0} pasajes a {1}", "≈ {0} fares at {1}", ["\(store.pasajesDisponibles)", "\(store.tarifaTexto)"]))
                 .font(.caption2)
                 .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(tinta.opacity(0.8))
@@ -59,8 +58,7 @@ struct MonederoCard: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L.t("Monedero ", "Wallet ") + empresa.nombre)
-        .accessibilityValue(L.t("Saldo de demostración \(store.saldoTexto), aproximadamente \(store.pasajesDisponibles) pasajes a \(store.tarifaTexto)",
-                                "Demo balance \(store.saldoTexto), approximately \(store.pasajesDisponibles) fares at \(store.tarifaTexto)"))
+        .accessibilityValue(L.f("Saldo de demostración {0}, aproximadamente {1} pasajes a {2}", "Demo balance {0}, approximately {1} fares at {2}", ["\(store.saldoTexto)", "\(store.pasajesDisponibles)", "\(store.tarifaTexto)"]))
     }
 
     private func boton(_ titulo: String, icono: String, accion: @escaping () -> Void) -> some View {
@@ -193,7 +191,7 @@ struct RecargarSaldoSheet: View {
                         AppHaptics.selection()
                         withAnimation(.easeInOut(duration: 0.18)) { elegido = importe }
                     } label: {
-                        Text(String(format: "S/ %.0f", importe))
+                        Text(FormatoNumero.soles(importe, decimales: 0))
                             .font(.system(.headline, weight: .heavy))
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 10)
@@ -286,7 +284,7 @@ struct RecargarSaldoSheet: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(L.t("Pagar con \(opcion.nombre)", "Pay with \(opcion.nombre)"))
+        .accessibilityLabel(L.f("Pagar con {0}", "Pay with {0}", ["\(opcion.nombre)"]))
         .accessibilityAddTraits(seleccionada ? .isSelected : [])
     }
 
@@ -317,9 +315,7 @@ struct RecargarSaldoSheet: View {
                                 .foregroundStyle(.onSurfaceVariant)
                         }
                         if !apilarContenido { Spacer() }
-                        Text(String(format: "%@S/ %.2f",
-                                    movimiento.importe > 0 ? "+" : "−",
-                                    abs(movimiento.importe)))
+                        Text((movimiento.importe > 0 ? "+" : "−") + FormatoNumero.soles(abs(movimiento.importe)))
                             .font(.bodySmMedium)
                             .monospacedDigit()
                             .foregroundStyle(movimiento.esRecarga ? Color.appPrimary : Color.onSurface)
@@ -351,8 +347,7 @@ struct RecargarSaldoSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 16, weight: .bold))
-                Text(L.t("Recargar \(String(format: "S/ %.0f", elegido)) con \(billetera.nombre)",
-                         "Top up \(String(format: "S/ %.0f", elegido)) with \(billetera.nombre)"))
+                Text(L.f("Recargar {0} con {1}", "Top up {0} with {1}", ["\(FormatoNumero.soles(elegido, decimales: 0))", "\(billetera.nombre)"]))
                     .font(.headlineSm)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -545,8 +540,7 @@ struct QRPasajeSheet: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(L.t("Mostrar el QR de \(opcion.nombre)",
-                                "Show the \(opcion.nombre) QR"))
+        .accessibilityLabel(L.f("Mostrar el QR de {0}", "Show the {0} QR", ["\(opcion.nombre)"]))
         .accessibilityAddTraits(seleccionada ? .isSelected : [])
     }
 
@@ -618,8 +612,7 @@ struct QRPasajeSheet: View {
             }
             .buttonStyle(PressableCapsuleStyle())
 
-            Text(L.t("Escanea el QR del cobrador y se descuenta el pasaje (\(store.tarifaTexto)) del saldo de demostración.",
-                     "Scan the collector's QR and the fare (\(store.tarifaTexto)) is deducted from the demo balance."))
+            Text(L.f("Escanea el QR del cobrador y se descuenta el pasaje ({0}) del saldo de demostración.", "Scan the collector's QR and the fare ({0}) is deducted from the demo balance.", ["\(store.tarifaTexto)"]))
                 .font(.bodyXs)
                 .foregroundStyle(.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)

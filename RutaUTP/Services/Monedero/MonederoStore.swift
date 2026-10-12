@@ -70,8 +70,8 @@ final class MonederoStore: ObservableObject {
 
     var saldo: Double { Double(saldoCentimos) / 100 }
     var pasajesDisponibles: Int { saldoCentimos / Self.tarifaCentimos }
-    var saldoTexto: String { String(format: "S/ %.2f", saldo) }
-    var tarifaTexto: String { String(format: "S/ %.2f", Self.tarifaReferencia) }
+    var saldoTexto: String { FormatoNumero.soles(saldo) }
+    var tarifaTexto: String { FormatoNumero.soles(Self.tarifaReferencia) }
 
     /// Rechaza importes no finitos, no positivos, con fracciones de céntimo
     /// o que excedan el límite. Un rechazo no modifica saldo ni historial.
