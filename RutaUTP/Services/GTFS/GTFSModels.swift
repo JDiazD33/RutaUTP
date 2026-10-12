@@ -54,16 +54,24 @@ struct RutaGTFS: Identifiable {
     }
 
     var precioTexto: String {
-        precio > 0 ? String(format: "S/ %.2f", precio) : "S/ —"
+        precio > 0 ? FormatoNumero.soles(precio) : "S/ —"
     }
 
     var frecuenciaTexto: String {
-        headwayMin > 0 ? "cada \(headwayMin) min" : "—"
+        headwayMin > 0 ? L.f("cada {0} min", "every {0} min", ["\(headwayMin)"]) : "—"
     }
+
+    var recorridoLocalizado: String { GTFSNombreParser.recorridoLocalizado(recorrido) }
 }
 
 // MARK: - Parser de nombres
 enum GTFSNombreParser {
+    /// El sufijo de presentación se traduce sin cambiar los nombres del feed.
+    static func recorridoLocalizado(_ recorrido: String) -> String {
+        let sufijo = " (ramal circular)"
+        guard recorrido.hasSuffix(sufijo) else { return recorrido }
+        return L.f("{0} (ramal circular)", "{0} (circular branch)", [String(recorrido.dropLast(sufijo.count))])
+    }
 
     /// Presentación compartida por Mapa, confirmación de subida y Rutas.
     /// No cambia los campos originales: las CT guardan la letra en `linea`.

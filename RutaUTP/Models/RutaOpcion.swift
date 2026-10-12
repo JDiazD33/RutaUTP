@@ -29,12 +29,14 @@ struct RutaOpcion: Identifiable, Equatable {
     }
 
     var frecuenciaTexto: String {
-        frecuenciaMin > 0 ? L.t("cada \(frecuenciaMin) min", "every \(frecuenciaMin) min") : "—"
+        frecuenciaMin > 0 ? L.f("cada {0} min", "every {0} min", ["\(frecuenciaMin)"]) : "—"
     }
 
     var tiempoTexto: String {
-        duracionMin > 0 ? "\(duracionMin) min" : "—"
+        duracionMin > 0 ? L.f("{0} min", "{0} min", ["\(duracionMin)"]) : "—"
     }
+
+    var recorridoLocalizado: String { GTFSNombreParser.recorridoLocalizado(recorrido) }
 
     // Identidad por route_id: el shape no participa en la comparación.
     static func == (lhs: RutaOpcion, rhs: RutaOpcion) -> Bool {
