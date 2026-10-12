@@ -61,7 +61,7 @@ struct VoiceOverHelpSheet: View {
             encabezado(L.t("Activación en el iPhone", "Turn it on on iPhone"))
             ForEach(pasos.indices, id: \.self) { i in
                 Text("\(i + 1). \(pasos[i])")
-                    .accessibilityLabel(L.t("Paso \(i + 1). ", "Step \(i + 1). ") + pasos[i])
+                    .accessibilityLabel(L.f("Paso {0}. ", "Step {0}. ", ["\(i + 1)"]) + pasos[i])
             }
             Text(L.t("También puedes pedirle a Siri que active o desactive VoiceOver.",
                      "You can also ask Siri to turn VoiceOver on or off."))

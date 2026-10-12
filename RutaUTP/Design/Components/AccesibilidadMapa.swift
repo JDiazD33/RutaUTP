@@ -2,6 +2,17 @@ import SwiftUI
 import MapKit
 import UIKit
 
+/// Los avisos hablados declaran su idioma sin depender del idioma de iOS.
+@MainActor
+enum AccesibilidadIdioma {
+    static func anunciar(_ texto: String) {
+        let voz = NSAttributedString(string: texto, attributes: [
+            .accessibilitySpeechLanguage: IdiomaManager.shared.idioma.codigoRegional
+        ])
+        UIAccessibility.post(notification: .announcement, argument: voz)
+    }
+}
+
 /// Alternativa a tocar una coordenada: elegir explícitamente un paradero del feed.
 /// No confirma un abordaje ni publica un reporte por sí misma.
 struct SelectorParaderoAccesible: View {
@@ -46,7 +57,7 @@ struct SelectorParaderoAccesible: View {
                         Button(direccion.nombre) {
                             let punto = MovimientoPuntoMapa.mover(seleccion, norte: direccion.norte, este: direccion.este)
                             onSeleccionar(punto)
-                            UIAccessibility.post(notification: .announcement, argument: MovimientoPuntoMapa.texto(punto))
+                            AccesibilidadIdioma.anunciar(MovimientoPuntoMapa.texto(punto))
                         }
                     }
                 }
@@ -77,7 +88,7 @@ extension MapaElegirLugar.Coordinator {
                 return true
             }]
         }
-        mapa.accessibilityLanguage = L.esIngles ? "en" : "es-PE"
+        mapa.accessibilityLanguage = IdiomaManager.shared.idioma.codigoRegional
         mapa.accessibilityValue = seleccion.map(MovimientoPuntoMapa.texto)
             ?? L.t("Sin punto seleccionado", "No point selected")
     }
@@ -85,7 +96,7 @@ extension MapaElegirLugar.Coordinator {
     private func elegirPuntoAccesible(_ punto: CLLocationCoordinate2D) {
         onTocar(punto)
         if UIAccessibility.isVoiceOverRunning {
-            UIAccessibility.post(notification: .announcement, argument: MovimientoPuntoMapa.texto(punto))
+            AccesibilidadIdioma.anunciar(MovimientoPuntoMapa.texto(punto))
         }
     }
 
@@ -110,6 +121,6 @@ private enum MovimientoPuntoMapa {
     static func texto(_ punto: CLLocationCoordinate2D) -> String {
         let lat = String(format: "%.5f", punto.latitude)
         let lon = String(format: "%.5f", punto.longitude)
-        return L.t("Latitud \(lat), longitud \(lon)", "Latitude \(lat), longitude \(lon)")
+        return L.f("Latitud {0}, longitud {1}", "Latitude {0}, longitude {1}", ["\(lat)", "\(lon)"])
     }
 }
