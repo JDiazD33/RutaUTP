@@ -15,6 +15,17 @@ enum CarnetPerfil: String, CaseIterable {
         }
     }
 
+    func tituloBreve(para empresa: TematicaEmpresa) -> String {
+        switch self {
+        case .foto:
+            return empresa == .utp
+                ? L.t("Foto del carné", "Card photo")
+                : L.t("Foto de credencial", "ID photo")
+        case .digital:
+            return L.t("Carné Digital", "Digital ID")
+        }
+    }
+
     var icono: String {
         self == .foto ? "person.text.rectangle.fill" : "person.crop.rectangle.fill"
     }
@@ -57,55 +68,48 @@ final class PreferenciasVisualesPerfilStore {
 }
 
 struct PerfilPreferenciasVisuales: View {
+    @Environment(\.dismiss) private var dismiss
     let empresa: TematicaEmpresa
     private let store = PreferenciasVisualesPerfilStore.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L.t("Preferencias visuales", "Visual preferences"))
-                .font(.labelCapsLg)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-                .padding(.leading, 4)
-                .accessibilityAddTraits(.isHeader)
-
-            VStack(spacing: 0) {
-                ForEach(CarnetPerfil.allCases, id: \.rawValue) { carnet in
-                    HStack(spacing: 14) {
-                        Image(systemName: carnet.icono)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Color.appPrimary)
-                            .frame(width: 36, height: 36)
-                            .background(Color.appPrimary.opacity(0.14), in: Circle())
-                            .accessibilityHidden(true)
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach(CarnetPerfil.allCases, id: \.rawValue) { carnet in
                         Toggle(isOn: Binding(
                             get: { store.visible(carnet, empresa: empresa) },
                             set: { store.establecer($0, carnet: carnet, empresa: empresa) }
                         )) {
-                            Text(L.t("Mostrar ", "Show ") + carnet.titulo(para: empresa))
-                                .font(.bodyMdMedium)
-                                .foregroundStyle(.onSurface)
-                                .fixedSize(horizontal: false, vertical: true)
+                            Label(carnet.tituloBreve(para: empresa), systemImage: carnet.icono)
+                                .foregroundStyle(Color.onSurface)
                         }
                         .tint(.appPrimary)
+                        .accessibilityHint(L.t("Muestra u oculta esta credencial sin borrar sus datos", "Show or hide this credential without deleting its data"))
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                    if carnet == .foto {
-                        Divider().padding(.leading, 56).accessibilityHidden(true)
+                } header: {
+                    Text(empresa.nombre)
+                } footer: {
+                    Text(L.t("Ocultarlas conserva tus fotos.", "Hiding them keeps your photos."))
+                }
+                Section {
+                    DisclosureGroup(L.t("Más información", "More information")) {
+                        Text(L.f("Elige los carnets que aparecen en tu billetera de {0}. Se recuerda para cada empresa; ocultarlos conserva tus fotos.", "Choose the cards shown in your {0} wallet. Choices are remembered for each company; hiding cards keeps your photos.", [empresa.nombre]))
+                            .font(.footnote)
+                            .foregroundStyle(Color.onSurfaceVariant)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 4)
                     }
                 }
             }
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 16))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
+            .navigationTitle(L.t("Credenciales", "Credentials"))
+            .navigationBarTitleDisplayMode(.inline)
+            .tint(.appPrimary)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Listo", "Done")) { dismiss() }
+                }
             }
-
-            Text(L.f("Elige los carnets que aparecen en tu billetera de {0}. Se recuerda para cada empresa; ocultarlos conserva tus fotos.", "Choose the cards shown in your {0} wallet. Choices are remembered for each company; hiding cards keeps your photos.", ["\(empresa.nombre)"]))
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -1,0 +1,5 @@
+# Instalar solo en el proveedor APNs: pip install -r requirements-push.txt
+httpx[http2]>=0.28,<1
+PyJWT[crypto]>=2.10,<3
+# Base IANA para contenedores sin /usr/share/zoneinfo.
+tzdata>=2024.1,<2028

@@ -492,7 +492,9 @@ Permite seleccionar línea/ramal, motivo y punto, revisar alertas y confirmar
 lo observado. Sin conexión o sin un snapshot reciente no afirma que no haya
 incidencias: muestra información no disponible y deshabilita el envío.
 Los avisos indican la zona afectada; **no inventan ni dibujan un itinerario
-alterno** que los reportes no proporcionan. No hay notificaciones push.
+alterno** que los reportes no proporcionan. Los avisos push para líneas guardadas
+son optativos y requieren configurar APNs: ver [PUSH-NOTIFICACIONES.md](PUSH-NOTIFICACIONES.md).
+EMQX por sí solo no envía notificaciones de iOS.
 
 Para habilitarlo en un despliegue existente, actualizar el backend y aplicar
 las reglas `rutautp/cambios/…` de `mqtt/config/acl.example` al ACL activo,

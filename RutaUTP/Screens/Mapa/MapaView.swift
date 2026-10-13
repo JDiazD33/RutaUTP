@@ -185,7 +185,7 @@ private struct MapaScreenContent: View {
                     } else {
                         NearbyTransportPanel(vm: vm, panelColapsado: $panelColapsado,
                                              reportButton: botonReportar)
-                            .padding(.bottom, tabBarHeight + 8)
+                            .padding(.bottom, tabBarHeight)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }

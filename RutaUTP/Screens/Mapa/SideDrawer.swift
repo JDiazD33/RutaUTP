@@ -82,7 +82,9 @@ struct SideDrawer: View {
                 // El sheet vive en su propia UIWindow: se le fuerza el tema
                 // elegido en Ajustes (no hereda el de la ventana principal).
                 .seguirTemaForzado()
-                .presentationDetents(item == .ciudad ? [.large] : [.medium, .large])
+                .presentationDetents(
+                    [.ciudad, .soporte, .sobreNosotros, .notificaciones].contains(item) ? [.large] : [.medium, .large]
+                )
                 .presentationDragIndicator(.visible)
         }
         // La foto pudo cambiar en Datos Personales: recargar al abrir el

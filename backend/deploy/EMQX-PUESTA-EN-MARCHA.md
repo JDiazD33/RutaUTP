@@ -112,3 +112,12 @@ por sí solo la detección de pasajeros. El backend exige dos cuentas distintas.
    necesitan corroboración; repetir desde una cuenta no suma otro voto.
 5. Para disponibilidad continua, trasladar el mismo proceso Python a un
    servidor siempre encendido. EMQX por sí solo no ejecuta este programa.
+
+## Avisos de iOS con la app cerrada
+
+La integración APNs está preparada y desactivada por defecto. EMQX transporta
+los registros privados, pero no sustituye a Apple Developer ni al backend que
+envía a Apple. Las reglas `rutautp/notificaciones/…` todavía deben añadirse al
+Authorization real por cuenta. Ver [PUSH-NOTIFICACIONES.md](../PUSH-NOTIFICACIONES.md)
+para requisitos, permisos exactos, firma de iOS y configuración del proveedor.
+No se han aplicado esas reglas ni probado entregas APNs en esta tarea.

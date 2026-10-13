@@ -218,6 +218,30 @@ check "app NO PUEDE leer votos individuales" \
     device-001 "rutautp/ocupacion/device-001/reporte" \
     device-001 "rutautp/ocupacion/device-001/reporte" no
 
+check "app PUEDE registrar sus avisos" \
+    backend "rutautp/notificaciones/device-001/registro" \
+    device-001 "rutautp/notificaciones/device-001/registro" si
+
+check "app NO PUEDE registrar avisos de otra cuenta" \
+    backend "rutautp/notificaciones/device-002/registro" \
+    device-001 "rutautp/notificaciones/device-002/registro" no
+
+check "app NO PUEDE leer registros con tokens" \
+    device-001 "rutautp/notificaciones/device-001/registro" \
+    device-001 "rutautp/notificaciones/device-001/registro" no
+
+check "backend PUEDE enviar el recibo privado" \
+    device-001 "rutautp/notificaciones/device-001/recibo" \
+    backend "rutautp/notificaciones/device-001/recibo" si
+
+check "app NO PUEDE leer recibos de otra cuenta" \
+    device-001 "rutautp/notificaciones/device-002/recibo" \
+    backend "rutautp/notificaciones/device-002/recibo" no
+
+check "app NO PUEDE falsificar recibos" \
+    device-001 "rutautp/notificaciones/device-001/recibo" \
+    device-001 "rutautp/notificaciones/device-001/recibo" no
+
 check "debug PUEDE leer observaciones (cuenta de diagnóstico)" \
     debug "rutautp/observaciones/device-001/probe/posicion" \
     device-001 "rutautp/observaciones/device-001/probe/posicion" \

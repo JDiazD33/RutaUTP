@@ -121,6 +121,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         bridge.run(publish=not args.dry_run)
+    except ConfigError as error:
+        logger.error("configuracion de avisos invalida: %s", error)
+        return EXIT_CONFIG
     except OSError as error:
         logger.error(
             "no se pudo conectar a %s:%d: %s", config.host, config.port, error

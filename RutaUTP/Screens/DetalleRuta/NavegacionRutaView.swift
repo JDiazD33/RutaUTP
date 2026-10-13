@@ -66,11 +66,13 @@ struct NavegacionRutaView: View {
         }
         .preferredColorScheme(.dark)
         .onAppear {
+            NotificacionesService.shared.navegacionAbierta = true
             pantallaVisible = true
             viewModel.actualizarActividadVisual(scenePhase == .active)
             viewModel.iniciar()
         }
         .onDisappear {
+            NotificacionesService.shared.navegacionAbierta = false
             pantallaVisible = false
             viewModel.actualizarActividadVisual(false)
             viewModel.terminar()

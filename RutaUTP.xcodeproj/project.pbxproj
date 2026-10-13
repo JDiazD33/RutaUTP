@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */; };
+		ECF34513F945499ABD8EB439 /* PushRutasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE808E3026E54669B06DFE24 /* PushRutasService.swift */; };
+		F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2972779301B74337A0930235 /* NotificacionesView.swift */; };
+		0D5914DEA00142519A50A1E1 /* NotificacionesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D98B0269CA244709B2AF09A /* NotificacionesService.swift */; };
+		8334E005EAE0477B8A014A43 /* ProgramadorRecordatorios.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8ACACBB0204A4FBD90ACA4 /* ProgramadorRecordatorios.swift */; };
+		5AF6BD67C5964F5298355C6C /* PreferenciasNotificacionesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19CF9A4A902F4815B7F12FA1 /* PreferenciasNotificacionesStore.swift */; };
+		5E6E8EE662E64881AF67A9CE /* RecordatorioViaje.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1268729AF29446888D5462FD /* RecordatorioViaje.swift */; };
 		B7E0C5037B014557A9E34CAA /* RespaldosRecuperacionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */; };
 		30C8E60E781443809B689068 /* RecuperacionPreferencias.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C49D29E23E644F8A533D0B6 /* RecuperacionPreferencias.swift */; };
 		BD5200000000000000000002 /* IndiceBusquedaRuta.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD5200000000000000000001 /* IndiceBusquedaRuta.swift */; };
@@ -202,6 +209,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvisosDiarios.swift; sourceTree = "<group>"; };
+		AE808E3026E54669B06DFE24 /* PushRutasService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRutasService.swift; sourceTree = "<group>"; };
+		C193FD90B1EF4256AB1FBEDF /* RutaUTP-Push.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "RutaUTP-Push.entitlements"; sourceTree = "<group>"; };
+		2972779301B74337A0930235 /* NotificacionesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificacionesView.swift; sourceTree = "<group>"; };
+		0D98B0269CA244709B2AF09A /* NotificacionesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificacionesService.swift; sourceTree = "<group>"; };
+		CD8ACACBB0204A4FBD90ACA4 /* ProgramadorRecordatorios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramadorRecordatorios.swift; sourceTree = "<group>"; };
+		19CF9A4A902F4815B7F12FA1 /* PreferenciasNotificacionesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenciasNotificacionesStore.swift; sourceTree = "<group>"; };
+		1268729AF29446888D5462FD /* RecordatorioViaje.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordatorioViaje.swift; sourceTree = "<group>"; };
 		9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RespaldosRecuperacionSheet.swift; sourceTree = "<group>"; };
 		4C49D29E23E644F8A533D0B6 /* RecuperacionPreferencias.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecuperacionPreferencias.swift; sourceTree = "<group>"; };
 		BD5200000000000000000001 /* IndiceBusquedaRuta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndiceBusquedaRuta.swift; sourceTree = "<group>"; };
@@ -412,6 +427,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D5C8B80F46754BEE8B334245 /* Notificaciones */ = {
+			isa = PBXGroup;
+			children = (
+				19CF9A4A902F4815B7F12FA1 /* PreferenciasNotificacionesStore.swift */,
+				CD8ACACBB0204A4FBD90ACA4 /* ProgramadorRecordatorios.swift */,
+				0D98B0269CA244709B2AF09A /* NotificacionesService.swift */,
+				EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */,
+				AE808E3026E54669B06DFE24 /* PushRutasService.swift */,
+			);
+			path = Notificaciones;
+			sourceTree = "<group>";
+		};
 		BC010000000000000000000B /* Mapa */ = {
 			isa = PBXGroup;
 			children = (
@@ -503,6 +530,7 @@
 		0A8004B8300AD9FE004E1676 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				2972779301B74337A0930235 /* NotificacionesView.swift */,
 				BD3000000000000000000001 /* SelectorTematicasSheet.swift */,
 				BD2000000000000000000003 /* ModoBusesUTPSection.swift */,
 				4D7CF8EC6FD44D9D8BAE522B /* SelectorIdioma.swift */,
@@ -550,6 +578,7 @@
 		0A8004C0300AD9FE004E1676 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				1268729AF29446888D5462FD /* RecordatorioViaje.swift */,
 				BD0900000000000000000001 /* SedeTrabajo.swift */,
 				BC0300000000000000000001 /* ScreenModelStore.swift */,
 				BC0200000000000000000007 /* RutaOpcion.swift */,
@@ -771,6 +800,7 @@
 		0A8004EF300AD9FE004E1676 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				D5C8B80F46754BEE8B334245 /* Notificaciones */,
 				79A3921D361B44938F8FF652 /* Community */,
 				7544D986CDED4B9DB414C3CD /* Camera */,
 				AA6600000000000000000C01 /* GTFS */,
@@ -802,6 +832,7 @@
 		0A8004F6300AD9FE004E1676 /* RutaUTP */ = {
 			isa = PBXGroup;
 			children = (
+				C193FD90B1EF4256AB1FBEDF /* RutaUTP-Push.entitlements */,
 				D2E2F49613884D9984BE49C5 /* Localization */,
 				BD3000000000000000000003 /* sedes-empresas-trujillo.json */,
 				0A8004BC300AD9FE004E1676 /* Design */,
@@ -1024,6 +1055,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */,
+				0D5914DEA00142519A50A1E1 /* NotificacionesService.swift in Sources */,
+				A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */,
+				ECF34513F945499ABD8EB439 /* PushRutasService.swift in Sources */,
+				8334E005EAE0477B8A014A43 /* ProgramadorRecordatorios.swift in Sources */,
+				5AF6BD67C5964F5298355C6C /* PreferenciasNotificacionesStore.swift in Sources */,
+				5E6E8EE662E64881AF67A9CE /* RecordatorioViaje.swift in Sources */,
 				D2B430B695D44164A48CE214 /* NavegacionRutaViewModel.swift in Sources */,
 				17E9137A2C174B91A95FD7B1 /* MapaNavegacionRepresentable.swift in Sources */,
 				545CD446B6684A9782ED15A7 /* ResultadoQR.swift in Sources */,
@@ -1361,6 +1399,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = "$(RUTA_PUSH_ENTITLEMENTS)";
+				RUTA_PUSH_ENTITLEMENTS = "";
+				RUTA_PUSH_HABILITADO = NO;
+				RUTA_APNS_ENVIRONMENT = development;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RutaUTP/Preview Content\"";
 				DEVELOPMENT_TEAM = 2DB6N5Q47S;
@@ -1400,6 +1442,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = "$(RUTA_PUSH_ENTITLEMENTS)";
+				RUTA_PUSH_ENTITLEMENTS = "";
+				RUTA_PUSH_HABILITADO = NO;
+				RUTA_APNS_ENVIRONMENT = production;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"RutaUTP/Preview Content\"";
 				DEVELOPMENT_TEAM = 2DB6N5Q47S;

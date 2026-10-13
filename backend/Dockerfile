@@ -19,6 +19,12 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Imagen optativa del proveedor: docker build --build-arg WITH_APNS=1 ...
+# No se copia ni se genera una clave Apple durante la construccion.
+ARG WITH_APNS=0
+COPY requirements-push.txt ./
+RUN if [ "$WITH_APNS" = "1" ]; then pip install --no-cache-dir -r requirements-push.txt; fi
+
 COPY rutautp_backend ./rutautp_backend
 
 ENV PYTHONUNBUFFERED=1

@@ -46,6 +46,9 @@ venv/
 # contiene trayectorias observadas; no debe acabar en el repositorio.
 backend/data/
 
+# Las claves del proveedor APNs pertenecen al servidor, nunca al repositorio.
+*.p8
+
 # Backend: entorno real del servicio (credenciales). La plantilla sí se versiona.
 backend/deploy/backend.env
 

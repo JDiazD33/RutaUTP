@@ -16,31 +16,7 @@ import UIKit
 
 // MARK: - 1. NOTIFICACIONES SHEET
 struct NotificacionesSheet: View {
-    @AppStorage(PreferenciasApp.notificaciones) private var notificacionesOn = true
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                SheetHeader(icon: "bell.fill", iconColor: .tertiary,
-                            title: L.t("Notificaciones", "Notifications"))
-                Toggle(isOn: $notificacionesOn) {
-                    Text(L.t("Preferencia de notificaciones", "Notification preference"))
-                        .font(.bodyMdMedium)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .tint(.appPrimary)
-                .padding(16)
-                .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
-
-                Text(L.t("Esta preferencia se guarda en este dispositivo y es la misma que aparece en Perfil. Esta versión no envía notificaciones ni programa pausas. El ajuste no cambia los permisos de iOS.",
-                         "This preference is saved on this device and is shared with Profile. This version does not send notifications or schedule pauses. The setting does not change iOS permissions."))
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(20)
-        }
-    }
+    var body: some View { NotificacionesView() }
 }
 
 // MARK: - 2. CIUDAD SHEET
@@ -181,6 +157,7 @@ struct AjustesSheet: View {
     /// usuario tiene que poder saber qué se envía y cuándo antes de aceptarlo.
     @State private var mostrarConsentimiento = false
     @State private var mostrarDetallesContribucion = false
+    @State private var mostrarNotificaciones = false
 
     var body: some View {
         ScrollView {
@@ -204,6 +181,25 @@ struct AjustesSheet: View {
                 SelectorTematicaEmpresa()
 
                 SelectorSedeTrabajo()
+
+                Button { mostrarNotificaciones = true } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "bell.fill").accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(L.t("Notificaciones", "Notifications")).font(.headline)
+                            TimelineView(.periodic(from: .now, by: 60)) { contexto in
+                                Text(NotificacionesService.shared.resumen(ahora: contexto.date)).font(.subheadline)
+                            }
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right").accessibilityHidden(true)
+                    }
+                    .foregroundStyle(.onSurface)
+                    .padding(16)
+                    .frame(minHeight: 44)
+                    .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
 
                 // Contribución asociada a la cuenta de instalación y al viaje.
                 VStack(alignment: .leading, spacing: 8) {
@@ -246,6 +242,9 @@ struct AjustesSheet: View {
                 Spacer()
             }
             .padding(20)
+        }
+        .sheet(isPresented: $mostrarNotificaciones) {
+            NotificacionesView().seguirTemaForzado().presentationDetents([.large])
         }
         .confirmationDialog(
             L.t("Ayudar con ubicaciones en tiempo real",
@@ -356,170 +355,383 @@ private struct TextoContribucionJustificado: UIViewRepresentable {
 
 // MARK: - 4. SOPORTE SHEET
 struct SoporteSheet: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var busqueda = ""
+    @State private var preguntaAbierta: Int?
 
-    private var faqs: [(icon: String, q: String, a: String)] {
+    private struct Pregunta: Identifiable {
+        let id: Int
+        let icono: String
+        let titulo: String
+        let respuesta: String
+    }
+
+    private var preguntas: [Pregunta] {
         [
-        ("exclamationmark.bubble.fill",
-         L.t("¿Cómo reporto un incidente?", "How do I report an incident?"),
-         L.t("Toca el botón REPORTAR en el mapa o en Seguridad y describe la situación.",
-             "Tap the REPORT button on the map or in Safety and describe the situation.")),
-        ("bookmark.fill",
-         L.t("¿Cómo guardo un lugar?", "How do I save a place?"),
-         L.t("En la pantalla de Guardado, presiona + Añadir y completa los datos.",
-             "In the Saved screen, tap + Add and fill in the details.")),
-        ("location.fill",
-         L.t("¿Cómo cambio mi destino?", "How do I change my destination?"),
-         L.t("En el mapa, toca un chip (tu sede, Centro, Huanchaco o tus lugares guardados) para cambiar rápido. Elige tu sede en Ajustes.",
-             "On the map, tap a chip (your workplace, Downtown, Huanchaco or your saved places) to switch quickly. Choose your workplace in Settings.")),
-        ("arrow.triangle.2.circlepath",
-         L.t("¿Cómo actualizo una ruta?", "How do I refresh a route?"),
-         L.t("Las rutas se actualizan automáticamente cada pocos segundos.",
-             "Routes refresh automatically every few seconds."))
+            Pregunta(id: 0, icono: "exclamationmark.bubble.fill",
+                     titulo: L.t("¿Cómo reporto un incidente?", "How do I report an incident?"),
+                     respuesta: L.t("Toca el botón REPORTAR en el mapa o en Seguridad y describe la situación.",
+                                    "Tap the REPORT button on the map or in Safety and describe the situation.")
+                        + "\n\n" + L.t("En esta versión de prueba, los reportes no se envían a un servidor.",
+                                             "In this trial version, reports are not sent to a server.")),
+            Pregunta(id: 1, icono: "bookmark.fill",
+                     titulo: L.t("¿Cómo guardo un lugar?", "How do I save a place?"),
+                     respuesta: L.t("En la pantalla de Guardado, presiona + Añadir y completa los datos.",
+                                    "In the Saved screen, tap + Add and fill in the details.")),
+            Pregunta(id: 2, icono: "location.fill",
+                     titulo: L.t("¿Cómo cambio mi destino?", "How do I change my destination?"),
+                     respuesta: L.t("En el mapa, toca un chip (tu sede, Centro, Huanchaco o tus lugares guardados) para cambiar rápido. Elige tu sede en Ajustes.",
+                                    "On the map, tap a chip (your workplace, Downtown, Huanchaco or your saved places) to switch quickly. Choose your workplace in Settings.")),
+            Pregunta(id: 3, icono: "arrow.triangle.2.circlepath",
+                     titulo: L.t("¿Cómo actualizo una ruta?", "How do I refresh a route?"),
+                     respuesta: L.t("El catálogo de líneas y paraderos viene incluido en la app. Sus cambios llegan con las actualizaciones de la app.",
+                                    "The route and stop catalog is included in the app. Changes arrive with app updates."))
         ]
     }
 
-    var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                SheetHeader(icon: "headphones", iconColor: .secondary, title: L.t("Soporte", "Support"))
-
-                // Boton de contacto
-                Button {
-                    // En un proyecto real: mailto: o telefono
-                    dismiss()
-                } label: {
-                    HStack {
-                        Image(systemName: "message.fill")
-                        Text(L.t("Contactar Soporte Técnico", "Contact Technical Support"))
-                    }
-                    .font(.headlineSm)
-                    .foregroundStyle(.onPrimaryFill)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill)
-                    )
-                }
-                .buttonStyle(.plain)
-
-                // FAQ
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(L.t("PREGUNTAS FRECUENTES", "FREQUENTLY ASKED QUESTIONS"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    VStack(spacing: 8) {
-                        ForEach(faqs.indices, id: \.self) { i in
-                            faqRow(faqs[i])
-                        }
-                    }
-                }
-
-                Spacer(minLength: 40)
+    private var preguntasFiltradas: [Pregunta] {
+        let consulta = busqueda.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !consulta.isEmpty else { return preguntas }
+        let locale = IdiomaManager.shared.idioma.locale
+        return preguntas.filter { pregunta in
+            [pregunta.titulo, pregunta.respuesta].contains { texto in
+                texto.range(of: consulta, options: [.caseInsensitive, .diacriticInsensitive], locale: locale) != nil
             }
-            .padding(20)
         }
     }
 
-    private func faqRow(_ faq: (icon: String, q: String, a: String)) -> some View {
-        DisclosureGroup {
-            Text(faq.a)
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .padding(.top, 4)
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: faq.icon)
-                    .foregroundStyle(.appPrimary)
-                Text(faq.q)
-                    .font(.bodyMdMedium)
+    var body: some View {
+        MenuDetailSheet(title: L.t("Soporte", "Support")) {
+            MenuDetailHero(
+                icon: "headphones",
+                title: L.t("¿En qué te ayudamos?", "How can we help?"),
+                subtitle: L.t("Encuentra respuestas para usar la app y moverte por Trujillo.",
+                              "Find answers about using the app and getting around Trujillo.")
+            )
+
+            buscador
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L.t("Preguntas frecuentes", "Frequently asked questions"))
+                    .font(.headline)
                     .foregroundStyle(.onSurface)
+                    .accessibilityAddTraits(.isHeader)
+
+                if preguntasFiltradas.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L.t("No encontramos respuestas", "No answers found"))
+                            .font(.headline)
+                            .foregroundStyle(.onSurface)
+                        Text(L.t("Prueba con otra palabra o borra la búsqueda.",
+                                 "Try another word or clear the search."))
+                            .font(.subheadline)
+                            .foregroundStyle(.onSurfaceVariant)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                    .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
+                } else {
+                    ForEach(preguntasFiltradas) { pregunta in
+                        preguntaRow(pregunta)
+                    }
+                }
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.appPrimary)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L.t("Ayuda sin conexión", "Offline help"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.onSurface)
+                    Text(L.t("Puedes consultar estas respuestas aunque no tengas internet.",
+                             "You can read these answers even without an internet connection."))
+                        .font(.footnote)
+                        .foregroundStyle(.onSurfaceVariant)
+                }
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var buscador: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.onSurfaceVariant)
+                .accessibilityHidden(true)
+            TextField(L.t("Buscar en la ayuda", "Search help"), text: $busqueda)
+                .font(.body)
+                .foregroundStyle(.onSurface)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+                .accessibilityLabel(L.t("Buscar en la ayuda", "Search help"))
+            if !busqueda.isEmpty {
+                Button {
+                    busqueda = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.onSurfaceVariant)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Borrar búsqueda", "Clear search"))
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.surfaceContainerLow)
-        )
+        .padding(.leading, 16)
+        .padding(.trailing, busqueda.isEmpty ? 16 : 4)
+        .frame(minHeight: 52)
+        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(Color.outlineVariant, lineWidth: 1)
+        }
+    }
+
+    private func preguntaRow(_ pregunta: Pregunta) -> some View {
+        DisclosureGroup(isExpanded: Binding(
+            get: { preguntaAbierta == pregunta.id },
+            set: { abierta in
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                    preguntaAbierta = abierta ? pregunta.id : nil
+                }
+            }
+        )) {
+            Text(pregunta.respuesta)
+                .font(.body)
+                .foregroundStyle(.onSurfaceVariant)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+        } label: {
+            HStack(spacing: 12) {
+                MenuDetailIcon(icon: pregunta.icono)
+                Text(pregunta.titulo)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.onSurface)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(minHeight: 44, alignment: .leading)
+        }
+        .tint(.appPrimary)
+        .padding(16)
+        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
     }
 }
 
 // MARK: - 5. SOBRE NOSOTROS SHEET
 struct SobreNosotrosSheet: View {
+    /// Leer la version instalada evita que el texto quede desfasado del bundle.
+    private var version: String? {
+        guard let numero = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+              !numero.isEmpty else { return nil }
+        return L.f("Versión {0}", "Version {0}", [numero])
+    }
+
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 20) {
-                // Logo
-                VStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(LinearGradient(
-                                colors: [Color.primaryFill, Color.primaryContainer, Color.primaryGradientEnd],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 96, height: 96)
-                        Image(systemName: "bus.fill")
-                            .font(.system(size: 44, weight: .bold))
-                            .foregroundStyle(.onPrimaryFill)
-                    }
-                    Text("Ruta UTP Trujillo")
-                        .font(.headlineMd)
-                    Text("v1.0.0")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.surfaceContainerLow))
-                }
-                .padding(.top, 12)
+        MenuDetailSheet(title: L.t("Sobre Nosotros", "About Us")) {
+            MenuDetailHero(
+                icon: "bus.fill",
+                title: "Ruta UTP Trujillo",
+                subtitle: L.t("Tu ciudad, más cerca.", "Your city, closer."),
+                badge: version
+            )
 
-                // Descripcion
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L.t("SOBRE LA APP", "ABOUT THE APP"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    Text(L.t("Aplicación prototipo de movilidad en Trujillo para estudiantes y colaboradores. Permite elegir una sede de trabajo, buscar rutas de micros y combis, guardar lugares y consultar reportes comunitarios y seguimiento.",
-                             "Prototype mobility app in Trujillo for students and employees. Choose a workplace, find bus and van routes, save places, and view community reports and tracking."))
-                        .font(.bodyMd)
-                        .foregroundStyle(.onSurface)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                // Creditos
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(L.t("EQUIPO DE DESARROLLO", "DEVELOPMENT TEAM"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    creditoRow(L.t("Diseño y desarrollo", "Design and development"), "Universidad Tecnológica del Perú S.A.C")
-                    creditoRow(L.t("Institución", "Institution"), "Universidad Tecnológica del Perú")
-                    Link("Uicons by Flaticon", destination: URL(string: "https://www.flaticon.com/uicons")!)
-                        .font(.bodySm)
-                        .foregroundStyle(Color.appPrimary)
-                        .accessibilityLabel(L.t("Iconos de negocios por Flaticon", "Business icons by Flaticon"))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Spacer(minLength: 40)
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L.t("Sobre la app", "About the app"))
+                    .font(.headline)
+                    .foregroundStyle(.onSurface)
+                    .accessibilityAddTraits(.isHeader)
+                Text(L.t("Aplicación prototipo de movilidad en Trujillo para estudiantes y colaboradores. Permite elegir una sede de trabajo, buscar rutas de micros y combis, guardar lugares y consultar reportes comunitarios y seguimiento.",
+                         "Prototype mobility app in Trujillo for students and employees. Choose a workplace, find bus and van routes, save places, and view community reports and tracking."))
+                    .font(.body)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(20)
+
+            VStack(spacing: 0) {
+                featureRow(icon: "map.fill", title: L.t("Rutas", "Routes"),
+                           detail: L.t("Explora líneas y paraderos para planificar tu viaje.",
+                                       "Explore routes and stops to plan your trip."))
+                Divider().padding(.horizontal, 18)
+                featureRow(icon: "bookmark.fill", title: L.t("Guardado", "Saved"),
+                           detail: L.t("Ten a mano tus lugares y líneas favoritas.",
+                                       "Keep your favorite places and routes close at hand."))
+                Divider().padding(.horizontal, 18)
+                featureRow(icon: "location.fill", title: L.t("Tu viaje", "Your trip"),
+                           detail: L.t("Sigue tu avance durante el recorrido.",
+                                       "Follow your progress along the route."))
+            }
+            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L.t("Equipo de desarrollo", "Development team"))
+                    .font(.headline)
+                    .foregroundStyle(.onSurface)
+                    .accessibilityAddTraits(.isHeader)
+
+                VStack(alignment: .leading, spacing: 18) {
+                    creditoRow(L.t("Diseño y desarrollo", "Design and development"),
+                               "Universidad Tecnológica del Perú S.A.C")
+                    Divider()
+                    creditoRow(L.t("Institución", "Institution"), "Universidad Tecnológica del Perú")
+                    Divider()
+                    Link(destination: URL(string: "https://www.flaticon.com/uicons")!) {
+                        HStack(spacing: 12) {
+                            Text("Uicons by Flaticon")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer(minLength: 4)
+                            Image(systemName: "arrow.up.right")
+                                .accessibilityHidden(true)
+                        }
+                        .frame(minHeight: 44)
+                        .foregroundStyle(.appPrimary)
+                    }
+                    .accessibilityLabel(L.t("Iconos de negocios por Flaticon", "Business icons by Flaticon"))
+                }
+                .padding(20)
+                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+            }
         }
     }
 
-    private func creditoRow(_ rol: String, _ nombre: String) -> some View {
-        HStack {
-            Text(rol)
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-            Spacer()
-            Text(nombre)
-                .font(.bodySmMedium)
-                .foregroundStyle(.onSurface)
+    private func featureRow(icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            MenuDetailIcon(icon: icon)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.onSurface)
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func creditoRow(_ rol: String, _ nombre: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(rol)
+                .font(.footnote)
+                .foregroundStyle(.onSurfaceVariant)
+            Text(nombre)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Presentacion compartida de Soporte y Sobre Nosotros
+private struct MenuDetailSheet<Content: View>: View {
+    @Environment(\.dismiss) private var dismiss
+    let title: String
+    private let content: Content
+
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.onSurface)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.onSurface)
+                        .frame(width: 44, height: 44)
+                        .background(Color.surfaceContainerHigh, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Cerrar", "Close"))
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    content
+                }
+                .frame(maxWidth: 600, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 28)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .background(Color.appSurface.ignoresSafeArea())
+        .accessibilityAction(.escape) { dismiss() }
+    }
+}
+
+private struct MenuDetailHero: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    var badge: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Image(systemName: icon)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.onPrimaryFill)
+                .frame(width: 60, height: 60)
+                .background(Color.onPrimaryFill.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.system(.title2, design: .rounded).weight(.bold))
+                    .accessibilityAddTraits(.isHeader)
+                Text(subtitle)
+                    .font(.subheadline)
+            }
+            .foregroundStyle(.onPrimaryFill)
+            .fixedSize(horizontal: false, vertical: true)
+
+            if let badge {
+                Text(badge)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.onSurface)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.surfaceContainerLowest, in: Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(24)
+        .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 28))
+    }
+}
+
+private struct MenuDetailIcon: View {
+    let icon: String
+
+    var body: some View {
+        Image(systemName: icon)
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(.onPrimaryContainer)
+            .frame(width: 40, height: 40)
+            .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 13))
+            .accessibilityHidden(true)
     }
 }
 

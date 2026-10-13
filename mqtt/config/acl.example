@@ -39,6 +39,10 @@ pattern write rutautp/ocupacion/%u/reporte
 pattern read rutautp/ocupacion/%u/recibo
 pattern read rutautp/ocupacion/estado
 
+# Registro de avisos: incluye el token APNs, solo por TLS y bajo su cuenta.
+pattern write rutautp/notificaciones/%u/registro
+pattern read rutautp/notificaciones/%u/recibo
+
 # Bloqueo deliberado de la identidad compartida histórica. Los `deny` tienen
 # precedencia sobre los permisos `pattern`; así una migración incompleta falla
 # de forma visible en lugar de conservar el aislamiento roto.
@@ -65,6 +69,8 @@ topic write rutautp/cambios/estado
 topic read rutautp/ocupacion/+/reporte
 topic write rutautp/ocupacion/+/recibo
 topic write rutautp/ocupacion/estado
+topic read rutautp/notificaciones/+/registro
+topic write rutautp/notificaciones/+/recibo
 
 # ── Cuenta humana de depuración ───────────────────────────────────────────
 #

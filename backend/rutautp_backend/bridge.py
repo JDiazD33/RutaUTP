@@ -94,6 +94,7 @@ class Bridge:
         self.config = config
         self.feed = feed
         self.route_changes = RouteChanges(feed)
+        self.push = None
         self.publisher = publisher
         self.validator = validator or ObservationValidator(feed, config)
         # El feed se pasa al agregador para que conozca la longitud de cada
@@ -433,8 +434,9 @@ class Bridge:
         """Conecta al broker y atiende mensajes hasta que se interrumpa.
 
         Se usa `client.loop()` en el hilo principal en vez de `loop_start()`:
-        así los mensajes se procesan en el mismo hilo que `tick()` y no hay
-        estado compartido entre hilos.
+        así las observaciones y reportes se procesan en el mismo hilo que
+        `tick()`. APNs tiene su propio worker y serializa el acceso a su SQLite;
+        no comparte geometria, votos ni estado vehicular con ese hilo.
 
         Con `publish=False` no se publica nada, aunque el publicador estuviera
         inyectado: es el modo de prueba contra un broker real.
@@ -445,9 +447,19 @@ class Bridge:
         desconectado para siempre y sin decir nada.
         """
         import paho.mqtt.client as mqtt
+        from .push_config import PushConfig
+        from .push_service import PushService
 
         if tick_interval_s <= 0:
             raise ValueError("tick_interval_s debe ser mayor que cero")
+
+        # Nada de APNs en dry-run. El resto de la app sigue funcionando sin
+        # Apple Developer: APNS_ENABLED=0 devuelve un estado honesto al cliente.
+        self.push = None
+        if publish:
+            push_config = PushConfig.from_env(str(self.config.database_path), self.config.use_tls)
+            self.push = PushService(push_config, self.feed)
+            self.push.start()
 
         client = self._build_client(mqtt)
 
@@ -494,6 +506,11 @@ class Bridge:
                 client.loop(timeout=tick_interval_s)
                 self.tick(connected=client.is_connected())
                 self.route_changes.publish_snapshot(time.time(), self.publisher)
+                if self.push:
+                    now_push = time.time()
+                    if now_push - self.push.last_observe >= 5:
+                        alerts = self.route_changes.confirmed_for_push(now_push) if self.push.ready else []
+                        self.push.observe(alerts, now_push)
                 self.occupancy.publish_snapshot(time.time(), self.publisher)
 
                 if client.is_connected():
@@ -531,6 +548,8 @@ class Bridge:
                 next_attempt_at = now + delay
                 delay = min(delay * 2, RECONNECT_MAX_S)
         finally:
+            if self.push:
+                self.push.close()
             for signum, handler in previous_handlers.items():
                 signal.signal(signum, handler)
 
@@ -594,6 +613,17 @@ class Bridge:
         client.on_disconnect = self._on_disconnect
 
         def on_message(_client: Any, _userdata: Any, message: Any) -> None:
+            if message.topic.startswith("rutautp/notificaciones/"):
+                if self.push and self.config.use_tls and not message.retain:
+                    try:
+                        receipt = self.push.register(message.topic, message.payload, time.time())
+                        if receipt and self.publisher:
+                            principal, body = receipt
+                            self.publisher(f"rutautp/notificaciones/{principal}/recibo", json.dumps(body))
+                    except Exception:
+                        # No incluir payload ni excepciones con datos privados.
+                        logger.error("no se pudo guardar el registro de avisos")
+                return
             if message.topic.startswith("rutautp/ocupacion/"):
                 receipt = self.occupancy.handle(message.topic, message.payload, time.time())
                 if receipt and self.publisher:
@@ -628,6 +658,9 @@ class Bridge:
 
         client.subscribe(self.config.observations_topic, qos=1)
         client.subscribe(REPORT_TOPIC, qos=1)
+        if self.push:
+            from .push_service import REGISTER_TOPIC
+            client.subscribe(REGISTER_TOPIC, qos=1)
         self.route_changes.last_snapshot = float("-inf")
         client.subscribe(OCCUPANCY_REPORT_TOPIC, qos=1)
         self.occupancy.last_snapshot = float("-inf")

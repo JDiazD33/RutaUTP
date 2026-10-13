@@ -321,6 +321,13 @@
     "pt-BR": "Abre o seletor de pontos com ações para mover e confirmar o destino",
     "zh-Hans": "打开点选取器，其中包含移动和确认目的地的操作"
   },
+  "Abre la consulta de cambios para revisar los reportes disponibles de tu línea. Sin información reciente no se puede confirmar el estado de la ruta.": {
+    "de": "Öffne die Routenänderungen, um verfügbare Meldungen zu deiner Linie zu prüfen. Ohne aktuelle Informationen lässt sich der Zustand der Route nicht bestätigen.",
+    "en": "Open route changes to check available reports for your line. Without recent information, the route status cannot be confirmed.",
+    "fr": "Ouvrez les changements d’itinéraire pour consulter les signalements disponibles sur votre ligne. Sans informations récentes, l’état de l’itinéraire ne peut pas être confirmé.",
+    "pt-BR": "Abra a consulta de mudanças para conferir os relatos disponíveis da sua linha. Sem informações recentes, não é possível confirmar a situação da rota.",
+    "zh-Hans": "打开线路变化页面，查看该线路已有的报告。缺少近期信息时，无法确认线路状况。"
+  },
   "Abre la guía oficial en el navegador": {
     "de": "Öffnet den offiziellen Leitfaden in Ihrem Browser",
     "en": "Opens the official guide in your browser",
@@ -369,6 +376,13 @@
     "fr": "Ouvrir les paramètres de localisation",
     "pt-BR": "Abra as configurações de localização",
     "zh-Hans": "打开位置设置"
+  },
+  "Abrir ajustes de iOS": {
+    "de": "iOS-Einstellungen öffnen",
+    "en": "Open iOS settings",
+    "fr": "Ouvrir les réglages iOS",
+    "pt-BR": "Abrir ajustes do iOS",
+    "zh-Hans": "打开iOS设置"
   },
   "Abrir menú": {
     "de": "Menü öffnen",
@@ -468,6 +482,13 @@
     "pt-BR": "Ative a localização para navegar",
     "zh-Hans": "启用位置导航"
   },
+  "Activa las notificaciones para recibir los avisos diarios.": {
+    "de": "Aktiviere Benachrichtigungen, um tägliche Hinweise zu erhalten.",
+    "en": "Turn on notifications to receive daily notifications.",
+    "fr": "Activez les notifications pour recevoir les rappels quotidiens.",
+    "pt-BR": "Ative as notificações para receber os avisos diários.",
+    "zh-Hans": "请开启通知以接收每日提醒。"
+  },
   "Activa o desactiva VoiceOver con su interruptor.": {
     "de": "Mit dem Schalter können Sie VoiceOver ein- oder ausschalten.",
     "en": "Use the switch to turn VoiceOver on or off.",
@@ -510,6 +531,13 @@
     "pt-BR": "Ativar um controle",
     "zh-Hans": "操作控件"
   },
+  "Activas": {
+    "de": "Aktiv",
+    "en": "Active",
+    "fr": "Actives",
+    "pt-BR": "Ativas",
+    "zh-Hans": "已开启"
+  },
   "Actualiza qué tan lleno va el micro; tu elección venció.": {
     "de": "Aktualisieren Sie, wie voll Ihr Bus ist; Ihre Auswahl ist abgelaufen.",
     "en": "Update how full your bus is; your selection expired.",
@@ -524,6 +552,13 @@
     "pt-BR": "Atualizado ",
     "zh-Hans": "已更新 "
   },
+  "Actualizando avisos…": {
+    "de": "Benachrichtigungen werden aktualisiert…",
+    "en": "Updating notifications…",
+    "fr": "Mise à jour des notifications…",
+    "pt-BR": "Atualizando notificações…",
+    "zh-Hans": "正在更新通知…"
+  },
   "Acércate a un paradero": {
     "de": "Gehen Sie zu einem Halt",
     "en": "Head to a stop",
@@ -537,6 +572,13 @@
     "fr": "Poulet aeropuerto (mélange de riz et nouilles) ou kam lu Wantan en portion complète avec 15 % de réduction. Le chef de famille de La Esperanza.",
     "pt-BR": "Aeropuerto de frango (misto de arroz e macarrão) ou kam lu wantan em porção integral com 15% de desconto. A chifa da família de La Esperanza.",
     "zh-Hans": "鸡肉 aeropuerto（混合米饭和面条）或金卤云吞全份，可享受 15% 的折扣。 La Esperanza的家族厨师。"
+  },
+  "Agenda cubierta hasta {0}": {
+    "de": "Benachrichtigungen geplant bis {0}",
+    "en": "Schedule covered until {0}",
+    "fr": "Notifications programmées jusqu’au {0}",
+    "pt-BR": "Agenda programada até {0}",
+    "zh-Hans": "通知已安排至{0}"
   },
   "Agua acumulada en una calle y personal trabajando con una unidad de succión.": {
     "de": "Stehendes Wasser auf einer Straße und Arbeiter, die einen Saugwagen benutzen.",
@@ -685,6 +727,20 @@
     "pt-BR": "Analisando movimento",
     "zh-Hans": "分析运动"
   },
+  "Antes de canjear un cupón, comprueba sus condiciones, su fecha de vencimiento y la confirmación del negocio.": {
+    "de": "Prüfe vor dem Einlösen eines Gutscheins seine Bedingungen, das Ablaufdatum und die Bestätigung des Geschäfts.",
+    "en": "Before redeeming a coupon, check its terms, expiry date and confirmation from the business.",
+    "fr": "Avant d’utiliser un coupon, vérifiez ses conditions, sa date d’expiration et la confirmation du commerce.",
+    "pt-BR": "Antes de usar um cupom, confira suas condições, a data de validade e a confirmação do negócio.",
+    "zh-Hans": "使用优惠券前，请核对使用条件、有效期和商家的确认。"
+  },
+  "Antes de salir": {
+    "de": "Vor der Abfahrt",
+    "en": "Before heading out",
+    "fr": "Avant de partir",
+    "pt-BR": "Antes de sair",
+    "zh-Hans": "出发前"
+  },
   "Apagar linterna": {
     "de": "Taschenlampe ausschalten",
     "en": "Turn off flashlight",
@@ -790,12 +846,47 @@
     "pt-BR": "Progresso da viagem",
     "zh-Hans": "行程进度"
   },
+  "Avisos de cambios desactivados": {
+    "de": "Benachrichtigungen über Routenänderungen deaktiviert",
+    "en": "Route change notifications disabled",
+    "fr": "Notifications de changements désactivées",
+    "pt-BR": "Avisos de mudanças desativados",
+    "zh-Hans": "线路变化通知已关闭"
+  },
+  "Avisos de la comunidad cuando al menos dos cuentas reportan el mismo cambio. Las pausas, días y horarios también se aplican al envío remoto una vez sincronizados.": {
+    "de": "Community-Benachrichtigungen, wenn mindestens zwei Konten dieselbe Änderung melden. Nach der Synchronisierung gelten Pausen, Tage und Ruhezeiten auch für entfernte Benachrichtigungen.",
+    "en": "Community notifications when at least two accounts report the same change. Pauses, days and quiet hours also apply to remote delivery once synced.",
+    "fr": "Notifications de la communauté lorsqu’au moins deux comptes signalent le même changement. Après synchronisation, les pauses, jours et horaires s’appliquent aussi aux envois distants.",
+    "pt-BR": "Avisos da comunidade quando pelo menos duas contas relatam a mesma mudança. Após a sincronização, pausas, dias e horários também se aplicam ao envio remoto.",
+    "zh-Hans": "至少两个账号报告同一变化时发送社区通知。同步后，暂停、静音日期和时间段也适用于远程通知。"
+  },
+  "Avisos del día": {
+    "de": "Tägliche Hinweise",
+    "en": "Daily notifications",
+    "fr": "Notifications du jour",
+    "pt-BR": "Avisos do dia",
+    "zh-Hans": "每日通知"
+  },
+  "Avisos diarios aleatorios": {
+    "de": "Tägliche Benachrichtigungen zu zufälligen Zeiten",
+    "en": "Random daily notifications",
+    "fr": "Notifications quotidiennes à des heures aléatoires",
+    "pt-BR": "Avisos diários em horários aleatórios",
+    "zh-Hans": "每日随机时间通知"
+  },
   "Ayuda de VoiceOver": {
     "de": "VoiceOver Hilfe",
     "en": "VoiceOver help",
     "fr": "Aide VoiceOver",
     "pt-BR": "Ajuda VoiceOver",
     "zh-Hans": "VoiceOver 帮助"
+  },
+  "Ayuda sin conexión": {
+    "de": "Offline-Hilfe",
+    "en": "Offline help",
+    "fr": "Aide hors connexion",
+    "pt-BR": "Ajuda sem internet",
+    "zh-Hans": "离线帮助"
   },
   "Ayudar con ubicaciones": {
     "de": "Positionen beitragen",
@@ -992,6 +1083,13 @@
     "fr": "Portefeuille numérique",
     "pt-BR": "Carteira digital",
     "zh-Hans": "数字钱包"
+  },
+  "Bloqueadas por iOS": {
+    "de": "Von iOS blockiert",
+    "en": "Blocked by iOS",
+    "fr": "Bloquées par iOS",
+    "pt-BR": "Bloqueadas pelo iOS",
+    "zh-Hans": "被iOS阻止"
   },
   "Bollitos de anís de la primera hornada, para el recreo o el viaje de vuelta a casa.": {
     "de": "Anisbrötchen aus der ersten Charge, für die Pause oder die Heimfahrt.",
@@ -1196,6 +1294,13 @@
     "pt-BR": "Pesquisar empresa",
     "zh-Hans": "搜寻公司"
   },
+  "Buscar en la ayuda": {
+    "de": "Hilfe durchsuchen",
+    "en": "Search help",
+    "fr": "Rechercher dans l’aide",
+    "pt-BR": "Buscar na ajuda",
+    "zh-Hans": "搜索帮助"
+  },
   "Buscar línea para guardar": {
     "de": "Suchen Sie nach einer Linie zum Speichern",
     "en": "Search for a line to save",
@@ -1371,6 +1476,13 @@
     "pt-BR": "Trocar de linha",
     "zh-Hans": "更换线路"
   },
+  "Cambiar de modo termina tu viaje actual.": {
+    "de": "Ein Moduswechsel beendet deine aktuelle Fahrt.",
+    "en": "Switching modes ends your current trip.",
+    "fr": "Changer de mode met fin à votre trajet en cours.",
+    "pt-BR": "Mudar de modo encerra sua viagem atual.",
+    "zh-Hans": "切换模式会结束当前行程。"
+  },
   "Cambiar empresa": {
     "de": "Firma wechseln",
     "en": "Change company",
@@ -1440,6 +1552,20 @@
     "fr": "Modifications d'itinéraire",
     "pt-BR": "Mudanças de rota",
     "zh-Hans": "路线变更"
+  },
+  "Cambios en mis líneas guardadas": {
+    "de": "Änderungen auf meinen gespeicherten Linien",
+    "en": "Changes on my saved lines",
+    "fr": "Changements sur mes lignes enregistrées",
+    "pt-BR": "Mudanças nas minhas linhas salvas",
+    "zh-Hans": "已保存线路的变化"
+  },
+  "Cambios pendientes de sincronizar": {
+    "de": "Änderungen warten auf Synchronisierung",
+    "en": "Changes waiting to sync",
+    "fr": "Changements en attente de synchronisation",
+    "pt-BR": "Mudanças pendentes de sincronização",
+    "zh-Hans": "更改待同步"
   },
   "Camina ": {
     "de": "Gehen ",
@@ -1525,6 +1651,13 @@
     "pt-BR": "Cancelar o marcador",
     "zh-Hans": "取消标记"
   },
+  "Cantidad por día": {
+    "de": "Anzahl pro Tag",
+    "en": "Daily frequency",
+    "fr": "Fréquence quotidienne",
+    "pt-BR": "Quantidade por dia",
+    "zh-Hans": "每日数量"
+  },
   "Cargando líneas oficiales…": {
     "de": "Offizielle Routen werden geladen…",
     "en": "Loading official routes…",
@@ -1601,6 +1734,13 @@
     "fr": "Exemple d'identification numérique de ",
     "pt-BR": "Exemplo de ID digital de ",
     "zh-Hans": "样本数字 ID "
+  },
+  "Carné guardado": {
+    "de": "Ausweis gespeichert",
+    "en": "Card saved",
+    "fr": "Carte enregistrée",
+    "pt-BR": "Carteira salva",
+    "zh-Hans": "证件已保存"
   },
   "Categoría": {
     "de": "Kategorie",
@@ -1973,6 +2113,13 @@
     "pt-BR": "Com espaço",
     "zh-Hans": "有空间"
   },
+  "Con la misma hora de inicio y fin, el silencio dura todo el día.": {
+    "de": "Wenn Anfang und Ende dieselbe Uhrzeit haben, gilt die Ruhezeit den ganzen Tag.",
+    "en": "When start and end times match, quiet hours last all day.",
+    "fr": "Si les heures de début et de fin sont identiques, le silence dure toute la journée.",
+    "pt-BR": "Quando o início e o fim têm o mesmo horário, o silêncio dura o dia inteiro.",
+    "zh-Hans": "开始和结束时间相同时，将全天静音。"
+  },
   "Conectando con el servicio de alertas…": {
     "de": "Verbindung zu Routenwarnungen wird hergestellt…",
     "en": "Connecting to route alerts…",
@@ -2008,6 +2155,13 @@
     "pt-BR": "A confirmação de outra empresa retorna ao transporte urbano e encerra a viagem atual.",
     "zh-Hans": "确认另一家公司返回城市交通并结束当前行程。"
   },
+  "Confirmar pausa": {
+    "de": "Pause bestätigen",
+    "en": "Confirm pause",
+    "fr": "Confirmer la pause",
+    "pt-BR": "Confirmar pausa",
+    "zh-Hans": "确认暂停"
+  },
   "Confirmar ubicación": {
     "de": "Standort bestätigen",
     "en": "Confirm location",
@@ -2036,12 +2190,33 @@
     "pt-BR": "Cones e escavadeiras podem indicar um fechamento gradual. Se sua rota mudar em González Prada, informe onde começa e termina o trecho afetado.",
     "zh-Hans": "锥体和挖掘机可能表明分阶段关闭。如果您在 González Prada 上的路线发生变化，请报告受影响路段的开始和结束位置。"
   },
+  "Consulta los cambios de ruta": {
+    "de": "Prüfe Routenänderungen",
+    "en": "Check route changes",
+    "fr": "Consultez les changements d’itinéraire",
+    "pt-BR": "Consulte as mudanças de rota",
+    "zh-Hans": "查看线路变化情况"
+  },
   "Consulta qué puedes usar sin internet": {
     "de": "Sehen Sie, was ohne Internet funktioniert",
     "en": "See what works without internet",
     "fr": "Découvrez ce qui fonctionne sans Internet",
     "pt-BR": "Veja o que funciona sem internet",
     "zh-Hans": "看看没有互联网的情况下有什么作用"
+  },
+  "Consultando iOS…": {
+    "de": "iOS wird geprüft…",
+    "en": "Checking iOS…",
+    "fr": "Vérification d’iOS…",
+    "pt-BR": "Consultando o iOS…",
+    "zh-Hans": "正在检查iOS…"
+  },
+  "Consultar cambios de ruta": {
+    "de": "Routenänderungen prüfen",
+    "en": "Check route changes",
+    "fr": "Consulter les changements d’itinéraire",
+    "pt-BR": "Consultar mudanças de rota",
+    "zh-Hans": "查看线路变化"
   },
   "Contactar Soporte Técnico": {
     "de": "Kontaktieren Sie den technischen Support",
@@ -2168,6 +2343,20 @@
     "fr": "E-mail personnel : ",
     "pt-BR": "E-mail pessoal: ",
     "zh-Hans": "个人邮箱： "
+  },
+  "Crear recordatorio": {
+    "de": "Erinnerung erstellen",
+    "en": "Create reminder",
+    "fr": "Créer un rappel",
+    "pt-BR": "Criar lembrete",
+    "zh-Hans": "创建提醒"
+  },
+  "Credenciales": {
+    "de": "Ausweise",
+    "en": "Credentials",
+    "fr": "Cartes",
+    "pt-BR": "Credenciais",
+    "zh-Hans": "证件"
   },
   "Cuadrilla extendiendo asfalto en una avenida junto a viviendas.": {
     "de": "Ein Team verteilt Asphalt auf einer Allee neben Häusern.",
@@ -2386,6 +2575,13 @@
     "pt-BR": "Detalhes institucionais",
     "zh-Hans": "机构详情"
   },
+  "Datos personales": {
+    "de": "Persönliche Angaben",
+    "en": "Personal details",
+    "fr": "Informations personnelles",
+    "pt-BR": "Dados pessoais",
+    "zh-Hans": "个人信息"
+  },
   "De a dos: pide un 1/4 de pollo a la brasa con papas doradas y el segundo va por nuestra cuenta.": {
     "de": "Für zwei: Bestellen Sie ein 1/4 Brathähnchen mit goldenen Pommes Frites und das zweite geht auf uns.",
     "en": "For two: order a 1/4 rotisserie chicken with golden fries and the second one is on us.",
@@ -2427,6 +2623,13 @@
     "fr": "Démo : aucune application de paiement n'est ouverte et aucun transfert d'argent réel.",
     "pt-BR": "Demonstração: nenhum aplicativo de pagamento é aberto e nenhum movimento de dinheiro real.",
     "zh-Hans": "演示：没有打开支付应用程序，也没有真正的资金流动。"
+  },
+  "Desactivadas": {
+    "de": "Deaktiviert",
+    "en": "Disabled",
+    "fr": "Désactivées",
+    "pt-BR": "Desativadas",
+    "zh-Hans": "已关闭"
   },
   "Desactivado": {
     "de": "Deaktiviert",
@@ -2476,6 +2679,13 @@
     "fr": "Description du rapport",
     "pt-BR": "Descrição do relatório",
     "zh-Hans": "报告说明"
+  },
+  "Desde": {
+    "de": "Von",
+    "en": "From",
+    "fr": "De",
+    "pt-BR": "Das",
+    "zh-Hans": "开始"
   },
   "Desde el campus UTP": {
     "de": "Vom UTP-Campus",
@@ -2560,6 +2770,13 @@
     "fr": "Destination",
     "pt-BR": "Destino",
     "zh-Hans": "目的地"
+  },
+  "Destino no disponible": {
+    "de": "Ziel nicht verfügbar",
+    "en": "Destination unavailable",
+    "fr": "Destination indisponible",
+    "pt-BR": "Destino indisponível",
+    "zh-Hans": "目的地不可用"
   },
   "Destinos guardados": {
     "de": "Gespeicherte Ziele",
@@ -2764,6 +2981,20 @@
     "pt-BR": "Durante a pavimentação, o acesso à rotatória poderá sofrer alterações. Um relatório é mais útil quando explica para onde o trânsito está sendo desviado.",
     "zh-Hans": "在铺设过程中，通往环岛的通道可能会发生变化。当报告解释交通正在改道的地方时，它会更有帮助。"
   },
+  "Días de salida": {
+    "de": "Abfahrtstage",
+    "en": "Departure days",
+    "fr": "Jours de départ",
+    "pt-BR": "Dias de saída",
+    "zh-Hans": "出发日期"
+  },
+  "Días sin avisos": {
+    "de": "Tage ohne Benachrichtigungen",
+    "en": "Days without notifications",
+    "fr": "Jours sans notifications",
+    "pt-BR": "Dias sem notificações",
+    "zh-Hans": "不接收通知的日期"
+  },
   "E": {
     "de": "O",
     "en": "E",
@@ -2841,6 +3072,13 @@
     "pt-BR": "Editar perfil",
     "zh-Hans": "编辑个人资料"
   },
+  "Editar recordatorio": {
+    "de": "Erinnerung bearbeiten",
+    "en": "Edit reminder",
+    "fr": "Modifier le rappel",
+    "pt-BR": "Editar lembrete",
+    "zh-Hans": "编辑提醒"
+  },
   "Editar ubicación en el mapa": {
     "de": "Standort auf der Karte bearbeiten",
     "en": "Edit location on map",
@@ -2903,6 +3141,20 @@
     "fr": "Le catalogue GTFS ne contient aucune route",
     "pt-BR": "O catálogo GTFS não contém rotas",
     "zh-Hans": "GTFS 目录不包含线路"
+  },
+  "El catálogo actual de negocios es de demostración. Todavía no hay descuentos reales verificados para enviar avisos.": {
+    "de": "Der aktuelle Geschäftskatalog dient der Demonstration. Es gibt noch keine bestätigten echten Rabatte für Benachrichtigungen.",
+    "en": "The current business catalog is for demonstration. There are no verified real discounts for notifications yet.",
+    "fr": "Le catalogue actuel de commerces est une démonstration. Aucune réduction réelle vérifiée n’est encore disponible pour envoyer des notifications.",
+    "pt-BR": "O catálogo atual de negócios é de demonstração. Ainda não há descontos reais verificados para enviar avisos.",
+    "zh-Hans": "当前商家目录用于演示。暂时没有经过核实的真实折扣可用于发送通知。"
+  },
+  "El catálogo de líneas y paraderos viene incluido en la app. Sus cambios llegan con las actualizaciones de la app.": {
+    "de": "Der Katalog mit Linien und Haltestellen ist in der App enthalten. Änderungen werden mit App-Updates bereitgestellt.",
+    "en": "The route and stop catalog is included in the app. Changes arrive with app updates.",
+    "fr": "Le catalogue des lignes et des arrêts est inclus dans l’app. Il évolue avec les mises à jour de l’app.",
+    "pt-BR": "O catálogo de linhas e pontos de parada está incluído no app. As mudanças chegam com as atualizações do app.",
+    "zh-Hans": "应用内包含线路和站点目录。目录的变更随应用更新提供。"
   },
   "El catálogo local se cargó correctamente, pero no incluye rutas.": {
     "de": "Der lokale Katalog wurde erfolgreich geladen, enthält jedoch keine Routen.",
@@ -2981,6 +3233,13 @@
     "pt-BR": "O valor não é válido para esta carteira. Nenhuma alteração foi feita.",
     "zh-Hans": "该金额对该钱包无效。没有进行任何更改。"
   },
+  "El lugar se eliminó o tu sede cambió. Edita el destino para volver a recibir este recordatorio.": {
+    "de": "Der Ort wurde gelöscht oder Ihr Standort hat sich geändert. Bearbeiten Sie das Ziel, um diese Erinnerung wieder zu erhalten.",
+    "en": "The place was deleted or your workplace changed. Edit the destination to receive this reminder again.",
+    "fr": "Le lieu a été supprimé ou votre site a changé. Modifiez la destination pour recevoir à nouveau ce rappel.",
+    "pt-BR": "O lugar foi excluído ou sua unidade mudou. Edite o destino para voltar a receber este lembrete.",
+    "zh-Hans": "地点已删除或你的工作地点已变更。请编辑目的地以重新接收此提醒。"
+  },
   "El micro de las 6:20 AM llega vacío al paradero de Urb. El Recreo.": {
     "de": "Der Bus um 6:20 Uhr erreicht die Urb. El Recreo Haltestelle fast leer.",
     "en": "The 6:20 AM bus reaches the Urb. El Recreo stop nearly empty.",
@@ -3037,6 +3296,27 @@
     "pt-BR": "A remoção do pavimento pode fechar um bloco em etapas. Ao relatá-lo, faça a distinção entre um fechamento total e o tráfego em uma faixa.",
     "zh-Hans": "路面拆除可以分阶段关闭街区。报告时，区分完全封闭和使用单车道的交通。"
   },
+  "El servicio no aceptó el registro. Revisa la configuración de la conexión.": {
+    "de": "Der Dienst hat die Registrierung nicht angenommen. Prüfe die Verbindungseinstellungen.",
+    "en": "The service did not accept registration. Check the connection configuration.",
+    "fr": "Le service a refusé l’inscription. Vérifiez la configuration de la connexion.",
+    "pt-BR": "O serviço não aceitou o registro. Confira a configuração da conexão.",
+    "zh-Hans": "服务未接受注册。请检查连接配置。"
+  },
+  "El servidor recibió tus ajustes, pero el envío remoto aún no está configurado.": {
+    "de": "Der Server hat deine Einstellungen erhalten, aber der entfernte Versand ist noch nicht eingerichtet.",
+    "en": "The server received your settings, but remote delivery is not configured yet.",
+    "fr": "Le serveur a reçu vos réglages, mais l’envoi distant n’est pas encore configuré.",
+    "pt-BR": "O servidor recebeu seus ajustes, mas o envio remoto ainda não está configurado.",
+    "zh-Hans": "服务器已收到你的设置，但远程发送尚未配置。"
+  },
+  "El sonido está apagado en iOS. Puedes cambiarlo en los ajustes del sistema.": {
+    "de": "Der Ton ist in iOS deaktiviert. Sie können dies in den Systemeinstellungen ändern.",
+    "en": "Sound is turned off in iOS. You can change it in system settings.",
+    "fr": "Le son est désactivé dans iOS. Vous pouvez le modifier dans les réglages du système.",
+    "pt-BR": "O som está desativado no iOS. Você pode alterá-lo nos ajustes do sistema.",
+    "zh-Hans": "iOS中的声音已关闭。你可以在系统设置中更改。"
+  },
   "El tiempo incluye una espera estimada para el segundo micro.": {
     "de": "Die Zeit beinhaltet eine geschätzte Wartezeit auf den zweiten Bus.",
     "en": "Time includes an estimated wait for the second bus.",
@@ -3078,6 +3358,20 @@
     "fr": "Choisissez l'entreprise et le lieu de travail",
     "pt-BR": "Escolha a empresa e o local de trabalho",
     "zh-Hans": "选择公司和工作地点"
+  },
+  "Elegir fecha y hora": {
+    "de": "Datum und Uhrzeit wählen",
+    "en": "Choose date and time",
+    "fr": "Choisir la date et l’heure",
+    "pt-BR": "Escolher data e horário",
+    "zh-Hans": "选择日期和时间"
+  },
+  "Elegir horario y cantidad": {
+    "de": "Zeitraum und Anzahl wählen",
+    "en": "Choose time and frequency",
+    "fr": "Choisir les horaires et la fréquence",
+    "pt-BR": "Escolher horário e quantidade",
+    "zh-Hans": "选择时间和数量"
   },
   "Elegir otra línea": {
     "de": "Andere Linie wählen",
@@ -3177,12 +3471,26 @@
     "pt-BR": "Escolha os locais que aparecerão aqui",
     "zh-Hans": "选择在此显示的地点"
   },
+  "Elige qué carnés aparecen en tu billetera": {
+    "de": "Wähle die Ausweise, die in deiner Geldbörse angezeigt werden",
+    "en": "Choose which cards appear in your wallet",
+    "fr": "Choisissez les cartes affichées dans votre portefeuille",
+    "pt-BR": "Escolha quais carteiras aparecem na sua carteira",
+    "zh-Hans": "选择钱包中显示的证件"
+  },
   "Elige tu ruta": {
     "de": "Wählen Sie Ihre Route",
     "en": "Pick your route",
     "fr": "Choisissez votre itinéraire",
     "pt-BR": "Escolha sua rota",
     "zh-Hans": "选择您的路线"
+  },
+  "Elige un destino": {
+    "de": "Ziel wählen",
+    "en": "Choose a destination",
+    "fr": "Choisir une destination",
+    "pt-BR": "Escolha um destino",
+    "zh-Hans": "选择目的地"
   },
   "Elige un destino guardado para calcular cómo llegar.": {
     "de": "Wählen Sie ein gespeichertes Ziel, um eine Wegbeschreibung zu finden.",
@@ -3191,12 +3499,26 @@
     "pt-BR": "Escolha um destino salvo para encontrar rotas.",
     "zh-Hans": "选择已保存的目的地以查找路线。"
   },
+  "Elige un destino, una hora y los días en que quieres recordar tu salida.": {
+    "de": "Wählen Sie ein Ziel, eine Uhrzeit und die Tage für Ihre Abfahrtserinnerung.",
+    "en": "Choose a destination, a time and the days you want a departure reminder.",
+    "fr": "Choisissez une destination, une heure et les jours où vous souhaitez un rappel de départ.",
+    "pt-BR": "Escolha um destino, um horário e os dias em que deseja um lembrete de saída.",
+    "zh-Hans": "选择目的地、时间以及需要出发提醒的日期。"
+  },
   "Eliminar": {
     "de": "Löschen",
     "en": "Delete",
     "fr": "Supprimer",
     "pt-BR": "Excluir",
     "zh-Hans": "删除"
+  },
+  "Eliminar recordatorio": {
+    "de": "Erinnerung löschen",
+    "en": "Delete reminder",
+    "fr": "Supprimer le rappel",
+    "pt-BR": "Excluir lembrete",
+    "zh-Hans": "删除提醒"
   },
   "Eliminar referencia": {
     "de": "Referenz löschen",
@@ -3282,6 +3604,13 @@
     "pt-BR": "No mapa, toque em um chip (seu local de trabalho, centro da cidade, Huanchaco ou seus locais salvos) para mudar rapidamente. Escolha seu local de trabalho em Configurações.",
     "zh-Hans": "在地图上，点击一个芯片（您的工作场所、市中心、Huanchaco 或您保存的地点）即可快速切换。在“设置”中选择您的工作场所。"
   },
+  "En esta versión de prueba, los reportes no se envían a un servidor.": {
+    "de": "In dieser Testversion werden Meldungen nicht an einen Server gesendet.",
+    "en": "In this trial version, reports are not sent to a server.",
+    "fr": "Dans cette version d’essai, les signalements ne sont pas envoyés à un serveur.",
+    "pt-BR": "Nesta versão de teste, os relatos não são enviados a um servidor.",
+    "zh-Hans": "在此试用版本中，报告不会发送到服务器。"
+  },
   "En la pantalla de Guardado, presiona + Añadir y completa los datos.": {
     "de": "Tippen Sie im Bildschirm „Gespeichert“ auf + Hinzufügen und geben Sie die Details ein.",
     "en": "In the Saved screen, tap + Add and fill in the details.",
@@ -3345,6 +3674,13 @@
     "pt-BR": "Encontre a rota exata do seu local até o campus, sem complicações.",
     "zh-Hans": "轻松找到从您所在位置到校园的准确路线。"
   },
+  "Encuentra respuestas para usar la app y moverte por Trujillo.": {
+    "de": "Finde Antworten zur App und zur Fortbewegung in Trujillo.",
+    "en": "Find answers about using the app and getting around Trujillo.",
+    "fr": "Trouvez des réponses pour utiliser l’app et vous déplacer à Trujillo.",
+    "pt-BR": "Encontre respostas sobre como usar o app e se locomover por Trujillo.",
+    "zh-Hans": "查找关于使用应用和在特鲁希略出行的解答。"
+  },
   "Encuentra tu micro y revisa su recorrido": {
     "de": "Finden Sie Ihren Bus und überprüfen Sie seine Route",
     "en": "Find your bus and check its route",
@@ -3387,12 +3723,40 @@
     "pt-BR": "Enviando…",
     "zh-Hans": "正在发送..."
   },
+  "Enviar aviso de prueba": {
+    "de": "Testbenachrichtigung senden",
+    "en": "Send test notification",
+    "fr": "Envoyer une notification de test",
+    "pt-BR": "Enviar notificação de teste",
+    "zh-Hans": "发送测试通知"
+  },
+  "Enviar aviso local de prueba": {
+    "de": "Lokale Testbenachrichtigung senden",
+    "en": "Send a local test notification",
+    "fr": "Envoyer une notification locale de test",
+    "pt-BR": "Enviar aviso local de teste",
+    "zh-Hans": "发送本地测试通知"
+  },
   "Enviar reporte": {
     "de": "Bericht senden",
     "en": "Send report",
     "fr": "Envoyer le rapport",
     "pt-BR": "Enviar relatório",
     "zh-Hans": "发送报告"
+  },
+  "Equipo de desarrollo": {
+    "de": "Entwicklungsteam",
+    "en": "Development team",
+    "fr": "Équipe de développement",
+    "pt-BR": "Equipe de desenvolvimento",
+    "zh-Hans": "开发团队"
+  },
+  "Es hora de salir hacia {0}. Abre RutaUTP para revisar tu destino.": {
+    "de": "Zeit, nach {0} aufzubrechen. Öffnen Sie RutaUTP, um Ihr Ziel zu prüfen.",
+    "en": "Time to head to {0}. Open RutaUTP to check your destination.",
+    "fr": "Il est temps de partir vers {0}. Ouvrez RutaUTP pour consulter votre destination.",
+    "pt-BR": "É hora de sair para {0}. Abra o RutaUTP para conferir seu destino.",
+    "zh-Hans": "该出发前往{0}了。打开RutaUTP查看目的地。"
   },
   "Es una demostración: el código lleva los datos de una cuenta inventada y ninguna app de pagos lo leerá como un cobro. No se mueve dinero real.": {
     "de": "Dies ist eine Demo: Der Code enthält die Details eines erstellten Kontos und wird von keiner Zahlungs-App als Belastung gelesen. Es bewegt sich kein echtes Geld.",
@@ -3492,6 +3856,13 @@
     "pt-BR": "Esta cidade ainda não está disponível",
     "zh-Hans": "该城市尚不可用"
   },
+  "Esta es una prueba de los avisos locales de RutaUTP.": {
+    "de": "Dies ist ein Test der lokalen Benachrichtigungen von RutaUTP.",
+    "en": "This is a test of RutaUTP's local notifications.",
+    "fr": "Ceci est un test des notifications locales de RutaUTP.",
+    "pt-BR": "Este é um teste dos avisos locais do RutaUTP.",
+    "zh-Hans": "这是 RutaUTP 本地通知的测试。"
+  },
   "Esta instalación aún no tiene habilitada la contribución de viajes. Puedes seguir consultando la ruta en el mapa.": {
     "de": "Reisebeiträge sind in dieser Installation noch nicht konfiguriert. Sie können Ihre Route weiterhin auf der Karte anzeigen.",
     "en": "Trip contributions aren't configured on this installation yet. You can still view your route on the map.",
@@ -3541,6 +3912,20 @@
     "pt-BR": "Estado da viagem",
     "zh-Hans": "行程状态"
   },
+  "Este aviso lo entrega iOS. Tus notificaciones están listas.": {
+    "de": "Diese Benachrichtigung wird von iOS zugestellt. Ihre Benachrichtigungen sind bereit.",
+    "en": "This notification is delivered by iOS. Your notifications are ready.",
+    "fr": "Cette notification est envoyée par iOS. Vos notifications sont prêtes.",
+    "pt-BR": "Esta notificação é entregue pelo iOS. Suas notificações estão prontas.",
+    "zh-Hans": "此通知由iOS送达。通知功能已就绪。"
+  },
+  "Este aviso ya venció o la línea ya no está guardada. Revisa los reportes actuales en Seguridad.": {
+    "de": "Diese Benachrichtigung ist abgelaufen oder die Linie ist nicht mehr gespeichert. Prüfe aktuelle Meldungen unter Sicherheit.",
+    "en": "This notification has expired or the line is no longer saved. Check current reports in Safety.",
+    "fr": "Cette notification a expiré ou la ligne n’est plus enregistrée. Consultez les signalements actuels dans Sécurité.",
+    "pt-BR": "Este aviso expirou ou a linha não está mais salva. Confira os relatos atuais em Segurança.",
+    "zh-Hans": "此通知已过期或该线路已取消保存。请在“安全”中查看当前报告。"
+  },
   "Este bus ya no tiene una ubicación reciente. Vuelve a seleccionarlo en el mapa.": {
     "de": "Dieser Bus hat keine aktuelle Position mehr. Wählen Sie es erneut auf der Karte aus.",
     "en": "This bus no longer has a recent position. Select it again on the map.",
@@ -3583,6 +3968,13 @@
     "pt-BR": "Este ponto está a {0} m da rota {1}. Não corresponde a esta linha: toque no trajeto azul.",
     "zh-Hans": "该点距离 {1} 线路 {0} 米，不属于此线路。请点击蓝色路线。"
   },
+  "Este recordatorio ya no está disponible. Revisa tus ajustes de notificaciones.": {
+    "de": "Diese Erinnerung ist nicht mehr verfügbar. Prüfen Sie Ihre Benachrichtigungseinstellungen.",
+    "en": "This reminder is no longer available. Check your notification settings.",
+    "fr": "Ce rappel n’est plus disponible. Vérifiez vos réglages de notifications.",
+    "pt-BR": "Este lembrete não está mais disponível. Confira seus ajustes de notificações.",
+    "zh-Hans": "此提醒已不可用。请检查通知设置。"
+  },
   "Estoy en un micro": {
     "de": "Ich sitze im Bus",
     "en": "I'm on a bus",
@@ -3624,6 +4016,13 @@
     "fr": "Agrandir la carte",
     "pt-BR": "Expandir mapa",
     "zh-Hans": "展开地图"
+  },
+  "Explora líneas y paraderos para planificar tu viaje.": {
+    "de": "Entdecke Linien und Haltestellen, um deine Fahrt zu planen.",
+    "en": "Explore routes and stops to plan your trip.",
+    "fr": "Explorez les lignes et les arrêts pour préparer votre trajet.",
+    "pt-BR": "Explore linhas e pontos de parada para planejar sua viagem.",
+    "zh-Hans": "浏览线路和站点，规划你的行程。"
   },
   "Explora paraderos": {
     "de": "Erkunden Sie Bushaltestellen",
@@ -3695,6 +4094,13 @@
     "pt-BR": "FREQUENTE",
     "zh-Hans": "频繁"
   },
+  "Falta configurar la conexión del servicio.": {
+    "de": "Die Verbindung zum Dienst muss eingerichtet werden.",
+    "en": "The service connection needs to be configured.",
+    "fr": "La connexion au service doit être configurée.",
+    "pt-BR": "É necessário configurar a conexão do serviço.",
+    "zh-Hans": "需要配置服务连接。"
+  },
   "Falta el archivo {0}": {
     "de": "Datei {0} fehlt",
     "en": "File {0} is missing",
@@ -3737,6 +4143,13 @@
     "pt-BR": "Foto de arquivo: ",
     "zh-Hans": "存档照片： "
   },
+  "Foto de credencial": {
+    "de": "Ausweisfoto",
+    "en": "ID photo",
+    "fr": "Photo du badge",
+    "pt-BR": "Foto do crachá",
+    "zh-Hans": "证件照片"
+  },
   "Foto de perfil": {
     "de": "Profilfoto",
     "en": "Profile photo",
@@ -3778,6 +4191,13 @@
     "fr": "Photo enregistrée sur cet appareil",
     "pt-BR": "Foto salva neste dispositivo",
     "zh-Hans": "此设备上保存的照片"
+  },
+  "Franja de envío": {
+    "de": "Versandzeitraum",
+    "en": "Delivery window",
+    "fr": "Plage d’envoi",
+    "pt-BR": "Faixa de envio",
+    "zh-Hans": "发送时间段"
   },
   "Frecuente": {
     "de": "Häufig",
@@ -3842,6 +4262,13 @@
     "pt-BR": "Obrigado por ajudar. Nesta versão de teste o relatório não é enviado para nenhum servidor.",
     "zh-Hans": "谢谢你的帮助。在此试用版本中，报告不会发送到任何服务器。"
   },
+  "Guarda las líneas que usas y revisa tu destino con tiempo para preparar tu salida.": {
+    "de": "Speichere die Linien, die du nutzt, und prüfe dein Ziel rechtzeitig, um deine Abfahrt vorzubereiten.",
+    "en": "Save the lines you use and check your destination ahead of time to prepare your departure.",
+    "fr": "Enregistrez les lignes que vous utilisez et vérifiez votre destination à l’avance pour préparer votre départ.",
+    "pt-BR": "Salve as linhas que usa e confira seu destino com antecedência para preparar sua saída.",
+    "zh-Hans": "保存常用线路，并提前检查目的地，为出发做好准备。"
+  },
   "Guarda los puntos que te sirven": {
     "de": "Speichern Sie die Haltestellen, die Sie brauchen",
     "en": "Keep the stops you need",
@@ -3856,6 +4283,20 @@
     "pt-BR": "Salve as linhas de feed oficiais para tê-las à mão.",
     "zh-Hans": "保存好官方饲料线以方便使用。"
   },
+  "Guarda un cupón desde un negocio del mapa.": {
+    "de": "Speichere einen Gutschein eines Geschäfts auf der Karte.",
+    "en": "Save a coupon from a business on the map.",
+    "fr": "Enregistrez un coupon depuis un commerce sur la carte.",
+    "pt-BR": "Salve um cupom de um negócio no mapa.",
+    "zh-Hans": "从地图上的商家保存优惠券。"
+  },
+  "Guarda un lugar con ubicación o elige tu sede en Ajustes.": {
+    "de": "Speichern Sie einen Ort mit Position oder wählen Sie Ihren Standort in den Einstellungen.",
+    "en": "Save a place with a location or choose your workplace in Settings.",
+    "fr": "Enregistrez un lieu avec sa position ou choisissez votre site dans les réglages.",
+    "pt-BR": "Salve um lugar com localização ou escolha sua unidade nos Ajustes.",
+    "zh-Hans": "保存一个带位置信息的地点，或在设置中选择你的工作地点。"
+  },
   "Guarda un paradero desde «Paraderos y referencias».": {
     "de": "Speichern Sie eine Haltestelle unter „Haltestellen und Sehenswürdigkeiten“.",
     "en": "Save a stop from ‘Stops and landmarks’.",
@@ -3869,6 +4310,13 @@
     "fr": "Enregistrez un arrêt dans « Arrêts et points de repère » pour le retrouver ici.",
     "pt-BR": "Salve uma parada em ‘Paradas e pontos de referência’ para encontrá-la aqui.",
     "zh-Hans": "在“站点和地标”中保存站点即可在此处找到它。"
+  },
+  "Guarda una línea para recibir sus cambios de ruta.": {
+    "de": "Speichere eine Linie, um ihre Routenänderungen zu erhalten.",
+    "en": "Save a line to receive its route changes.",
+    "fr": "Enregistrez une ligne pour recevoir ses changements d’itinéraire.",
+    "pt-BR": "Salve uma linha para receber seus avisos de mudança de rota.",
+    "zh-Hans": "保存线路以接收其变化通知。"
   },
   "Guardada": {
     "de": "Gespeichert",
@@ -4038,12 +4486,40 @@
     "pt-BR": "Para ",
     "zh-Hans": "至 "
   },
+  "Hasta": {
+    "de": "Bis",
+    "en": "Until",
+    "fr": "À",
+    "pt-BR": "Até",
+    "zh-Hans": "结束"
+  },
   "Hasta ": {
     "de": "Zu ",
     "en": "To ",
     "fr": "À ",
     "pt-BR": "Para ",
     "zh-Hans": "至 "
+  },
+  "Hasta 1 aviso al día": {
+    "de": "Bis zu 1 Benachrichtigung pro Tag",
+    "en": "Up to 1 notification a day",
+    "fr": "Jusqu’à 1 notification par jour",
+    "pt-BR": "Até 1 aviso por dia",
+    "zh-Hans": "每天最多 1 条通知"
+  },
+  "Hasta que vuelva a activarlas": {
+    "de": "Bis ich sie wieder aktiviere",
+    "en": "Until I turn them on again",
+    "fr": "Jusqu’à ce que je les réactive",
+    "pt-BR": "Até eu ativá-las novamente",
+    "zh-Hans": "直到我重新开启"
+  },
+  "Hasta {0} avisos al día": {
+    "de": "Bis zu {0} Benachrichtigungen pro Tag",
+    "en": "Up to {0} notifications a day",
+    "fr": "Jusqu’à {0} notifications par jour",
+    "pt-BR": "Até {0} avisos por dia",
+    "zh-Hans": "每天最多 {0} 条通知"
   },
   "Hay que tener cuidado ahí siempre.": {
     "de": "Da müssen wir immer aufpassen.",
@@ -4086,6 +4562,27 @@
     "fr": "Domicile",
     "pt-BR": "Casa",
     "zh-Hans": "家"
+  },
+  "Hora de salida": {
+    "de": "Abfahrtszeit",
+    "en": "Departure time",
+    "fr": "Heure de départ",
+    "pt-BR": "Horário de saída",
+    "zh-Hans": "出发时间"
+  },
+  "Hora de salir": {
+    "de": "Zeit aufzubrechen",
+    "en": "Time to leave",
+    "fr": "C’est l’heure de partir",
+    "pt-BR": "Hora de sair",
+    "zh-Hans": "该出发了"
+  },
+  "Horario de silencio": {
+    "de": "Ruhezeiten",
+    "en": "Quiet hours",
+    "fr": "Heures de silence",
+    "pt-BR": "Horário de silêncio",
+    "zh-Hans": "静音时段"
   },
   "Hospital Belén – Emergencias 24 h": {
     "de": "Krankenhaus Belén – 24 Stunden Notaufnahme",
@@ -4325,6 +4822,13 @@
     "pt-BR": "A chave “{0}” não está no manifesto",
     "zh-Hans": "密钥“{0}”不在清单中"
   },
+  "La conexión no permite registrar avisos de forma segura.": {
+    "de": "Die Verbindung erlaubt keine sichere Registrierung von Benachrichtigungen.",
+    "en": "The connection cannot register notifications securely.",
+    "fr": "La connexion ne permet pas d’inscrire les notifications de manière sécurisée.",
+    "pt-BR": "A conexão não permite registrar avisos com segurança.",
+    "zh-Hans": "此连接无法安全地注册通知。"
+  },
   "La foto anterior se conserva. Comprueba el espacio disponible e inténtalo de nuevo.": {
     "de": "Ihr vorheriges Foto bleibt erhalten. Überprüfen Sie den verfügbaren Speicherplatz und versuchen Sie es erneut.",
     "en": "Your previous photo is preserved. Check available storage and try again.",
@@ -4332,12 +4836,40 @@
     "pt-BR": "Sua foto anterior é preservada. Verifique o armazenamento disponível e tente novamente.",
     "zh-Hans": "您之前的照片将被保留。检查可用存储空间并重试。"
   },
+  "La franja debe terminar después de la hora inicial, dentro del mismo día. Los silencios y pausas también se respetan.": {
+    "de": "Der Zeitraum muss am selben Tag nach der Startzeit enden. Ruhezeiten und Pausen werden ebenfalls berücksichtigt.",
+    "en": "The window must end after its start time, within the same day. Quiet settings and pauses are also respected.",
+    "fr": "La plage doit se terminer après son heure de début, le même jour. Les périodes de silence et les pauses sont aussi respectées.",
+    "pt-BR": "A faixa deve terminar após o horário inicial, no mesmo dia. Os períodos de silêncio e as pausas também são respeitados.",
+    "zh-Hans": "时间段必须在当天结束，且结束时间晚于开始时间。静音设置和暂停也会生效。"
+  },
+  "La hora se elige al azar dentro de tu franja. Son recordatorios generales: los avisos de obstrucciones o descuentos concretos necesitan datos confirmados.": {
+    "de": "Die Uhrzeit wird zufällig innerhalb deines Zeitraums gewählt. Es sind allgemeine Erinnerungen: Hinweise auf konkrete Sperrungen oder Rabatte benötigen bestätigte Daten.",
+    "en": "The time is chosen randomly within your window. These are general reminders: notifications about specific obstructions or discounts require confirmed data.",
+    "fr": "L’heure est choisie au hasard dans votre plage. Ce sont des rappels généraux : les notifications de blocages ou de réductions précises nécessitent des données confirmées.",
+    "pt-BR": "O horário é escolhido ao acaso dentro da sua faixa. São lembretes gerais: avisos de obstruções ou descontos específicos precisam de dados confirmados.",
+    "zh-Hans": "发送时间会在所选时间段内随机安排。这些是一般提醒；具体的道路阻塞或折扣通知需要经过确认的数据。"
+  },
   "La línea C-07 va despejada sábados por la mañana, casi siempre hay asiento.": {
     "de": "Der C-07 ist am Samstagmorgen ruhig; Sitzplätze sind in der Regel frei.",
     "en": "The C-07 is quiet on Saturday mornings; seats are usually available.",
     "fr": "Le C-07 est calme le samedi matin ; des places sont généralement disponibles.",
     "pt-BR": "O C-07 fica silencioso nas manhãs de sábado; geralmente há assentos disponíveis.",
     "zh-Hans": "周六早上，C-07 很安静；通常都有座位。"
+  },
+  "La pausa o el cambio aún no llegó al servidor. Los avisos remotos pueden seguir usando tus ajustes anteriores hasta sincronizar.": {
+    "de": "Die Pause oder Änderung hat den Server noch nicht erreicht. Bis zur Synchronisierung können entfernte Benachrichtigungen deine bisherigen Einstellungen verwenden.",
+    "en": "The pause or change has not reached the server yet. Remote notifications may use your previous settings until you sync.",
+    "fr": "La pause ou le changement n’a pas encore atteint le serveur. Les notifications distantes peuvent utiliser vos anciens réglages jusqu’à la synchronisation.",
+    "pt-BR": "A pausa ou mudança ainda não chegou ao servidor. Os avisos remotos podem usar seus ajustes anteriores até a sincronização.",
+    "zh-Hans": "暂停或更改尚未同步到服务器。在同步完成前，远程通知可能仍使用之前的设置。"
+  },
+  "La preferencia de compartir ubicación se guarda en este dispositivo. No comparte tu ubicación con otros usuarios ni desactiva el GPS del mapa.": {
+    "de": "Die Einstellung zum Teilen der Position wird auf diesem Gerät gespeichert. Sie teilt Ihre Position nicht mit anderen Personen und schaltet das GPS der Karte nicht aus.",
+    "en": "The location sharing preference is saved on this device. It does not share your location with other users or turn off map GPS.",
+    "fr": "La préférence de partage de position est enregistrée sur cet appareil. Elle ne partage pas votre position avec d’autres personnes et ne désactive pas le GPS de la carte.",
+    "pt-BR": "A preferência de compartilhar localização é salva neste dispositivo. Ela não compartilha sua localização com outros usuários nem desativa o GPS do mapa.",
+    "zh-Hans": "位置共享偏好保存在此设备上。它不会与其他用户共享你的位置，也不会关闭地图GPS。"
   },
   "La referencia no es válida o ya está guardada.": {
     "de": "Die Referenz ist ungültig oder bereits gespeichert.",
@@ -4563,6 +5095,34 @@
     "pt-BR": "As abordagens para Óvalo Papal podem atrasar sua viagem. Saia com tempo de sobra e verifique sua fila antes de ir para a parada.",
     "zh-Hans": "通往 Óvalo Papal 的路线可能会延误您的行程。在前往车站之前，请留出空闲时间并检查线路。"
   },
+  "Los avisos omitidos durante una pausa no se acumulan al reactivar.": {
+    "de": "Während einer Pause übersprungene Benachrichtigungen werden beim Fortsetzen nicht nachgesendet.",
+    "en": "Notifications skipped during a pause are not sent when you resume.",
+    "fr": "Les notifications ignorées pendant une pause ne sont pas envoyées à la reprise.",
+    "pt-BR": "As notificações ignoradas durante uma pausa não são enviadas ao retomar.",
+    "zh-Hans": "恢复后不会补发暂停期间跳过的通知。"
+  },
+  "Los avisos quedan programados hasta la fecha indicada. Abre la app para renovar la agenda.": {
+    "de": "Benachrichtigungen sind bis zum angezeigten Datum geplant. Öffnen Sie die App, um den Zeitplan zu erneuern.",
+    "en": "Notifications are scheduled until the date shown. Open the app to renew the schedule.",
+    "fr": "Les notifications sont programmées jusqu’à la date indiquée. Ouvrez l’app pour renouveler le programme.",
+    "pt-BR": "As notificações estão programadas até a data indicada. Abra o app para renovar a agenda.",
+    "zh-Hans": "通知已安排至显示的日期。打开应用可更新安排。"
+  },
+  "Los avisos remotos aún no están disponibles en esta versión.": {
+    "de": "Entfernte Benachrichtigungen sind in dieser Version noch nicht verfügbar.",
+    "en": "Remote notifications are not available in this version yet.",
+    "fr": "Les notifications distantes ne sont pas encore disponibles dans cette version.",
+    "pt-BR": "Os avisos remotos ainda não estão disponíveis nesta versão.",
+    "zh-Hans": "此版本暂不支持远程通知。"
+  },
+  "Los banners están apagados en iOS. Revisa los ajustes si quieres verlos en pantalla.": {
+    "de": "Banner sind in iOS deaktiviert. Prüfen Sie die Einstellungen, um sie auf dem Bildschirm zu sehen.",
+    "en": "Banners are turned off in iOS. Check settings if you want to see them on screen.",
+    "fr": "Les bannières sont désactivées dans iOS. Consultez les réglages pour les afficher à l’écran.",
+    "pt-BR": "Os banners estão desativados no iOS. Confira os ajustes para vê-los na tela.",
+    "zh-Hans": "iOS中的横幅已关闭。要在屏幕上显示横幅，请检查设置。"
+  },
   "Los cupones guardados no se pueden leer. Se conservaron los datos originales.": {
     "de": "Gespeicherte Gutscheine konnten nicht gelesen werden. Die Originaldaten blieben erhalten.",
     "en": "Saved coupons could not be read. The original data was preserved.",
@@ -4604,6 +5164,13 @@
     "fr": "Les informations personnelles que vous saisissez, les lieux et itinéraires enregistrés, les photos de profil et de carte d'étudiant et les références de carte sont stockés localement. Le portefeuille utilise un solde de démonstration et ne traite pas les paiements réels. Les rapports et les publications de la communauté dans cette version ne sont pas envoyés à un serveur ni partagés avec d'autres utilisateurs.",
     "pt-BR": "Os dados pessoais inseridos, lugares e rotas salvos, fotos de perfil e cartão de estudante e referências de cartão são armazenados localmente. A carteira usa saldo de demonstração e não processa pagamentos reais. Os relatórios e postagens da comunidade nesta versão não são enviados para um servidor nem compartilhados com outros usuários.",
     "zh-Hans": "您输入的个人详细信息、保存的地点和路线、个人资料和学生卡照片以及卡参考信息都存储在本地。该钱包使用模拟余额，不处理真实​​付款。此版本中的报告和社区帖子不会发送到服务器或与其他用户共享。"
+  },
+  "Los días marcados quedan silenciados cada semana.": {
+    "de": "Die ausgewählten Tage sind jede Woche stummgeschaltet.",
+    "en": "Selected days are muted every week.",
+    "fr": "Les jours sélectionnés sont silencieux chaque semaine.",
+    "pt-BR": "Os dias selecionados ficam silenciados toda semana.",
+    "zh-Hans": "每周选定的日期将静音。"
   },
   "Los huecos en la pista pueden obligar al micro a cambiar de carril. Reporta el daño con una referencia de la calle y el sentido del recorrido.": {
     "de": "Schlaglöcher können einen Bus zum Spurwechsel zwingen. Melden Sie den Schaden mit Straßenmarkierung und Fahrtrichtung.",
@@ -5102,6 +5669,13 @@
     "pt-BR": "Percursos com paragem a 300 m deste local.",
     "zh-Hans": "在此地点 300 m 范围内停靠的路线。"
   },
+  "Líneas guardadas: {0}": {
+    "de": "Gespeicherte Linien: {0}",
+    "en": "Saved lines: {0}",
+    "fr": "Lignes enregistrées : {0}",
+    "pt-BR": "Linhas salvas: {0}",
+    "zh-Hans": "已保存线路：{0}"
+  },
   "MI BILLETERA": {
     "de": "MEINE GELDBÖRSE",
     "en": "MY WALLET",
@@ -5374,6 +5948,13 @@
     "fr": "Ma position",
     "pt-BR": "Minha localização",
     "zh-Hans": "我的位置"
+  },
+  "Mi billetera": {
+    "de": "Meine Geldbörse",
+    "en": "My wallet",
+    "fr": "Mon portefeuille",
+    "pt-BR": "Minha carteira",
+    "zh-Hans": "我的钱包"
   },
   "Mi posición": {
     "de": "Meine Position",
@@ -5697,6 +6278,13 @@
     "pt-BR": "Mostra o que funciona offline",
     "zh-Hans": "显示离线工作的内容"
   },
+  "Muestra u oculta esta credencial sin borrar sus datos": {
+    "de": "Blende diesen Ausweis ein oder aus, ohne seine Daten zu löschen",
+    "en": "Show or hide this credential without deleting its data",
+    "fr": "Affichez ou masquez cette carte sans supprimer ses données",
+    "pt-BR": "Mostre ou oculte esta credencial sem apagar seus dados",
+    "zh-Hans": "显示或隐藏此证件，不会删除其数据"
+  },
   "Muestra · sin validez": {
     "de": "Beispiel · ungültig",
     "en": "Sample · not valid",
@@ -5731,6 +6319,13 @@
     "fr": "Plus de passages",
     "pt-BR": "Mais frequência",
     "zh-Hans": "增加班次"
+  },
+  "Más información": {
+    "de": "Mehr Informationen",
+    "en": "More information",
+    "fr": "En savoir plus",
+    "pt-BR": "Mais informações",
+    "zh-Hans": "更多信息"
   },
   "Máximo {0} caracteres": {
     "de": "Höchstens {0} Zeichen",
@@ -5858,6 +6453,13 @@
     "pt-BR": "Nenhuma linha foi encontrada perto deste ponto",
     "zh-Hans": "在此点附近未发现线路"
   },
+  "No encontramos respuestas": {
+    "de": "Keine Antworten gefunden",
+    "en": "No answers found",
+    "fr": "Aucune réponse trouvée",
+    "pt-BR": "Nenhuma resposta encontrada",
+    "zh-Hans": "未找到解答"
+  },
   "No encontramos rutas para ": {
     "de": "Keine Routen gefunden für ",
     "en": "No routes found for ",
@@ -5886,6 +6488,13 @@
     "pt-BR": "Não especificado",
     "zh-Hans": "未指定"
   },
+  "No hay avisos diarios programados. Revisa la franja y tus reglas de silencio.": {
+    "de": "Es sind keine täglichen Benachrichtigungen geplant. Prüfe den Zeitraum und deine Ruhezeiten.",
+    "en": "There are no daily notifications scheduled. Check the delivery window and your quiet settings.",
+    "fr": "Aucune notification quotidienne n’est programmée. Vérifiez la plage d’envoi et vos réglages de silence.",
+    "pt-BR": "Não há avisos diários agendados. Confira a faixa de envio e suas regras de silêncio.",
+    "zh-Hans": "尚未安排每日通知。请检查发送时间段和静音设置。"
+  },
   "No hay buses de demostración disponibles": {
     "de": "Keine Demobusse verfügbar",
     "en": "No demo buses are available",
@@ -5899,6 +6508,13 @@
     "fr": "Aucun changement récent confirmé.",
     "pt-BR": "Nenhuma alteração recente confirmada.",
     "zh-Hans": "最近没有确认的变化。"
+  },
+  "No hay fechas programadas. Revisa los días y horarios de silencio.": {
+    "de": "Es sind keine Termine geplant. Prüfen Sie die stummen Tage und Ruhezeiten.",
+    "en": "There are no scheduled dates. Check quiet days and hours.",
+    "fr": "Aucune date n’est programmée. Vérifiez les jours et les heures de silence.",
+    "pt-BR": "Não há datas programadas. Confira os dias e horários de silêncio.",
+    "zh-Hans": "未安排任何通知。请检查静音日期和时段。"
   },
   "No hay líneas con paradero a menos de {0} m de este lugar.": {
     "de": "Im Umkreis von {0} m um diesen Ort gibt es keine Haltestelle.",
@@ -5970,6 +6586,13 @@
     "pt-BR": "Não foi possível carregar as rotas. Você pode tentar novamente.",
     "zh-Hans": "我们无法加载路线。你可以再试一次。"
   },
+  "No pudimos confirmar la cancelación de todos los avisos. Intenta de nuevo.": {
+    "de": "Die Stornierung aller Benachrichtigungen konnte nicht bestätigt werden. Versuchen Sie es erneut.",
+    "en": "We could not confirm cancellation of all notifications. Try again.",
+    "fr": "Impossible de confirmer l’annulation de toutes les notifications. Réessayez.",
+    "pt-BR": "Não foi possível confirmar o cancelamento de todas as notificações. Tente novamente.",
+    "zh-Hans": "无法确认所有通知均已取消。请重试。"
+  },
   "No pudimos confirmar la recepción. Intenta de nuevo cuando haya conexión.": {
     "de": "Wir konnten den Empfang nicht bestätigen. Versuchen Sie es erneut, wenn die Verbindung hergestellt ist.",
     "en": "We couldn't confirm receipt. Try again when connected.",
@@ -5977,12 +6600,61 @@
     "pt-BR": "Não foi possível confirmar o recebimento. Tente novamente quando estiver conectado.",
     "zh-Hans": "我们无法确认收货。连接后重试。"
   },
+  "No pudimos conservar la agenda diaria. Intenta de nuevo; tus datos anteriores se conservan.": {
+    "de": "Der tägliche Zeitplan konnte nicht gespeichert werden. Versuche es erneut; deine bisherigen Daten bleiben erhalten.",
+    "en": "We could not save the daily schedule. Try again; your previous data has been preserved.",
+    "fr": "Impossible de conserver le programme quotidien. Réessayez ; vos données précédentes sont conservées.",
+    "pt-BR": "Não foi possível salvar a agenda diária. Tente novamente; seus dados anteriores foram preservados.",
+    "zh-Hans": "无法保存每日通知计划。请重试；你之前的数据已保留。"
+  },
+  "No pudimos consultar el permiso de notificaciones. Intenta de nuevo.": {
+    "de": "Die Berechtigung für Benachrichtigungen konnte nicht angefragt werden. Versuchen Sie es erneut.",
+    "en": "We could not request notification permission. Try again.",
+    "fr": "Impossible de demander l’autorisation des notifications. Réessayez.",
+    "pt-BR": "Não foi possível solicitar permissão para notificações. Tente novamente.",
+    "zh-Hans": "无法请求通知权限。请重试。"
+  },
   "No pudimos guardar esta referencia de subida. Tus datos anteriores se conservan; puedes seguir ayudando durante este viaje.": {
     "de": "Wir konnten diese Boarding-Referenz nicht speichern. Ihre bisherigen Daten bleiben erhalten; Sie können während dieser Reise weiterhin einen Beitrag leisten.",
     "en": "We couldn't save this boarding reference. Your previous data has been preserved; you can keep contributing during this trip.",
     "fr": "Nous n'avons pas pu enregistrer cette référence d'embarquement. Vos données précédentes ont été conservées ; vous pouvez continuer à contribuer pendant ce voyage.",
     "pt-BR": "Não foi possível salvar esta referência de embarque. Seus dados anteriores foram preservados; você pode continuar contribuindo durante esta viagem.",
     "zh-Hans": "我们无法保存此上车参考信息。您之前的数据已被保留；您可以在这次旅行中继续做出贡献。"
+  },
+  "No pudimos guardar los avisos diarios. Tus datos anteriores se conservan.": {
+    "de": "Die täglichen Benachrichtigungen konnten nicht gespeichert werden. Deine bisherigen Daten bleiben erhalten.",
+    "en": "We could not save daily notifications. Your previous data has been preserved.",
+    "fr": "Impossible d’enregistrer les notifications quotidiennes. Vos données précédentes sont conservées.",
+    "pt-BR": "Não foi possível salvar os avisos diários. Seus dados anteriores foram preservados.",
+    "zh-Hans": "无法保存每日通知设置。你之前的数据已保留。"
+  },
+  "No pudimos guardar tus ajustes. Tus datos anteriores se conservan.": {
+    "de": "Ihre Einstellungen konnten nicht gespeichert werden. Ihre bisherigen Daten bleiben erhalten.",
+    "en": "We could not save your settings. Your previous data has been preserved.",
+    "fr": "Impossible d’enregistrer vos réglages. Vos données précédentes ont été conservées.",
+    "pt-BR": "Não foi possível salvar seus ajustes. Seus dados anteriores foram preservados.",
+    "zh-Hans": "无法保存设置。之前的数据已保留。"
+  },
+  "No pudimos leer las líneas o los ajustes guardados. Tus datos se conservan.": {
+    "de": "Gespeicherte Linien oder Einstellungen konnten nicht gelesen werden. Deine Daten bleiben erhalten.",
+    "en": "We could not read saved lines or settings. Your data has been preserved.",
+    "fr": "Impossible de lire les lignes ou les réglages enregistrés. Vos données sont conservées.",
+    "pt-BR": "Não foi possível ler as linhas ou os ajustes salvos. Seus dados foram preservados.",
+    "zh-Hans": "无法读取已保存的线路或设置。你的数据已保留。"
+  },
+  "No pudimos leer los ajustes o la agenda de avisos diarios. Tus datos se conservan.": {
+    "de": "Die Einstellungen oder der tägliche Zeitplan konnten nicht gelesen werden. Deine Daten bleiben erhalten.",
+    "en": "We could not read daily notification settings or the schedule. Your data has been preserved.",
+    "fr": "Impossible de lire les réglages ou le programme des notifications quotidiennes. Vos données sont conservées.",
+    "pt-BR": "Não foi possível ler os ajustes ou a agenda dos avisos diários. Seus dados foram preservados.",
+    "zh-Hans": "无法读取每日通知设置或计划。你的数据已保留。"
+  },
+  "No pudimos leer tus ajustes de notificaciones. Tus datos se conservan.": {
+    "de": "Ihre Benachrichtigungseinstellungen konnten nicht gelesen werden. Ihre Daten bleiben erhalten.",
+    "en": "We could not read your notification settings. Your data has been preserved.",
+    "fr": "Impossible de lire vos réglages de notifications. Vos données ont été conservées.",
+    "pt-BR": "Não foi possível ler seus ajustes de notificações. Seus dados foram preservados.",
+    "zh-Hans": "无法读取通知设置。数据已保留。"
   },
   "No pudimos leer tus guardados": {
     "de": "Ihre gespeicherten Ziele konnten nicht gelesen werden",
@@ -6004,6 +6676,13 @@
     "fr": "Impossible d'obtenir une localisation récente et précise. Réessayez ou marquez l'endroit manuellement.",
     "pt-BR": "Não foi possível obter uma localização recente e precisa. Tente novamente ou marque o local manualmente.",
     "zh-Hans": "无法获得最近的准确位置。再试一次或手动标记该位置。"
+  },
+  "No pudimos registrar este dispositivo para avisos remotos. Intenta de nuevo.": {
+    "de": "Dieses Gerät konnte nicht für entfernte Benachrichtigungen registriert werden. Versuche es erneut.",
+    "en": "We could not register this device for remote notifications. Try again.",
+    "fr": "Impossible d’inscrire cet appareil aux notifications distantes. Réessayez.",
+    "pt-BR": "Não foi possível registrar este dispositivo para avisos remotos. Tente novamente.",
+    "zh-Hans": "无法为此设备注册远程通知。请重试。"
   },
   "No recibimos señal GPS. Inténtalo de nuevo.": {
     "de": "Kein GPS-Signal empfangen. Bitte versuchen Sie es erneut.",
@@ -6116,6 +6795,13 @@
     "fr": "Vos lignes enregistrées n'ont pas pu être lues. Les données originales ont été conservées et les modifications sont bloquées.",
     "pt-BR": "Suas linhas salvas não puderam ser lidas. Os dados originais foram preservados e as alterações estão bloqueadas.",
     "zh-Hans": "无法读取您保存的行。原始数据已被保留，更改被阻止。"
+  },
+  "No se pudieron programar todos los avisos. Vuelve a intentarlo.": {
+    "de": "Nicht alle Benachrichtigungen konnten geplant werden. Versuchen Sie es erneut.",
+    "en": "Not all notifications could be scheduled. Try again.",
+    "fr": "Toutes les notifications n’ont pas pu être programmées. Réessayez.",
+    "pt-BR": "Não foi possível programar todas as notificações. Tente novamente.",
+    "zh-Hans": "无法安排所有通知。请重试。"
   },
   "No se pudieron recuperar los datos del monedero. Las operaciones están bloqueadas y los datos originales se conservan.": {
     "de": "Wallet-Daten konnten nicht wiederhergestellt werden. Vorgänge werden blockiert und die Originaldaten bleiben erhalten.",
@@ -6334,6 +7020,13 @@
     "pt-BR": "Notificações",
     "zh-Hans": "通知"
   },
+  "Notificación de prueba": {
+    "de": "Testbenachrichtigung",
+    "en": "Test notification",
+    "fr": "Notification de test",
+    "pt-BR": "Notificação de teste",
+    "zh-Hans": "测试通知"
+  },
   "Nuevo paradero": {
     "de": "Neuer Halt",
     "en": "New stop",
@@ -6404,6 +7097,13 @@
     "pt-BR": "Ocultar transporte próximo",
     "zh-Hans": "隐藏附近的交通工具"
   },
+  "Ocultarlas conserva tus fotos.": {
+    "de": "Beim Ausblenden bleiben deine Fotos erhalten.",
+    "en": "Hiding them keeps your photos.",
+    "fr": "Les masquer conserve vos photos.",
+    "pt-BR": "Ocultar mantém suas fotos.",
+    "zh-Hans": "隐藏证件会保留你的照片。"
+  },
   "Ocupación": {
     "de": "Auslastung",
     "en": "Occupancy",
@@ -6431,6 +7131,13 @@
     "fr": "Organisez les références enregistrées sur cet appareil. Les paiements ne sont pas pris en charge",
     "pt-BR": "Organize as referências salvas neste dispositivo. Pagamentos não são suportados",
     "zh-Hans": "整理此设备上保存的参考资料。不支持付款"
+  },
+  "Organiza tus salidas y elige cuándo recibir avisos.": {
+    "de": "Planen Sie Ihre Abfahrten und wählen Sie, wann Sie Benachrichtigungen erhalten möchten.",
+    "en": "Plan your departures and choose when to receive notifications.",
+    "fr": "Organisez vos départs et choisissez quand recevoir des notifications.",
+    "pt-BR": "Organize suas saídas e escolha quando receber notificações.",
+    "zh-Hans": "安排出发计划，并选择接收通知的时间。"
   },
   "Organiza tus tarjetas con un nombre, su red y los últimos cuatro dígitos. Estas referencias se guardan en el llavero de este dispositivo. No permiten pagar, recargar el monedero ni usar NFC.": {
     "de": "Organisieren Sie Ihre Karten nach einem Namen, ihrem Netzwerk und den letzten vier Ziffern. Diese Referenzen werden im Schlüsselbund dieses Geräts gespeichert. Sie können damit nicht zum Bezahlen, zum Aufladen des Guthabens oder zur Nutzung von NFC verwendet werden.",
@@ -6747,12 +7454,61 @@
     "pt-BR": "Patrulha ativa e iluminação alta até às 23h.",
     "zh-Hans": "积极巡逻并高亮照明直至晚上 11:00。"
   },
+  "Pausadas hasta {0}": {
+    "de": "Pausiert bis {0}",
+    "en": "Paused until {0}",
+    "fr": "En pause jusqu’au {0}",
+    "pt-BR": "Pausadas até {0}",
+    "zh-Hans": "已暂停至{0}"
+  },
+  "Pausar 1 hora": {
+    "de": "Für 1 Stunde pausieren",
+    "en": "Pause for 1 hour",
+    "fr": "Mettre en pause pendant 1 heure",
+    "pt-BR": "Pausar por 1 hora",
+    "zh-Hans": "暂停1小时"
+  },
+  "Pausar avisos": {
+    "de": "Benachrichtigungen pausieren",
+    "en": "Pause notifications",
+    "fr": "Mettre les notifications en pause",
+    "pt-BR": "Pausar notificações",
+    "zh-Hans": "暂停通知"
+  },
   "Pausar demo": {
     "de": "Demo pausieren",
     "en": "Pause demo",
     "fr": "Suspendre la démo",
     "pt-BR": "Pausar demonstração",
     "zh-Hans": "暂停演示"
+  },
+  "Pausar hasta": {
+    "de": "Pausieren bis",
+    "en": "Pause until",
+    "fr": "Mettre en pause jusqu’au",
+    "pt-BR": "Pausar até",
+    "zh-Hans": "暂停至"
+  },
+  "Pausar {0} días": {
+    "de": "Für {0} Tage pausieren",
+    "en": "Pause for {0} days",
+    "fr": "Mettre en pause pendant {0} jours",
+    "pt-BR": "Pausar por {0} dias",
+    "zh-Hans": "暂停{0}天"
+  },
+  "Pausar {0} horas": {
+    "de": "Für {0} Stunden pausieren",
+    "en": "Pause for {0} hours",
+    "fr": "Mettre en pause pendant {0} heures",
+    "pt-BR": "Pausar por {0} horas",
+    "zh-Hans": "暂停{0}小时"
+  },
+  "Pausas": {
+    "de": "Pausen",
+    "en": "Pauses",
+    "fr": "Pauses",
+    "pt-BR": "Pausas",
+    "zh-Hans": "暂停"
   },
   "Pavimento desgastado, grietas y un hueco en una calle con vehículos.": {
     "de": "Abgenutzter Bürgersteig, Risse und ein Schlagloch auf einer Straße mit Fahrzeugen.",
@@ -6767,6 +7523,13 @@
     "fr": "Commandes au restaurant ou via WhatsApp. Boissons non incluses.",
     "pt-BR": "Pedidos no restaurante ou via WhatsApp. Bebidas não incluídas.",
     "zh-Hans": "在餐厅或通过 WhatsApp 点餐。不包括饮料。"
+  },
+  "Pendientes de permiso": {
+    "de": "Berechtigung ausstehend",
+    "en": "Awaiting permission",
+    "fr": "En attente d’autorisation",
+    "pt-BR": "Aguardando permissão",
+    "zh-Hans": "等待授权"
   },
   "Perfil": {
     "de": "Profil",
@@ -6789,12 +7552,33 @@
     "pt-BR": "Permissão de localização negada. Ative-o em Configurações para usar o rastreamento.",
     "zh-Hans": "位置权限被拒绝。在“设置”中启用它以使用跟踪。"
   },
+  "Permiso y estado": {
+    "de": "Berechtigung und Status",
+    "en": "Permission and status",
+    "fr": "Autorisation et état",
+    "pt-BR": "Permissão e status",
+    "zh-Hans": "权限和状态"
+  },
   "Permite el acceso a tu ubicación en Ajustes.": {
     "de": "Erlauben Sie den Standortzugriff in den Einstellungen.",
     "en": "Allow location access in Settings.",
     "fr": "Autorisez l’accès à la localisation dans Paramètres.",
     "pt-BR": "Permitir acesso à localização em Configurações.",
     "zh-Hans": "允许在“设置”中访问位置。"
+  },
+  "Permite las notificaciones en iOS para recibir cambios de ruta.": {
+    "de": "Erlaube Benachrichtigungen in iOS, um Routenänderungen zu erhalten.",
+    "en": "Allow notifications in iOS to receive route changes.",
+    "fr": "Autorisez les notifications dans iOS pour recevoir les changements d’itinéraire.",
+    "pt-BR": "Permita notificações no iOS para receber mudanças de rota.",
+    "zh-Hans": "请在 iOS 中允许通知，以接收线路变化。"
+  },
+  "Permitir notificaciones": {
+    "de": "Benachrichtigungen erlauben",
+    "en": "Allow notifications",
+    "fr": "Autoriser les notifications",
+    "pt-BR": "Permitir notificações",
+    "zh-Hans": "允许通知"
   },
   "Persona sospechosa": {
     "de": "Verdächtige Person",
@@ -6985,6 +7769,13 @@
     "pt-BR": "Preferência de notificação",
     "zh-Hans": "通知偏好"
   },
+  "Preferencia de ubicación": {
+    "de": "Standorteinstellung",
+    "en": "Location preference",
+    "fr": "Préférence de localisation",
+    "pt-BR": "Preferência de localização",
+    "zh-Hans": "位置偏好"
+  },
   "Preferencia desactivada": {
     "de": "Präferenz deaktiviert",
     "en": "Preference disabled",
@@ -7012,6 +7803,20 @@
     "fr": "Passer pour l'instant",
     "pt-BR": "Pular por enquanto",
     "zh-Hans": "暂时跳过"
+  },
+  "Preguntas frecuentes": {
+    "de": "Häufige Fragen",
+    "en": "Frequently asked questions",
+    "fr": "Questions fréquentes",
+    "pt-BR": "Perguntas frequentes",
+    "zh-Hans": "常见问题"
+  },
+  "Prepara tu próximo viaje": {
+    "de": "Bereite deine nächste Fahrt vor",
+    "en": "Prepare your next trip",
+    "fr": "Préparez votre prochain trajet",
+    "pt-BR": "Prepare sua próxima viagem",
+    "zh-Hans": "准备下一次行程"
   },
   "Preparando detección pasiva": {
     "de": "Passive Erkennung vorbereiten",
@@ -7055,6 +7860,13 @@
     "pt-BR": "Privacidade",
     "zh-Hans": "隐私"
   },
+  "Privacidad y datos": {
+    "de": "Datenschutz und Daten",
+    "en": "Privacy and data",
+    "fr": "Confidentialité et données",
+    "pt-BR": "Privacidade e dados",
+    "zh-Hans": "隐私与数据"
+  },
   "Probar con un código de ejemplo": {
     "de": "Versuchen Sie es mit einem Beispielcode",
     "en": "Try a sample code",
@@ -7069,6 +7881,13 @@
     "pt-BR": "Patrocinado",
     "zh-Hans": "赞助"
   },
+  "Promociones demo": {
+    "de": "Demo-Angebote",
+    "en": "Demo offers",
+    "fr": "Offres de démonstration",
+    "pt-BR": "Promoções de demonstração",
+    "zh-Hans": "演示优惠"
+  },
   "Propón mejoras: frecuencias, limpieza, nuevos paraderos o precios justos.": {
     "de": "Schlagen Sie Verbesserungen vor: Häufigkeit, Sauberkeit, neue Haltestellen oder faire Tarife.",
     "en": "Suggest improvements: frequency, cleanliness, new stops or fair fares.",
@@ -7082,6 +7901,13 @@
     "fr": "Test MQTT actif : ligne {0}",
     "pt-BR": "Teste MQTT ativo: linha {0}",
     "zh-Hans": "MQTT 测试已启用：线路 {0}"
+  },
+  "Prueba con otra palabra o borra la búsqueda.": {
+    "de": "Versuche ein anderes Wort oder lösche die Suche.",
+    "en": "Try another word or clear the search.",
+    "fr": "Essayez un autre mot ou effacez la recherche.",
+    "pt-BR": "Tente outra palavra ou limpe a busca.",
+    "zh-Hans": "请尝试其他关键词或清除搜索。"
   },
   "Prueba otro destino.": {
     "de": "Versuchen Sie es mit einem anderen Ziel.",
@@ -7110,6 +7936,20 @@
     "fr": "Bientôt. Il n’y a pas encore de lieux de travail Popeyes disponibles à sélectionner dans Trujillo.",
     "pt-BR": "Em breve. Ainda não há locais de trabalho Popeyes disponíveis para seleção em Trujillo.",
     "zh-Hans": "即将推出。 Trujillo 中尚无可供选择的 Popeyes 工作场所。"
+  },
+  "Próximo aviso": {
+    "de": "Nächste Benachrichtigung",
+    "en": "Next notification",
+    "fr": "Prochaine notification",
+    "pt-BR": "Próxima notificação",
+    "zh-Hans": "下次通知"
+  },
+  "Próximo aviso diario: {0}": {
+    "de": "Nächste tägliche Benachrichtigung: {0}",
+    "en": "Next daily notification: {0}",
+    "fr": "Prochaine notification quotidienne : {0}",
+    "pt-BR": "Próximo aviso diário: {0}",
+    "zh-Hans": "下一条每日通知：{0}"
   },
   "Próximo paradero": {
     "de": "Nächster Halt",
@@ -7166,6 +8006,27 @@
     "fr": "Vous pouvez remplacer la photo à tout moment. Il reste enregistré après la fermeture de l'application. L’enregistrer ne vérifie pas votre identité universitaire.",
     "pt-BR": "Você pode substituir a foto a qualquer momento. Ele permanece salvo após fechar o aplicativo. Salvá-lo não verifica sua identidade universitária.",
     "zh-Hans": "您可以随时更换照片。关闭应用程序后它会保持保存状态。保存它并不能验证您的大学身份。"
+  },
+  "Puedes consultar estas respuestas aunque no tengas internet.": {
+    "de": "Du kannst diese Antworten auch ohne Internetverbindung lesen.",
+    "en": "You can read these answers even without an internet connection.",
+    "fr": "Vous pouvez consulter ces réponses même sans connexion Internet.",
+    "pt-BR": "Você pode consultar estas respostas mesmo sem conexão com a internet.",
+    "zh-Hans": "即使没有网络连接，你也可以查看这些解答。"
+  },
+  "Puedes leer este consejo y continuar tu viaje. Revisa las otras pantallas cuando termines.": {
+    "de": "Du kannst diesen Tipp lesen und deine Fahrt fortsetzen. Prüfe die anderen Ansichten nach der Fahrt.",
+    "en": "You can read this tip and continue your trip. Check the other screens when you finish.",
+    "fr": "Vous pouvez lire ce conseil et poursuivre votre trajet. Consultez les autres écrans à la fin du trajet.",
+    "pt-BR": "Você pode ler esta dica e continuar sua viagem. Consulte as outras telas quando terminar.",
+    "zh-Hans": "你可以阅读这条建议并继续行程。结束后再查看其他页面。"
+  },
+  "Puedes silenciar la noche, aunque el horario cruce la medianoche.": {
+    "de": "Sie können die Nacht stummschalten, auch wenn die Ruhezeit über Mitternacht hinausgeht.",
+    "en": "You can mute the night, even when quiet hours cross midnight.",
+    "fr": "Vous pouvez couper les notifications la nuit, même si la période traverse minuit.",
+    "pt-BR": "Você pode silenciar a noite, mesmo quando o horário passa da meia-noite.",
+    "zh-Hans": "你可以在夜间静音，包括跨越午夜的时段。"
   },
   "Punto de subida guardado": {
     "de": "Einstiegspunkt gespeichert",
@@ -7349,6 +8210,20 @@
     "pt-BR": "Variante {0}",
     "zh-Hans": "支线 {0}"
   },
+  "Reactivar ahora": {
+    "de": "Jetzt fortsetzen",
+    "en": "Resume now",
+    "fr": "Reprendre maintenant",
+    "pt-BR": "Retomar agora",
+    "zh-Hans": "立即恢复"
+  },
+  "Reactivar notificaciones": {
+    "de": "Benachrichtigungen wieder aktivieren",
+    "en": "Turn notifications back on",
+    "fr": "Réactiver les notifications",
+    "pt-BR": "Reativar notificações",
+    "zh-Hans": "重新开启通知"
+  },
   "Recalculando automáticamente": {
     "de": "Automatische Neuberechnung",
     "en": "Recalculating automatically",
@@ -7398,12 +8273,26 @@
     "pt-BR": "Recarregue {0} com {1}",
     "zh-Hans": "使用 {1} 充值 {0}"
   },
+  "Recibir notificaciones": {
+    "de": "Benachrichtigungen erhalten",
+    "en": "Receive notifications",
+    "fr": "Recevoir des notifications",
+    "pt-BR": "Receber notificações",
+    "zh-Hans": "接收通知"
+  },
   "Recordarme en 2 minutos": {
     "de": "Erinnere mich in 2 Minuten daran",
     "en": "Remind me in 2 minutes",
     "fr": "Rappelez-moi dans 2 minutes",
     "pt-BR": "Lembre-me em 2 minutos",
     "zh-Hans": "2 分钟后提醒我"
+  },
+  "Recordatorio de viaje": {
+    "de": "Fahrterinnerung",
+    "en": "Trip reminder",
+    "fr": "Rappel de trajet",
+    "pt-BR": "Lembrete de viagem",
+    "zh-Hans": "出行提醒"
   },
   "Recorrido": {
     "de": "Entfernung",
@@ -7460,6 +8349,27 @@
     "fr": "Références locales · aucun paiement",
     "pt-BR": "Referências locais · sem pagamentos",
     "zh-Hans": "仅本地卡片信息 · 不支持付款"
+  },
+  "Registrando este dispositivo…": {
+    "de": "Dieses Gerät wird registriert…",
+    "en": "Registering this device…",
+    "fr": "Inscription de cet appareil…",
+    "pt-BR": "Registrando este dispositivo…",
+    "zh-Hans": "正在注册此设备…"
+  },
+  "Registro remoto confirmado": {
+    "de": "Registrierung beim Server bestätigt",
+    "en": "Remote registration confirmed",
+    "fr": "Inscription distante confirmée",
+    "pt-BR": "Registro remoto confirmado",
+    "zh-Hans": "远程注册已确认"
+  },
+  "Registro válido hasta {0}. Abre la app para renovarlo.": {
+    "de": "Registrierung gültig bis {0}. Öffne die App, um sie zu verlängern.",
+    "en": "Registration valid until {0}. Open the app to renew it.",
+    "fr": "Inscription valable jusqu’au {0}. Ouvrez l’application pour la renouveler.",
+    "pt-BR": "Registro válido até {0}. Abra o app para renová-lo.",
+    "zh-Hans": "注册有效期至 {0}。打开应用以续期。"
   },
   "Reintentar": {
     "de": "Versuchen Sie es noch einmal",
@@ -7657,12 +8567,47 @@
     "pt-BR": "Restaurante",
     "zh-Hans": "餐厅"
   },
+  "Revisa el destino": {
+    "de": "Ziel prüfen",
+    "en": "Check the destination",
+    "fr": "Vérifiez la destination",
+    "pt-BR": "Confira o destino",
+    "zh-Hans": "检查目的地"
+  },
   "Revisa el punto donde subiste antes de confirmarlo. La flecha marca tu ubicación actual; toca el mapa para elegir otro lugar.": {
     "de": "Überprüfen Sie vor der Bestätigung, wo Sie eingestiegen sind. Der Pfeil markiert Ihren aktuellen Standort; Tippen Sie auf die Karte, um einen anderen Ort auszuwählen.",
     "en": "Review where you boarded before confirming. The arrow marks your current location; tap the map to choose another spot.",
     "fr": "Vérifiez où vous avez embarqué avant de confirmer. La flèche marque votre emplacement actuel ; appuyez sur la carte pour choisir un autre endroit.",
     "pt-BR": "Revise onde você embarcou antes de confirmar. A seta marca sua localização atual; toque no mapa para escolher outro local.",
     "zh-Hans": "在确认之前查看您上车的地点。箭头标记您当前的位置；点击地图选择另一个地点。"
+  },
+  "Revisa la programación": {
+    "de": "Zeitplan prüfen",
+    "en": "Check the schedule",
+    "fr": "Vérifiez le programme",
+    "pt-BR": "Confira a programação",
+    "zh-Hans": "检查通知安排"
+  },
+  "Revisa las condiciones de tus cupones": {
+    "de": "Prüfe die Bedingungen deiner Gutscheine",
+    "en": "Check your coupon terms",
+    "fr": "Vérifiez les conditions de vos coupons",
+    "pt-BR": "Confira as condições dos seus cupons",
+    "zh-Hans": "检查优惠券使用条件"
+  },
+  "Revisa tu línea y sus paraderos antes de salir. Los horarios del catálogo son una referencia para planear tu viaje.": {
+    "de": "Prüfe deine Linie und Haltestellen vor der Abfahrt. Die Fahrpläne im Katalog dienen als Orientierung für deine Planung.",
+    "en": "Check your line and stops before heading out. Catalog timetables are a reference for planning your trip.",
+    "fr": "Vérifiez votre ligne et ses arrêts avant de partir. Les horaires du catalogue servent de référence pour préparer votre trajet.",
+    "pt-BR": "Confira sua linha e os pontos antes de sair. Os horários do catálogo são uma referência para planejar sua viagem.",
+    "zh-Hans": "出发前检查线路和站点。目录中的时刻表可作为行程规划的参考。"
+  },
+  "Revisa tus ajustes": {
+    "de": "Einstellungen prüfen",
+    "en": "Check your settings",
+    "fr": "Vérifiez vos réglages",
+    "pt-BR": "Confira seus ajustes",
+    "zh-Hans": "检查设置"
   },
   "Robo en el paradero": {
     "de": "Diebstahl an der Haltestelle",
@@ -7775,6 +8720,13 @@
     "fr": "Itinéraires nocturnes surveillés.",
     "pt-BR": "Rotas noturnas monitoradas.",
     "zh-Hans": "监控夜间路线。"
+  },
+  "Rutas pendientes": {
+    "de": "Routen folgen",
+    "en": "Routes pending",
+    "fr": "Lignes à venir",
+    "pt-BR": "Rotas pendentes",
+    "zh-Hans": "线路待公布"
   },
   "Rutas próximamente": {
     "de": "Routen folgen in Kürze",
@@ -8035,6 +8987,13 @@
     "pt-BR": "É necessária permissão de localização",
     "zh-Hans": "需要位置许可"
   },
+  "Se reanudan después de {0}": {
+    "de": "Sie werden nach {0} fortgesetzt",
+    "en": "They resume after {0}",
+    "fr": "Elles reprennent après le {0}",
+    "pt-BR": "Serão retomadas após {0}",
+    "zh-Hans": "将在{0}之后恢复"
+  },
   "Se respaldarán la selección y el orden originales en tus documentos. Volverán los accesos iniciales; tus lugares guardados se conservan.": {
     "de": "Die ursprüngliche Auswahl und Bestellung wird in Ihren Unterlagen gesichert. Es kehren die Standardverknüpfungen zurück; Ihre gespeicherten Orte bleiben erhalten.",
     "en": "The original selection and order will be backed up in your documents. Default shortcuts will return; your saved places will be preserved.",
@@ -8203,12 +9162,26 @@
     "pt-BR": "Se você já embarcou, confirme sua linha. Caso contrário, continue visualizando sua rota.",
     "zh-Hans": "如果您已上车，请确认您的线路。否则，请继续查看您的路线。"
   },
+  "Sigue tu avance durante el recorrido.": {
+    "de": "Verfolge deinen Fortschritt während der Fahrt.",
+    "en": "Follow your progress along the route.",
+    "fr": "Suivez votre progression tout au long du trajet.",
+    "pt-BR": "Acompanhe seu progresso durante o trajeto.",
+    "zh-Hans": "在途中查看你的行程进度。"
+  },
   "Siguiendo tu ubicación": {
     "de": "Verfolgen Sie Ihren Standort",
     "en": "Following your location",
     "fr": "Suivre votre position",
     "pt-BR": "Seguindo sua localização",
     "zh-Hans": "追踪您的位置"
+  },
+  "Silenciar por horario": {
+    "de": "Zu Ruhezeiten stummschalten",
+    "en": "Mute during quiet hours",
+    "fr": "Activer les heures de silence",
+    "pt-BR": "Silenciar por horário",
+    "zh-Hans": "按时段静音"
   },
   "Simular avance": {
     "de": "Simulieren Sie den Fortschritt",
@@ -8245,6 +9218,13 @@
     "pt-BR": "Não confirmado",
     "zh-Hans": "未证实"
   },
+  "Sin cupones guardados": {
+    "de": "Keine gespeicherten Gutscheine",
+    "en": "No saved coupons",
+    "fr": "Aucun coupon enregistré",
+    "pt-BR": "Nenhum cupom salvo",
+    "zh-Hans": "暂无已保存的优惠券"
+  },
   "Sin datos recientes": {
     "de": "Keine aktuellen Daten",
     "en": "No recent data",
@@ -8265,6 +9245,13 @@
     "fr": "Date indisponible",
     "pt-BR": "Data indisponível",
     "zh-Hans": "日期不详"
+  },
+  "Sin fechas programadas": {
+    "de": "Keine Termine geplant",
+    "en": "No scheduled dates",
+    "fr": "Aucune date programmée",
+    "pt-BR": "Sem datas programadas",
+    "zh-Hans": "未安排日期"
   },
   "Sin indicar": {
     "de": "Nicht angegeben",
@@ -8300,6 +9287,13 @@
     "fr": "Aucun point sélectionné",
     "pt-BR": "Nenhum ponto selecionado",
     "zh-Hans": "未选择点"
+  },
+  "Sin recordatorios": {
+    "de": "Keine Erinnerungen",
+    "en": "No reminders",
+    "fr": "Aucun rappel",
+    "pt-BR": "Sem lembretes",
+    "zh-Hans": "没有提醒"
   },
   "Sin referencias guardadas": {
     "de": "Keine gespeicherten Referenzen",
@@ -8357,12 +9351,40 @@
     "pt-BR": "Nenhuma viagem detectada",
     "zh-Hans": "尚未检测到行程"
   },
+  "Sincronizando con el servicio…": {
+    "de": "Synchronisierung mit dem Dienst…",
+    "en": "Syncing with the service…",
+    "fr": "Synchronisation avec le service…",
+    "pt-BR": "Sincronizando com o serviço…",
+    "zh-Hans": "正在与服务同步…"
+  },
+  "Sincronizar ahora": {
+    "de": "Jetzt synchronisieren",
+    "en": "Sync now",
+    "fr": "Synchroniser maintenant",
+    "pt-BR": "Sincronizar agora",
+    "zh-Hans": "立即同步"
+  },
   "Sobre Nosotros": {
     "de": "Über uns",
     "en": "About Us",
     "fr": "À propos de nous",
     "pt-BR": "Sobre nós",
     "zh-Hans": "关于我们"
+  },
+  "Sobre la app": {
+    "de": "Über die App",
+    "en": "About the app",
+    "fr": "À propos de l’app",
+    "pt-BR": "Sobre o app",
+    "zh-Hans": "关于应用"
+  },
+  "Sobre la ubicación": {
+    "de": "Über den Standort",
+    "en": "About location",
+    "fr": "À propos de la localisation",
+    "pt-BR": "Sobre a localização",
+    "zh-Hans": "关于位置"
   },
   "Solo se eliminará la referencia local; tu tarjeta bancaria no se modifica.": {
     "de": "Es wird nur der lokale Verweis entfernt; Ihre Bankkarte ändert sich nicht.",
@@ -8391,6 +9413,13 @@
     "fr": "Ce sont des références enregistrées sur cet appareil. Ils ne permettent pas les paiements ni ne vérifient les cartes auprès de la banque.",
     "pt-BR": "Estas são referências salvas neste dispositivo. Eles não permitem pagamentos nem verificam cartões no banco.",
     "zh-Hans": "这些是保存在该设备上的参考。他们不支持银行付款或验证银行卡。"
+  },
+  "Sonido de los avisos": {
+    "de": "Benachrichtigungston",
+    "en": "Notification sound",
+    "fr": "Son des notifications",
+    "pt-BR": "Som das notificações",
+    "zh-Hans": "通知声音"
   },
   "Soporte": {
     "de": "Unterstützung",
@@ -8574,6 +9603,13 @@
     "pt-BR": "Temas de cores",
     "zh-Hans": "颜色主题"
   },
+  "Ten a mano tus lugares y líneas favoritas.": {
+    "de": "Behalte deine Lieblingsorte und -linien griffbereit.",
+    "en": "Keep your favorite places and routes close at hand.",
+    "fr": "Gardez vos lieux et lignes favoris à portée de main.",
+    "pt-BR": "Tenha seus lugares e linhas favoritas sempre à mão.",
+    "zh-Hans": "随时查看你收藏的地点和线路。"
+  },
   "Tendrás que volver a iniciar sesión para usar la app.": {
     "de": "Um die App nutzen zu können, müssen Sie sich erneut anmelden.",
     "en": "You will need to sign in again to use the app.",
@@ -8594,6 +9630,20 @@
     "fr": "Magasin",
     "pt-BR": "Loja",
     "zh-Hans": "商店"
+  },
+  "Tienes un viaje en curso. Puedes revisar los cambios de ruta en Seguridad al terminarlo.": {
+    "de": "Du bist gerade unterwegs. Nach der Fahrt kannst du Routenänderungen unter Sicherheit prüfen.",
+    "en": "You have a trip in progress. You can check route changes in Safety when it ends.",
+    "fr": "Un trajet est en cours. Vous pourrez consulter les changements d’itinéraire dans Sécurité à la fin du trajet.",
+    "pt-BR": "Você tem uma viagem em andamento. Pode consultar as mudanças de rota em Segurança ao terminar.",
+    "zh-Hans": "你有正在进行的行程。结束后可在“安全”中查看线路变化。"
+  },
+  "Tienes un viaje en curso. Termínalo antes de abrir otro destino.": {
+    "de": "Sie haben eine laufende Fahrt. Beenden Sie sie, bevor Sie ein anderes Ziel öffnen.",
+    "en": "You have a trip in progress. Finish it before opening another destination.",
+    "fr": "Un trajet est en cours. Terminez-le avant d’ouvrir une autre destination.",
+    "pt-BR": "Você tem uma viagem em andamento. Finalize-a antes de abrir outro destino.",
+    "zh-Hans": "你有正在进行的行程。请先结束行程，再打开其他目的地。"
   },
   "Tip: bajarse 1 cuadra antes de la UTP por Piérola ahorra 5 min de embotellamiento.": {
     "de": "Tipp: Wenn Sie einen Block vor UTP auf Piérola aussteigen, vermeiden Sie etwa 5 Minuten Stau.",
@@ -8924,12 +9974,26 @@
     "pt-BR": "Trabalhadores e um veículo municipal reparando um trecho da calçada.",
     "zh-Hans": "工人和一辆市政车辆正在修复一段人行道。"
   },
+  "Transporte": {
+    "de": "Verkehr",
+    "en": "Transport",
+    "fr": "Transport",
+    "pt-BR": "Transporte",
+    "zh-Hans": "交通"
+  },
   "Transporte cerca de este lugar": {
     "de": "Transport in der Nähe dieses Ortes",
     "en": "Transport near this place",
     "fr": "Transport à proximité de ce lieu",
     "pt-BR": "Transporte perto deste lugar",
     "zh-Hans": "此地点附近的交通"
+  },
+  "Transporte urbano": {
+    "de": "Stadtverkehr",
+    "en": "City transport",
+    "fr": "Transport urbain",
+    "pt-BR": "Transporte urbano",
+    "zh-Hans": "城市交通"
   },
   "Transportes cercanos": {
     "de": "Verkehrsmittel in der Nähe",
@@ -9007,6 +10071,13 @@
     "fr": "Votre carte, toujours à portée de main",
     "pt-BR": "Seu cartão, sempre à mão",
     "zh-Hans": "您的卡，永远方便"
+  },
+  "Tu ciudad, más cerca.": {
+    "de": "Deine Stadt, näher.",
+    "en": "Your city, closer.",
+    "fr": "Votre ville, plus proche.",
+    "pt-BR": "Sua cidade, mais perto.",
+    "zh-Hans": "让你的城市更近。"
   },
   "Tu micro, mejor identificado": {
     "de": "Helfen Sie dabei, Ihren Bus zu identifizieren",
@@ -9098,6 +10169,13 @@
     "fr": "Vos lieux et lignes enregistrés, ainsi que toutes les photos de profil et de carte que vous avez ajoutées.",
     "pt-BR": "Seus lugares e linhas salvos, além de fotos de perfil e cartão que você adicionou.",
     "zh-Hans": "您保存的地点和线路，以及您添加的任何个人资料和卡片照片。"
+  },
+  "Tus notificaciones están desactivadas. El recordatorio se guardará sin avisarte.": {
+    "de": "Ihre Benachrichtigungen sind deaktiviert. Die Erinnerung wird gespeichert, ohne Sie zu benachrichtigen.",
+    "en": "Your notifications are disabled. The reminder will be saved without notifying you.",
+    "fr": "Vos notifications sont désactivées. Le rappel sera enregistré sans vous avertir.",
+    "pt-BR": "Suas notificações estão desativadas. O lembrete será salvo sem enviar avisos.",
+    "zh-Hans": "通知已关闭。提醒将被保存，但不会通知你。"
   },
   "Tus promociones guardadas en Tracking Demo.": {
     "de": "Ihre gespeicherten Angebote aus der Tracking-Demo.",
@@ -9393,6 +10471,13 @@
     "pt-BR": "Ver no Google Maps",
     "zh-Hans": "在 Google 地图中查看"
   },
+  "Ver foto": {
+    "de": "Foto ansehen",
+    "en": "View photo",
+    "fr": "Voir la photo",
+    "pt-BR": "Ver foto",
+    "zh-Hans": "查看照片"
+  },
   "Ver foto completa": {
     "de": "Gesamtes Foto anzeigen",
     "en": "Fit whole photo",
@@ -9477,6 +10562,13 @@
     "pt-BR": "Mostrar percurso completo",
     "zh-Hans": "显示完整路线"
   },
+  "Ver rutas": {
+    "de": "Routen anzeigen",
+    "en": "View routes",
+    "fr": "Voir les itinéraires",
+    "pt-BR": "Ver rotas",
+    "zh-Hans": "查看线路"
+  },
   "Ver toda la ruta": {
     "de": "Vollständige Route anzeigen",
     "en": "Show full route",
@@ -9511,6 +10603,13 @@
     "fr": "Voir l'emplacement et les options",
     "pt-BR": "Ver localização e opções",
     "zh-Hans": "查看位置与选项"
+  },
+  "Versión {0}": {
+    "de": "Version {0}",
+    "en": "Version {0}",
+    "fr": "Version {0}",
+    "pt-BR": "Versão {0}",
+    "zh-Hans": "版本 {0}"
   },
   "Viaje": {
     "de": "Reise",
@@ -9771,6 +10870,34 @@
     "pt-BR": "frequência",
     "zh-Hans": "频率"
   },
+  "iOS aceptó la prueba. El aviso está programado para dentro de 5 segundos.": {
+    "de": "iOS hat den Test angenommen. Die Benachrichtigung ist in 5 Sekunden geplant.",
+    "en": "iOS accepted the test. The notification is scheduled in 5 seconds.",
+    "fr": "iOS a accepté le test. La notification est programmée dans 5 secondes.",
+    "pt-BR": "O iOS aceitou o teste. A notificação está programada para daqui a 5 segundos.",
+    "zh-Hans": "iOS已接受测试。通知安排在5秒后发送。"
+  },
+  "iOS bloquea los avisos. Puedes permitirlos en los ajustes del sistema.": {
+    "de": "iOS blockiert Benachrichtigungen. Sie können sie in den Systemeinstellungen erlauben.",
+    "en": "iOS blocks notifications. You can allow them in system settings.",
+    "fr": "iOS bloque les notifications. Vous pouvez les autoriser dans les réglages du système.",
+    "pt-BR": "O iOS bloqueia as notificações. Você pode permiti-las nos ajustes do sistema.",
+    "zh-Hans": "iOS阻止了通知。你可以在系统设置中允许通知。"
+  },
+  "iOS no pudo programar la prueba. Intenta de nuevo.": {
+    "de": "iOS konnte den Test nicht planen. Versuchen Sie es erneut.",
+    "en": "iOS could not schedule the test. Try again.",
+    "fr": "iOS n’a pas pu programmer le test. Réessayez.",
+    "pt-BR": "O iOS não conseguiu programar o teste. Tente novamente.",
+    "zh-Hans": "iOS无法安排测试通知。请重试。"
+  },
+  "iOS puede silenciar o retrasar los avisos con Concentración o el Resumen programado.": {
+    "de": "iOS kann Benachrichtigungen durch Fokus oder die geplante Übersicht stummschalten oder verzögern.",
+    "en": "iOS may silence or delay notifications with Focus or Scheduled Summary.",
+    "fr": "iOS peut couper ou retarder les notifications avec Concentration ou le résumé programmé.",
+    "pt-BR": "O iOS pode silenciar ou atrasar as notificações com Foco ou Resumo Agendado.",
+    "zh-Hans": "iOS可能通过专注模式或定时推送摘要静音或延迟通知。"
+  },
   "modalidad ": {
     "de": "Studienform ",
     "en": "modality ",
@@ -10030,6 +11157,13 @@
     "pt-BR": "Iniciar uma nova lista de linhas salvas?",
     "zh-Hans": "启动新的已保存线路列表？"
   },
+  "¿En qué te ayudamos?": {
+    "de": "Wie können wir helfen?",
+    "en": "How can we help?",
+    "fr": "Comment pouvons-nous vous aider ?",
+    "pt-BR": "Como podemos ajudar?",
+    "zh-Hans": "我们能帮你什么？"
+  },
   "¿Finalizar el viaje?": {
     "de": "Die Reise beenden?",
     "en": "End the trip?",
@@ -10120,6 +11254,13 @@
     "fr": "Zone surveillée par caméras privées, circulation piétonnière constante.",
     "pt-BR": "Área monitorada por câmeras privadas, tráfego constante de pedestres.",
     "zh-Hans": "由私人摄像头监控的区域，人流量恒定。"
+  },
+  "Último aviso programado: {0}. Abre la app para renovar la agenda.": {
+    "de": "Letzte geplante Benachrichtigung: {0}. Öffne die App, um den Zeitplan zu erneuern.",
+    "en": "Last scheduled notification: {0}. Open the app to renew the schedule.",
+    "fr": "Dernière notification programmée : {0}. Ouvrez l’application pour renouveler le programme.",
+    "pt-BR": "Último aviso agendado: {0}. Abra o app para renovar a agenda.",
+    "zh-Hans": "最后一条已安排的通知：{0}。打开应用以更新通知计划。"
   },
   "Últimos 4 dígitos": {
     "de": "Letzte 4 Ziffern",

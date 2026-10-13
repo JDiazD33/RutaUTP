@@ -2,7 +2,7 @@
 //  PerfilView.swift
 //  RutaUTP
 //
-//  Pantalla de perfil: hero gradient con billetera, configuración con toggles.
+//  Perfil con identidad, billetera y ajustes organizados por seccion.
 //
 
 import SwiftUI
@@ -23,7 +23,6 @@ struct PerfilView: View {
     /// Preferencias del usuario. En @AppStorage para que sobrevivan al cambio
     /// de pestaña: RootView reconstruye cada pantalla al navegar, así que con
     /// @State se perdían en cada visita.
-    @AppStorage(PreferenciasApp.notificaciones) private var notifOn: Bool = true
     @AppStorage(PreferenciasApp.compartirUbicacion) private var ubicacionOn: Bool = true
     /// Modo Señas. Se lee desde varias pantallas, por eso va en AppStorage
     /// y no en @State: cualquier vista reacciona al cambio al instante.
@@ -36,6 +35,8 @@ struct PerfilView: View {
     @State private var showVoiceOverHelp: Bool = false
     @State private var showRespaldos: Bool = false
     @State private var mostrarIdiomas = false
+    @State private var mostrarNotificaciones = false
+    @State private var mostrarCredenciales = false
     //  CORREGIDO V3: estado para Wallet
     @State private var showTarjetaSheet: Bool = false
     @State private var showRecargarSaldo: Bool = false
@@ -74,7 +75,7 @@ struct PerfilView: View {
         empresa == .inkafarma ? Color(light: "#193D23", dark: "#E8EED2") : .onPrimaryFill
     }
     private var fondoAvatar: Color {
-        empresa == .inkafarma ? Color(light: "#EAD983", dark: "#456534") : .inversePrimary
+        empresa == .inkafarma ? Color(light: "#EAD983", dark: "#456534") : .primaryFill
     }
 
     var body: some View {
@@ -83,17 +84,20 @@ struct PerfilView: View {
 
             ZStack(alignment: .bottom) {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
+                    VStack(spacing: 24) {
                         hero
+                            .padding(.horizontal, 20)
 
-                        PerfilCuponesGuardados()
-                            .padding(.top, 24)
+                        billetera
+                            .padding(.horizontal, 20)
 
                         configuracion
                             .padding(.horizontal, 20)
-                            .padding(.top, 24)
-                        Spacer(minLength: 140)
+
+                        PerfilCuponesGuardados()
                     }
+                    .padding(.top, 20)
+                    .padding(.bottom, 24)
                 }
                 .padding(.bottom, tabBarHeight)
 
@@ -105,6 +109,15 @@ struct PerfilView: View {
         .sheet(isPresented: $mostrarIdiomas) {
             SelectorIdioma()
                 .presentationDetents([.medium, .large])
+                .seguirTemaForzado()
+        }
+        .sheet(isPresented: $mostrarNotificaciones) {
+            NotificacionesView().seguirTemaForzado().presentationDetents([.large])
+        }
+        .sheet(isPresented: $mostrarCredenciales) {
+            PerfilPreferenciasVisuales(empresa: empresa)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
                 .seguirTemaForzado()
         }
         // Foto de perfil: recargar al entrar y al volver de Datos Personales.
@@ -136,6 +149,7 @@ struct PerfilView: View {
             carnetGuardado = false
             showCarneDigital = false
             showCarnetScanner = false
+            mostrarCredenciales = false
         }
         .onChange(of: mostrarCarnetFoto) { _, visible in
             if !visible { showCarnetScanner = false }
@@ -226,440 +240,347 @@ struct PerfilView: View {
         }
     }
 
-    // MARK: - Banner Sin Conexión (Top)
-    // MARK: - Hero
+    // MARK: - Identidad
     private var hero: some View {
-        ZStack(alignment: .topLeading) {
-            Circle()
-                .fill(Color.white.opacity(0.10))
-                .frame(width: 220, height: 220)
-                .offset(x: 230, y: -70)
-                .accessibilityHidden(true)
-            Circle()
-                .fill(Color.white.opacity(0.06))
-                .frame(width: 150, height: 150)
-                .offset(x: -50, y: 50)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Spacer().frame(height: 56)
-
-                // Avatar + Nombre + Rol
-                (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
-                                  : AnyLayout(HStackLayout(alignment: .center, spacing: 14))) {
-                    ZStack {
-                        Circle()
-                            .fill(fondoAvatar)
-                            .frame(width: avatarSize, height: avatarSize)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                        if let fotoPerfil {
-                            Image(uiImage: fotoPerfil)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: avatarSize, height: avatarSize)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                                .accessibilityHidden(true)
-                        } else {
-                            Text(iniciales(nombre))
-                                .font(.headlineMd)
-                                .foregroundStyle(tintaCabecera)
-                        }
-                    }
-                    .accessibilityLabel(L.t("Foto de perfil, ", "Profile photo, ") + iniciales(nombre))
-                    .accessibilityAddTraits(.isImage)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(nombre)
-                            .font(.headlineLgMobile)
-                            .foregroundStyle(tintaCabecera)
-                        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
-                                          : AnyLayout(HStackLayout(spacing: 6))) {
-                            Text(rolPerfil)
-                                .font(.labelCapsSm)
-                                .foregroundStyle(tintaCabecera.opacity(0.95))
-                                .appTracking(AppTracking.wideLabel)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(Color.white.opacity(0.20)))
-                            if mostrarCarnetFoto, hayCarnetGuardado {
-                                HStack(spacing: 3) {
-                                    Image(systemName: "checkmark.seal.fill")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .accessibilityHidden(true)
-                                    Text(L.t("CARNÉ GUARDADO", "CARD SAVED"))
-                                        .font(.labelCapsSm)
-                                        .appTracking(AppTracking.wideLabel)
-                                }
-                                .foregroundStyle(.onTertiary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(Color.tertiary))
-                            }
-                        }
-                    }
-                    if !apilarContenido { Spacer() }
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(L.t("Perfil", "Profile"))
+                    .font(.labelCapsLg)
+                    .foregroundStyle(tintaCabecera.opacity(0.9))
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button {
+                    AppHaptics.impact(.light)
+                    showDatosPersonales = true
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(tintaCabecera)
+                        .frame(width: 44, height: 44)
+                        .background(tintaCabecera.opacity(0.12), in: Circle())
                 }
-                .padding(.horizontal, 20)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(nombre + ", " + rolPerfil
-                                + (mostrarCarnetFoto && hayCarnetGuardado ? L.t(", carné guardado", ", card saved") : ""))
-                .accessibilityAddTraits(.isHeader)
-
-                // Mi Wallet integrado debajo del nombre
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(L.t("MI BILLETERA", "MY WALLET"))
-                        .font(.labelCapsSm)
-                        .foregroundStyle(tintaCabecera.opacity(0.85))
-                        .appTracking(AppTracking.wideLabel)
-                        .padding(.horizontal, 4)
-                        .accessibilityAddTraits(.isHeader)
-
-                    // Monedero a lo ancho: es el contenido real de la
-                    // billetera, y así sus dos botones no se recortan.
-                    MonederoCard(store: monederoStore,
-                                 onRecargar: { showRecargarSaldo = true },
-                                 onMostrarQR: { showQRPasaje = true },
-                                 tinta: tintaCabecera,
-                                 empresa: empresa)
-
-                    if mostrarCarnetFoto || mostrarCarnetDigital {
-                        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-                                          : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
-                            if mostrarCarnetFoto {
-                                tarjetaBilletera(icono: CarnetPerfil.foto.icono,
-                                                titulo: CarnetPerfil.foto.titulo(para: empresa),
-                                                detalle: hayCarnetGuardado
-                                                    ? L.t("Ver foto guardada", "View saved photo")
-                                                    : L.t("Añadir foto", "Add photo"),
-                                                conChevron: false) {
-                                    empresaDelCarnet = empresa
-                                    showCarnetScanner = true
-                                }
-                            }
-
-                            if mostrarCarnetDigital {
-                                tarjetaBilletera(icono: CarnetPerfil.digital.icono,
-                                                titulo: CarnetPerfil.digital.titulo(para: empresa),
-                                                detalle: L.t("Muestra · sin validez",
-                                                             "Sample · not valid"),
-                                                conChevron: true) {
-                                    empresaDelCarnet = empresa
-                                    showCarneDigital = true
-                                }
-                            }
-                        }
-                    }
-
-                    // Organizador local de referencias de tarjetas, sin pagos.
-                    Button {
-                        AppHaptics.impact(.light)
-                        showTarjetaSheet = true
-                    } label: {
-                        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
-                                          : AnyLayout(HStackLayout(spacing: 10))) {
-                            Image(systemName: "creditcard.fill")
-                                .font(.system(size: 18))
-                                .foregroundStyle(tintaCabecera.opacity(0.85))
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(L.t("Mis tarjetas", "My cards"))
-                                    .font(.footnote.bold())
-                                    .foregroundStyle(tintaCabecera)
-                                Text(L.t("Referencias locales · sin pagos",
-                                         "Local references · no payments"))
-                                    .font(.caption2)
-                                    .foregroundStyle(tintaCabecera.opacity(0.75))
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            if !apilarContenido { Spacer() }
-                            Text(L.t("LOCAL", "LOCAL"))
-                                .font(.labelCapsSm)
-                                .foregroundStyle(tintaCabecera)
-                                .appTracking(AppTracking.wideLabel)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(.white.opacity(0.22)))
-                        }
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.10)))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(.white.opacity(0.22),
-                                              style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(L.t("Mis tarjetas, referencias locales", "My cards, local references"))
-                    .accessibilityHint(L.t("Organiza referencias guardadas en este dispositivo. No permite pagar",
-                                           "Organize references saved on this device. Payments are not supported"))
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 22)
-
-                Spacer(minLength: 24)
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Editar perfil", "Edit profile"))
             }
+
+            (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+                              : AnyLayout(HStackLayout(alignment: .center, spacing: 16))) {
+                ZStack {
+                    Circle().fill(fondoAvatar)
+                    if let fotoPerfil {
+                        Image(uiImage: fotoPerfil)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Text(iniciales(nombre))
+                            .font(.headlineMd)
+                            .foregroundStyle(tintaCabecera)
+                    }
+                }
+                .frame(width: avatarSize, height: avatarSize)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(tintaCabecera.opacity(0.3), lineWidth: 2))
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(nombre)
+                        .font(.headlineLgMobile)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(rolPerfil)
+                        .font(.caption.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(tintaCabecera.opacity(0.85))
+                    if mostrarCarnetFoto, hayCarnetGuardado {
+                        Label(L.t("Carné guardado", "Card saved"), systemImage: "checkmark.circle.fill")
+                            .font(.caption.weight(.medium))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(tintaCabecera.opacity(0.12), in: Capsule())
+                    }
+                }
+                .foregroundStyle(tintaCabecera)
+                if !apilarContenido { Spacer(minLength: 0) }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(nombre + ", " + rolPerfil
+                + (mostrarCarnetFoto && hayCarnetGuardado
+                   ? L.t(", carné guardado", ", card saved") : ""))
         }
-        .frame(minHeight: mostrarCarnetFoto || mostrarCarnetDigital ? 470 : 360)
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            LinearGradient(
-                colors: coloresCabecera,
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
+            LinearGradient(colors: coloresCabecera, startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+
+    // MARK: - Billetera
+    private var billetera: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                              : AnyLayout(HStackLayout(alignment: .center, spacing: 12))) {
+                tituloSeccion(L.t("Mi billetera", "My wallet"))
+                if !apilarContenido { Spacer(minLength: 0) }
+                Button {
+                    AppHaptics.impact(.light)
+                    mostrarCredenciales = true
+                } label: {
+                    Label(L.t("Credenciales", "Credentials"), systemImage: "slider.horizontal.3")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.onPrimaryContainer)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
+                        .background(Color.primaryContainer, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(L.t("Elige qué carnés aparecen en tu billetera", "Choose which cards appear in your wallet"))
+            }
+
+            MonederoCard(store: monederoStore,
+                         onRecargar: { showRecargarSaldo = true },
+                         onMostrarQR: { showQRPasaje = true },
+                         tinta: tintaCabecera,
+                         empresa: empresa)
+                .padding(6)
+                .background {
+                    LinearGradient(colors: coloresCabecera, startPoint: .topLeading, endPoint: .bottomTrailing)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+            if mostrarCarnetFoto || mostrarCarnetDigital {
+                (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                                  : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
+                    if mostrarCarnetFoto {
+                        tarjetaBilletera(icono: CarnetPerfil.foto.icono,
+                                        titulo: CarnetPerfil.foto.tituloBreve(para: empresa),
+                                        detalle: hayCarnetGuardado
+                                            ? L.t("Ver foto", "View photo")
+                                            : L.t("Añadir foto", "Add photo")) {
+                            empresaDelCarnet = empresa
+                            showCarnetScanner = true
+                        }
+                    }
+                    if mostrarCarnetDigital {
+                        tarjetaBilletera(icono: CarnetPerfil.digital.icono,
+                                        titulo: CarnetPerfil.digital.tituloBreve(para: empresa),
+                                        detalle: L.t("Muestra · sin validez", "Sample · not valid")) {
+                            empresaDelCarnet = empresa
+                            showCarneDigital = true
+                        }
+                    }
+                }
+            }
+
+            grupoFilas {
+                chevronRow(icon: "creditcard.fill", iconColor: .appPrimary,
+                           label: L.t("Mis tarjetas", "My cards"),
+                           detalle: L.t("Referencias locales · sin pagos", "Local references · no payments")) {
+                    AppHaptics.impact(.light)
+                    showTarjetaSheet = true
+                }
+                .accessibilityHint(L.t("Organiza referencias guardadas en este dispositivo. No permite pagar",
+                                       "Organize references saved on this device. Payments are not supported"))
+            }
         }
     }
 
-    /// Tarjeta translúcida de la billetera (carnet y carné digital).
-    ///
-    /// Estaba copiada dos veces, con el mismo fondo, el mismo borde y el mismo
-    /// gesto; solo cambiaban el icono y los textos.
-    private func tarjetaBilletera(icono: String,
-                                  titulo: String,
-                                  detalle: String,
-                                  conChevron: Bool,
+    private func tarjetaBilletera(icono: String, titulo: String, detalle: String,
                                   accion: @escaping () -> Void) -> some View {
         Button {
             AppHaptics.impact(.light)
             accion()
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: icono)
-                    .font(.system(size: 18))
-                    .foregroundStyle(tintaCabecera)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(titulo)
-                        .font(.footnote.bold())
-                        .foregroundStyle(tintaCabecera)
-                    Text(detalle)
-                        .font(.caption2)
-                        .foregroundStyle(tintaCabecera.opacity(0.8))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if conChevron {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    iconoFila(icono, color: .appPrimary)
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(tintaCabecera.opacity(0.7))
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.onSurfaceVariant)
                         .accessibilityHidden(true)
                 }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(titulo).font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
+                    Text(detalle).font(.caption)
+                        .foregroundStyle(Color.onSurfaceVariant)
+                }
+                .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(12)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.18)))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.25), lineWidth: 1)
-            )
+            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.outlineVariant.opacity(0.18), lineWidth: 0.5)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 20))
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(titulo)
         .accessibilityValue(detalle)
     }
 
-    // MARK: - Configuración
+    // MARK: - Ajustes
     private var configuracion: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PerfilPreferenciasVisuales(empresa: empresa)
-                .padding(.bottom, 12)
-            if TransporteApp.busesUTPDisponibles {
-                ModoBusesUTPSection()
-                    .padding(.bottom, 12)
-            }
+        VStack(alignment: .leading, spacing: 24) {
+            if TransporteApp.busesUTPDisponibles { ModoBusesUTPSection() }
 
-            Text(L.t("Preferencias", "Preferences"))
-                .font(.labelCapsLg)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-                .padding(.leading, 4)
-                .accessibilityAddTraits(.isHeader)
-
-            VStack(spacing: 0) {
-                chevronRow(icon: "globe", iconColor: .appPrimary,
-                           label: L.t("Idioma", "Language") + " · " + IdiomaManager.shared.idioma.nombreNativo) {
-                    mostrarIdiomas = true
-                }
-                Divider().padding(.leading, 56).accessibilityHidden(true)
-                toggleRow(icon: "bell.fill", iconColor: .appPrimary,
-                          label: L.t("Preferencia de notificaciones", "Notification preference"), isOn: $notifOn)
-                Divider().padding(.leading, 56).accessibilityHidden(true)
-                toggleRow(icon: "mappin.circle.fill", iconColor: .secondary,
-                          label: L.t("Preferencia de compartir ubicación", "Location sharing preference"), isOn: $ubicacionOn)
-                Divider().padding(.leading, 56).accessibilityHidden(true)
-                offlineToggleRow
-                Divider().padding(.leading, 56).accessibilityHidden(true)
-                toggleRow(icon: "hand.raised.fill", iconColor: .tertiary,
-                          label: L.signable("perfil.modo_senias", "Modo Señas", "Sign Language Mode"), isOn: $modoSenias)
-            .seniable("perfil.modo_senias", conGesto: false)
-                Divider().padding(.leading, 56).accessibilityHidden(true)
-                chevronRow(icon: "pencil", iconColor: .onSurfaceVariant,
-                           label: L.t("Editar perfil", "Edit profile")) {
-                    AppHaptics.impact(.light)
-                    showDatosPersonales = true
-                }
-                Divider().padding(.leading, 56).accessibilityHidden(true)
-                chevronRow(icon: "archivebox", iconColor: .onSurfaceVariant,
-                           label: L.t("Respaldos guardados", "Saved backups")) {
-                    AppHaptics.impact(.light)
-                    showRespaldos = true
-                }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.surfaceContainerLowest)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
-                    )
-            )
-
-            Text(L.t("Las preferencias de notificaciones y de compartir ubicación se guardan solo en este dispositivo. Esta versión no envía alertas ni comparte tu ubicación con otros usuarios. No cambian los permisos de iOS ni desactivan el GPS del mapa.",
-                     "Notification and location sharing preferences are saved only on this device. This version does not send alerts or share your location with other users. They do not change iOS permissions or turn off map GPS."))
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // ── Accesibilidad (VoiceOver) ──
             VStack(alignment: .leading, spacing: 12) {
-                Text(L.t("Accesibilidad", "Accessibility"))
-                    .font(.labelCapsLg)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                    .padding(.leading, 4)
-                    .accessibilityAddTraits(.isHeader)
+                tituloSeccion(L.t("Preferencias", "Preferences"))
+                grupoFilas {
+                    chevronRow(icon: "globe", iconColor: .appPrimary,
+                               label: L.t("Idioma", "Language"),
+                               detalle: IdiomaManager.shared.idioma.nombreNativo) {
+                        mostrarIdiomas = true
+                    }
+                    separadorFila
+                    TimelineView(.periodic(from: .now, by: 60)) { contexto in
+                        chevronRow(icon: "bell.fill", iconColor: .appPrimary,
+                                   label: L.t("Notificaciones", "Notifications"),
+                                   detalle: NotificacionesService.shared.resumen(ahora: contexto.date)) {
+                            mostrarNotificaciones = true
+                        }
+                    }
+                    separadorFila
+                    offlineToggleRow
+                }
+            }
 
-                VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                tituloSeccion(L.t("Accesibilidad", "Accessibility"))
+                grupoFilas {
+                    toggleRow(icon: "hand.raised.fill", iconColor: .tertiary,
+                              label: L.signable("perfil.modo_senias", "Modo Señas", "Sign Language Mode"),
+                              isOn: $modoSenias)
+                        .seniable("perfil.modo_senias", conGesto: false)
+                    separadorFila
                     accesibilidadRow()
                 }
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.surfaceContainerLowest)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
-                        )
-                )
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                tituloSeccion(L.t("Privacidad y datos", "Privacy and data"))
+                grupoFilas {
+                    chevronRow(icon: "person.crop.circle", iconColor: .appPrimary,
+                               label: L.t("Datos personales", "Personal details")) {
+                        AppHaptics.impact(.light)
+                        showDatosPersonales = true
+                    }
+                    separadorFila
+                    chevronRow(icon: "archivebox", iconColor: .appPrimary,
+                               label: L.t("Respaldos guardados", "Saved backups")) {
+                        AppHaptics.impact(.light)
+                        showRespaldos = true
+                    }
+                    separadorFila
+                    toggleRow(icon: "mappin.circle.fill", iconColor: .secondary,
+                              label: L.t("Preferencia de ubicación", "Location preference"), isOn: $ubicacionOn)
+                }
+                DisclosureGroup(L.t("Sobre la ubicación", "About location")) {
+                    Text(L.t("La preferencia de compartir ubicación se guarda en este dispositivo. No comparte tu ubicación con otros usuarios ni desactiva el GPS del mapa.",
+                             "The location sharing preference is saved on this device. It does not share your location with other users or turn off map GPS."))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 6)
+                }
+                .font(.footnote)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .tint(.appPrimary)
             }
         }
     }
 
-    // MARK: - Fila Accesibilidad (VoiceOver)
-    @ViewBuilder
     private func accesibilidadRow() -> some View {
-        Button {
+        chevronRow(icon: voiceOverOn ? "speaker.wave.3.fill" : "speaker.slash.fill",
+                   iconColor: .appPrimary, label: L.t("VoiceOver", "VoiceOver"),
+                   detalle: voiceOverOn ? L.t("Activado", "On") : L.t("Desactivado", "Off")) {
             AppHaptics.impact(.light)
             showVoiceOverHelp = true
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(Color.appPrimary.opacity(0.14))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: voiceOverOn ? "speaker.wave.3.fill" : "speaker.slash.fill")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.appPrimary)
-                }
-                .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L.t("VoiceOver", "VoiceOver"))
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
-                    Text(voiceOverOn ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.onSurfaceVariant)
-                    .accessibilityHidden(true)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("VoiceOver")
-        .accessibilityValue(voiceOverOn ? L.t("Activado", "On") : L.t("Desactivado", "Off"))
         .accessibilityHint(L.t("Muestra instrucciones de activación y gestos de navegación", "Shows activation instructions and navigation gestures"))
+    }
+
+    private var offlineToggleRow: some View {
+        chevronRow(icon: "wifi.slash", iconColor: .secondary,
+                   label: L.t("Modo offline", "Offline mode")) {
+            AppHaptics.impact(.light)
+            showOfflineMapPopup = true
+        }
+        .accessibilityHint(L.t("Consulta qué puedes usar sin internet", "See what works without internet"))
+    }
+
+    private func tituloSeccion(_ titulo: String) -> some View {
+        Text(titulo)
+            .font(.title3.weight(.bold))
+            .foregroundStyle(Color.onSurface)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private func grupoFilas<Contenido: View>(@ViewBuilder contenido: () -> Contenido) -> some View {
+        VStack(spacing: 0, content: contenido)
+            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.outlineVariant.opacity(0.18), lineWidth: 0.5)
+            }
+    }
+
+    private var separadorFila: some View {
+        Divider().padding(.leading, 68).accessibilityHidden(true)
+    }
+
+    private func iconoFila(_ icono: String, color: Color) -> some View {
+        Image(systemName: icono)
+            .font(.body.weight(.semibold))
+            .foregroundStyle(color == .appPrimary ? Color.onPrimaryContainer : color)
+            .frame(width: 38, height: 38)
+            .background(color == .appPrimary ? Color.primaryContainer : color.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 12))
+            .accessibilityHidden(true)
     }
 
     private func toggleRow(icon: String, iconColor: Color, label: String, isOn: Binding<Bool>) -> some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle().fill(iconColor.opacity(0.14)).frame(width: 36, height: 36)
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(iconColor)
-            }
-            .accessibilityHidden(true)
+            iconoFila(icon, color: iconColor)
             Toggle(isOn: isOn) {
                 Text(label)
                     .font(.bodyMdMedium)
-                    .foregroundStyle(.onSurface)
+                    .foregroundStyle(Color.onSurface)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .tint(.appPrimary)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 16)
         .padding(.vertical, 14)
-
     }
 
-    // MARK: - Disponibilidad sin conexión
-    private var offlineToggleRow: some View {
-        Button {
-            AppHaptics.impact(.light)
-            showOfflineMapPopup = true
-        } label: {
+    private func chevronRow(icon: String, iconColor: Color, label: String,
+                            detalle: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: "wifi.slash")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Color.orange)
-                    .frame(width: 36, height: 36)
-                    .background(Color.orange.opacity(0.14), in: Circle())
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L.t("Modo offline", "Offline mode"))
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
-                    Text(L.t("Consulta qué puedes usar sin internet", "See what works without internet"))
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
+                iconoFila(icon, color: iconColor)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(label).font(.bodyMdMedium).foregroundStyle(Color.onSurface)
+                    if let detalle {
+                        Text(detalle).font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                    }
                 }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(Color.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.onSurfaceVariant)
+                    .accessibilityHidden(true)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    private func chevronRow(icon: String, iconColor: Color, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle().fill(iconColor.opacity(0.14)).frame(width: 36, height: 36)
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(iconColor)
-                }
-                .accessibilityHidden(true)
-                Text(label)
-                    .font(.bodyMdMedium)
-                    .foregroundStyle(.onSurface)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.onSurfaceVariant)
-                    .accessibilityHidden(true)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-        }
-        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
+        .accessibilityValue(detalle ?? "")
         .accessibilityHint(L.t("Doble toque para abrir", "Double tap to open"))
     }
 

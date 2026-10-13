@@ -17,6 +17,8 @@ import SwiftUI
 
 @main
 struct RutaUTPApp: App {
+    @UIApplicationDelegateAdaptor(NotificacionesAppDelegate.self) private var notificacionesDelegate
+
     /// Servicio de ubicación COMPARTIDO por la app.
     ///
     /// Lo usan el mapa y el rastreo pasivo a la vez, y `LocationService` está

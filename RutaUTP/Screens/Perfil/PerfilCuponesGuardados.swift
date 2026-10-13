@@ -15,21 +15,20 @@ struct PerfilCuponesGuardados: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Image(systemName: "ticket.fill")
-                    .foregroundStyle(Color.appPrimary)
                 Text(L.t("Mis cupones", "My coupons"))
                     .font(.title3.bold())
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Text("\(negocios.count)")
                     .font(.subheadline.bold())
                     .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(Color.appPrimary.opacity(0.1), in: Capsule())
+                    .foregroundStyle(Color.onPrimaryContainer)
+                    .background(Color.primaryContainer, in: Capsule())
             }
             .padding(.horizontal, 20)
 
-            Text(L.t("Tus promociones guardadas en Tracking Demo.",
-                     "Your saved offers from Tracking Demo."))
-                .font(.subheadline).foregroundStyle(Color.onSurfaceVariant)
+            Text(L.t("Promociones demo", "Demo offers"))
+                .font(.caption).foregroundStyle(Color.onSurfaceVariant)
                 .padding(.horizontal, 20)
 
             if let respaldo {
@@ -56,27 +55,47 @@ struct PerfilCuponesGuardados: View {
                 }
                 .padding(.horizontal, 20)
             } else if negocios.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "ticket")
-                        .font(.system(size: 32)).foregroundStyle(Color.appPrimary)
-                    Text(L.t("Tu próxima promo te espera", "Your next offer awaits"))
-                        .font(.headline)
-                    Text(L.t("Abre un negocio en el mapa y toca Guardar en su cupón. Aparecerá aquí.",
-                             "Open a business on the map and tap Save on its coupon. It will appear here."))
-                        .font(.subheadline).foregroundStyle(Color.onSurfaceVariant)
-                        .multilineTextAlignment(.center)
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "ticket")
+                            .font(.title3)
+                            .foregroundStyle(Color.onPrimaryContainer)
+                            .frame(width: 44, height: 44)
+                            .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 14))
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(L.t("Sin cupones guardados", "No saved coupons"))
+                                .font(.subheadline.weight(.semibold))
+                            Text(L.t("Guarda un cupón desde un negocio del mapa.",
+                                     "Save a coupon from a business on the map."))
+                                .font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
                     Button {
                         router.navigate(to: .trackingDemo)
                     } label: {
-                        Label(L.t("Explorar negocios", "Explore businesses"), systemImage: "map.fill")
-                            .font(.subheadline.bold()).padding(.vertical, 10).padding(.horizontal, 16)
-                            .foregroundStyle(.onPrimaryFill)
-                            .background(Color.primaryFill, in: Capsule())
+                        HStack {
+                            Text(L.t("Explorar negocios", "Explore businesses"))
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 4)
+                            Image(systemName: "arrow.right").accessibilityHidden(true)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.onPrimaryContainer)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .frame(minHeight: 44)
+                        .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
                 }
-                .frame(maxWidth: .infinity).padding(22)
-                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+                .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.outlineVariant.opacity(0.18), lineWidth: 0.5)
+                }
                 .padding(.horizontal, 20)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {

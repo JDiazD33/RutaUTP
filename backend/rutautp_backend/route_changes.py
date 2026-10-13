@@ -80,6 +80,8 @@ class RouteChanges:
                 receipt["code"] = "busy"
                 return (principal, receipt)
             group["votes"][principal] = now
+            if len(group["votes"]) >= 2 and "confirmedAt" not in group:
+                group["confirmedAt"] = now
             receipt.update(accepted=True, code="confirmed" if len(group["votes"]) >= 2 else "pending")
             return (principal, receipt)
         except (ValueError, TypeError, KeyError, UnicodeDecodeError, RecursionError):
@@ -93,9 +95,14 @@ class RouteChanges:
                 continue
             # La segunda confirmación más reciente determina hasta cuándo hay quorum.
             expires = sorted(group["votes"].values(), reverse=True)[1] + WINDOW
-            alerts.append({**{k: v for k, v in group.items() if k != "votes"},
+            alerts.append({**{k: v for k, v in group.items() if k not in ("votes", "confirmedAt")},
                            "confirmations": len(group["votes"]), "expiresAt": expires})
         return {"schemaVersion": 1, "timestamp": now, "alerts": alerts}
+
+    def confirmed_for_push(self, now):
+        alerts = self.snapshot(now)["alerts"]
+        confirmed = {g["id"]: g["confirmedAt"] for g in self.groups if "confirmedAt" in g}
+        return [{**alert, "confirmedAt": confirmed[alert["id"]]} for alert in alerts if alert["id"] in confirmed]
 
     def publish_snapshot(self, now, publisher):
         if publisher and now - self.last_snapshot >= 5:
