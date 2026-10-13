@@ -5,6 +5,7 @@ struct RouteSummaryPanel: View {
     let vm: MapaViewModel
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
     let onConfirmBoarding: () -> Void
+    let onIdentificarMicro: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -36,6 +37,14 @@ struct RouteSummaryPanel: View {
                 Label(L.t("Toma la línea ", "Take line ") + plan.route.lineaConLetra + " · " + plan.route.precioTexto,
                       systemImage: "bus.fill")
                     .fixedSize(horizontal: false, vertical: true)
+                Button(action: onIdentificarMicro) {
+                    Label(L.t("Identificar micro", "Identify bus"), systemImage: "photo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.appPrimary)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
                 if let transfer = plan.transfer {
                     Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
                     Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")

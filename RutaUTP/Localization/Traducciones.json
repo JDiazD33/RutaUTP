@@ -692,6 +692,13 @@
     "pt-BR": "Alertas de rota off-line",
     "zh-Hans": "离线线路警报"
   },
+  "Amarillo": {
+    "de": "Gelb",
+    "en": "Yellow",
+    "fr": "Jaune",
+    "pt-BR": "Amarelo",
+    "zh-Hans": "黄色"
+  },
   "Ampliación": {
     "de": "Vergrößerung",
     "en": "Zoom",
@@ -902,6 +909,13 @@
     "pt-BR": "Contribuir com localizações em tempo real",
     "zh-Hans": "贡献实时位置信息"
   },
+  "Azul": {
+    "de": "Blau",
+    "en": "Blue",
+    "fr": "Bleu",
+    "pt-BR": "Azul",
+    "zh-Hans": "蓝色"
+  },
   "AÑADIR": {
     "de": "HINZUFÜGEN",
     "en": "ADD",
@@ -1083,6 +1097,13 @@
     "fr": "Portefeuille numérique",
     "pt-BR": "Carteira digital",
     "zh-Hans": "数字钱包"
+  },
+  "Blanco": {
+    "de": "Weiß",
+    "en": "White",
+    "fr": "Blanc",
+    "pt-BR": "Branco",
+    "zh-Hans": "白色"
   },
   "Bloqueadas por iOS": {
     "de": "Von iOS blockiert",
@@ -1742,6 +1763,13 @@
     "pt-BR": "Carteira salva",
     "zh-Hans": "证件已保存"
   },
+  "Cartel de destino verificado": {
+    "de": "Bestätigtes Zielschild",
+    "en": "Verified destination sign",
+    "fr": "Panneau de destination vérifié",
+    "pt-BR": "Placa de destino verificada",
+    "zh-Hans": "已核实的目的地标牌"
+  },
   "Categoría": {
     "de": "Kategorie",
     "en": "Category",
@@ -1966,6 +1994,13 @@
     "pt-BR": "Solte um marcador no mapa",
     "zh-Hans": "在地图上放置一个标记"
   },
+  "Colores de la carrocería": {
+    "de": "Karosseriefarben",
+    "en": "Body colors",
+    "fr": "Couleurs de la carrosserie",
+    "pt-BR": "Cores da carroceria",
+    "zh-Hans": "车身颜色"
+  },
   "Combi": {
     "de": "Kleinbus",
     "en": "Minibus",
@@ -2126,6 +2161,13 @@
     "fr": "Connexion aux alertes d'itinéraire…",
     "pt-BR": "Conectando aos alertas de rota…",
     "zh-Hans": "正在连接路线警报..."
+  },
+  "Confirma el destino con el conductor antes de subir.": {
+    "de": "Bestätige das Ziel vor dem Einsteigen mit dem Fahrer.",
+    "en": "Confirm the destination with the driver before boarding.",
+    "fr": "Confirmez la destination avec le conducteur avant de monter.",
+    "pt-BR": "Confirme o destino com o motorista antes de embarcar.",
+    "zh-Hans": "上车前请向司机确认目的地。"
   },
   "Confirma solo si lo has visto. Se necesitan dos cuentas distintas en la misma ruta, motivo y zona. Los reportes vencen a los 15 minutos. El aviso señala la incidencia; el recorrido alterno aún no está verificado.": {
     "de": "Bestätigen Sie nur das, was Sie gesehen haben. Zwei verschiedene Konten müssen dieselbe Route, denselben Grund und dasselbe Gebiet melden. Berichte verfallen nach 15 Minuten. Die Warnung identifiziert den Vorfall; Der alternative Pfad wurde nicht überprüft.",
@@ -4115,6 +4157,20 @@
     "pt-BR": "Marque o ponto afetado para continuar.",
     "zh-Hans": "标记受影响的点以继续。"
   },
+  "Fecha de la foto no indicada": {
+    "de": "Fotodatum nicht angegeben",
+    "en": "Photo date not provided",
+    "fr": "Date de la photo non indiquée",
+    "pt-BR": "Data da foto não informada",
+    "zh-Hans": "未注明照片日期"
+  },
+  "Fecha de la foto: {0}": {
+    "de": "Fotodatum: {0}",
+    "en": "Photo date: {0}",
+    "fr": "Date de la photo : {0}",
+    "pt-BR": "Data da foto: {0}",
+    "zh-Hans": "照片日期：{0}"
+  },
   "Fin del recorrido": {
     "de": "Ende der Route",
     "en": "End of the route",
@@ -4171,6 +4227,27 @@
     "pt-BR": "Foto do perfil, JD",
     "zh-Hans": "个人资料照片，JD"
   },
+  "Foto de referencia": {
+    "de": "Referenzfoto",
+    "en": "Reference photo",
+    "fr": "Photo de référence",
+    "pt-BR": "Foto de referência",
+    "zh-Hans": "参考照片"
+  },
+  "Foto de referencia de la línea; no es una unidad en vivo.": {
+    "de": "Referenzfoto der Linie; kein Fahrzeug in Echtzeit.",
+    "en": "Reference photo of the line; it is not a live vehicle.",
+    "fr": "Photo de référence de la ligne ; ce n’est pas un véhicule en temps réel.",
+    "pt-BR": "Foto de referência da linha; não é um veículo em tempo real.",
+    "zh-Hans": "线路的参考照片，并非车辆的实时图像。"
+  },
+  "Foto de referencia de {0}, letra {1}": {
+    "de": "Referenzfoto von {0}, Kennzeichen {1}",
+    "en": "Reference photo of {0}, letter {1}",
+    "fr": "Photo de référence de {0}, lettre {1}",
+    "pt-BR": "Foto de referência de {0}, letra {1}",
+    "zh-Hans": "{0} 的参考照片，字母标识 {1}"
+  },
   "Foto del aporte": {
     "de": "Foto des Beitrags",
     "en": "Post photo",
@@ -4192,6 +4269,20 @@
     "pt-BR": "Foto salva neste dispositivo",
     "zh-Hans": "此设备上保存的照片"
   },
+  "Foto y colores pendientes": {
+    "de": "Foto und Farben noch offen",
+    "en": "Photo and colors pending",
+    "fr": "Photo et couleurs à vérifier",
+    "pt-BR": "Foto e cores pendentes",
+    "zh-Hans": "照片和颜色待核实"
+  },
+  "Foto: {0}": {
+    "de": "Foto: {0}",
+    "en": "Photo: {0}",
+    "fr": "Photo : {0}",
+    "pt-BR": "Foto: {0}",
+    "zh-Hans": "照片：{0}"
+  },
   "Franja de envío": {
     "de": "Versandzeitraum",
     "en": "Delivery window",
@@ -4212,6 +4303,13 @@
     "fr": "En face de CinePlanet Trujillo",
     "pt-BR": "Em frente ao CinePlanet Trujillo",
     "zh-Hans": "CinePlanet Trujillo对面"
+  },
+  "Fuente y verificación": {
+    "de": "Quelle und Überprüfung",
+    "en": "Source and verification",
+    "fr": "Source et vérification",
+    "pt-BR": "Fonte e verificação",
+    "zh-Hans": "来源与核实信息"
   },
   "Fuera del recorrido · {0} m": {
     "de": "Abseits der Route · {0} m",
@@ -4261,6 +4359,13 @@
     "fr": "Merci de votre aide. Dans cette version d'essai, le rapport n'est envoyé à aucun serveur.",
     "pt-BR": "Obrigado por ajudar. Nesta versão de teste o relatório não é enviado para nenhum servidor.",
     "zh-Hans": "谢谢你的帮助。在此试用版本中，报告不会发送到任何服务器。"
+  },
+  "Gris": {
+    "de": "Grau",
+    "en": "Gray",
+    "fr": "Gris",
+    "pt-BR": "Cinza",
+    "zh-Hans": "灰色"
   },
   "Guarda las líneas que usas y revisa tu destino con tiempo para preparar tu salida.": {
     "de": "Speichere die Linien, die du nutzt, und prüfe dein Ziel rechtzeitig, um deine Abfahrt vorzubereiten.",
@@ -4611,6 +4716,27 @@
     "fr": "Identité non vérifiée",
     "pt-BR": "Identidade não verificada",
     "zh-Hans": "身份未经验证"
+  },
+  "Identifica tu micro": {
+    "de": "Erkenne deinen Bus",
+    "en": "Identify your bus",
+    "fr": "Identifiez votre bus",
+    "pt-BR": "Identifique seu micro-ônibus",
+    "zh-Hans": "识别要乘坐的小巴"
+  },
+  "Identificación verificada": {
+    "de": "Bestätigte Identifikation",
+    "en": "Verified identification",
+    "fr": "Identification vérifiée",
+    "pt-BR": "Identificação verificada",
+    "zh-Hans": "身份信息已核实"
+  },
+  "Identificar micro": {
+    "de": "Bus erkennen",
+    "en": "Identify bus",
+    "fr": "Identifier le bus",
+    "pt-BR": "Identificar micro-ônibus",
+    "zh-Hans": "识别小巴"
   },
   "Idioma": {
     "de": "Sprache",
@@ -5837,6 +5963,13 @@
     "pt-BR": "Marcar localização no mapa",
     "zh-Hans": "在地图上标记位置"
   },
+  "Marrón": {
+    "de": "Braun",
+    "en": "Brown",
+    "fr": "Marron",
+    "pt-BR": "Marrom",
+    "zh-Hans": "棕色"
+  },
   "Material y maquinaria pueden reducir el espacio de circulación. Describe el tramo ocupado y si el micro necesita pasar por otra calle.": {
     "de": "Material und Maschinen können den Straßenraum verringern. Beschreiben Sie den belegten Abschnitt und ob der Bus eine andere Straße benutzen muss.",
     "en": "Material and machinery can reduce road space. Describe the occupied section and whether the bus needs to use another street.",
@@ -6012,6 +6145,13 @@
     "pt-BR": "Os ônibus estão lotados na Av. Larco. Três passaram sem parar no caminho para UTP.",
     "zh-Hans": "Av 上的巴士已满员。 Larco。三人在前往UTP的路上不停歇地通过了。"
   },
+  "Micro para tu viaje": {
+    "de": "Bus für deine Fahrt",
+    "en": "Bus for your trip",
+    "fr": "Bus pour votre trajet",
+    "pt-BR": "Micro-ônibus para sua viagem",
+    "zh-Hans": "此行要乘坐的小巴"
+  },
   "Micro, línea ": {
     "de": "Bus, Linie ",
     "en": "Bus, line ",
@@ -6088,6 +6228,13 @@
     "fr": "Portefeuille ",
     "pt-BR": "Carteira ",
     "zh-Hans": "钱包 "
+  },
+  "Morado": {
+    "de": "Violett",
+    "en": "Purple",
+    "fr": "Violet",
+    "pt-BR": "Roxo",
+    "zh-Hans": "紫色"
   },
   "Mostrar ": {
     "de": "Zeigen ",
@@ -6383,6 +6530,13 @@
     "pt-BR": "NOVO · SUAS PARADAS",
     "zh-Hans": "新·您的停靠站"
   },
+  "Naranja": {
+    "de": "Orange",
+    "en": "Orange",
+    "fr": "Orange",
+    "pt-BR": "Laranja",
+    "zh-Hans": "橙色"
+  },
   "Navegación principal": {
     "de": "Hauptnavigation",
     "en": "Main navigation",
@@ -6410,6 +6564,13 @@
     "fr": "Nous avons besoin de votre position pour trouver un arrêt d'embarquement. Activez le GPS et autorisez l’accès à la localisation.",
     "pt-BR": "Precisamos da sua localização para encontrar um ponto de embarque. Ative o GPS e permita o acesso à localização.",
     "zh-Hans": "我们需要您的位置来查找上车站。启用 GPS 并允许位置访问。"
+  },
+  "Negro": {
+    "de": "Schwarz",
+    "en": "Black",
+    "fr": "Noir",
+    "pt-BR": "Preto",
+    "zh-Hans": "黑色"
   },
   "No disponible": {
     "de": "Nicht verfügbar",
@@ -7692,6 +7853,13 @@
     "pt-BR": "Distância restante",
     "zh-Hans": "剩余路程"
   },
+  "Por verificar": {
+    "de": "Noch zu prüfen",
+    "en": "Not yet verified",
+    "fr": "À vérifier",
+    "pt-BR": "A verificar",
+    "zh-Hans": "待核实"
+  },
   "Porción + gaseosa a S/ 6": {
     "de": "Scheibe + Soda für S/ 6",
     "en": "Slice + soda for S/ 6",
@@ -7845,6 +8013,13 @@
     "fr": "Préparez-vous à arriver",
     "pt-BR": "Prepare-se para chegar",
     "zh-Hans": "准备好抵达"
+  },
+  "Primer micro": {
+    "de": "Erster Bus",
+    "en": "First bus",
+    "fr": "Premier bus",
+    "pt-BR": "Primeiro micro-ônibus",
+    "zh-Hans": "第一辆小巴"
   },
   "Principal": {
     "de": "Standard",
@@ -8329,6 +8504,13 @@
     "pt-BR": "Referência de demonstração · verifique as condições no local",
     "zh-Hans": "演示参考·查看现场情况"
   },
+  "Referencia del GTFS. Aún no confirma la apariencia ni el cartel del micro.": {
+    "de": "GTFS-Referenz. Sie bestätigt noch nicht das Aussehen oder Zielschild des Busses.",
+    "en": "GTFS reference. It does not yet confirm the bus appearance or destination sign.",
+    "fr": "Référence GTFS. Elle ne confirme pas encore l’apparence du bus ni son panneau de destination.",
+    "pt-BR": "Referência do GTFS. Ainda não confirma a aparência nem a placa de destino do micro-ônibus.",
+    "zh-Hans": "GTFS 参考信息，尚未确认小巴的外观或目的地标牌。"
+  },
   "Referencia principal": {
     "de": "Primäre Referenz",
     "en": "Primary reference",
@@ -8609,12 +8791,26 @@
     "pt-BR": "Confira seus ajustes",
     "zh-Hans": "检查设置"
   },
+  "Revisado: {0}": {
+    "de": "Geprüft: {0}",
+    "en": "Reviewed: {0}",
+    "fr": "Vérifié le : {0}",
+    "pt-BR": "Revisado: {0}",
+    "zh-Hans": "核实日期：{0}"
+  },
   "Robo en el paradero": {
     "de": "Diebstahl an der Haltestelle",
     "en": "Theft at the stop",
     "fr": "Vol à l'arrêt",
     "pt-BR": "Roubo na parada",
     "zh-Hans": "车站盗窃"
+  },
+  "Rojo": {
+    "de": "Rot",
+    "en": "Red",
+    "fr": "Rouge",
+    "pt-BR": "Vermelho",
+    "zh-Hans": "红色"
   },
   "Ruta ": {
     "de": "Route ",
@@ -9008,6 +9204,13 @@
     "pt-BR": "Seguir minha localização",
     "zh-Hans": "关注我的位置"
   },
+  "Segundo micro": {
+    "de": "Zweiter Bus",
+    "en": "Second bus",
+    "fr": "Deuxième bus",
+    "pt-BR": "Segundo micro-ônibus",
+    "zh-Hans": "第二辆小巴"
+  },
   "Seguridad": {
     "de": "Sicherheit",
     "en": "Safety",
@@ -9070,6 +9273,13 @@
     "fr": "Sélectionnez un point de la carte",
     "pt-BR": "Selecione um ponto do mapa",
     "zh-Hans": "选择地图点"
+  },
+  "Sentido y aspecto actual por confirmar.": {
+    "de": "Fahrtrichtung und aktuelles Aussehen müssen bestätigt werden.",
+    "en": "Direction and current appearance need confirmation.",
+    "fr": "Sens de circulation et apparence actuelle à confirmer.",
+    "pt-BR": "Sentido e aparência atual a confirmar.",
+    "zh-Hans": "行驶方向和当前外观有待确认。"
   },
   "Serenazgo 24 h y alta afluencia de personas todo el día.": {
     "de": "24-Stunden-Stadtpatrouille und den ganzen Tag reger Fußgängerverkehr.",
@@ -10121,6 +10331,13 @@
     "pt-BR": "Seu relatório ajuda outros alunos",
     "zh-Hans": "您的报告可以帮助其他学生"
   },
+  "Tu tramo planeado": {
+    "de": "Dein geplanter Abschnitt",
+    "en": "Your planned segment",
+    "fr": "Votre trajet prévu",
+    "pt-BR": "Seu trecho planejado",
+    "zh-Hans": "计划乘坐的路段"
+  },
   "Tu transporte público": {
     "de": "Ihr Verkehrsmittel",
     "en": "Your public transport",
@@ -10548,6 +10765,13 @@
     "pt-BR": "Ver postagem",
     "zh-Hans": "查看帖子"
   },
+  "Ver publicación original": {
+    "de": "Originalbeitrag ansehen",
+    "en": "View original publication",
+    "fr": "Voir la publication originale",
+    "pt-BR": "Ver publicação original",
+    "zh-Hans": "查看原始发布内容"
+  },
   "Ver recorrido en el mapa": {
     "de": "Route auf der Karte anzeigen",
     "en": "View route on map",
@@ -10604,6 +10828,13 @@
     "pt-BR": "Ver localização e opções",
     "zh-Hans": "查看位置与选项"
   },
+  "Verde": {
+    "de": "Grün",
+    "en": "Green",
+    "fr": "Vert",
+    "pt-BR": "Verde",
+    "zh-Hans": "绿色"
+  },
   "Versión {0}": {
     "de": "Version {0}",
     "en": "Version {0}",
@@ -10652,6 +10883,13 @@
     "fr": "Vendredi-Dim à partir de 18h. Affichage du coupon.",
     "pt-BR": "Sex-Dom a partir das 18h. Mostrando o cupom.",
     "zh-Hans": "周五至周日下午 6 点开始。显示优惠券。"
+  },
+  "Vigente hasta: {0}": {
+    "de": "Gültig bis: {0}",
+    "en": "Valid until: {0}",
+    "fr": "Valable jusqu’au : {0}",
+    "pt-BR": "Válido até: {0}",
+    "zh-Hans": "有效期至：{0}"
   },
   "Vista aérea de una calle con pavimento retirado y trabajos sobre la vía.": {
     "de": "Luftaufnahme einer Straße mit entferntem Gehweg und Straßenarbeiten.",

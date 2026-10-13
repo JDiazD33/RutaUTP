@@ -1,0 +1,15 @@
+$(SRCROOT)/gtfs/agency.txt
+$(SRCROOT)/gtfs/routes.txt
+$(SRCROOT)/gtfs/trips.txt
+$(SRCROOT)/gtfs/stops.txt
+$(SRCROOT)/gtfs/stop_times.txt
+$(SRCROOT)/micros/fotos/nuevo-california-v.jpg
+$(SRCROOT)/micros/fotos/huanchaco-h.jpg
+$(SRCROOT)/micros/fotos/salaverry-express-a.jpg
+$(SRCROOT)/micros/fotos/nuevos-girasoles-b.jpg
+$(SRCROOT)/micros/fotos/san-isidro-labrador-t1.jpg
+$(SRCROOT)/micros/fotos/mochica-chimu-m.jpg
+$(SRCROOT)/micros/fotos/luz-divina-m.jpg
+$(SRCROOT)/micros/fotos/nuevos-girasoles-jj.jpg
+$(SRCROOT)/micros/fotos/santa-lucia-moche-b.jpg
+$(SRCROOT)/micros/fotos/mochica-d.jpg

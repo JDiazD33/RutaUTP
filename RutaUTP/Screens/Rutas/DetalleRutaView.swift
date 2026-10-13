@@ -43,6 +43,8 @@ struct DetalleRutaView: View {
                         .padding(.top, 16)
 
                     VStack(spacing: 20) {
+                        IdentificadorMicroView(referencia: ReferenciaMicroGTFS(ruta))
+
                         // Info card
                         HStack(alignment: .top, spacing: 14) {
                             RoundedRectangle(cornerRadius: 3)

@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4A4D3D4D3DF142DE8AFC8060 /* IdentificadorMicro.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0DDC047BF834B4AB0DD1510 /* IdentificadorMicro.swift */; };
+		EDE35922DACF488AB241A9EC /* CatalogoMicrosService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F5D0B4D3554F6B85775792 /* CatalogoMicrosService.swift */; };
+		45EDAC4481FC43729B1181CA /* IdentificadorMicroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 470BE2C709A54678B8B15ADB /* IdentificadorMicroView.swift */; };
+		EB27A03229C5460CBA11CF19 /* micros in Resources */ = {isa = PBXBuildFile; fileRef = 62EEEA97B050419BA4022597 /* micros */; };
 		A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */; };
 		ECF34513F945499ABD8EB439 /* PushRutasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE808E3026E54669B06DFE24 /* PushRutasService.swift */; };
 		F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2972779301B74337A0930235 /* NotificacionesView.swift */; };
@@ -209,6 +213,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B0DDC047BF834B4AB0DD1510 /* IdentificadorMicro.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificadorMicro.swift; sourceTree = "<group>"; };
+		E6F5D0B4D3554F6B85775792 /* CatalogoMicrosService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogoMicrosService.swift; sourceTree = "<group>"; };
+		470BE2C709A54678B8B15ADB /* IdentificadorMicroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificadorMicroView.swift; sourceTree = "<group>"; };
+		62EEEA97B050419BA4022597 /* micros */ = {isa = PBXFileReference; lastKnownFileType = folder; path = micros; sourceTree = "<group>"; };
 		EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvisosDiarios.swift; sourceTree = "<group>"; };
 		AE808E3026E54669B06DFE24 /* PushRutasService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRutasService.swift; sourceTree = "<group>"; };
 		C193FD90B1EF4256AB1FBEDF /* RutaUTP-Push.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "RutaUTP-Push.entitlements"; sourceTree = "<group>"; };
@@ -427,6 +435,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4150A066F98847FD9A9068F5 /* Micros */ = {
+			isa = PBXGroup;
+			children = (
+				B0DDC047BF834B4AB0DD1510 /* IdentificadorMicro.swift */,
+				E6F5D0B4D3554F6B85775792 /* CatalogoMicrosService.swift */,
+			);
+			path = Micros;
+			sourceTree = "<group>";
+		};
 		D5C8B80F46754BEE8B334245 /* Notificaciones */ = {
 			isa = PBXGroup;
 			children = (
@@ -452,6 +469,7 @@
 		0A40D90B2FDE5E7D00F79FBC = {
 			isa = PBXGroup;
 			children = (
+				62EEEA97B050419BA4022597 /* micros */,
 				BD2000000000000000000005 /* gtfs-utp */,
 				0A8004F6300AD9FE004E1676 /* RutaUTP */,
 				AA6600000000000000000D01 /* gtfs */,
@@ -530,6 +548,7 @@
 		0A8004B8300AD9FE004E1676 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				470BE2C709A54678B8B15ADB /* IdentificadorMicroView.swift */,
 				2972779301B74337A0930235 /* NotificacionesView.swift */,
 				BD3000000000000000000001 /* SelectorTematicasSheet.swift */,
 				BD2000000000000000000003 /* ModoBusesUTPSection.swift */,
@@ -800,6 +819,7 @@
 		0A8004EF300AD9FE004E1676 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				4150A066F98847FD9A9068F5 /* Micros */,
 				D5C8B80F46754BEE8B334245 /* Notificaciones */,
 				79A3921D361B44938F8FF652 /* Community */,
 				7544D986CDED4B9DB414C3CD /* Camera */,
@@ -944,6 +964,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0A40D9222FDE5E7F00F79FBC /* Build configuration list for PBXNativeTarget "RutaUTP" */;
 			buildPhases = (
+				1B821707217F4DC1A89C3F44 /* Validar fotos de micros */,
 				0A40D9102FDE5E7D00F79FBC /* Sources */,
 				0A40D9112FDE5E7D00F79FBC /* Frameworks */,
 				0A40D9122FDE5E7D00F79FBC /* Resources */,
@@ -1029,6 +1050,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EB27A03229C5460CBA11CF19 /* micros in Resources */,
 				011AA33A80B14650A13C1445 /* Traducciones.json in Resources */,
 				E60A8B46C22E426A9D19981D /* InfoPlist.strings in Resources */,
 				BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */,
@@ -1050,11 +1072,30 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		1B821707217F4DC1A89C3F44 /* Validar fotos de micros */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = ("$(SRCROOT)/tools/validar-micros.py", "$(SRCROOT)/micros", "$(SRCROOT)/micros/catalogo.json", "$(SRCROOT)/gtfs", "$(SRCROOT)/gtfs-utp");
+			inputFileListPaths = ("$(SRCROOT)/micros-recursos.xcfilelist");
+			name = "Validar fotos de micros";
+			outputPaths = ("$(DERIVED_FILE_DIR)/micros-validado.json");
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\n/usr/bin/python3 \"$SRCROOT/tools/validar-micros.py\" \"$SRCROOT\" \"$DERIVED_FILE_DIR/micros-validado.json\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		0A40D9102FDE5E7D00F79FBC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4A4D3D4D3DF142DE8AFC8060 /* IdentificadorMicro.swift in Sources */,
+				EDE35922DACF488AB241A9EC /* CatalogoMicrosService.swift in Sources */,
+				45EDAC4481FC43729B1181CA /* IdentificadorMicroView.swift in Sources */,
 				F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */,
 				0D5914DEA00142519A50A1E1 /* NotificacionesService.swift in Sources */,
 				A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */,

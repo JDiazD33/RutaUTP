@@ -38,6 +38,7 @@ private struct MapaScreenContent: View {
     @State private var mostrarDrawer = false
     @State private var showReportarSheet = false
     @State private var showBoardingConfirmation = false
+    @State private var showIdentificadorMicro = false
     @State private var mostrarAvisoViaje = false
     @State private var boardingReminderTask: Task<Void, Never>?
     @State private var boardingReminderDate: Date?
@@ -142,6 +143,8 @@ private struct MapaScreenContent: View {
                         RouteSummaryPanel(vm: vm, onConfirmBoarding: {
                             cancelarPreguntaDeViaje()
                             showBoardingConfirmation = true
+                        }, onIdentificarMicro: {
+                            showIdentificadorMicro = true
                         })
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
@@ -321,16 +324,23 @@ private struct MapaScreenContent: View {
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
             cancelarPreguntaDeViaje()
+            showIdentificadorMicro = false
             guard !viajeActivo else { return }
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
             withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }
         }
         .onChange(of: vm.busquedaResultado?.titulo) { _, _ in
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
-            if vm.busquedaResultado == nil { cancelarPreguntaDeViaje() }
+            if vm.busquedaResultado == nil {
+                cancelarPreguntaDeViaje()
+                showIdentificadorMicro = false
+            }
         }
         .onChange(of: vm.calculandoItinerario) { _, calculating in
-            if calculating { cancelarPreguntaDeViaje() }
+            if calculating {
+                cancelarPreguntaDeViaje()
+                showIdentificadorMicro = false
+            }
         }
         .onChange(of: vm.region.center.latitude) { _, _ in
             guard !viajeActivo else { return }
@@ -352,6 +362,14 @@ private struct MapaScreenContent: View {
             }
         }
         .animation(.easeInOut(duration: 0.28), value: mostrarDrawer)
+        .sheet(isPresented: $showIdentificadorMicro) {
+            if let instalado = vm.itinerarioInstalado {
+                IdentificacionViajeSheet(plan: instalado.plan)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                    .seguirTemaForzado()
+            }
+        }
         .sheet(isPresented: $showBoardingConfirmation) {
             BoardingConfirmationSheet(coordinator: trackingCoordinator,
                                       locationService: vm.sharedLocationService,
@@ -445,7 +463,7 @@ private struct MapaScreenContent: View {
                     }
                     // Mantener el recordatorio pendiente sin interrumpir otras pantallas.
                     guard scenePhase == .active else { return }
-                    if !showReportarSheet && !showElegirEnMapa && !showDestinosGuardados && !mostrarDrawer && !modoColocarMarcador
+                    if !showReportarSheet && !showElegirEnMapa && !showDestinosGuardados && !showIdentificadorMicro && !mostrarDrawer && !modoColocarMarcador
                         && vm.busSeleccionado == nil && !campoEnfocado {
                         boardingReminderDate = nil
                         showBoardingConfirmation = true
