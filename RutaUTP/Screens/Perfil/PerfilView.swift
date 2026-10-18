@@ -76,9 +76,6 @@ struct PerfilView: View {
     private var tintaCabecera: Color {
         empresa == .inkafarma ? Color(light: "#193D23", dark: "#E8EED2") : .onPrimaryFill
     }
-    private var fondoAvatar: Color {
-        empresa == .inkafarma ? Color(light: "#EAD983", dark: "#456534") : .primaryFill
-    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -247,8 +244,8 @@ struct PerfilView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L.t("Perfil", "Profile"))
-                    .font(.labelCapsLg)
-                    .foregroundStyle(tintaCabecera.opacity(0.9))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.onSurfaceVariant)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button {
@@ -257,9 +254,9 @@ struct PerfilView: View {
                 } label: {
                     Image(systemName: "pencil")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(tintaCabecera)
+                        .foregroundStyle(acentoPerfil)
                         .frame(width: 44, height: 44)
-                        .background(tintaCabecera.opacity(0.12), in: Circle())
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L.t("Editar perfil", "Edit profile"))
@@ -268,7 +265,7 @@ struct PerfilView: View {
             (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
                               : AnyLayout(HStackLayout(alignment: .center, spacing: 16))) {
                 ZStack {
-                    Circle().fill(fondoAvatar)
+                    Circle().fill(Color(uiColor: .tertiarySystemGroupedBackground))
                     if let fotoPerfil {
                         Image(uiImage: fotoPerfil)
                             .resizable()
@@ -276,31 +273,28 @@ struct PerfilView: View {
                     } else {
                         Text(iniciales(nombre))
                             .font(.headlineMd)
-                            .foregroundStyle(tintaCabecera)
+                            .foregroundStyle(acentoPerfil)
                     }
                 }
                 .frame(width: avatarSize, height: avatarSize)
                 .clipShape(Circle())
-                .overlay(Circle().stroke(tintaCabecera.opacity(0.3), lineWidth: 2))
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(nombre)
-                        .font(.headlineLgMobile)
+                        .font(.title2.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
                     Text(rolPerfil)
                         .font(.caption.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                        .foregroundStyle(tintaCabecera.opacity(0.85))
+                        .foregroundStyle(Color.onSurfaceVariant)
                     if mostrarCarnetFoto, hayCarnetGuardado {
                         Label(L.t("Carné guardado", "Card saved"), systemImage: "checkmark.circle.fill")
                             .font(.caption.weight(.medium))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(tintaCabecera.opacity(0.12), in: Capsule())
+                            .foregroundStyle(acentoPerfil)
                     }
                 }
-                .foregroundStyle(tintaCabecera)
+                .foregroundStyle(Color.onSurface)
                 if !apilarContenido { Spacer(minLength: 0) }
             }
             .accessibilityElement(children: .combine)
@@ -310,10 +304,8 @@ struct PerfilView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            LinearGradient(colors: coloresCabecera, startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Color(uiColor: .secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     // MARK: - Billetera
