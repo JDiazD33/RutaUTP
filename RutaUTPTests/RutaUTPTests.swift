@@ -232,13 +232,14 @@ final class TransitItineraryTests: XCTestCase {
                                                   destination: inicioCualquiera, radius: 500).isEmpty)
     }
 
-    private func line(_ id: String, _ points: [CLLocationCoordinate2D], headway: Int = 6) -> RutaGTFS {
+    private func line(_ id: String, _ points: [CLLocationCoordinate2D], headway: Int = 6,
+                      duration: Int = 10) -> RutaGTFS {
         RutaGTFS(id: id, linea: id, variante: "", recorrido: id, empresa: "Test",
                  colorHex: "00CC00", color: .green, shape: points,
                  paraderos: points.enumerated().map {
                      ParaderoGTFS(id: "\(id)-\($0.offset)", nombre: "\(id)-\($0.offset)",
                                   lat: $0.element.latitude, lon: $0.element.longitude)
-                 }, duracionMin: 10, headwayMin: headway, precio: 2,
+                 }, duracionMin: duration, headwayMin: headway, precio: 2,
                  distanciaKm: PolylineMatching.totalLengthMeters(points) / 1000, distanciaUTPMetros: 0)
     }
     private var transferNetwork: (RutaGTFS, RutaGTFS) {
@@ -528,8 +529,292 @@ final class TransitItineraryTests: XCTestCase {
         XCTAssertEqual(failures, 2)
     }
 
+    func testAlternativasIncluyenZ1EntreUTPYHospitalFlorenciaDeMora() async throws {
+        let catalog = try await GTFSRepository.shared.cargarCatalogo()
+        let planner = TransitPlanner()
+        let hospital = CLLocationCoordinate2D(latitude: -8.07962, longitude: -79.02429)
+        let options = await planner.options(in: catalog, origin: GTFSRepository.coordenadaUTP,
+                                            destination: hospital, radius: 1600)
+        let z1 = try XCTUnwrap(options.alternatives.first {
+            $0.route.id == "17434307" && $0.transfer == nil
+        })
+        XCTAssertEqual(z1.route.letraTransporte, "Z1")
+        XCTAssertLessThan(z1.walkToBoardMeters, 150)
+        XCTAssertLessThan(z1.walkToDestinationMeters, 200)
+        XCTAssertGreaterThan(z1.busMeters, 50)
+        XCTAssertEqual(Set(options.alternatives.map(\.optionID)).count, options.alternatives.count)
+
+        let variants = await planner.candidates(for: z1.routeIDs, in: catalog,
+            origin: GTFSRepository.coordenadaUTP, destination: hospital, radius: 1600)
+        XCTAssertFalse(variants.isEmpty)
+        XCTAssertTrue(variants.allSatisfy { $0.routeIDs == z1.routeIDs })
+    }
+
+    func testAlternativasNoSePierdenEntreVariantesDeLaMismaLinea() async throws {
+        let points = (0...40).map {
+            CLLocationCoordinate2D(latitude: -8.1, longitude: -79.04 + Double($0) * 0.001)
+        }
+        let fast = line("fast", points)
+        let slow = RutaGTFS(id: "slow", linea: "slow", variante: "", recorrido: "slow", empresa: "Test",
+            colorHex: "00CC00", color: .green, shape: points, paraderos: fast.paraderos,
+            duracionMin: 100, headwayMin: 6, precio: 2, distanciaKm: fast.distanciaKm, distanciaUTPMetros: 0)
+        let catalog = GTFSRouteCatalog(routes: [fast, slow])
+        let options = await TransitPlanner().options(in: catalog, origin: points.first!,
+            destination: points.last!, radius: 1600)
+        XCTAssertEqual(options.candidates.count, 32)
+        XCTAssertTrue(options.candidates.allSatisfy { $0.route.id == fast.id && $0.transfer == nil })
+        let direct = options.alternatives.filter { $0.transfer == nil }
+        XCTAssertEqual(Set(direct.map { $0.route.id }), Set(["fast", "slow"]))
+    }
+
+    func testElegirTransbordoConservaLaCombinacionYElOrdenDeLineas() async {
+        let (a, b) = transferNetwork
+        let catalog = GTFSRouteCatalog(routes: [a, b])
+        let planner = TransitPlanner()
+        let plans = await planner.candidates(for: [a.id, b.id], in: catalog,
+            origin: a.shape[0], destination: b.shape[1], radius: 50)
+        XCTAssertFalse(plans.isEmpty)
+        XCTAssertTrue(plans.allSatisfy { $0.route.id == a.id && $0.transfer?.route.id == b.id })
+        let reversed = await planner.candidates(for: [b.id, a.id], in: catalog,
+            origin: a.shape[0], destination: b.shape[1], radius: 50)
+        XCTAssertTrue(reversed.isEmpty)
+    }
+
+    func testUnaOpcionGanadoraAgrupaLasTresCategoriasSinRellenarElCarrusel() async throws {
+        let route = rutaSintetica()
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [route]),
+            origin: route.shape.first!, destination: route.shape.last!, radius: 1)
+        let only = try XCTUnwrap(options.highlights.first)
+        XCTAssertEqual(options.highlights.count, 1)
+        XCTAssertEqual(only.categories, [.recommended, .fastest, .closestBoarding])
+        XCTAssertEqual(only.plan.estimatedJourneySeconds - only.plan.totalSeconds, 150, accuracy: 0.01)
+    }
+
+    func testMasCercanaPriorizaLaSubidaAunqueSeCamineMasDespuesDeBajar() async throws {
+        let origin = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.04)
+        let destination = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.02)
+        let near = line("near", [origin, CLLocationCoordinate2D(latitude: -8.097, longitude: -79.02)])
+        let lessWalking = line("lessWalking", [CLLocationCoordinate2D(latitude: -8.099, longitude: -79.04), destination])
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [near, lessWalking]),
+            origin: origin, destination: destination, radius: 400)
+        let closest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.closestBoarding) })
+        XCTAssertEqual(closest.plan.route.id, "near")
+        XCTAssertEqual(closest.plan.walkToBoardMeters, 0, accuracy: 0.01)
+        XCTAssertGreaterThan(closest.plan.walkToDestinationMeters, 300)
+        XCTAssertLessThanOrEqual(options.highlights.count, 3)
+    }
+
+    func testMasRapidaIncluyeLaEsperaDelPrimerMicro() async throws {
+        let points = rutaSintetica().shape
+        let infrequent = line("infrequent", points, headway: 40, duration: 1)
+        let frequent = line("frequent", points, headway: 2)
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [infrequent, frequent]),
+            origin: points.first!, destination: points.last!, radius: 1)
+        let fastest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.fastest) })
+        XCTAssertEqual(fastest.plan.route.id, "frequent")
+    }
+
+    func testRecomendadaAceptaAlgoMasDeTiempoParaEvitarUnTransbordo() async throws {
+        let (first, second) = transferNetwork
+        let a = line("A", first.shape, headway: 2, duration: 2)
+        let b = line("B", second.shape, headway: 2, duration: 2)
+        let direct = line("direct", [a.shape[0],
+            CLLocationCoordinate2D(latitude: -8.12, longitude: -79.05), b.shape[1]], headway: 2)
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [a, b, direct]),
+            origin: a.shape[0], destination: b.shape[1], radius: 50)
+        let recommended = try XCTUnwrap(options.highlights.first { $0.categories.contains(.recommended) })
+        let fastest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.fastest) })
+        XCTAssertEqual(recommended.plan.route.id, "direct")
+        XCTAssertNil(recommended.plan.transfer)
+        XCTAssertNotNil(fastest.plan.transfer)
+        XCTAssertGreaterThan(recommended.plan.estimatedJourneySeconds, fastest.plan.estimatedJourneySeconds)
+    }
+
+    func testUnaLineaConOtraSubidaConservaLaOpcionCercana() async throws {
+        let origin = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.04)
+        let destination = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.02)
+        let route = line("loop", [origin,
+            CLLocationCoordinate2D(latitude: -8.2, longitude: -79.04),
+            CLLocationCoordinate2D(latitude: -8.1, longitude: -79.035), destination])
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [route]),
+            origin: origin, destination: destination, radius: 600)
+        let closest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.closestBoarding) })
+        let fastest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.fastest) })
+        XCTAssertEqual(closest.plan.board.id, "loop-0")
+        XCTAssertEqual(fastest.plan.board.id, "loop-2")
+        XCTAssertNotEqual(closest.plan.optionID, fastest.plan.optionID)
+        XCTAssertEqual(closest.plan.routeIDs, fastest.plan.routeIDs)
+        XCTAssertEqual(Set(options.highlights.map { $0.plan.optionID }).count, options.highlights.count)
+        XCTAssertTrue(fastest.categories.contains(.recommended),
+                      "Caminar hasta otra subida compensa cuando evita una vuelta larga")
+    }
+
+    @MainActor
+    func testElegirLaSubidaCercanaNoLaSustituyePorLaMasRapidaDeLaMismaLinea() async throws {
+        let origin = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.04)
+        let destination = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.02)
+        let route = line("loop", [origin,
+            CLLocationCoordinate2D(latitude: -8.2, longitude: -79.04),
+            CLLocationCoordinate2D(latitude: -8.1, longitude: -79.035), destination])
+        let vm = MapaViewModel(locationService: MapaGPSPrueba(),
+            routeService: RouteCalculationService(loader: { request in
+                let points = [request.source!.placemark.coordinate, request.destination!.placemark.coordinate]
+                return CalculatedRoute(polyline: MKPolyline(coordinates: points, count: points.count),
+                    expectedTravelTime: 1, distance: PolylineMatching.totalLengthMeters(points), steps: [])
+            }), repositorioGTFS: MapaGTFSPrueba(feed: [route]), crearProveedorReal: { nil })
+        defer { vm.detener() }
+        vm.userRealCoordinate = origin
+        vm.calcularRutaHacia(destination)
+        for _ in 0..<400 where vm.calculandoItinerario { try await Task.sleep(for: .milliseconds(5)) }
+        XCTAssertFalse(vm.calculandoItinerario)
+        let closest = try XCTUnwrap(vm.rutasDestacadas.first { $0.categories.contains(.closestBoarding) }?.plan)
+        XCTAssertEqual(vm.itinerario?.board.id, "loop-2")
+        vm.seleccionarAlternativa(closest)
+        for _ in 0..<400 where vm.calculandoItinerario { try await Task.sleep(for: .milliseconds(5)) }
+        XCTAssertFalse(vm.calculandoItinerario)
+        XCTAssertEqual(vm.itinerario?.board.id, "loop-0")
+        XCTAssertEqual(vm.itinerario?.optionID, closest.optionID)
+        XCTAssertLessThanOrEqual(vm.opcionesResumen.count, 3)
+    }
+
+    func testMasCercanaConTransbordoConservaUnaSubidaQueElTiempoDescartaria() async throws {
+        let origin = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.04)
+        let exit = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.02)
+        let end = CLLocationCoordinate2D(latitude: -8.08, longitude: -79.02)
+        let a = line("A", [origin, CLLocationCoordinate2D(latitude: -8.2, longitude: -79.04),
+            CLLocationCoordinate2D(latitude: -8.1, longitude: -79.035), exit])
+        let b = line("B", [exit, end])
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [a, b]),
+            origin: origin, destination: end, radius: 600)
+        let closest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.closestBoarding) })
+        let fastest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.fastest) })
+        XCTAssertEqual(closest.plan.routeIDs, ["A", "B"])
+        XCTAssertEqual(closest.plan.board.id, "A-0")
+        XCTAssertEqual(fastest.plan.board.id, "A-2")
+        XCTAssertLessThanOrEqual(options.highlights.count, 3)
+    }
+
     private var inicioCualquiera: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: -8.10, longitude: -79.04)
+    }
+}
+
+@MainActor
+final class MapaCarruselRutasTests: XCTestCase {
+    private func ruta(_ id: String, offset: Double) -> RutaGTFS {
+        let points = [0.0, 0.005, 0.01].map {
+            CLLocationCoordinate2D(latitude: -8.1 + offset, longitude: -79.04 + $0)
+        }
+        return RutaGTFS(id: id, linea: id, variante: id, recorrido: id, empresa: "Test",
+            colorHex: "00CC00", color: .green, shape: points,
+            paraderos: points.enumerated().map {
+                ParaderoGTFS(id: "\(id)-\($0.offset)", nombre: "\(id)-\($0.offset)",
+                             lat: $0.element.latitude, lon: $0.element.longitude)
+            }, duracionMin: 10, headwayMin: 6, precio: 2.5, distanciaKm: 1.1, distanciaUTPMetros: 0)
+    }
+
+    private func esperar(_ condicion: () -> Bool) async throws {
+        for _ in 0..<400 {
+            if condicion() { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTFail("No terminó la selección de ruta")
+        throw CancellationError()
+    }
+
+    private func preparar(loader: @escaping RouteCalculationService.Loader) async throws -> MapaViewModel {
+        let routes = [ruta("A", offset: 0), ruta("B", offset: 0.0002), ruta("C", offset: 0.0004)]
+        let vm = MapaViewModel(locationService: MapaGPSPrueba(),
+            routeService: RouteCalculationService(loader: loader),
+            repositorioGTFS: MapaGTFSPrueba(feed: routes), crearProveedorReal: { nil })
+        vm.userRealCoordinate = routes[0].shape[0]
+        vm.calcularRutaHacia(routes[0].shape.last!)
+        try await esperar { !vm.calculandoItinerario }
+        XCTAssertEqual(vm.itinerario?.route.id, "A")
+        return vm
+    }
+
+    func testVolverALaTarjetaActualCancelaLaSeleccionPendienteSinConsultarCaminatas() async throws {
+        let probe = DirectionsProbe()
+        let vm = try await preparar { try await probe.load($0, fail: false) }
+        defer { vm.detener() }
+        let actual = try XCTUnwrap(vm.itinerario)
+        let otra = try XCTUnwrap(vm.alternativasItinerario.first { $0.routeIDs == ["B"] })
+        let callsBefore = await probe.calls
+        let focusBefore = vm.itinerarioFocusTick
+        vm.seleccionarAlternativa(otra, diferir: true)
+        XCTAssertTrue(vm.calculandoItinerario)
+        XCTAssertFalse(vm.buscandoItinerarioInicial, "La guía debe seguir visible durante el cambio")
+        vm.seleccionarAlternativa(actual, diferir: true)
+        try await Task.sleep(for: .milliseconds(350))
+        let callsAfter = await probe.calls
+        XCTAssertEqual(callsBefore, callsAfter)
+        XCTAssertFalse(vm.calculandoItinerario)
+        XCTAssertNil(vm.seleccionandoAlternativa)
+        XCTAssertEqual(vm.itinerario?.routeIDs, actual.routeIDs)
+        XCTAssertEqual(vm.itinerarioFocusTick, focusBefore)
+    }
+
+    func testElCarruselEsperaLaPrimeraRutaComprobada() async throws {
+        let route = ruta("A", offset: 0)
+        let probe = DirectionsProbe()
+        let vm = MapaViewModel(locationService: MapaGPSPrueba(),
+            routeService: RouteCalculationService(loader: { request in
+                try await Task.sleep(for: .milliseconds(100))
+                return try await probe.load(request, fail: false)
+            }), repositorioGTFS: MapaGTFSPrueba(feed: [route]), crearProveedorReal: { nil })
+        defer { vm.detener() }
+        vm.userRealCoordinate = route.shape[0]
+        vm.calcularRutaHacia(route.shape.last!)
+        try await esperar { !vm.rutasDestacadas.isEmpty }
+        XCTAssertTrue(vm.calculandoItinerario)
+        XCTAssertNil(vm.itinerario)
+        XCTAssertTrue(vm.opcionesResumen.isEmpty,
+                      "Publicar las opciones antes de instalar la ruta puede cancelar la búsqueda inicial")
+        try await esperar { !vm.calculandoItinerario }
+        XCTAssertFalse(vm.opcionesResumen.isEmpty)
+    }
+
+    func testPasarRapidoPorVariasTarjetasInstalaSoloLaUltimaLinea() async throws {
+        let probe = DirectionsProbe()
+        let vm = try await preparar { try await probe.load($0, fail: false) }
+        defer { vm.detener() }
+        let b = try XCTUnwrap(vm.alternativasItinerario.first { $0.routeIDs == ["B"] })
+        let c = try XCTUnwrap(vm.alternativasItinerario.first { $0.routeIDs == ["C"] })
+        let callsBefore = await probe.calls
+        let focusBefore = vm.itinerarioFocusTick
+        vm.seleccionarAlternativa(b, diferir: true)
+        vm.seleccionarAlternativa(c, diferir: true)
+        XCTAssertEqual(vm.seleccionandoAlternativa, c.optionID)
+        try await esperar { !vm.calculandoItinerario }
+        let callsAfter = await probe.calls
+        XCTAssertEqual(vm.itinerario?.routeIDs, c.routeIDs)
+        XCTAssertTrue(vm.opcionesResumen.contains { $0.optionID == c.optionID },
+                      "Una elección de la lista debe seguir visible en el resumen")
+        XCTAssertLessThanOrEqual(vm.opcionesResumen.count, 3)
+        XCTAssertEqual(vm.itinerarioFocusTick, focusBefore + 1)
+        XCTAssertEqual(callsAfter - callsBefore, 2, "Solo se consultan las dos caminatas de C")
+    }
+
+    func testUnaCaminataFueraDelLimiteConservaElPlanYElMapaAnteriores() async throws {
+        let vm = try await preparar { request in
+            let a = request.source!.placemark.coordinate, b = request.destination!.placemark.coordinate
+            let detour = abs(a.latitude + 8.1) > 0.0003 || abs(b.latitude + 8.1) > 0.0003
+            let points = detour
+                ? [a, CLLocationCoordinate2D(latitude: -8.05, longitude: -79.035), b] : [a, b]
+            return CalculatedRoute(polyline: MKPolyline(coordinates: points, count: points.count),
+                expectedTravelTime: 1, distance: PolylineMatching.totalLengthMeters(points), steps: [])
+        }
+        defer { vm.detener() }
+        let actual = try XCTUnwrap(vm.itinerario)
+        let c = try XCTUnwrap(vm.alternativasItinerario.first { $0.routeIDs == ["C"] })
+        let originalPolyline = vm.routePolyline
+        vm.seleccionarAlternativa(c)
+        try await esperar { !vm.calculandoItinerario }
+        XCTAssertEqual(vm.itinerario?.routeIDs, actual.routeIDs)
+        XCTAssertTrue(vm.routePolyline === originalPolyline)
+        XCTAssertNotNil(vm.mensajeAlternativa)
+        XCTAssertNil(vm.seleccionandoAlternativa)
     }
 }
 
