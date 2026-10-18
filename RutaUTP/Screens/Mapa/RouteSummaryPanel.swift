@@ -12,6 +12,7 @@ struct RouteSummaryPanel: View {
     @State private var visibleOptionID: [String] = []
     @State private var showDetails = false
     @State private var boardingAfterDetails: [String]?
+    @State private var contentHeight: CGFloat?
 
     private var pages: [TransitItinerary] { vm.opcionesResumen }
 
@@ -41,10 +42,20 @@ struct RouteSummaryPanel: View {
                 }
             }
             .padding(10)
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(key: RoutePanelHeightKey.self, value: geometry.size.height)
+                }
+            }
         }
         .scrollBounceBehavior(.basedOnSize)
-        // El límite comprende cabecera, tarjeta y controles, no solo la guía.
-        .frame(height: maximumPanelHeight)
+        // Ajustar la tarjeta a su contenido elimina el hueco bajo los controles.
+        // La altura máxima sigue protegiendo el espacio visible del mapa.
+        .frame(height: min(maximumPanelHeight, contentHeight ?? 244))
+        .onPreferenceChange(RoutePanelHeightKey.self) { height in
+            let rounded = ceil(height)
+            if rounded > 0, contentHeight != rounded { contentHeight = rounded }
+        }
         .font(.footnote)
         .foregroundStyle(Color.onSurface)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -331,6 +342,13 @@ struct RouteSummaryPanel: View {
         .buttonStyle(.plain)
         .padding(.top, 4)
         .accessibilityLabel(L.t("¿Ya subiste? Confirma tu línea", "Already on board? Confirm your line"))
+    }
+}
+
+private enum RoutePanelHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat { 0 }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
