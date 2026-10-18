@@ -12,10 +12,36 @@ import SwiftUI
 // MARK: - Votos de la comunidad (like / dislike)
 /// Reacción del usuario por reporte. Vive en la sesión (demo; no persiste).
 /// Tocar el mismo voto lo retira; votar el lado opuesto cambia el voto.
+@MainActor
 final class ComunidadReacciones: ObservableObject {
+    /// Mantiene votos y comentarios al cambiar de pestaña durante la sesión.
+    static let compartida = ComunidadReacciones()
     enum Voto { case ninguno, util, noUtil }
 
+    struct Comentario: Identifiable {
+        let id = UUID()
+        let texto: String
+    }
+
     @Published private var votos: [UUID: Voto] = [:]
+    @Published private var comentarios: [UUID: [Comentario]] = [:]
+
+    func comentariosAgregados(_ reporte: ReporteComunidad) -> [Comentario] {
+        comentarios[reporte.id] ?? []
+    }
+
+    func totalComentarios(_ reporte: ReporteComunidad) -> Int {
+        reporte.comentarios + comentariosAgregados(reporte).count
+    }
+
+    @discardableResult
+    func agregarComentario(_ texto: String, a reporte: ReporteComunidad) -> Bool {
+        let limpio = String(texto.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300))
+        guard !limpio.isEmpty else { return false }
+        comentarios[reporte.id, default: []].append(Comentario(texto: limpio))
+        AppHaptics.success()
+        return true
+    }
 
     func voto(para reporte: ReporteComunidad) -> Voto {
         votos[reporte.id] ?? .ninguno
@@ -39,66 +65,76 @@ final class ComunidadReacciones: ObservableObject {
 struct ReporteCard: View {
     let reporte: ReporteComunidad
     @ObservedObject var reacciones: ComunidadReacciones
+    var abrir: () -> Void = {}
+    var comentar: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                ZStack {
-                    Circle().fill(reporte.avatarColor).frame(width: 40, height: 40)
-                    Text(reporte.iniciales)
-                        .font(.labelCapsMd)
-                        .foregroundStyle(reporte.avatarForeground)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(reporte.nombre)
-                        .font(.bodyMdMedium)
+            Button(action: abrir) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle().fill(reporte.avatarColor).frame(width: 40, height: 40)
+                            Text(reporte.iniciales)
+                                .font(.labelCapsMd)
+                                .foregroundStyle(reporte.avatarForeground)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(reporte.nombre)
+                                .font(.bodyMdMedium)
+                                .foregroundStyle(.onSurface)
+                            Text(reporte.tiempoLocalizado)
+                                .font(.labelCapsSm)
+                                .foregroundStyle(.onSurfaceVariant)
+                                .appTracking(AppTracking.wideLabel)
+                        }
+                        Spacer()
+                        Text(reporte.tipo.titulo.uppercased())
+                            .font(.labelCapsSm)
+                            .foregroundStyle(reporte.tipo.foreground)
+                            .appTracking(AppTracking.wideLabel)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 4).fill(reporte.tipo.background))
+                    }
+
+                    Text(reporte.cuerpoLocalizado)
+                        .font(.system(size: 15))
+                        .lineSpacing(3)
+                        .lineLimit(4)
                         .foregroundStyle(.onSurface)
-                    Text(reporte.tiempoLocalizado)
-                        .font(.labelCapsSm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
+
+                    if let foto = reporte.foto {
+                        FotoReporteView(foto: foto)
+                    }
                 }
-                Spacer()
-                Text(reporte.tipo.titulo.uppercased())
-                    .font(.labelCapsSm)
-                    .foregroundStyle(reporte.tipo.foreground)
-                    .appTracking(AppTracking.wideLabel)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 4).fill(reporte.tipo.background))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-
-            Text(reporte.cuerpoLocalizado)
-                .font(.system(size: 15))
-                .lineSpacing(3)
-                .lineLimit(4)
-                .foregroundStyle(.onSurface)
-
-            if let foto = reporte.foto {
-                FotoReporteView(foto: foto)
-            }
+            .buttonStyle(.plain)
+            .accessibilityHint(L.t("Ver publicación", "View post"))
 
             Divider().overlay(Color.outlineVariant.opacity(0.2))
             HStack(spacing: 8) {
                 votoButton(.util)
                 votoButton(.noUtil)
 
-                HStack(spacing: 5) {
-                    Image(systemName: "bubble.left")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("\(reporte.comentarios)")
-                        .font(.bodySm)
-                }
-                .foregroundStyle(.onSurfaceVariant)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(L.f("{0} comentarios", "{0} comments", ["\(reporte.comentarios)"]))
-
-                Spacer()
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 13, weight: .semibold))
+                Spacer(minLength: 0)
+                Button(action: comentar) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "bubble.left")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("\(reacciones.totalComentarios(reporte))")
+                            .font(.bodySm)
+                    }
                     .foregroundStyle(.onSurfaceVariant)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.f("{0} comentarios", "{0} comments", ["\(reacciones.totalComentarios(reporte))"]))
+                .accessibilityHint(L.t("Ver y añadir comentarios", "Read and add comments"))
             }
         }
         .padding(18)
@@ -129,17 +165,12 @@ struct ReporteCard: View {
                       ? (activo ? "hand.thumbsup.fill" : "hand.thumbsup")
                       : (activo ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
                     .font(.system(size: 13, weight: .semibold))
-                if esUtil {
-                    Text(L.t("Útil", "Useful") + " (\(cantidad))")
-                        .font(.bodySm)
-                } else {
-                    Text("\(cantidad)")
-                        .font(.bodySm)
-                }
+                Text("\(cantidad)").font(.bodySm)
             }
             .foregroundStyle(activo ? color : Color.onSurfaceVariant)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
+            .frame(minWidth: 44, minHeight: 44)
             .background(
                 Capsule().fill(activo ? color.opacity(0.10) : Color.surfaceContainerLow)
             )
@@ -148,7 +179,7 @@ struct ReporteCard: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(esUtil ? L.t("Me es útil", "Helpful") : L.t("No me es útil", "Not helpful"))
+        .accessibilityLabel(esUtil ? L.t("Me gusta", "Like") : L.t("No me gusta", "Dislike"))
         .accessibilityValue(L.f("{0} votos", "{0} votes", ["\(cantidad)"]))
         .accessibilityAddTraits(activo ? .isSelected : [])
     }
@@ -158,7 +189,10 @@ struct ReporteCard: View {
 struct ReporteDetailSheet: View {
     let reporte: ReporteComunidad
     @ObservedObject var reacciones: ComunidadReacciones
+    var comentarAlAbrir = false
     @Environment(\.dismiss) private var dismiss
+    @State private var comentario = ""
+    @FocusState private var comentarioEnfocado: Bool
 
     /// Comentarios de muestra, deterministas por reporte (misma semilla →
     /// mismos comentarios mientras la sesión esté viva).
@@ -184,111 +218,171 @@ struct ReporteDetailSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Autor
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
-                            Text(reporte.iniciales)
-                                .font(.headlineSm)
-                                .foregroundStyle(reporte.avatarForeground)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(reporte.nombre)
-                                .font(.headlineSm)
-                            Text(reporte.tiempoLocalizado)
-                                .font(.labelCapsSm)
-                                .foregroundStyle(.onSurfaceVariant)
+            HStack {
+                Text(L.t("Publicación", "Post")).font(.headlineSm)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark").font(.body.weight(.semibold))
+                        .foregroundStyle(Color.onSurfaceVariant).frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Cerrar", "Close"))
+            }
+            .padding(.horizontal, 20)
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Autor
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
+                                Text(reporte.iniciales)
+                                    .font(.headlineSm)
+                                    .foregroundStyle(reporte.avatarForeground)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(reporte.nombre)
+                                    .font(.headlineSm)
+                                Text(reporte.tiempoLocalizado)
+                                    .font(.labelCapsSm)
+                                    .foregroundStyle(.onSurfaceVariant)
+                                    .appTracking(AppTracking.wideLabel)
+                            }
+                            Spacer()
+                            Text(reporte.tipo.titulo.uppercased())
+                                .font(.labelCapsMd)
+                                .foregroundStyle(reporte.tipo.foreground)
                                 .appTracking(AppTracking.wideLabel)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
                         }
-                        Spacer()
-                        Text(reporte.tipo.titulo.uppercased())
-                            .font(.labelCapsMd)
-                            .foregroundStyle(reporte.tipo.foreground)
-                            .appTracking(AppTracking.wideLabel)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
-                    }
 
-                    Text(reporte.cuerpoLocalizado)
-                        .font(.bodyLg)
-                        .foregroundStyle(.onSurface)
+                        Text(reporte.cuerpoLocalizado)
+                            .font(.bodyLg)
+                            .foregroundStyle(.onSurface)
 
-                    if let foto = reporte.foto {
-                        FotoReporteView(foto: foto, detalle: true)
-                    }
+                        if let foto = reporte.foto {
+                            FotoReporteView(foto: foto, detalle: true)
+                        }
 
-                    // Votos interactivos
-                    HStack(spacing: 10) {
-                        votoButton(.util)
-                        votoButton(.noUtil)
-                        Spacer()
-                    }
-
-                    Divider()
-
-                    // Comentarios
-                    Text(L.f("COMENTARIOS ({0})", "COMMENTS ({0})", ["\(reporte.comentarios)"]))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-
-                    if reporte.comentarios == 0 {
+                        // Votos interactivos
                         HStack(spacing: 10) {
-                            Image(systemName: "bubble.left")
-                                .font(.system(size: 18))
-                                .foregroundStyle(.onSurfaceVariant.opacity(0.5))
-                            Text(L.t("Aún no hay comentarios. Sé el primero en comentar.",
-                                     "No comments yet. Be the first to comment."))
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurfaceVariant)
+                            votoButton(.util)
+                            votoButton(.noUtil)
+                            Spacer()
                         }
-                        .padding(.vertical, 8)
-                    } else {
-                        VStack(spacing: 10) {
-                            ForEach(Array(comentariosMuestra.enumerated()), id: \.offset) { _, c in
-                                HStack(alignment: .top, spacing: 10) {
-                                    ZStack {
-                                        Circle().fill(Color.surfaceContainerHigh).frame(width: 30, height: 30)
-                                        Text(c.iniciales)
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.onSurfaceVariant)
+
+                        Divider()
+
+                        // Comentarios
+                        Text(L.f("COMENTARIOS ({0})", "COMMENTS ({0})", ["\(reacciones.totalComentarios(reporte))"]))
+                            .font(.labelCapsMd)
+                            .foregroundStyle(.onSurfaceVariant)
+                            .appTracking(AppTracking.wideLabel)
+
+                        if reacciones.totalComentarios(reporte) == 0 {
+                            HStack(spacing: 10) {
+                                Image(systemName: "bubble.left")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(.onSurfaceVariant.opacity(0.5))
+                                Text(L.t("Aún no hay comentarios. Sé el primero en comentar.",
+                                         "No comments yet. Be the first to comment."))
+                                    .font(.bodySm)
+                                    .foregroundStyle(.onSurfaceVariant)
+                            }
+                            .padding(.vertical, 8)
+                        } else {
+                            VStack(spacing: 10) {
+                                ForEach(Array(comentariosMuestra.enumerated()), id: \.offset) { _, c in
+                                    HStack(alignment: .top, spacing: 10) {
+                                        ZStack {
+                                            Circle().fill(Color.surfaceContainerHigh).frame(width: 30, height: 30)
+                                            Text(c.iniciales)
+                                                .font(.system(size: 11, weight: .bold))
+                                                .foregroundStyle(.onSurfaceVariant)
+                                        }
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(c.nombre)
+                                                .font(.system(size: 13, weight: .semibold))
+                                                .foregroundStyle(.onSurface)
+                                            Text(c.texto)
+                                                .font(.bodySm)
+                                                .foregroundStyle(.onSurfaceVariant)
+                                        }
+                                        Spacer()
                                     }
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(c.nombre)
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundStyle(.onSurface)
-                                        Text(c.texto)
-                                            .font(.bodySm)
-                                            .foregroundStyle(.onSurfaceVariant)
-                                    }
-                                    Spacer()
+                                    .padding(10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color.surfaceContainerLow)
+                                    )
                                 }
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(Color.surfaceContainerLow)
-                                )
                             }
                         }
+                        ForEach(reacciones.comentariosAgregados(reporte)) { nuevo in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(L.t("Tú", "You")).font(.bodySmMedium)
+                                Text(nuevo.texto).font(.bodySm).textSelection(.enabled)
+                            }
+                            .foregroundStyle(Color.onSurface)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        Text(L.t("Los comentarios se conservan durante esta sesión de demostración.",
+                                 "Comments are kept for this demo session."))
+                            .font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                        Color.clear.frame(height: 1).id("finComentarios")
                     }
+                    .padding(20)
                 }
-                .padding(20)
+                .onAppear {
+                    if comentarAlAbrir { proxy.scrollTo("finComentarios", anchor: .bottom) }
+                }
+                .onChange(of: reacciones.totalComentarios(reporte)) { _, _ in
+                    withAnimation { proxy.scrollTo("finComentarios", anchor: .bottom) }
+                }
             }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) { campoComentario }
+        .task {
+            if comentarAlAbrir {
+                await Task.yield()
+                comentarioEnfocado = true
+            }
+        }
+    }
 
-            Button { dismiss() } label: {
-                Text(L.t("Cerrar", "Close"))
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
-                    .foregroundStyle(.onPrimaryFill)
-                    .font(.bodyMdMedium)
+    private var campoComentario: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            TextField(L.t("Tu comentario…", "Your comment…"), text: $comentario, axis: .vertical)
+                .font(.bodyMd).lineLimit(1...4)
+                .focused($comentarioEnfocado)
+                .padding(12)
+                .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 14))
+                .onChange(of: comentario) { _, texto in
+                    if texto.count > 300 { comentario = String(texto.prefix(300)) }
+                }
+                .submitLabel(.send)
+                .onSubmit(enviarComentario)
+            Button(action: enviarComentario) {
+                Image(systemName: "paperplane.fill")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(Color.onPrimaryFill)
+                    .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 14))
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
+            .disabled(comentario.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityLabel(L.t("Añadir comentario", "Add comment"))
         }
+        .padding(.horizontal, 20).padding(.vertical, 12)
+        .background(Color.appSurface)
+    }
+
+    private func enviarComentario() {
+        if reacciones.agregarComentario(comentario, a: reporte) { comentario = "" }
     }
 
     @ViewBuilder
@@ -306,14 +400,12 @@ struct ReporteDetailSheet: View {
                       ? (activo ? "hand.thumbsup.fill" : "hand.thumbsup")
                       : (activo ? "hand.thumbsdown.fill" : "hand.thumbsdown"))
                     .font(.system(size: 14, weight: .semibold))
-                Text(esUtil
-                     ? L.t("Útil", "Useful") + " (\(cantidad))"
-                     : L.t("No útil", "Not helpful") + " (\(cantidad))")
-                    .font(.bodySmMedium)
+                Text("\(cantidad)").font(.bodySmMedium)
             }
             .foregroundStyle(activo ? color : Color.onSurfaceVariant)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
+            .frame(minHeight: 44)
             .background(
                 Capsule().fill(activo ? color.opacity(0.10) : Color.surfaceContainerLow)
             )
@@ -322,6 +414,8 @@ struct ReporteDetailSheet: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(esUtil ? L.t("Me gusta", "Like") : L.t("No me gusta", "Dislike"))
+        .accessibilityValue(L.f("{0} votos", "{0} votes", ["\(cantidad)"]))
         .accessibilityAddTraits(activo ? .isSelected : [])
     }
 }

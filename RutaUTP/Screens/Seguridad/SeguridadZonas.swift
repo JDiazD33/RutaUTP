@@ -176,6 +176,169 @@ struct BannerParaderosPreview: View {
     }
 }
 
+enum CategoriaAyudaCercana: String, CaseIterable, Identifiable {
+    case comisarias, salud
+    var id: String { rawValue }
+    var titulo: String {
+        self == .comisarias ? L.t("Comisarías", "Police stations") : L.t("Salud", "Healthcare")
+    }
+    var icono: String { self == .comisarias ? "shield.lefthalf.filled" : "cross.case" }
+    var filtro: MKPointOfInterestFilter {
+        MKPointOfInterestFilter(including: self == .comisarias ? [.police] : [.hospital])
+    }
+}
+
+/// Búsqueda real de MapKit. El GPS es el mismo servicio compartido de la app;
+/// si no hay permiso/fix, se identifica expresamente la referencia utilizada.
+struct AyudaCercanaSheet: View {
+    let categoria: CategoriaAyudaCercana
+    let locationService: LocationServiceProtocol
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var router: AppRouter
+    @State private var resultados: [MKMapItem] = []
+    @State private var buscando = true
+    @State private var error: String?
+    @State private var revision = 0
+    @State private var usaUbicacion = false
+    @State private var centro = TransporteApp.referenciaInicio
+    @State private var busqueda: MKLocalSearch?
+    @State private var camara: MapCameraPosition = .region(MKCoordinateRegion(
+        center: TransporteApp.referenciaInicio,
+        span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)))
+
+    private var referencia: String {
+        if usaUbicacion { return L.t("Cerca de tu ubicación", "Near your location") }
+        if TransporteApp.busesUTPActivos { return L.t("Desde el campus UTP", "From the UTP campus") }
+        return TransporteApp.sedeVisible == nil
+            ? L.t("Desde el centro", "From downtown")
+            : L.t("Desde tu sede", "From your workplace")
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(referencia)
+                        .font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+                    Map(position: $camara) {
+                        if usaUbicacion { UserAnnotation() }
+                        ForEach(Array(resultados.enumerated()), id: \.offset) { _, item in
+                            Marker(item.name ?? categoria.titulo, coordinate: item.placemark.coordinate)
+                                .tint(Color.appPrimary)
+                        }
+                    }
+                    .frame(height: 240)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    if buscando {
+                        ProgressView(L.t("Buscando lugares…", "Finding places…"))
+                            .frame(maxWidth: .infinity).padding(.vertical, 20)
+                    } else if let error {
+                        Text(error).font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+                        Button(L.t("Reintentar", "Retry")) { revision += 1 }
+                            .buttonStyle(.bordered)
+                    } else if resultados.isEmpty {
+                        Text(L.t("No encontramos lugares de esta categoría cerca de la referencia.",
+                                 "No places in this category were found near the reference location."))
+                            .font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+                        Button(L.t("Reintentar", "Retry")) { revision += 1 }
+                            .buttonStyle(.bordered)
+                    } else {
+                        ForEach(Array(resultados.enumerated()), id: \.offset) { _, item in
+                            Button { abrir(item) } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: categoria.icono)
+                                        .foregroundStyle(Color.appPrimary)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(item.name ?? categoria.titulo).font(.bodyMdMedium)
+                                        if let direccion = item.placemark.title {
+                                            Text(direccion).font(.bodySm)
+                                                .foregroundStyle(Color.onSurfaceVariant)
+                                        }
+                                        Text(distancia(item)).font(.caption)
+                                            .foregroundStyle(Color.onSurfaceVariant)
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "arrow.up.right").foregroundStyle(Color.appPrimary)
+                                }
+                                .multilineTextAlignment(.leading)
+                                .foregroundStyle(Color.onSurface)
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 16))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint(L.t("Ver ubicación en el mapa", "View location on map"))
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color.appBackground)
+            .navigationTitle(categoria.titulo)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Cerrar", "Close")) { dismiss() }
+                }
+            }
+        }
+        .tint(Color.appPrimary)
+        .seguirTemaForzado()
+        .task(id: revision) { await cargar() }
+        .onDisappear { busqueda?.cancel() }
+    }
+
+    @MainActor
+    private func cargar() async {
+        buscando = true
+        error = nil
+        resultados = []
+        let ubicacion = await UbicacionPuntual.obtener(desde: locationService)
+        guard !Task.isCancelled else { return }
+        usaUbicacion = ubicacion != nil
+        centro = ubicacion?.coordinate ?? TransporteApp.referenciaInicio
+        camara = .region(MKCoordinateRegion(center: centro,
+            span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)))
+        let request = MKLocalPointsOfInterestRequest(center: centro, radius: 5_000)
+        request.pointOfInterestFilter = categoria.filtro
+        let search = MKLocalSearch(request: request)
+        busqueda = search
+        defer { busqueda = nil; buscando = false }
+        do {
+            let response = try await search.start()
+            guard !Task.isCancelled else { return }
+            let origen = CLLocation(latitude: centro.latitude, longitude: centro.longitude)
+            resultados = response.mapItems.sorted {
+                origen.distance(from: CLLocation(latitude: $0.placemark.coordinate.latitude,
+                                                 longitude: $0.placemark.coordinate.longitude))
+                < origen.distance(from: CLLocation(latitude: $1.placemark.coordinate.latitude,
+                                                   longitude: $1.placemark.coordinate.longitude))
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            self.error = L.t("No pudimos buscar el lugar. Revisa tu conexión.",
+                             "Could not find the location. Check your connection.")
+        }
+    }
+
+    private func distancia(_ item: MKMapItem) -> String {
+        let origen = CLLocation(latitude: centro.latitude, longitude: centro.longitude)
+        let destino = CLLocation(latitude: item.placemark.coordinate.latitude,
+                                 longitude: item.placemark.coordinate.longitude)
+        return L.f("{0} km de la referencia", "{0} km from the reference", [
+            FormatoNumero.decimal(origen.distance(from: destino) / 1_000)
+        ])
+    }
+
+    private func abrir(_ item: MKMapItem) {
+        let coordenada = item.placemark.coordinate
+        router.destinoPendiente = DestinoPendiente(titulo: item.name ?? categoria.titulo,
+            lat: coordenada.latitude, lon: coordenada.longitude)
+        dismiss()
+        router.navigate(to: .mapaPrincipal)
+    }
+}
+
 #Preview {
     SeguridadView().environmentObject(AppRouter())
 }

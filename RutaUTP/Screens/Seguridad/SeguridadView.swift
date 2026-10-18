@@ -17,10 +17,17 @@ struct SeguridadView: View {
     @State private var showReportarSheet = false
     @State private var showPublicarComunidad = false
     @State private var showLlamarAlert = false
+    @State private var showLlamarContacto = false
+    @State private var showConfigurarContacto = false
+    @State private var seccion: Seccion = .ayuda
+    @State private var categoriaCercana: CategoriaAyudaCercana?
+    @AppStorage("emergencia_nombre") private var contactoNombre = ""
+    @AppStorage("emergencia_numero") private var contactoNumero = ""
     @State private var selectedReporte: ReporteComunidad?
+    @State private var comentarAlAbrir = false
     /// Likes/dislikes de la sección Comunidad (compartido entre las cards
     /// y el detalle para que el conteo coincida).
-    @StateObject private var reacciones = ComunidadReacciones()
+    @StateObject private var reacciones = ComunidadReacciones.compartida
     @State private var buscandoZona = false
     @State private var errorZona: String?
     @State private var zonaSeleccionada: RutaSegura? = nil  // detalle (alert)
@@ -33,21 +40,21 @@ struct SeguridadView: View {
     @State private var revisionCatalogo = 0
     @State private var cargandoParaderos = false
 
-    /// Lugares guardados, tiles y modo edición (estilo Springboard).
-    /// Los datos y sus operaciones viven en el modelo; en la vista solo queda
-    /// qué sheet está abierto y qué lugar está seleccionado.
+    /// Se conservan los paraderos guardados y sus datos; los tiles de lugares
+    /// personales se consultan desde Guardado.
     @StateObject private var lugaresVM = SeguridadLugaresModel()
     @State private var selectedLugar: LugarGuardado?
-    @State private var showElegirLugares = false
-    @State private var confirmarReinicioTiles = false
-    @State private var errorRecuperacionTiles = false
-    @State private var respaldoTiles: URL?
-    @State private var marcosTiles: [UUID: CGRect] = [:]
-    @GestureState private var arrastreActivo = false
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+
+    private enum Seccion: String, CaseIterable, Identifiable {
+        case ayuda, comunidad
+        var id: String { rawValue }
+        var titulo: String {
+            self == .ayuda ? L.t("Ayuda", "Help") : L.t("Comunidad", "Community")
+        }
+    }
 
     /// DEBUG: `--comunidad` deja solo la sección de comunidad y `--zonas` solo
     /// la de zonas seguras. Van bajo `#if DEBUG` para que la lectura de
@@ -70,14 +77,6 @@ struct SeguridadView: View {
     }()
 
     private static let reportes = ReporteComunidad.publicacionesDemo
-
-    /// Alertas del feed de comunidad, contadas del MISMO array que alimenta
-    /// las cards. Antes la barra de resumen mostraba un "2" escrito a mano
-    /// que no correspondía a ningún dato; así el número no puede
-    /// desincronizarse del contenido.
-    private static var alertasEnFeed: Int {
-        reportes.filter { $0.tipo == .alerta }.count
-    }
 
     // 10 puntos/zonas de seguridad de Trujillo; se deslizan como carrusel.
     private var rutasSeguras: [RutaSegura] {
@@ -152,18 +151,22 @@ struct SeguridadView: View {
             // Contenido scrollable
             VStack(spacing: 0) {
                 header
-                summaryBar
+                greetingCard
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                selectorSeccion
                 ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: 28) {
+                    LazyVStack(spacing: 24) {
                         if Self.soloComunidadDebug {
                             comunidadSection
                         } else if Self.soloZonasDebug {
                             rutasSegurasSection
-                        } else {
-                            greetingCard
-                            lugaresSection
+                        } else if seccion == .ayuda {
+                            accesosRapidos
+                            cercaDeTi
                             rutasSegurasSection
                             paraderosGuardadosSection
+                        } else {
                             comunidadSection
                         }
                         Spacer(minLength: 20)
@@ -178,17 +181,9 @@ struct SeguridadView: View {
             BottomNavBar()
         }
         .ignoresSafeArea(edges: .bottom)
-        .onDisappear { lugaresVM.arrastrando = nil }
-        .onChange(of: scenePhase) { _, phase in
-            if phase != .active { lugaresVM.arrastrando = nil }
-        }
-        .onChange(of: lugaresVM.modoEdicion) { _, _ in lugaresVM.arrastrando = nil }
         .onAppear {
             lugaresVM.cargar()
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--editar") {
-                lugaresVM.modoEdicion = true
-            }
             if ProcessInfo.processInfo.arguments.contains("--paraderos") {
                 showParaderosMap = true
             }
@@ -234,28 +229,29 @@ struct SeguridadView: View {
                 .presentationDetents([.large])
         }
         .sheet(item: $selectedReporte) { reporte in
-            ReporteDetailSheet(reporte: reporte, reacciones: reacciones)
-                .presentationDetents([.medium, .large])
+            ReporteDetailSheet(reporte: reporte, reacciones: reacciones, comentarAlAbrir: comentarAlAbrir)
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .alert(L.t("¿Restablecer tus accesos?", "Reset your shortcuts?"),
-               isPresented: $confirmarReinicioTiles) {
-            Button(L.t("Respaldar y restablecer", "Back up and reset"), role: .destructive) {
-                do {
-                    if let archivo = try lugaresVM.respaldarYReiniciarTiles() { respaldoTiles = archivo }
-                    lugaresVM.cargar()
-                } catch { errorRecuperacionTiles = true }
-            }
-            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
-        } message: {
-            Text(L.t("Se respaldarán la selección y el orden originales en tus documentos. Volverán los accesos iniciales; tus lugares guardados se conservan.",
-                     "The original selection and order will be backed up in your documents. Default shortcuts will return; your saved places will be preserved."))
+        .sheet(item: $categoriaCercana) { categoria in
+            AyudaCercanaSheet(categoria: categoria, locationService: locationService)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
-        .alert(L.t("No se pudo restablecer", "Couldn't reset"), isPresented: $errorRecuperacionTiles) {
-            Button(L.t("Aceptar", "OK"), role: .cancel) {}
+        .sheet(isPresented: $showConfigurarContacto) {
+            ContactoSeguridadSheet()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .alert(L.t("Llamar a mi contacto", "Call my contact"), isPresented: $showLlamarContacto) {
+            Button(L.t("Llamar", "Call")) {
+                if let numero = numeroContacto, let url = URL(string: "tel://" + numero) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
         } message: {
-            Text(L.t("No se reiniciaron los datos. Reintenta la lectura y comprueba el espacio disponible.",
-                     "The data was not reset. Retry reading and check available storage."))
+            Text([contactoNombre, numeroContacto ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
         }
         .alert(L.t("Llamar al 105", "Call 105"), isPresented: $showLlamarAlert) {
             Button(L.t("Llamar", "Call")) {
@@ -304,385 +300,163 @@ struct SeguridadView: View {
             }
             .presentationDetents([.medium, .large])
         }
-        // Añadir: elegir qué lugares guardados aparecen como tiles
-        .sheet(isPresented: $showElegirLugares) {
-            ElegirLugaresSheet(
-                lugares: lugaresVM.lugares.filter { !$0.esFijo },
-                seleccion: Set(lugaresVM.tilesActuales.filter { !$0.esFijo }.map(\.id)),
-                irAGuardado: { showElegirLugares = false; router.navigate(to: .guardado) }
-            ) { nuevaSeleccion in
-                lugaresVM.reconstruirTiles(seleccion: nuevaSeleccion)
-            }
-            .presentationDetents([.medium])
-        }
     }
 
-    // MARK: - Header (✅ CORREGIDO V3: Reportar en header, icono lock.fill)
+    // MARK: - Cabecera y ayuda directa
     private var header: some View {
-        HStack(spacing: 12) {
-            // Lado izquierdo: icono + titulo
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.primaryFixed)
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.appPrimary)
-                }
-                Text(L.t("Seguridad", "Safety"))
-                    .font(.headlineLgMobile)
-                    .foregroundStyle(.appPrimary)
-                    .accessibilityAddTraits(.isHeader)
-            }
+        HStack {
+            Text(L.t("Seguridad", "Safety"))
+                .font(.headlineLgMobile)
+                .accessibilityAddTraits(.isHeader)
             Spacer()
-            // Lado derecho: boton Reportar
-            Button {
-                // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
-                SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "seguridad.reportar") { showReportarSheet = true }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 12, weight: .bold))
-                    Text(L.signable("seguridad.reportar", "Reportar", "Report"))
-                        .font(.labelCapsMd)
-                        .appTracking(AppTracking.wideLabel)
-                }
-                .foregroundStyle(.onPrimaryFill)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Capsule().fill(Color.primaryFill))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Reportar incidente", "Report an incident"))
-            .seniable("seguridad.reportar", conGesto: false)
+            Image(systemName: "shield.lefthalf.filled")
+                .font(.title3)
+                .accessibilityHidden(true)
         }
+        .foregroundStyle(Color.appPrimary)
         .padding(.horizontal, 20)
-        .frame(height: 56)
-        .background(Color.appSurface)
-        .overlay(
-            Rectangle()
-                .fill(Color.outlineVariant.opacity(0.25))
-                .frame(height: 1),
-            alignment: .bottom
-        )
+        .frame(height: 54)
     }
 
-    // MARK: - Summary bar (✅ CORREGIDO V3: Reportar movido al header, solo queda Llamar 105)
-    private var summaryBar: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                // Sin concatenar ni Markdown: el texto se resuelve como un
-                // String de runtime, así que "**2**" se dibujaba con los
-                // asteriscos literales a la vista.
-                Text(L.f("Alertas hoy: {0}", "Alerts today: {0}", ["\(Self.alertasEnFeed)"]))
-                    .font(.bodySmMedium)
-                if cargandoParaderos {
-                    Text(L.t("Cargando paraderos…", "Loading stops…")).font(.bodySmMedium)
-                } else if let errorCargaParaderos {
-                    Text(L.aviso(errorCargaParaderos)).font(.bodyXs).foregroundStyle(Color.appError)
-                    Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
-                        .font(.bodyXsMedium)
-                } else {
-                    Text(L.f("Paraderos para explorar: {0}", "Stops to explore: {0}", ["\(paraderosIluminados.count)"]))
-                        .font(.bodySmMedium)
+    private var selectorSeccion: some View {
+        Picker(L.t("Seguridad", "Safety"), selection: $seccion) {
+            ForEach(Seccion.allCases) { opcion in
+                Text(opcion.titulo).tag(opcion)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 4)
+    }
+
+    private var greetingCard: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { contexto in
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 16) {
+                    saludoYFecha(contexto.date)
+                    Spacer(minLength: 0)
+                    reloj(contexto.date)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    saludoYFecha(contexto.date)
+                    reloj(contexto.date)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func saludoYFecha(_ fecha: Date) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(saludoDinamico(fecha)).font(.headlineBody).foregroundStyle(Color.onSurface)
+            Text(FormatoFecha.fecha(fecha).capitalized)
+                .font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func reloj(_ fecha: Date) -> some View {
+        Text(FormatoFecha.fecha(fecha, plantilla: "jmm"))
+            .font(.title3.weight(.semibold)).monospacedDigit()
+            .foregroundStyle(Color.appPrimary)
+            .fixedSize()
+    }
+
+    private var numeroContacto: String? { telefonoContactoValido(contactoNumero) }
+
+    private var accesosRapidos: some View {
+        VStack(spacing: 10) {
             Button {
-                // Modo Señas: deja ver el videito antes de que la alerta tape el miniplayer.
-                SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "seguridad.emergencia") { showLlamarAlert = true }
+                SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "seguridad.emergencia") {
+                    showLlamarAlert = true
+                }
             } label: {
-                Text(L.signable("seguridad.emergencia", "Llamar 105", "Call 105"))
-                    .font(.bodyXsMedium)
-                    .foregroundStyle(.onSurface)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.surfaceContainerHigh))
+                Label(L.signable("seguridad.emergencia", "Emergencias", "Emergency"), systemImage: "phone.fill")
+                    .font(.bodyMdMedium)
+                    .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .foregroundStyle(Color.onPrimaryFill)
+                    .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 18))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Llamar al 105 emergencias", "Call emergency services at 105"))
             .seniable("seguridad.emergencia", conGesto: false)
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.surfaceContainer)
-        )
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-    }
 
-    // MARK: - Greeting
-    private var greetingCard: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle().fill(Color.tertiary.opacity(0.12)).frame(width: 48, height: 48)
-                Image(systemName: "calendar")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.tertiary)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(saludoDinamico)
-                    .font(.headlineBody)
-                    .foregroundStyle(.onSurface)
-                Text(fechaActual())
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.surfaceContainerLowest)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
-                )
-        )
-    }
-
-    // MARK: - Lugares guardados (reales, vía LugaresStore)
-
-    private var lugaresSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(L.signable("seguridad.lugares_guardados", "Lugares Guardados", "Saved Places"))
-                    .font(.headlineSm)
-                    .foregroundStyle(.onSurface)
-                    .seniable("seguridad.lugares_guardados", distintivoDx: 10)
-                Spacer()
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 10))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
+            layout {
                 Button {
-                    AppHaptics.impact(.medium)
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        lugaresVM.alternarEdicion()
-                    }
+                    AppHaptics.selection()
+                    if numeroContacto == nil { showConfigurarContacto = true }
+                    else { showLlamarContacto = true }
                 } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: lugaresVM.modoEdicion ? "checkmark.circle.fill" : "pencil")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(lugaresVM.modoEdicion ? L.t("LISTO", "DONE") : L.t("EDITAR", "EDIT"))
-                            .font(.labelCapsSm)
-                            .appTracking(AppTracking.wideLabel)
-                    }
-                    .foregroundStyle(lugaresVM.modoEdicion ? Color.appPrimary : Color.onSurfaceVariant)
+                    accesoLabel(L.t("Llamar a mi contacto", "Call my contact"), icono: "person.crop.circle")
                 }
                 .buttonStyle(.plain)
-                .disabled(lugaresVM.datosLugaresInvalidos || lugaresVM.datosTilesInvalidos)
-            }
-
-            if lugaresVM.datosLugaresInvalidos {
-                Text(L.t("No se pudieron leer tus lugares. Se conservaron los datos originales; puedes reintentar la lectura en Guardado.",
-                         "Your places could not be read. The original data was preserved; you can retry reading in Saved."))
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if lugaresVM.datosTilesInvalidos {
-                Text(L.t("No se pudieron leer la selección o el orden de tus accesos. Se conservaron los datos originales.",
-                         "Your shortcut selection or order could not be read. The original data was preserved."))
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(L.t("Reintentar lectura", "Retry reading")) { lugaresVM.cargar() }
-                    .frame(minHeight: 44)
-                Button(L.t("Respaldar y restablecer accesos", "Back up and reset shortcuts")) {
-                    confirmarReinicioTiles = true
-                }
-                .frame(minHeight: 44)
-            }
-            if let respaldoTiles {
-                ShareLink(item: respaldoTiles) {
-                    Label(L.t("Compartir respaldo de accesos", "Share shortcut backup"),
-                          systemImage: "square.and.arrow.up")
-                        .frame(minHeight: 44)
-                }
-            }
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
-                                    count: dynamicTypeSize.isAccessibilitySize ? 1 : (dynamicTypeSize >= .xxLarge ? 2 : 3)), spacing: 12) {
-                ForEach(lugaresVM.tilesActuales) { lugar in
-                    lugarTileLugar(lugar)
-                        .background {
-                            GeometryReader { geometry in
-                                Color.clear.preference(key: MarcosTilesPreferenceKey.self,
-                                    value: [lugar.id: geometry.frame(in: .named("seguridad.lugares"))])
-                            }
-                        }
-                        .highPriorityGesture(arrastreDeLugar(lugar),
-                            including: lugaresVM.modoEdicion && !lugar.esFijo ? .all : .subviews)
-                        .accessibilityActions {
-                            if lugaresVM.modoEdicion, !lugar.esFijo,
-                               let indice = lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) {
-                                if indice > 0, !lugaresVM.tilesActuales[indice - 1].esFijo {
-                                    Button(L.t("Mover antes", "Move earlier")) { moverTileAccesible(lugar, desplazamiento: -1) }
-                                }
-                                if indice + 1 < lugaresVM.tilesActuales.count {
-                                    Button(L.t("Mover después", "Move later")) { moverTileAccesible(lugar, desplazamiento: 1) }
-                                }
-                            }
-                        }
-                }
-                lugarTileAñadir
-            }
-            .coordinateSpace(name: "seguridad.lugares")
-            .onPreferenceChange(MarcosTilesPreferenceKey.self) { marcosTiles = $0 }
-            .onChange(of: arrastreActivo) { _, activo in
-                if !activo { lugaresVM.arrastrando = nil }
-            }
-            .disabled(lugaresVM.datosLugaresInvalidos || lugaresVM.datosTilesInvalidos)
-        }
-    }
-
-    /// GestureState vuelve a false tanto al terminar como al cancelar fuera de la cuadrícula.
-    /// El arrastre solo mueve accesos dentro de esta pantalla; no exporta datos.
-    private func arrastreDeLugar(_ lugar: LugarGuardado) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.25)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("seguridad.lugares")))
-            .updating($arrastreActivo) { value, activo, _ in
-                if case .second(true, _) = value { activo = true }
-            }
-            .onChanged { value in
-                guard lugaresVM.modoEdicion, !lugaresVM.datosLugaresInvalidos,
-                      !lugar.esFijo, case .second(true, let movimiento?) = value else { return }
-                if lugaresVM.arrastrando == nil {
-                    AppHaptics.impact(.light)
-                    lugaresVM.arrastrando = lugar
-                }
-                guard let destino = lugaresVM.tilesActuales.first(where: {
-                    $0.id != lugar.id && !$0.esFijo && marcosTiles[$0.id]?.contains(movimiento.location) == true
-                }) else { return }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                    _ = lugaresVM.mover(lugar.id, sobre: destino.id)
-                }
-            }
-            .onEnded { _ in lugaresVM.arrastrando = nil }
-    }
-
-    /// Misma lista y persistencia que el arrastre; respeta el lugar fijo y los datos inválidos.
-    private func moverTileAccesible(_ lugar: LugarGuardado, desplazamiento: Int) {
-        guard lugaresVM.modoEdicion, !lugaresVM.datosLugaresInvalidos, !lugar.esFijo,
-              let indice = lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) else { return }
-        let destino = indice + desplazamiento
-        guard lugaresVM.tilesActuales.indices.contains(destino),
-              !lugaresVM.tilesActuales[destino].esFijo else { return }
-        _ = lugaresVM.mover(lugar.id, sobre: lugaresVM.tilesActuales[destino].id)
-        if UIAccessibility.isVoiceOverRunning {
-            AccesibilidadIdioma.anunciar(L.f("{0}, posición {1}", "{0}, position {1}", ["\(lugar.nombre)", "\(destino + 1)"]))
-        }
-    }
-
-    private func lugarTileLugar(_ lugar: LugarGuardado) -> some View {
-        let esArrastrado = lugaresVM.arrastrando?.id == lugar.id
-        return lugarTile(nombre: lugar.nombre,
-                         icon: lugar.icono,
-                         bg: lugar.esFijo ? Color.primaryFill : Color.primaryContainer.opacity(0.12),
-                         fg: lugar.esFijo ? .onPrimaryFill : .appPrimary,
-                         border: lugar.esFijo,
-                         badgeFrecuente: lugar.esFrecuente,
-                         indiceTile: lugaresVM.tilesActuales.firstIndex(where: { $0.id == lugar.id }) ?? 0)
-        {
-            if lugaresVM.modoEdicion {
-                AppHaptics.impact(.light)
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    lugaresVM.modoEdicion = false
-                }
-            }
-            selectedLugar = lugar
-        }
-        .overlay(alignment: .topLeading) {
-            if lugaresVM.modoEdicion {
-                if lugar.esFijo {
-                    // UTP es fijo: no se puede borrar ni mover
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.onSurfaceVariant)
-                        .frame(width: 18, height: 18)
-                        .background(Circle().fill(Color.surfaceContainerHigh))
-                        .overlay(Circle().stroke(Color.surfaceContainerLowest, lineWidth: 1.5))
-                        .offset(x: -6, y: -6)
-                        .transition(.scale(scale: 0.3).combined(with: .opacity))
-                } else {
-                    Button {
-                        AppHaptics.warning()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            _ = lugaresVM.eliminar(lugar)
-                        }
-                    } label: {
-                        Image(systemName: "minus")
-                            .font(.system(size: 10, weight: .heavy))
-                            .foregroundStyle(.white)
-                            .frame(width: 20, height: 20)
-                            .background(Circle().fill(Color.appError))
-                            .overlay(Circle().stroke(Color.surfaceContainerLowest, lineWidth: 1.5))
-                            .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
-                    }
-                    .buttonStyle(.plain)
-                    .offset(x: -7, y: -7)
-                    .transition(.scale(scale: 0.3).combined(with: .opacity))
-                    .accessibilityLabel(L.f("Eliminar {0}", "Remove {0}", ["\(lugar.nombre)"]))
-                }
-            }
-        }
-        .scaleEffect(esArrastrado ? 1.08 : (lugaresVM.modoEdicion ? 0.97 : 1.0))
-        .opacity(esArrastrado ? 0.75 : 1.0)
-        .zIndex(esArrastrado ? 10 : 0)
-    }
-
-    private var lugarTileAñadir: some View {
-        lugarTile(nombre: lugaresVM.modoEdicion ? L.t("Añadir", "Add")
-                     : (lugaresVM.tilesActuales.count <= 1 ? L.t("Añadir", "Add") : L.t("Elegir", "Choose")),
-                  icon: "plus",
-                  bg: Color.surfaceContainerLow,
-                  fg: .outline,
-                  border: false,
-                  dashed: true) {
-            AppHaptics.selection()
-            showElegirLugares = true
-        }
-    }
-
-    private func lugarTile(nombre: String, icon: String, bg: Color, fg: Color, border: Bool, badgeFrecuente: Bool = false, indiceTile: Int = 0, dashed: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 10) {
-                ZStack {
-                    Circle().fill(bg).frame(width: 48, height: 48)
-                        .overlay(
-                            Circle()
-                                .strokeBorder(border ? Color.appPrimary : Color.outline.opacity(0.4),
-                                              style: StrokeStyle(lineWidth: border ? 2 : 1, dash: dashed ? [3, 3] : []))
-                        )
-                    Image(systemName: icon)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(fg)
-                }
-                .overlay(alignment: .topTrailing) {
-                    if badgeFrecuente {
-                        Circle()
-                            .fill(Color.tertiary)
-                            .frame(width: 10, height: 10)
-                            .overlay(Circle().stroke(Color.surfaceContainerLowest, lineWidth: 2))
-                            .offset(x: 3, y: -3)
+                .accessibilityHint(numeroContacto == nil
+                    ? L.t("Configura tu contacto de emergencia", "Set up your emergency contact")
+                    : contactoNombre)
+                .contextMenu {
+                    Button(L.t("Editar contacto", "Edit contact"), systemImage: "pencil") {
+                        showConfigurarContacto = true
                     }
                 }
-                Text(nombre)
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurface)
-                    .appTracking(AppTracking.wideLabel)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "seguridad.reportar") {
+                        showReportarSheet = true
+                    }
+                } label: {
+                    accesoLabel(L.signable("seguridad.reportar", "Reportar", "Report"), icono: "exclamationmark.triangle")
+                }
+                .buttonStyle(.plain)
+                .seniable("seguridad.reportar", conGesto: false)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.surfaceContainerLowest)
-            )
         }
-        .buttonStyle(.plain)
-        .modifier(JiggleEffect(active: lugaresVM.modoEdicion && !dashed, indice: indiceTile))
     }
+
+    private func accesoLabel(_ titulo: String, icono: String) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Image(systemName: icono).font(.title3).foregroundStyle(Color.appPrimary)
+            Text(titulo).font(.bodyMdMedium).foregroundStyle(Color.onSurface)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
+        .padding(16)
+        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 18))
+        .contentShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var cercaDeTi: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L.t("Cerca de ti", "Near you")).font(.headlineSm)
+                .foregroundStyle(Color.onSurface)
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
+            layout {
+                ForEach(CategoriaAyudaCercana.allCases) { categoria in
+                    Button { categoriaCercana = categoria } label: {
+                        accesoCercano(categoria.titulo, icono: categoria.icono)
+                    }.buttonStyle(.plain)
+                }
+                Button { showParaderosMap = true } label: {
+                    accesoCercano(L.t("Paraderos", "Stops"), icono: "bus")
+                }.buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func accesoCercano(_ titulo: String, icono: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icono).font(.title3).foregroundStyle(Color.appPrimary)
+            Text(titulo).font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 64)
+        .contentShape(Rectangle())
+    }
+
 
     // MARK: - Rutas seguras
     private var rutasSegurasSection: some View {
@@ -693,6 +467,15 @@ struct SeguridadView: View {
                 Text(L.signable("seguridad.rutas_seguras", "Paraderos y referencias", "Stops and landmarks"))
                     .font(.headlineSm)
                     .seniable("seguridad.rutas_seguras", distintivoDx: 10)
+            }
+
+            if cargandoParaderos {
+                ProgressView(L.t("Cargando paraderos…", "Loading stops…"))
+                    .font(.bodySm)
+            } else if let errorCargaParaderos {
+                Text(L.aviso(errorCargaParaderos)).font(.bodySm).foregroundStyle(Color.appError)
+                Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
+                    .buttonStyle(.bordered)
             }
 
             Button {
@@ -863,16 +646,20 @@ struct SeguridadView: View {
     private var tarjetasComunidad: some View {
         LazyVStack(spacing: 12) {
             ForEach(Self.reportes) { reporte in
-                ReporteCard(reporte: reporte, reacciones: reacciones)
-                    .onTapGesture { selectedReporte = reporte }
-                    .accessibilityAction(named: Text(L.t("Ver publicación", "View post"))) { selectedReporte = reporte }
+                ReporteCard(reporte: reporte, reacciones: reacciones, abrir: {
+                    comentarAlAbrir = false
+                    selectedReporte = reporte
+                }, comentar: {
+                    comentarAlAbrir = true
+                    selectedReporte = reporte
+                })
             }
         }
     }
 
     // MARK: - Helpers
-    private var saludoDinamico: String {
-        let h = Calendar.current.component(.hour, from: Date())
+    private func saludoDinamico(_ fecha: Date) -> String {
+        let h = Calendar.current.component(.hour, from: fecha)
         switch h {
         case 5..<12:  return L.t("Buenos días", "Good morning")
         case 12..<19: return L.t("Buenas tardes", "Good afternoon")
@@ -880,9 +667,56 @@ struct SeguridadView: View {
         }
     }
 
-    private func fechaActual() -> String {
-        return FormatoFecha.fecha(Date())
-            .capitalized
+}
+
+private func telefonoContactoValido(_ valor: String) -> String? {
+    let limpio = valor.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard limpio.allSatisfy({ "0123456789+()- .".contains($0) }),
+          limpio.filter({ $0 == "+" }).count <= 1,
+          !limpio.contains("+") || limpio.hasPrefix("+") else { return nil }
+    let digitos = valor.filter { $0 >= "0" && $0 <= "9" }
+    guard (7...15).contains(digitos.count) else { return nil }
+    return limpio.hasPrefix("+") ? "+" + digitos : digitos
+}
+
+private struct ContactoSeguridadSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("emergencia_nombre") private var nombreGuardado = ""
+    @AppStorage("emergencia_numero") private var numeroGuardado = ""
+    @State private var nombre = ""
+    @State private var numero = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(L.t("Contacto de emergencia", "Emergency contact")) {
+                    TextField(L.t("Nombre", "Name"), text: $nombre)
+                        .textContentType(.name)
+                    TextField(L.t("Teléfono", "Phone"), text: $numero)
+                        .keyboardType(.phonePad).textContentType(.telephoneNumber)
+                }
+            }
+            .navigationTitle(L.t("Mi contacto", "My contact"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Guardar", "Save")) {
+                        guard let telefono = telefonoContactoValido(numero) else { return }
+                        nombreGuardado = nombre.trimmingCharacters(in: .whitespacesAndNewlines)
+                        numeroGuardado = telefono
+                        dismiss()
+                    }
+                    .disabled(nombre.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                              || telefonoContactoValido(numero) == nil)
+                }
+            }
+        }
+        .tint(Color.appPrimary)
+        .onAppear { nombre = nombreGuardado; numero = numeroGuardado }
+        .seguirTemaForzado()
     }
 }
 

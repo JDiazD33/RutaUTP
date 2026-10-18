@@ -11905,5 +11905,145 @@
     "fr": "🧇 Gaufre + glace S/ 8",
     "pt-BR": "🧇 Waffle + sorvete S/ 8",
     "zh-Hans": "🧇 华夫饼+冰淇淋 S/ 8"
+  },
+  "Ayuda": {
+    "en": "Help",
+    "de": "Hilfe",
+    "fr": "Aide",
+    "pt-BR": "Ajuda",
+    "zh-Hans": "帮助"
+  },
+  "Llamar a mi contacto": {
+    "en": "Call my contact",
+    "de": "Meinen Kontakt anrufen",
+    "fr": "Appeler mon contact",
+    "pt-BR": "Ligar para meu contato",
+    "zh-Hans": "致电我的联系人"
+  },
+  "Configura tu contacto de emergencia": {
+    "en": "Set up your emergency contact",
+    "de": "Notfallkontakt einrichten",
+    "fr": "Configurer votre contact d’urgence",
+    "pt-BR": "Configure seu contato de emergência",
+    "zh-Hans": "设置紧急联系人"
+  },
+  "Editar contacto": {
+    "en": "Edit contact",
+    "de": "Kontakt bearbeiten",
+    "fr": "Modifier le contact",
+    "pt-BR": "Editar contato",
+    "zh-Hans": "编辑联系人"
+  },
+  "Contacto de emergencia": {
+    "en": "Emergency contact",
+    "de": "Notfallkontakt",
+    "fr": "Contact d’urgence",
+    "pt-BR": "Contato de emergência",
+    "zh-Hans": "紧急联系人"
+  },
+  "Mi contacto": {
+    "en": "My contact",
+    "de": "Mein Kontakt",
+    "fr": "Mon contact",
+    "pt-BR": "Meu contato",
+    "zh-Hans": "我的联系人"
+  },
+  "Ver y añadir comentarios": {
+    "en": "Read and add comments",
+    "de": "Kommentare lesen und hinzufügen",
+    "fr": "Lire et ajouter des commentaires",
+    "pt-BR": "Ler e adicionar comentários",
+    "zh-Hans": "查看和添加评论"
+  },
+  "Me gusta": {
+    "en": "Like",
+    "de": "Gefällt mir",
+    "fr": "J’aime",
+    "pt-BR": "Curtir",
+    "zh-Hans": "赞"
+  },
+  "No me gusta": {
+    "en": "Dislike",
+    "de": "Gefällt mir nicht",
+    "fr": "Je n’aime pas",
+    "pt-BR": "Não curtir",
+    "zh-Hans": "踩"
+  },
+  "Publicación": {
+    "en": "Post",
+    "de": "Beitrag",
+    "fr": "Publication",
+    "pt-BR": "Publicação",
+    "zh-Hans": "帖子"
+  },
+  "Tú": {
+    "en": "You",
+    "de": "Du",
+    "fr": "Vous",
+    "pt-BR": "Você",
+    "zh-Hans": "你"
+  },
+  "Los comentarios se conservan durante esta sesión de demostración.": {
+    "en": "Comments are kept for this demo session.",
+    "de": "Kommentare bleiben während dieser Demo-Sitzung erhalten.",
+    "fr": "Les commentaires sont conservés pendant cette session de démonstration.",
+    "pt-BR": "Os comentários são mantidos durante esta sessão de demonstração.",
+    "zh-Hans": "评论仅在本次演示会话中保留。"
+  },
+  "Tu comentario…": {
+    "en": "Your comment…",
+    "de": "Dein Kommentar…",
+    "fr": "Votre commentaire…",
+    "pt-BR": "Seu comentário…",
+    "zh-Hans": "你的评论…"
+  },
+  "Añadir comentario": {
+    "en": "Add comment",
+    "de": "Kommentar hinzufügen",
+    "fr": "Ajouter un commentaire",
+    "pt-BR": "Adicionar comentário",
+    "zh-Hans": "添加评论"
+  },
+  "Comisarías": {
+    "en": "Police stations",
+    "de": "Polizeiwachen",
+    "fr": "Commissariats",
+    "pt-BR": "Delegacias",
+    "zh-Hans": "警察局"
+  },
+  "Cerca de tu ubicación": {
+    "en": "Near your location",
+    "de": "In deiner Nähe",
+    "fr": "Près de votre position",
+    "pt-BR": "Perto da sua localização",
+    "zh-Hans": "你的位置附近"
+  },
+  "Buscando lugares…": {
+    "en": "Finding places…",
+    "de": "Orte werden gesucht…",
+    "fr": "Recherche de lieux…",
+    "pt-BR": "Buscando locais…",
+    "zh-Hans": "正在搜索地点…"
+  },
+  "No encontramos lugares de esta categoría cerca de la referencia.": {
+    "en": "No places in this category were found near the reference location.",
+    "de": "In dieser Kategorie wurden keine Orte in der Nähe des Referenzstandorts gefunden.",
+    "fr": "Aucun lieu de cette catégorie n’a été trouvé près du lieu de référence.",
+    "pt-BR": "Não encontramos locais desta categoria perto do local de referência.",
+    "zh-Hans": "参考位置附近未找到此类别的地点。"
+  },
+  "{0} km de la referencia": {
+    "en": "{0} km from the reference",
+    "de": "{0} km vom Referenzstandort",
+    "fr": "À {0} km du lieu de référence",
+    "pt-BR": "A {0} km do local de referência",
+    "zh-Hans": "距参考位置 {0} 公里"
+  },
+  "Emergencias": {
+    "de": "Notruf",
+    "en": "Emergency",
+    "fr": "Urgences",
+    "pt-BR": "Emergências",
+    "zh-Hans": "紧急求助"
   }
 }
