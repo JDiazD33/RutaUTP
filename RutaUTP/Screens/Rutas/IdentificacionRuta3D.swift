@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum ColorMicroReferencia: String {
+enum ColorTransporteReferencia: String {
     case verde, blanco, azul, amarillo, rojo
 
     var color: Color {
@@ -25,11 +25,11 @@ enum ColorMicroReferencia: String {
 }
 
 /// Colores observados en una referencia; no certifican toda la flota actual.
-struct ColoresMicroReferencia {
+struct ColoresTransporteReferencia {
     let linea: String
     let letra: String
     let empresa: String
-    let colores: [ColorMicroReferencia]
+    let colores: [ColorTransporteReferencia]
     let fuente: URL?
 }
 
@@ -38,7 +38,7 @@ struct IdentificacionRuta3D {
     let codigo: String
     let letra: String
     let empresa: String
-    let colores: ColoresMicroReferencia?
+    let colores: ColoresTransporteReferencia?
 
     init(ruta: RutaOpcion) {
         let identificacion = GTFSNombreParser.identificacionTransporte(linea: ruta.linea, variante: ruta.variante)
@@ -56,14 +56,19 @@ struct IdentificacionRuta3D {
         }
     }
 
-    /// Alcance inicial: codigos M del catalogo urbano, no un route_type inferido.
-    var esMicro: Bool { !routeID.hasPrefix("utp:") && codigo.hasPrefix("M-") }
+    /// Modelos esquematicos por categoria del catalogo urbano, no por route_type 3.
+    var tipoModelo: TipoTransporte3D? {
+        guard !routeID.hasPrefix("utp:") else { return nil }
+        if codigo.hasPrefix("M-") { return .micro }
+        if codigo.hasPrefix("C-") { return .combi }
+        return nil
+    }
     var claveModelo: String { [routeID, codigo, letra, empresa].joined(separator: "|") }
 
     // Fotografias aportadas por el usuario y publicacion original de Salaverry.
     // Los tonos son aproximaciones visuales. No se reutilizan fotos ni graficos.
     // Las variantes con corazon quedan separadas y no heredan una foto de la base.
-    private static let referencias: [String: ColoresMicroReferencia] = [
+    private static let referencias: [String: ColoresTransporteReferencia] = [
         "17434299": .init(linea: "M-07", letra: "V", empresa: "Nuevo California",
                            colores: [.verde, .blanco],
                            fuente: URL(string: "https://onibusbrasil.com/MiguelBusologoTrujillo/14432887")),
@@ -78,13 +83,38 @@ struct IdentificacionRuta3D {
         "17434472": .init(linea: "M-20", letra: "C", empresa: "Salaverry Express",
                            colores: [.azul], fuente: fuenteSalaverry),
         "17434330": .init(linea: "M-22", letra: "F", empresa: "Salaverry Express",
-                           colores: [.azul], fuente: fuenteSalaverry)
+                           colores: [.azul], fuente: fuenteSalaverry),
+        // Referencias fotograficas por route_id; no se transfieren a variantes.
+        "17350695": .init(linea: "C-01", letra: "B", empresa: "Nuevos Girasoles",
+                           colores: [.verde, .blanco, .rojo],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122142360590117228/")),
+        "17491518": .init(linea: "C-03", letra: "JJ", empresa: "Nuevos Girasoles",
+                           colores: [.verde, .blanco, .rojo],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122140658732117228/")),
+        "17434339": .init(linea: "C-11", letra: "T1", empresa: "San Isidro Labrador",
+                           colores: [.rojo, .amarillo, .azul],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122166200408117228/")),
+        "17463346": .init(linea: "C-10", letra: "M", empresa: "Mochica Chimu",
+                           colores: [.azul, .blanco, .amarillo],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122161071242117228/")),
+        "17463385": .init(linea: "C-22", letra: "M", empresa: "Luz Divina",
+                           colores: [.blanco, .verde],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122161713404117228/")),
+        "17508289": .init(linea: "C-12", letra: "B", empresa: "Santa Lucia de Moche",
+                           colores: [.blanco, .rojo, .verde],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122156437472117228/")),
+        "17508501": .init(linea: "C-13", letra: "D", empresa: "Mochica",
+                           colores: [.blanco, .rojo, .verde, .azul],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122160478976117228/")),
+        // Foto aportada en el chat: C-25 S2 de El Aguila, no la Z1 de Titanic.
+        "17521009": .init(linea: "C-25", letra: "S2", empresa: "El Aguila",
+                           colores: [.blanco, .azul], fuente: nil)
     ]
 
     private static let fuenteSalaverry = URL(string: "https://trujilloexperiencefreewt.blogspot.com/p/como-llegar-puerto-salaverry.html")
 }
 
-/// Se muestra en todas las lineas; el modelo por linea empieza por los micros.
+/// Identificacion por linea; micros y combis comparten controles, no la geometria.
 struct IdentificacionRuta3DView: View {
     let identificacion: IdentificacionRuta3D
     var activo = true
@@ -97,7 +127,7 @@ struct IdentificacionRuta3DView: View {
                     .font(.headlineSm)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 4)
-                if identificacion.esMicro {
+                if identificacion.tipoModelo != nil {
                     Button { ampliar = true } label: {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
                             .frame(minWidth: 44, minHeight: 44)
@@ -108,8 +138,8 @@ struct IdentificacionRuta3DView: View {
                 }
             }
             datos
-            if identificacion.esMicro {
-                PanelTransporte3D(tipo: .micro, identificacion: identificacion, activo: activo && !ampliar)
+            if let tipo = identificacion.tipoModelo {
+                PanelTransporte3D(tipo: tipo, identificacion: identificacion, activo: activo && !ampliar)
                     .id(identificacion.claveModelo)
             } else {
                 Label(L.t("Modelo de esta categoría próximamente", "Model for this category coming soon"), systemImage: "cube.transparent")
@@ -157,7 +187,7 @@ struct IdentificacionRuta3DView: View {
 }
 
 struct ColoresReferenciaRutaView: View {
-    let referencia: ColoresMicroReferencia?
+    let referencia: ColoresTransporteReferencia?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -186,7 +216,7 @@ struct ColoresReferenciaRutaView: View {
     }
 
     @ViewBuilder
-    private func muestras(_ referencia: ColoresMicroReferencia) -> some View {
+    private func muestras(_ referencia: ColoresTransporteReferencia) -> some View {
         ForEach(referencia.colores, id: \.rawValue) { color in
             HStack(spacing: 6) {
                 Circle()

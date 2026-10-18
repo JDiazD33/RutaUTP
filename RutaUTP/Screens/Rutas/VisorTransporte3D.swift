@@ -128,7 +128,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                 do {
                     let entidad = try await Entity(contentsOf: url)
                     guard !Task.isCancelled, let self, self.generacion == solicitud else { return }
-                    self.presentar(entidad)
+                    self.presentar(entidad, tipo: tipo)
                 } catch {
                     guard !Task.isCancelled, let self, self.generacion == solicitud else { return }
                     self.cambioEstado?(.fallo)
@@ -143,12 +143,12 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                     if case .failure = resultado { self.cambioEstado?(.fallo) }
                 } receiveValue: { [weak self] entidad in
                     guard let self, self.generacion == solicitud else { return }
-                    self.presentar(entidad)
+                    self.presentar(entidad, tipo: tipo)
                 }
         }
     }
 
-    private func presentar(_ entidad: Entity) {
+    private func presentar(_ entidad: Entity, tipo: TipoTransporte3D) {
         let caja = entidad.visualBounds(relativeTo: nil)
         let extensionMayor = max(caja.extents.x, caja.extents.y, caja.extents.z)
         guard extensionMayor.isFinite, extensionMayor > 0 else {
@@ -164,9 +164,9 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
             cambioEstado?(.fallo)
             return
         }
-        if let identificacion, identificacion.esMicro {
-            aplicarPinturaReferencia(a: entidad, colores: identificacion.colores?.colores ?? [])
-            agregarCarteles(a: entidad, identificacion: identificacion, caja: caja)
+        if let identificacion, identificacion.tipoModelo == tipo {
+            aplicarPinturaReferencia(a: entidad, colores: identificacion.colores?.colores ?? [], tipo: tipo)
+            agregarCarteles(a: entidad, identificacion: identificacion, caja: caja, tipo: tipo)
         }
         modelo = entidad
         ancla.addChild(entidad)
@@ -204,7 +204,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         }
     }
 
-    private func aplicarPinturaReferencia(a entidad: Entity, colores: [ColorMicroReferencia]) {
+    private func aplicarPinturaReferencia(a entidad: Entity, colores: [ColorTransporteReferencia], tipo: TipoTransporte3D) {
         guard let principal = colores.first else { return }
         for (parte, indices) in carrocerias {
             guard var componente = parte.components[ModelComponent.self] else { continue }
@@ -213,39 +213,73 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
             }
             parte.components.set(componente)
         }
-        // Franjas esquematicas sobre la carroceria del micro, sin tapar las ruedas.
+        // Franjas esquematicas sobre la carroceria, sin tapar las ruedas o ventanas.
         // No se reproducen graficos, marcas ni una pintura exacta de una unidad.
         for (indice, color) in colores.dropFirst().enumerated() {
-            let alto: Float = indice == 0 ? 0.16 : 0.07
-            let y: Float = indice == 0 ? 1.28 : 1.44
+            let alto: Float
+            let y: Float
+            let mitadAncho: Float
+            let largo: Float
+            switch tipo {
+            case .micro:
+                alto = indice == 0 ? 0.16 : 0.07
+                y = indice == 0 ? 1.28 : 1.44
+                mitadAncho = 1.18
+                largo = 6.5
+            case .combi:
+                let paso = Float(0.26) / Float(max(colores.count - 1, 1))
+                alto = paso * 0.72
+                y = 1.0 + Float(indice) * paso
+                mitadAncho = 0.99
+                largo = 3.9
+            case .colectivo:
+                return
+            }
             for lado in [Float(-1), Float(1)] {
-                let franja = ModelEntity(mesh: .generateBox(size: [0.025, alto, 6.5]),
+                let franja = ModelEntity(mesh: .generateBox(size: [0.025, alto, largo]),
                                          materials: [SimpleMaterial(color: UIColor(color.color), roughness: 0.6, isMetallic: false)])
-                franja.position = [lado * 1.18, y, -0.45]
+                franja.position = [lado * mitadAncho, y, -0.45]
                 entidad.addChild(franja)
             }
         }
     }
 
-    private func agregarCarteles(a entidad: Entity, identificacion: IdentificacionRuta3D, caja: BoundingBox) {
+    private func agregarCarteles(a entidad: Entity, identificacion: IdentificacionRuta3D, caja: BoundingBox, tipo: TipoTransporte3D) {
         guard !identificacion.letra.isEmpty else { return }
+        let factor: Float
+        let posiciones: [(SIMD3<Float>, simd_quatf)]
+        switch tipo {
+        case .micro:
+            factor = 1
+            posiciones = [
+                ([-0.36, 2.12, caja.max.z - 0.08], simd_quatf(angle: 0, axis: [0, 1, 0])),
+                ([0, 2.12, caja.min.z - 0.04], simd_quatf(angle: .pi, axis: [0, 1, 0])),
+                ([1.20, 2.12, 1.80], simd_quatf(angle: .pi / 2, axis: [0, 1, 0])),
+                ([-1.20, 2.12, 1.80], simd_quatf(angle: -.pi / 2, axis: [0, 1, 0]))
+            ]
+        case .combi:
+            factor = 0.74
+            // La inclinacion sigue el parabrisas del recurso combi.usdz.
+            posiciones = [
+                ([-0.30, 1.82, 2.39], simd_quatf(angle: -atan(Float(0.97 / 0.91)), axis: [1, 0, 0])),
+                ([0, 1.75, caja.min.z - 0.025], simd_quatf(angle: .pi, axis: [0, 1, 0])),
+                ([1.0, 1.75, -0.85], simd_quatf(angle: .pi / 2, axis: [0, 1, 0])),
+                ([-1.0, 1.75, -0.85], simd_quatf(angle: -.pi / 2, axis: [0, 1, 0]))
+            ]
+        case .colectivo:
+            return
+        }
         let plantilla = Entity()
         plantilla.name = "CartelDeRuta"
-        plantilla.addChild(ModelEntity(mesh: .generateBox(size: [1.32, 0.91, 0.025], cornerRadius: 0.008),
+        plantilla.addChild(ModelEntity(mesh: .generateBox(size: [1.32 * factor, 0.91 * factor, 0.025], cornerRadius: 0.008),
                                         materials: [UnlitMaterial(color: .white)]))
-        plantilla.addChild(textoCartel(identificacion.codigo, ancho: 1.10, alto: 0.18, y: 0.26))
-        plantilla.addChild(textoCartel(identificacion.letra, ancho: 1.15, alto: 0.47, y: -0.09))
+        plantilla.addChild(textoCartel(identificacion.codigo, ancho: 1.10 * factor, alto: 0.18 * factor, y: 0.26 * factor))
+        plantilla.addChild(textoCartel(identificacion.letra, ancho: 1.15 * factor, alto: 0.47 * factor, y: -0.09 * factor))
         // +Z es el frente del recurso. Las letras forman parte de la escena 3D.
-        let posiciones: [(SIMD3<Float>, Float)] = [
-            ([-0.36, 2.12, caja.max.z - 0.08], 0),
-            ([0, 2.12, caja.min.z - 0.04], .pi),
-            ([1.20, 2.12, 1.80], .pi / 2),
-            ([-1.20, 2.12, 1.80], -.pi / 2)
-        ]
-        for (posicion, angulo) in posiciones {
+        for (posicion, orientacion) in posiciones {
             let cartel = plantilla.clone(recursive: true)
             cartel.position = posicion
-            cartel.orientation = simd_quatf(angle: angulo, axis: [0, 1, 0])
+            cartel.orientation = orientacion
             entidad.addChild(cartel)
         }
     }

@@ -31,6 +31,11 @@ struct Transportes3DView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var tipo: TipoTransporte3D = .micro
 
+    private var tipoSeleccionado: TipoTransporte3D? {
+        if let identificacion { return identificacion.tipoModelo }
+        return tipo
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -55,8 +60,14 @@ struct Transportes3DView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("transportes3d.tipo")
                     }
-                    PanelTransporte3D(tipo: identificacion == nil ? tipo : .micro, identificacion: identificacion)
-                        .id(identificacion?.claveModelo ?? tipo.rawValue)
+                    if let tipoSeleccionado {
+                        PanelTransporte3D(tipo: tipoSeleccionado, identificacion: identificacion)
+                            .id(identificacion?.claveModelo ?? tipoSeleccionado.rawValue)
+                    } else {
+                        Text(L.t("Modelo de esta categoría próximamente", "Model for this category coming soon"))
+                            .font(.bodySm)
+                            .foregroundStyle(Color.onSurfaceVariant)
+                    }
                 }
                 .padding(20)
             }
