@@ -601,7 +601,30 @@ final class TransitItineraryTests: XCTestCase {
         XCTAssertEqual(closest.plan.route.id, "near")
         XCTAssertEqual(closest.plan.walkToBoardMeters, 0, accuracy: 0.01)
         XCTAssertGreaterThan(closest.plan.walkToDestinationMeters, 300)
+        XCTAssertTrue(closest.categories.contains(.recommended))
         XCTAssertLessThanOrEqual(options.highlights.count, 3)
+    }
+
+    func testRecomiendaLaSubidaCercanaAunqueLaMasRapidaExijaCaminar1200Metros() async throws {
+        let origin = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.04)
+        let destination = CLLocationCoordinate2D(latitude: -8.08, longitude: -79.04)
+        let near = line("near", [origin,
+            CLLocationCoordinate2D(latitude: -8.13, longitude: -79.07), destination], duration: 40)
+        let fast = line("fast", [CLLocationCoordinate2D(latitude: -8.1, longitude: -79.029),
+                                destination], headway: 0, duration: 1)
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [near, fast]),
+            origin: origin, destination: destination, radius: 1600)
+        let recommended = try XCTUnwrap(options.highlights.first { $0.categories.contains(.recommended) })
+        let fastest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.fastest) })
+        XCTAssertEqual(recommended.plan.route.id, "near")
+        XCTAssertEqual(recommended.plan.walkToBoardMeters, 0, accuracy: 0.01)
+        XCTAssertTrue(recommended.categories.contains(.closestBoarding))
+        XCTAssertEqual(options.highlights.first?.plan.optionID, recommended.plan.optionID)
+        XCTAssertEqual(fastest.plan.route.id, "fast")
+        XCTAssertGreaterThan(fastest.plan.walkToBoardMeters, 1100)
+        XCTAssertLessThan(fastest.plan.walkToBoardMeters, 1300)
+        XCTAssertLessThan(fastest.plan.estimatedJourneySeconds, recommended.plan.estimatedJourneySeconds)
+        XCTAssertEqual(options.highlights.count, 2, "No duplicar Recomendada y Más cercana")
     }
 
     func testMasRapidaIncluyeLaEsperaDelPrimerMicro() async throws {
@@ -687,8 +710,9 @@ final class TransitItineraryTests: XCTestCase {
         XCTAssertNotEqual(closest.plan.optionID, fastest.plan.optionID)
         XCTAssertEqual(closest.plan.routeIDs, fastest.plan.routeIDs)
         XCTAssertEqual(Set(options.highlights.map { $0.plan.optionID }).count, options.highlights.count)
-        XCTAssertTrue(fastest.categories.contains(.recommended),
-                      "Caminar hasta otra subida compensa cuando evita una vuelta larga")
+        XCTAssertTrue(closest.categories.contains(.recommended))
+        XCTAssertFalse(fastest.categories.contains(.recommended),
+                       "Ahorrar tiempo no debe sustituir la recomendación de subida cercana")
     }
 
     @MainActor
@@ -710,6 +734,11 @@ final class TransitItineraryTests: XCTestCase {
         for _ in 0..<400 where vm.calculandoItinerario { try await Task.sleep(for: .milliseconds(5)) }
         XCTAssertFalse(vm.calculandoItinerario)
         let closest = try XCTUnwrap(vm.rutasDestacadas.first { $0.categories.contains(.closestBoarding) }?.plan)
+        XCTAssertEqual(vm.itinerario?.board.id, "loop-0")
+        let fastest = try XCTUnwrap(vm.rutasDestacadas.first { $0.categories.contains(.fastest) }?.plan)
+        vm.seleccionarAlternativa(fastest)
+        for _ in 0..<400 where vm.calculandoItinerario { try await Task.sleep(for: .milliseconds(5)) }
+        XCTAssertFalse(vm.calculandoItinerario)
         XCTAssertEqual(vm.itinerario?.board.id, "loop-2")
         vm.seleccionarAlternativa(closest)
         for _ in 0..<400 where vm.calculandoItinerario { try await Task.sleep(for: .milliseconds(5)) }
@@ -815,6 +844,27 @@ final class MapaCarruselRutasTests: XCTestCase {
                       "Publicar las opciones antes de instalar la ruta puede cancelar la búsqueda inicial")
         try await esperar { !vm.calculandoItinerario }
         XCTAssertFalse(vm.opcionesResumen.isEmpty)
+    }
+
+    func testSiFallaLaSubidaRecomendadaSeReintentaPorCercania() async throws {
+        let routes = [ruta("A", offset: 0), ruta("B", offset: 0.0002), ruta("C", offset: 0.0004)]
+        let vm = MapaViewModel(locationService: MapaGPSPrueba(),
+            routeService: RouteCalculationService(loader: { request in
+                let a = request.source!.placemark.coordinate, b = request.destination!.placemark.coordinate
+                let fromA = abs(a.latitude + 8.1) < 0.000001 && abs(b.latitude + 8.1) < 0.000001
+                let points = fromA ? [a, CLLocationCoordinate2D(latitude: -8.05, longitude: -79.035), b] : [a, b]
+                return CalculatedRoute(polyline: MKPolyline(coordinates: points, count: points.count),
+                    expectedTravelTime: 1, distance: PolylineMatching.totalLengthMeters(points), steps: [])
+            }), repositorioGTFS: MapaGTFSPrueba(feed: routes), crearProveedorReal: { nil })
+        defer { vm.detener() }
+        vm.userRealCoordinate = routes[0].shape[0]
+        vm.calcularRutaHacia(routes[0].shape.last!)
+        try await esperar { !vm.calculandoItinerario }
+        XCTAssertEqual(vm.itinerario?.route.id, "B")
+        let installed = try XCTUnwrap(vm.itinerario)
+        XCTAssertTrue(vm.categorias(de: installed).contains(.recommended))
+        XCTAssertTrue(vm.categorias(de: installed).contains(.closestBoarding))
+        XCTAssertEqual(vm.opcionesResumen.first?.optionID, installed.optionID)
     }
 
     func testPasarRapidoPorVariasTarjetasInstalaSoloLaUltimaLinea() async throws {
