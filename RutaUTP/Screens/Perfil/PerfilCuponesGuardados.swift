@@ -5,6 +5,7 @@ import UIKit
 
 struct PerfilCuponesGuardados: View {
     @EnvironmentObject private var router: AppRouter
+    @Environment(\.colorScheme) private var colorScheme
     @State private var negocios: [Negocio] = []
     @State private var seleccionado: Negocio?
     @State private var datosCuponesInvalidos = false
@@ -12,24 +13,24 @@ struct PerfilCuponesGuardados: View {
     @State private var errorRecuperacion = false
     @State private var respaldo: URL?
 
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                Text(L.t("Mis cupones", "My coupons"))
-                    .font(.title3.bold())
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L.t("Mis cupones", "My coupons"))
+                        .font(.title3.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
+                    Text(L.t("Promociones demo", "Demo offers"))
+                        .font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                }
+                Spacer(minLength: 8)
                 Text("\(negocios.count)")
-                    .font(.subheadline.bold())
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .foregroundStyle(Color.onPrimaryContainer)
-                    .background(Color.primaryContainer, in: Capsule())
+                    .font(.subheadline.weight(.medium)).monospacedDigit()
+                    .foregroundStyle(Color.onSurfaceVariant)
             }
             .padding(.horizontal, 20)
-
-            Text(L.t("Promociones demo", "Demo offers"))
-                .font(.caption).foregroundStyle(Color.onSurfaceVariant)
-                .padding(.horizontal, 20)
 
             if let respaldo {
                 ShareLink(item: respaldo) {
@@ -55,13 +56,12 @@ struct PerfilCuponesGuardados: View {
                 }
                 .padding(.horizontal, 20)
             } else if negocios.isEmpty {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "ticket")
-                            .font(.title3)
-                            .foregroundStyle(Color.onPrimaryContainer)
-                            .frame(width: 44, height: 44)
-                            .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 14))
+                            .font(.body)
+                            .foregroundStyle(acento)
+                            .frame(width: 28, height: 28)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(L.t("Sin cupones guardados", "No saved coupons"))
@@ -72,30 +72,36 @@ struct PerfilCuponesGuardados: View {
                         }
                         .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(16)
+                    Divider().padding(.leading, 56).accessibilityHidden(true)
                     Button {
                         router.navigate(to: .trackingDemo)
                     } label: {
-                        HStack {
+                        HStack(spacing: 12) {
+                            Image(systemName: "map")
+                                .frame(width: 28, height: 28)
+                                .accessibilityHidden(true)
                             Text(L.t("Explorar negocios", "Explore businesses"))
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 4)
-                            Image(systemName: "arrow.right").accessibilityHidden(true)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.onSurfaceVariant.opacity(0.55))
+                                .accessibilityHidden(true)
                         }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.onPrimaryContainer)
-                        .padding(.horizontal, 14)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(acento)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 12)
-                        .frame(minHeight: 44)
-                        .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 12))
+                        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.outlineVariant.opacity(0.18), lineWidth: 0.5)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(uiColor: .secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .padding(.horizontal, 20)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -238,9 +244,8 @@ private struct PerfilCuponCard: View {
                 .buttonStyle(.plain)
             }
             .padding(18)
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24)
-                .stroke(negocio.categoria.color.opacity(0.22), lineWidth: 1))
+            .background(Color(uiColor: .secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .alert(L.t("No se pudo quitar el cupón", "Couldn't remove coupon"), isPresented: $errorGuardado) {
                 Button(L.t("Aceptar", "OK"), role: .cancel) {}
             } message: {
