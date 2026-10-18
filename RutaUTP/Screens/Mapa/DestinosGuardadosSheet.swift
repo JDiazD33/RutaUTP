@@ -128,7 +128,7 @@ struct DestinosGuardadosSheet: View {
         let ubicacionValida = lugar.coordinate.map(CLLocationCoordinate2DIsValid) == true
         return Button { onSeleccionar(lugar) } label: {
             HStack(spacing: 12) {
-                Image(systemName: esParadero ? "bus.fill" : lugar.icono)
+                Image(systemName: esParadero && lugar.iconoPersonalizado == nil ? "bus.fill" : lugar.icono)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.appPrimary)
                     .frame(width: 40, height: 40)

@@ -16,6 +16,7 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import Combine
 
 // MARK: - Linea Detail Sheet (línea GTFS real)
 struct LineaDetailSheet: View {
@@ -189,14 +190,119 @@ struct LineaDetailSheet: View {
     }
 }
 
+/// Una lectura puntual del servicio compartido. La cámara y el pin elegido
+/// son estados distintos; una respuesta tardía no deshace un gesto del mapa.
+@MainActor
+private final class UbicacionMapaLugar: ObservableObject {
+    @Published private(set) var centro: CLLocationCoordinate2D?
+    @Published private(set) var revisionCamara = 0
+    @Published private(set) var buscando = false
+    @Published private(set) var aviso: String?
+    private var tarea: Task<Void, Never>?
+    private var revision = UUID()
+    private var inicioSolicitado = false
+    private var huboInteraccion = false
+
+    deinit { tarea?.cancel() }
+
+    func iniciar(desde service: LocationServiceProtocol) {
+        guard !inicioSolicitado else { return }
+        inicioSolicitado = true
+        if service.authorizationStatus.isAuthorized,
+           let lectura = (service as? LocationService)?.lastKnownLocation,
+           UbicacionPuntual.esValida(lectura, ahora: Date(), antiguedadMaxima: 10) {
+            centro = lectura.coordinate
+            revisionCamara &+= 1
+        }
+        buscar(desde: service, automatico: true)
+    }
+
+    func buscar(desde service: LocationServiceProtocol, automatico: Bool = false) {
+        guard !automatico || !huboInteraccion else { return }
+        cancelar()
+        buscando = true
+        aviso = nil
+        let solicitud = revision
+        tarea = Task { @MainActor [weak self] in
+            let lectura = await UbicacionPuntual.obtener(desde: service, antiguedadMaxima: 10)
+            guard let self, !Task.isCancelled, self.revision == solicitud else { return }
+            self.tarea = nil
+            self.buscando = false
+            if let lectura {
+                self.centro = lectura.coordinate
+                self.revisionCamara &+= 1
+            } else {
+                self.aviso = service.authorizationStatus.isDenied
+                    ? L.t("Activa la ubicación de la app en Ajustes para centrar el mapa.", "Enable the app's location access in Settings to center the map.")
+                    : L.t("No pudimos obtener tu ubicación. Vuelve a tocar la flecha.", "We couldn't get your location. Tap the arrow again.")
+            }
+        }
+    }
+
+    func interactuar() {
+        huboInteraccion = true
+        cancelar()
+    }
+
+    func cancelar() {
+        revision = UUID()
+        tarea?.cancel()
+        tarea = nil
+        if buscando { buscando = false }
+    }
+}
+
+private struct BotonUbicacionLugar: View {
+    @ObservedObject var ubicacion: UbicacionMapaLugar
+    let locationService: LocationServiceProtocol
+
+    var body: some View {
+        Button {
+            AppHaptics.impact(.light)
+            ubicacion.buscar(desde: locationService)
+        } label: {
+            Group {
+                if ubicacion.buscando {
+                    ProgressView().tint(Color.onPrimaryFill)
+                } else {
+                    Image(systemName: "location.fill").font(.body.weight(.semibold))
+                }
+            }
+            .foregroundStyle(Color.onPrimaryFill)
+            .frame(width: 44, height: 44)
+            .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .disabled(ubicacion.buscando)
+        .accessibilityLabel(ubicacion.buscando
+                            ? L.t("Buscando tu ubicación…", "Finding your location…")
+                            : L.t("Mi ubicación", "My location"))
+        .accessibilityHint(L.t("Centra el mapa sin cambiar el lugar marcado", "Centers the map without changing the marked place"))
+    }
+}
+
 // MARK: - Add Lugar sheet (con mapa en vivo)
 struct AddLugarSheet: View {
+    let locationService: LocationServiceProtocol
     var onSave: (LugarGuardado) -> Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var ubicacion = UbicacionMapaLugar()
 
     @State private var nombre: String = ""
     @State private var direccion: String = ""
     @State private var categoria: CategoriaLugar = .otro
+    @State private var iconoPersonalizado: String?
+    @FocusState private var campoActivo: Campo?
+
+    private enum Campo { case nombre, direccion }
+
+    private var iconoElegido: String {
+        categoria == .personalizado ? (iconoPersonalizado ?? categoria.icono) : categoria.icono
+    }
+    private let spanCercano = MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006)
 
     // Ubicación elegida (por geocodificación o toque en el mapa)
     @State private var coordElegida: CLLocationCoordinate2D? = nil
@@ -212,37 +318,49 @@ struct AddLugarSheet: View {
     /// `programarGeocodificacion` no intente geocodificar lo que el sistema
     /// acaba de escribir por ella.
     @State private var rellenoDesdeMapa = false
-    @State private var ajusteManual = false
     @State private var mapaExpandido = false
     @State private var errorAlGuardar = false
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Con el mapa arriba, el rótulo ya no necesita pedir que se
-                    // ubique: el gesto siguiente es tocarlo, y el propio mapa
-                    // lo dice ("Toca el mapa para ubicar el lugar"). Este
-                    // encabezado nombra la acción, no repite la instrucción.
-                    Text(L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
-                        .font(.headlineMd)
-                        .seniable(coordElegida == nil ? nil : "guardado.guardar_lugar")
-
-                    // Orden: el MAPA primero. El lugar se elige mirando el
-                    // mapa, no escribiendo; la dirección sale sola de ahí.
-                    // Antes el campo iba primero y el mapa al final, que
-                    // obligaba a escribir para poder ver dónde era.
-                    mapaElegir
-                    campoDireccion
-                    estadoUbicacion
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L.t("Ubicación", "Location"))
+                            .font(.headline)
+                            .accessibilityAddTraits(.isHeader)
+                        VStack(alignment: .leading, spacing: 12) {
+                            mapaElegir
+                            campoDireccion
+                            estadoUbicacion
+                            if let aviso = ubicacion.aviso {
+                                Text(aviso).font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                            }
+                        }
+                        .padding(12)
+                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+                    }
                     campoNombre
                     selectorCategoria
-
-                    botonGuardar
+                    if categoria == .personalizado { selectorIcono }
                 }
                 .padding(20)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Color.appBackground)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                botonGuardar
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.appBackground)
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(Color.outlineVariant.opacity(0.2)).frame(height: 0.5)
+                    }
+            }
+            .navigationTitle(L.t("Añadir lugar", "Add place"))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.appBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.t("Cancelar", "Cancel")) {
@@ -250,9 +368,25 @@ struct AddLugarSheet: View {
                         dismiss()
                     }
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L.t("Listo", "Done")) { campoActivo = nil }
+                }
             }
         }
-        .onDisappear { cancelarGeocodificacion() }
+        .tint(.appPrimary)
+        .onAppear { ubicacion.iniciar(desde: locationService) }
+        .onDisappear {
+            if !mapaExpandido {
+                cancelarGeocodificacion()
+                ubicacion.cancelar()
+            }
+        }
+        .onChange(of: scenePhase) { _, fase in
+            // El diálogo de permiso puede volver inactiva la escena; la
+            // lectura solo se cancela al pasar realmente a segundo plano.
+            if fase == .background { ubicacion.cancelar() }
+        }
         .alert(L.t("No se pudo guardar el lugar", "Unable to save place"), isPresented: $errorAlGuardar) {
             Button(L.t("Aceptar", "OK"), role: .cancel) { }
         } message: {
@@ -263,38 +397,61 @@ struct AddLugarSheet: View {
 
     // MARK: Campos
     private var campoNombre: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L.t("NOMBRE", "NAME"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-            TextField(L.t("Ej. Mi trabajo", "e.g. My job"), text: $nombre)
-                .textFieldStyle(.plain)
-                .accessibilityLabel(L.t("Nombre del lugar", "Place name"))
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L.t("Tu lugar", "Your place"))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                : AnyLayout(HStackLayout(spacing: 14))
+            layout {
+                Image(systemName: iconoElegido)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(Color.onPrimaryFill)
+                    .frame(width: 56, height: 56)
+                    .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 16))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L.t("Nombre del lugar", "Place name"))
+                        .font(.caption)
+                        .foregroundStyle(Color.onSurfaceVariant)
+                    TextField(L.t("Ej. Mi casa o mi trabajo", "e.g. My home or workplace"), text: $nombre, axis: .vertical)
+                        .font(.body.weight(.semibold))
+                        .textFieldStyle(.plain)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .focused($campoActivo, equals: .nombre)
+                        .onSubmit { campoActivo = nil }
+                        .accessibilityLabel(L.t("Nombre del lugar", "Place name"))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(16)
+            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
         }
     }
 
     private var campoDireccion: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(L.t("DIRECCIÓN", "ADDRESS"))
-                .font(.labelCapsMd)
+            Text(L.t("Dirección", "Address"))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 13, weight: .semibold))
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.body)
                     .foregroundStyle(.onSurfaceVariant)
                 TextField(L.t("Toca el mapa y la dirección se escribe sola",
-                              "Tap the map and the address fills in"), text: $direccion)
+                              "Tap the map and the address fills in"), text: $direccion, axis: .vertical)
                     .font(.bodySm)
                     .autocorrectionDisabled()
+                    .focused($campoActivo, equals: .direccion)
+                    .submitLabel(.done)
+                    .onSubmit { campoActivo = nil }
                     .accessibilityLabel(L.t("Dirección del lugar", "Place address"))
                     .accessibilityHint(L.t("Escribe una dirección o elige un punto con las acciones del mapa", "Enter an address or choose a point using the map actions"))
                     .onChange(of: direccion) { _, _ in programarGeocodificacion() }
                 if buscandoUbicacion {
-                    ProgressView().scaleEffect(0.8)
+                    ProgressView()
                         .accessibilityLabel(L.t("Buscando dirección", "Looking up address"))
                 }
             }
@@ -306,34 +463,21 @@ struct AddLugarSheet: View {
     /// Estado de la ubicación: encontrada / buscando / ajustada a mano.
     @ViewBuilder
     private var estadoUbicacion: some View {
-        if ajusteManual {
-            Label(L.t("Ubicación ajustada en el mapa", "Location adjusted on the map"), systemImage: "hand.tap.fill")
-                .font(.bodySm)
-                .foregroundStyle(.appPrimary)
-        } else if buscandoUbicacion {
+        if buscandoUbicacion {
             Label(L.t("Buscando la dirección…", "Looking up the address…"), systemImage: "magnifyingglass")
-                .font(.bodySm)
+                .font(.caption)
                 .foregroundStyle(.onSurfaceVariant)
         } else if direccionNoEncontrada {
             Label(L.t("No encontramos esa dirección — toca el mapa para ubicarla tú", "We could not find that address — tap the map to place it yourself"), systemImage: "exclamationmark.circle.fill")
-                .font(.bodySm)
-                .foregroundStyle(.orange)
-        } else if ajusteManual, !buscandoUbicacion {
-            Label(direccion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                  ? L.t("Toca el mapa para escribir la dirección", "Tap the map to fill in the address")
-                  : L.t("Dirección del punto marcado ✓", "Address of the marked spot ✓"),
-                  systemImage: direccion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                  ? "hand.tap.fill" : "checkmark.circle.fill")
-                .font(.bodySm)
-                .foregroundStyle(direccion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                 ? Color.onSurfaceVariant : .green)
+                .font(.caption)
+                .foregroundStyle(Color.appError)
         } else if coordElegida != nil {
-            Label(L.t("Ubicación encontrada ✓", "Location found ✓"), systemImage: "checkmark.circle.fill")
-                .font(.bodySm)
-                .foregroundStyle(.green)
+            Label(L.t("Ubicación lista", "Location ready"), systemImage: "checkmark.circle.fill")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.appPrimary)
         } else {
             Label(L.t("Toca el mapa para ubicar el lugar", "Tap the map to place the place"), systemImage: "info.circle")
-                .font(.bodySm)
+                .font(.caption)
                 .foregroundStyle(.onSurfaceVariant)
         }
     }
@@ -345,34 +489,43 @@ struct AddLugarSheet: View {
                 colorPin: .appPrimary,
                 coordenada: coordElegida,
                 onTocar: { coord in
+                    ubicacion.interactuar()
+                    campoActivo = nil
                     AppHaptics.impact(.light)
                     confirmarSeleccionManual()
-                    withAnimation(.spring(response: 0.3)) {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.3)) {
                         coordElegida = coord
                     }
                     escribirDireccionDesdeMapa(coord)
                 },
-                recentrarTrigger: recentrarTrigger
+                recentrarTrigger: recentrarTrigger,
+                spanInicial: spanCercano,
+                spanRecentrado: spanCercano,
+                iconoPin: iconoElegido,
+                centroCamara: ubicacion.centro,
+                recentrarCamaraTrigger: ubicacion.revisionCamara,
+                onInteraccion: { ubicacion.interactuar() }
             )
 
-            HStack(spacing: 6) {
-                Image(systemName: "hand.tap.fill")
-                    .font(.system(size: 11, weight: .bold))
-                Text(L.t("Toca el mapa para mover el pin", "Tap the map to move the pin"))
-                    .font(.system(size: 11, weight: .semibold))
-            }
-            .foregroundStyle(.white)
+            Label(L.t("Toca el mapa para mover el pin", "Tap the map to move the pin"), systemImage: "hand.tap.fill")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(Color.onSurface)
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Capsule().fill(Color.black.opacity(0.55)))
-            .padding(.bottom, 10)
+            .padding(.vertical, 8)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .padding(12)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
-        // Con el mapa al frente del formulario pasa a ser la pieza principal
-        // de la pantalla: 210 pt obligaban a apretar los dedos para colocar un
-        // punto con precisión, que es justo lo contrario de lo que se hace aquí.
-        .frame(height: 300)
+        .frame(height: 280)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(alignment: .topTrailing) { botonExpandirMapa }
+        .overlay(alignment: .topTrailing) {
+            VStack(spacing: 8) {
+                botonExpandirMapa
+                BotonUbicacionLugar(ubicacion: ubicacion, locationService: locationService)
+            }
+            .padding(8)
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.outlineVariant.opacity(0.4), lineWidth: 1)
@@ -380,7 +533,11 @@ struct AddLugarSheet: View {
         .fullScreenCover(isPresented: $mapaExpandido) {
             MapaElegirExpandido(
                 coordenada: $coordElegida,
+                ubicacion: ubicacion,
+                locationService: locationService,
+                iconoPin: iconoElegido,
                 onTocar: { nueva in
+                    ubicacion.interactuar()
                     AppHaptics.impact(.light)
                     confirmarSeleccionManual()
                     escribirDireccionDesdeMapa(nueva)
@@ -394,36 +551,103 @@ struct AddLugarSheet: View {
     private var botonExpandirMapa: some View {
         Button {
             AppHaptics.impact(.light)
+            campoActivo = nil
             mapaExpandido = true
         } label: {
             Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 13, weight: .bold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(.onSurface)
-                .frame(width: 32, height: 32)
+                .frame(width: 44, height: 44)
                 .background(Circle().fill(.ultraThinMaterial))
                 .overlay(
                     Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
                 )
         }
         .buttonStyle(.plain)
-        .padding(8)
         .accessibilityLabel(L.t("Expandir mapa", "Expand map"))
     }
 
     private var selectorCategoria: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L.t("CATEGORÍA", "CATEGORY"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-            Picker(L.t("Categoría", "Category"), selection: $categoria) {
-                ForEach(CategoriaLugar.allCases) { c in
-                    Text(c.label).tag(c)
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L.t("Categoría", "Category"))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            LazyVGrid(columns: dynamicTypeSize.isAccessibilitySize
+                      ? [GridItem(.flexible())]
+                      : [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
+                ForEach(CategoriaLugar.allCases) { opcion in
+                    let seleccionada = categoria == opcion
+                    Button {
+                        campoActivo = nil
+                        categoria = opcion
+                        AppHaptics.selection()
+                    } label: {
+                        VStack(spacing: 8) {
+                            Image(systemName: opcion.icono)
+                                .font(.title3.weight(.semibold))
+                                .accessibilityHidden(true)
+                            Text(opcion.label)
+                                .font(.caption.weight(.semibold))
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 68)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 12)
+                        .foregroundStyle(seleccionada ? Color.onPrimaryContainer : Color.onSurface)
+                        .background(seleccionada ? Color.primaryContainer : Color.surfaceContainerLow,
+                                    in: RoundedRectangle(cornerRadius: 16))
+                        .overlay(alignment: .topTrailing) {
+                            if seleccionada {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.onPrimaryContainer)
+                                    .padding(7)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(opcion.label)
+                    .accessibilityAddTraits(seleccionada ? .isSelected : [])
                 }
             }
-            .pickerStyle(.menu)
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+        }
+    }
+
+    private var selectorIcono: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L.t("Icono personalizado", "Custom icon"))
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: dynamicTypeSize.isAccessibilitySize ? 80 : 52), spacing: 10)], spacing: 10) {
+                ForEach(IconoLugar.opciones) { opcion in
+                    let seleccionado = iconoElegido == opcion.id
+                    Button {
+                        campoActivo = nil
+                        iconoPersonalizado = opcion.id
+                        AppHaptics.selection()
+                    } label: {
+                        Image(systemName: opcion.id)
+                            .font(.title2.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 80 : 56)
+                            .foregroundStyle(seleccionado ? Color.onPrimaryFill : Color.onSurface)
+                            .background(seleccionado ? Color.primaryFill : Color.surfaceContainerLow,
+                                        in: RoundedRectangle(cornerRadius: 16))
+                            .overlay(alignment: .topTrailing) {
+                                if seleccionado {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 10, weight: .heavy))
+                                        .foregroundStyle(Color.onPrimaryFill)
+                                        .padding(6)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(opcion.nombre)
+                    .accessibilityAddTraits(seleccionado ? .isSelected : [])
+                }
+            }
         }
     }
 
@@ -441,11 +665,12 @@ struct AddLugarSheet: View {
                 // punto pertenece a la dirección actual y la hoja sigue activa.
                 guard revision == revisionUbicacion, puedeGuardar, let coord = coordElegida else { return }
                 let guardado = onSave(LugarGuardado(
-                    nombre: nombre.trimmingCharacters(in: .whitespaces),
+                    nombre: nombre.trimmingCharacters(in: .whitespacesAndNewlines),
                     direccion: direccion.isEmpty ? L.t("Sin dirección", "No address") : direccion,
                     categoria: categoria,
                     lat: coord.latitude,
-                    lon: coord.longitude
+                    lon: coord.longitude,
+                    iconoPersonalizado: categoria == .personalizado ? iconoPersonalizado : nil
                 ))
                 guard guardado else {
                     AppHaptics.warning()
@@ -457,32 +682,23 @@ struct AddLugarSheet: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: coordElegida == nil ? "location.slash.fill" : "mappin.and.ellipse")
-                    .font(.system(size: 16, weight: .bold))
+                Image(systemName: "bookmark.fill")
+                    .font(.body.weight(.semibold))
                 Text(coordElegida == nil
                      ? L.t("Ubica el lugar para guardar", "Pin the place to save")
                      : L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
                     .font(.headlineSm)
             }
-            .foregroundStyle(puedeGuardar ? Color.onPrimaryFill : Color.white)
+            .foregroundStyle(puedeGuardar ? Color.onPrimaryFill : Color.onSurfaceVariant)
             .frame(maxWidth: .infinity, minHeight: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: puedeGuardar
-                                ? [.primaryFill, .primaryFill.opacity(0.78)]
-                                : [Color.onSurfaceVariant.opacity(0.35), Color.onSurfaceVariant.opacity(0.25)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: puedeGuardar ? .appPrimary.opacity(0.35) : .clear,
-                            radius: 10, x: 0, y: 5)
+                    .fill(puedeGuardar ? Color.primaryFill : Color.surfaceContainerHigh)
             )
         }
         .buttonStyle(PressableCapsuleStyle())
         .disabled(!puedeGuardar)
-        .animation(.easeInOut(duration: 0.2), value: puedeGuardar)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: puedeGuardar)
         .seniable(puedeGuardar ? "guardado.guardar_lugar" : nil, conGesto: false)
     }
 
@@ -496,11 +712,10 @@ struct AddLugarSheet: View {
         // toque en el mapa se desharía a sí mismo ~0.7 s después.
         guard !rellenoDesdeMapa else {
             rellenoDesdeMapa = false
-            ajusteManual = true
             return
         }
+        ubicacion.interactuar()
         cancelarGeocodificacion()
-        ajusteManual = false
         direccionNoEncontrada = false
         coordElegida = nil
         direccionValidada = nil
@@ -529,7 +744,6 @@ struct AddLugarSheet: View {
 
     private func confirmarSeleccionManual() {
         cancelarGeocodificacion()
-        ajusteManual = true
         direccionNoEncontrada = false
         direccionValidada = direccion
         // Si el relleno acaba de dejar el campo con un texto IDENTICAL al que
@@ -585,7 +799,7 @@ struct AddLugarSheet: View {
 
         if let coord = resultados?.first?.location?.coordinate {
             direccionNoEncontrada = false
-            withAnimation(.spring(response: 0.35)) {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35)) {
                 coordElegida = coord
                 direccionValidada = direccionSolicitada
                 recentrarTrigger += 1
@@ -601,8 +815,12 @@ struct AddLugarSheet: View {
 // MARK: - Mapa expandido para elegir ubicación (desde AddLugarSheet)
 /// El mismo selector `MapaElegirLugar` a pantalla completa: comparte la
 /// coordenada con el formulario vía binding y sincroniza cada toque.
-struct MapaElegirExpandido: View {
+private struct MapaElegirExpandido: View {
     @Binding var coordenada: CLLocationCoordinate2D?
+    @ObservedObject var ubicacion: UbicacionMapaLugar
+    let locationService: LocationServiceProtocol
+    var iconoPin: String = "mappin.circle.fill"
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Se dispara en cada toque del mapa, después de actualizar la coordenada.
     /// Recibe la coordenada tocada para poder geocodificarla.
     var onTocar: (CLLocationCoordinate2D) -> Void
@@ -614,20 +832,38 @@ struct MapaElegirExpandido: View {
                 colorPin: .appPrimary,
                 coordenada: coordenada,
                 onTocar: { coord in
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
                         coordenada = coord
                     }
                     onTocar(coord)
-                }
+                },
+                spanInicial: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006),
+                spanRecentrado: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006),
+                iconoPin: iconoPin,
+                centroCamara: ubicacion.centro,
+                recentrarCamaraTrigger: ubicacion.revisionCamara,
+                onInteraccion: { ubicacion.interactuar() }
             )
             .ignoresSafeArea()
 
             VStack {
                 barraSuperior
                 Spacer()
+                HStack {
+                    Spacer()
+                    BotonUbicacionLugar(ubicacion: ubicacion, locationService: locationService)
+                }
+                .padding(.horizontal, 20)
+                if let aviso = ubicacion.aviso {
+                    Text(aviso)
+                        .font(.footnote)
+                        .padding(12)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        .padding(.horizontal, 20)
+                }
                 pie
             }
-            .animation(.easeInOut(duration: 0.2), value: coordenada == nil)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: coordenada == nil)
         }
     }
 
@@ -635,9 +871,9 @@ struct MapaElegirExpandido: View {
         HStack(spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.body.weight(.semibold))
                 Text(L.t("Elige la ubicación", "Pick the location"))
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
@@ -650,9 +886,9 @@ struct MapaElegirExpandido: View {
                 onCerrar()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(.onSurface)
-                    .frame(width: 38, height: 38)
+                    .frame(width: 44, height: 44)
                     .background(Circle().fill(.ultraThinMaterial))
                     .overlay(
                         Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
@@ -674,7 +910,7 @@ struct MapaElegirExpandido: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.body.weight(.semibold))
                     Text(L.t("Usar esta ubicación", "Use this location"))
                         .font(.headlineSm)
                 }
@@ -691,9 +927,9 @@ struct MapaElegirExpandido: View {
         } else {
             HStack(spacing: 6) {
                 Image(systemName: "hand.tap.fill")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.caption.weight(.semibold))
                 Text(L.t("Toca el mapa para ubicar el lugar", "Tap the map to pin the location"))
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.caption.weight(.semibold))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 14)

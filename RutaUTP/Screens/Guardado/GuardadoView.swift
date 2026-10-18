@@ -16,6 +16,7 @@ import MapKit
 import CoreLocation
 
 struct GuardadoView: View {
+    let locationService: LocationServiceProtocol
     @EnvironmentObject private var router: AppRouter
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
     @StateObject private var vm = GuardadoViewModel()
@@ -84,8 +85,8 @@ struct GuardadoView: View {
                      "The original data has been preserved. Check available storage and try again."))
         }
         .sheet(isPresented: $showAddLugar) {
-            AddLugarSheet { vm.añadirLugar($0) }
-            .presentationDetents([.medium, .large])
+            AddLugarSheet(locationService: locationService) { vm.añadirLugar($0) }
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedLugar) { lugar in
@@ -535,9 +536,17 @@ struct MapaElegirLugar: UIViewRepresentable {
     var onTocar: (CLLocationCoordinate2D) -> Void
     /// Cambia para re-centrar el mapa sobre `coordenada` (ej. al geocodificar).
     var recentrarTrigger: Int = 0
+    /// Cada consumidor puede acercar su selector sin alterar los otros mapas.
+    var spanInicial = MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
+    var spanRecentrado = MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
+    var iconoPin: String = "mappin.circle.fill"
+    var centroCamara: CLLocationCoordinate2D?
+    var recentrarCamaraTrigger: Int = 0
+    var onInteraccion: () -> Void = {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onTocar: onTocar, colorPin: UIColor(colorPin))
+        Coordinator(onTocar: onTocar, colorPin: UIColor(colorPin), iconoPin: iconoPin,
+                    ultimoRecentradoCamara: recentrarCamaraTrigger, onInteraccion: onInteraccion)
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -547,8 +556,8 @@ struct MapaElegirLugar: UIViewRepresentable {
         mapView.showsUserLocation = true
         mapView.setRegion(
             MKCoordinateRegion(
-                center: coordenada ?? .init(latitude: -8.1096, longitude: -79.0287),
-                span: MKCoordinateSpan(latitudeDelta: 0.015, longitudeDelta: 0.015)
+                center: coordenada ?? centroCamara ?? .init(latitude: -8.1096, longitude: -79.0287),
+                span: spanInicial
             ), animated: false)
 
         let tap = UITapGestureRecognizer(target: context.coordinator,
@@ -561,13 +570,18 @@ struct MapaElegirLugar: UIViewRepresentable {
     func updateUIView(_ mapView: MKMapView, context: Context) {
         let coordinator = context.coordinator
         coordinator.colorPin = UIColor(colorPin)
+        coordinator.iconoPin = iconoPin
         coordinator.onTocar = onTocar
+        coordinator.onInteraccion = onInteraccion
 
         // Pin
         if let coordenada {
             if let pin = coordinator.pin {
                 pin.coordinate = coordenada
-                (mapView.view(for: pin) as? MKMarkerAnnotationView)?.markerTintColor = coordinator.colorPin
+                if let vistaPin = mapView.view(for: pin) as? MKMarkerAnnotationView {
+                    vistaPin.markerTintColor = coordinator.colorPin
+                    vistaPin.glyphImage = UIImage(systemName: iconoPin)
+                }
             } else {
                 let pin = MKPointAnnotation()
                 pin.coordinate = coordenada
@@ -587,8 +601,16 @@ struct MapaElegirLugar: UIViewRepresentable {
                 mapView.setRegion(
                     MKCoordinateRegion(
                         center: coordenada,
-                        span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
+                        span: spanRecentrado
                     ), animated: true)
+            }
+        }
+        // La flecha mueve únicamente la cámara; nunca sustituye el pin.
+        if coordinator.ultimoRecentradoCamara != recentrarCamaraTrigger {
+            coordinator.ultimoRecentradoCamara = recentrarCamaraTrigger
+            if let centroCamara {
+                mapView.setRegion(MKCoordinateRegion(center: centroCamara, span: spanRecentrado),
+                                  animated: !UIAccessibility.isReduceMotionEnabled)
             }
         }
         coordinator.configurarAccesibilidad(mapView, seleccion: coordenada)
@@ -599,10 +621,27 @@ struct MapaElegirLugar: UIViewRepresentable {
         var ultimoRecentrado = 0
         var onTocar: (CLLocationCoordinate2D) -> Void
         var colorPin: UIColor
+        var iconoPin: String
+        var ultimoRecentradoCamara: Int
+        var onInteraccion: () -> Void
 
-        init(onTocar: @escaping (CLLocationCoordinate2D) -> Void, colorPin: UIColor) {
+        init(onTocar: @escaping (CLLocationCoordinate2D) -> Void, colorPin: UIColor, iconoPin: String,
+             ultimoRecentradoCamara: Int, onInteraccion: @escaping () -> Void) {
             self.onTocar = onTocar
             self.colorPin = colorPin
+            self.iconoPin = iconoPin
+            self.ultimoRecentradoCamara = ultimoRecentradoCamara
+            self.onInteraccion = onInteraccion
+        }
+
+        func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+            // Reconoce arrastre/zoom con los gestos públicos de UIKit sin
+            // añadir reconocedores que compitan con MapKit o el scroll.
+            func hayGestoActivo(_ vista: UIView) -> Bool {
+                (vista.gestureRecognizers ?? []).contains { $0.state == .began || $0.state == .changed }
+                    || vista.subviews.contains(where: hayGestoActivo)
+            }
+            if hayGestoActivo(mapView) { onInteraccion() }
         }
 
         @objc func mapaTocado(_ gesture: UITapGestureRecognizer) {
@@ -619,7 +658,7 @@ struct MapaElegirLugar: UIViewRepresentable {
                         ?? MKMarkerAnnotationView(annotation: nil, reuseIdentifier: id)
             view.annotation = annotation
             view.markerTintColor = colorPin
-            view.glyphImage = UIImage(systemName: "mappin.circle.fill")
+            view.glyphImage = UIImage(systemName: iconoPin)
             view.glyphTintColor = .white
             view.canShowCallout = false
             return view
@@ -829,5 +868,5 @@ struct LugarDetailSheet: View {
 
 
 #Preview {
-    GuardadoView().environmentObject(AppRouter())
+    GuardadoView(locationService: LocationService()).environmentObject(AppRouter())
 }

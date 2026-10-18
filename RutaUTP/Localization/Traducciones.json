@@ -475,6 +475,13 @@
     "pt-BR": "Ative o acesso à câmera ou escolha uma foto da sua biblioteca.",
     "zh-Hans": "启用相机访问或从图库中选择照片。"
   },
+  "Activa la ubicación de la app en Ajustes para centrar el mapa.": {
+    "de": "Aktiviere den Standortzugriff der App in den Einstellungen, um die Karte zu zentrieren.",
+    "en": "Enable the app's location access in Settings to center the map.",
+    "fr": "Activez l’accès à la localisation de l’application dans Réglages pour centrer la carte.",
+    "pt-BR": "Ative o acesso à localização do app em Ajustes para centralizar o mapa.",
+    "zh-Hans": "请在设置中允许应用访问位置，以将地图移至你所在的位置。"
+  },
   "Activa la ubicación para navegar": {
     "de": "Aktivieren Sie den Standort zum Navigieren",
     "en": "Enable location to navigate",
@@ -804,6 +811,13 @@
     "pt-BR": "Arraste o mapa para marcar o local",
     "zh-Hans": "拖动地图标记位置"
   },
+  "Auto": {
+    "de": "Auto",
+    "en": "Car",
+    "fr": "Voiture",
+    "pt-BR": "Carro",
+    "zh-Hans": "汽车"
+  },
   "Autor del post ficticio. La foto es de archivo y no documenta un incidente actual. Se conserva el encuadre; las nuevas fotos usan una copia de menor resolución.": {
     "de": "Autor eines fiktiven Beitrags. Dieses Archivfoto dokumentiert keinen aktuellen Vorfall. Der Rahmen bleibt erhalten; Neue Fotos verwenden eine Kopie mit niedrigerer Auflösung.",
     "en": "Fictional post author. This archive photo does not document a current incident. Framing is preserved; new photos use a lower-resolution copy.",
@@ -873,6 +887,13 @@
     "fr": "Notifications quotidiennes à des heures aléatoires",
     "pt-BR": "Avisos diários em horários aleatórios",
     "zh-Hans": "每日随机时间通知"
+  },
+  "Avión": {
+    "de": "Flugzeug",
+    "en": "Airplane",
+    "fr": "Avion",
+    "pt-BR": "Avião",
+    "zh-Hans": "飞机"
   },
   "Ayuda de VoiceOver": {
     "de": "VoiceOver Hilfe",
@@ -1070,6 +1091,27 @@
     "pt-BR": "Desça e caminhe até o seu destino",
     "zh-Hans": "下车步行前往目的地"
   },
+  "Bandera": {
+    "de": "Flagge",
+    "en": "Flag",
+    "fr": "Drapeau",
+    "pt-BR": "Bandeira",
+    "zh-Hans": "旗帜"
+  },
+  "Biblioteca": {
+    "de": "Bibliothek",
+    "en": "Library",
+    "fr": "Bibliothèque",
+    "pt-BR": "Biblioteca",
+    "zh-Hans": "图书馆"
+  },
+  "Bicicleta": {
+    "de": "Fahrrad",
+    "en": "Bicycle",
+    "fr": "Vélo",
+    "pt-BR": "Bicicleta",
+    "zh-Hans": "自行车"
+  },
   "Billetera": {
     "de": "Geldbörse",
     "en": "Wallet",
@@ -1258,6 +1300,13 @@
     "fr": "Trouver le signal GPS…",
     "pt-BR": "Encontrando sinal de GPS…",
     "zh-Hans": "正在寻找 GPS 信号..."
+  },
+  "Buscando tu ubicación…": {
+    "de": "Standort wird ermittelt…",
+    "en": "Finding your location…",
+    "fr": "Recherche de votre position…",
+    "pt-BR": "Buscando sua localização…",
+    "zh-Hans": "正在获取你的位置…"
   },
   "Buscando ubicación": {
     "de": "Standort wird gesucht",
@@ -1756,6 +1805,13 @@
     "pt-BR": "Telefone",
     "zh-Hans": "电话"
   },
+  "Centra el mapa sin cambiar el lugar marcado": {
+    "de": "Zentriert die Karte, ohne den markierten Ort zu ändern",
+    "en": "Centers the map without changing the marked place",
+    "fr": "Centre la carte sans modifier le lieu marqué",
+    "pt-BR": "Centraliza o mapa sem alterar o lugar marcado",
+    "zh-Hans": "将地图移至你的位置，不改变已标记的地点"
+  },
   "Centrar en mi ubicación": {
     "de": "Zentrieren Sie meinen Standort",
     "en": "Center on my location",
@@ -1769,6 +1825,13 @@
     "fr": "Centre-ville",
     "pt-BR": "Centro da cidade",
     "zh-Hans": "市中心"
+  },
+  "Centro comercial": {
+    "de": "Einkaufszentrum",
+    "en": "Shopping mall",
+    "fr": "Centre commercial",
+    "pt-BR": "Shopping",
+    "zh-Hans": "购物中心"
   },
   "Cerca de ": {
     "de": "In der Nähe ",
@@ -1909,6 +1972,13 @@
     "fr": "Sauté de nouilles chowfan au poulet ou au porc en portion familiale avec 25 % de rabais pour qu'il arrive chaud à la maison.",
     "pt-BR": "Macarrão chowfan de frango ou porco refogado na porção família com 25% de desconto para chegar quentinho em casa.",
     "zh-Hans": "家庭份的鸡肉或猪肉炒粉面可享受 25% 的折扣，所以回家时还是热腾腾的。"
+  },
+  "Cine": {
+    "de": "Kino",
+    "en": "Cinema",
+    "fr": "Cinéma",
+    "pt-BR": "Cinema",
+    "zh-Hans": "电影"
   },
   "Ciudad": {
     "de": "Stadt",
@@ -2077,6 +2147,13 @@
     "fr": "Partage de cette référence de Óvalo Papal pour les nouveaux arrivants sur Trujillo. Vérifiez la direction de votre file avant d'embarquer.",
     "pt-BR": "Compartilhando esta referência de Óvalo Papal para iniciantes em Trujillo. Verifique a direção da sua linha antes de embarcar.",
     "zh-Hans": "为 Trujillo 的新手分享 Óvalo Papal 的参考。上车前检查线路方向。"
+  },
+  "Compras": {
+    "de": "Einkaufen",
+    "en": "Shopping",
+    "fr": "Achats",
+    "pt-BR": "Compras",
+    "zh-Hans": "购物"
   },
   "Comprobando datos locales…": {
     "de": "Lokale Daten prüfen…",
@@ -2309,6 +2386,13 @@
     "pt-BR": "Sundae artesanal com leite e frutas da estação. Pegue dois copos de duas colheres e pague por um.",
     "zh-Hans": "手工圣代，配以牛奶和时令水果。拿两个两勺的杯子，付一杯钱。"
   },
+  "Corazón": {
+    "de": "Herz",
+    "en": "Heart",
+    "fr": "Cœur",
+    "pt-BR": "Coração",
+    "zh-Hans": "爱心"
+  },
   "Corredor iluminado y transitado hasta las 11:00 PM.": {
     "de": "Beleuchteter, belebter Korridor bis 23:00 Uhr.",
     "en": "Lit, busy corridor until 11:00 PM.",
@@ -2343,6 +2427,13 @@
     "fr": "E-mail personnel : ",
     "pt-BR": "E-mail pessoal: ",
     "zh-Hans": "个人邮箱： "
+  },
+  "Correr": {
+    "de": "Laufen",
+    "en": "Running",
+    "fr": "Course à pied",
+    "pt-BR": "Corrida",
+    "zh-Hans": "跑步"
   },
   "Crear recordatorio": {
     "de": "Erinnerung erstellen",
@@ -2441,6 +2532,13 @@
     "fr": "CODE UTP",
     "pt-BR": "CÓDIGO UTP",
     "zh-Hans": "UTP 代码"
+  },
+  "Cámara": {
+    "de": "Kamera",
+    "en": "Camera",
+    "fr": "Appareil photo",
+    "pt-BR": "Câmera",
+    "zh-Hans": "相机"
   },
   "Cámara no disponible": {
     "de": "Kamera nicht verfügbar",
@@ -2806,6 +2904,20 @@
     "pt-BR": "Dez por cento de desconto em todo o primeiro lote: pão francês, pãezinhos e tortilhas, a partir das 6h.",
     "zh-Hans": "从早上 6 点开始，第一批法国面包、小圆面包和玉米饼可享受 10% 的折扣。"
   },
+  "Dinero": {
+    "de": "Geld",
+    "en": "Money",
+    "fr": "Argent",
+    "pt-BR": "Dinheiro",
+    "zh-Hans": "金钱"
+  },
+  "Dirección": {
+    "de": "Adresse",
+    "en": "Address",
+    "fr": "Adresse",
+    "pt-BR": "Endereço",
+    "zh-Hans": "地址"
+  },
   "Dirección del lugar": {
     "de": "Ortsadresse",
     "en": "Place address",
@@ -3051,6 +3163,13 @@
     "pt-BR": "PONTOS FINAIS",
     "zh-Hans": "终点"
   },
+  "Edificio": {
+    "de": "Gebäude",
+    "en": "Building",
+    "fr": "Bâtiment",
+    "pt-BR": "Edifício",
+    "zh-Hans": "建筑"
+  },
   "Editar contacto de emergencia": {
     "de": "Notfallkontakt bearbeiten",
     "en": "Edit emergency contact",
@@ -3099,6 +3218,13 @@
     "fr": "par ex. La ligne B devrait circuler plus souvent…",
     "pt-BR": "por exemplo A Linha B deveria rodar com mais frequência…",
     "zh-Hans": "例如B线应该运行得更频繁……"
+  },
+  "Ej. Mi casa o mi trabajo": {
+    "de": "Z. B. mein Zuhause oder Arbeitsplatz",
+    "en": "e.g. My home or workplace",
+    "fr": "Ex. Ma maison ou mon travail",
+    "pt-BR": "Ex.: minha casa ou meu trabalho",
+    "zh-Hans": "例如：我家或工作地点"
   },
   "Ej. Mi trabajo": {
     "de": "z.B. Mein Job",
@@ -3982,6 +4108,20 @@
     "pt-BR": "Estou em um ônibus",
     "zh-Hans": "我在公交车上"
   },
+  "Estrella": {
+    "de": "Stern",
+    "en": "Star",
+    "fr": "Étoile",
+    "pt-BR": "Estrela",
+    "zh-Hans": "星星"
+  },
+  "Estudios": {
+    "de": "Bildung",
+    "en": "Study",
+    "fr": "Études",
+    "pt-BR": "Estudos",
+    "zh-Hans": "学习"
+  },
   "Estás ayudando con ubicaciones. Consulta el estado de tu viaje en la tarjeta inferior del mapa.": {
     "de": "Sie teilen Standorte. Überprüfen Sie Ihren Reisestatus auf der Karte unten auf der Karte.",
     "en": "You are sharing locations. Check your trip status in the card at the bottom of the map.",
@@ -4115,6 +4255,13 @@
     "pt-BR": "Marque o ponto afetado para continuar.",
     "zh-Hans": "标记受影响的点以继续。"
   },
+  "Farmacia": {
+    "de": "Apotheke",
+    "en": "Pharmacy",
+    "fr": "Pharmacie",
+    "pt-BR": "Farmácia",
+    "zh-Hans": "药店"
+  },
   "Fin del recorrido": {
     "de": "Ende der Route",
     "en": "End of the route",
@@ -4220,6 +4367,13 @@
     "pt-BR": "Fora da rota · {0} m",
     "zh-Hans": "偏离公交线路·{0}米"
   },
+  "Fútbol": {
+    "de": "Fußball",
+    "en": "Soccer",
+    "fr": "Football",
+    "pt-BR": "Futebol",
+    "zh-Hans": "足球"
+  },
   "GPS ACTIVO": {
     "de": "GPS EIN",
     "en": "GPS ON",
@@ -4240,6 +4394,13 @@
     "fr": "Prêt pour le GPS · choisissez une destination",
     "pt-BR": "GPS pronto · escolha um destino",
     "zh-Hans": "GPS 就绪 · 选择目的地"
+  },
+  "Gimnasio": {
+    "de": "Fitnessstudio",
+    "en": "Gym",
+    "fr": "Salle de sport",
+    "pt-BR": "Academia",
+    "zh-Hans": "健身房"
   },
   "Gracias por aportar a la comunidad UTP. En esta versión de prueba la publicación no se comparte con otros usuarios.": {
     "de": "Vielen Dank für Ihren Beitrag zur UTP-Community. In dieser Testversion wird der Beitrag nicht mit anderen Benutzern geteilt.",
@@ -4591,12 +4752,33 @@
     "pt-BR": "Hospital Belén – Urgência 24h",
     "zh-Hans": "贝伦医院 – 24 小时急诊室"
   },
+  "Hotel": {
+    "de": "Hotel",
+    "en": "Hotel",
+    "fr": "Hôtel",
+    "pt-BR": "Hotel",
+    "zh-Hans": "酒店"
+  },
   "Huanchaco": {
     "de": "Huanchaco",
     "en": "Huanchaco",
     "fr": "Huanchaco",
     "pt-BR": "Huanchaco",
     "zh-Hans": "Huanchaco"
+  },
+  "Icono": {
+    "de": "Symbol",
+    "en": "Icon",
+    "fr": "Icône",
+    "pt-BR": "Ícone",
+    "zh-Hans": "图标"
+  },
+  "Icono personalizado": {
+    "de": "Eigenes Symbol",
+    "en": "Custom icon",
+    "fr": "Icône personnalisée",
+    "pt-BR": "Ícone personalizado",
+    "zh-Hans": "自定义图标"
   },
   "Iconos de negocios por Flaticon": {
     "de": "Business-Icons von Flaticon",
@@ -4709,6 +4891,13 @@
     "fr": "Jeu-Dim à partir de 12h00. Livraison disponible.",
     "pt-BR": "Qui-Dom a partir das 12h. Entrega disponível.",
     "zh-Hans": "周四至周日 12:00。可送货。"
+  },
+  "Juegos": {
+    "de": "Spiele",
+    "en": "Games",
+    "fr": "Jeux",
+    "pt-BR": "Jogos",
+    "zh-Hans": "游戏"
   },
   "Jugo grande + tostada a S/ 5": {
     "de": "Großer Saft + Toast für S/ 5",
@@ -5837,6 +6026,13 @@
     "pt-BR": "Marcar localização no mapa",
     "zh-Hans": "在地图上标记位置"
   },
+  "Mascota": {
+    "de": "Haustier",
+    "en": "Pet",
+    "fr": "Animal de compagnie",
+    "pt-BR": "Animal de estimação",
+    "zh-Hans": "宠物"
+  },
   "Material y maquinaria pueden reducir el espacio de circulación. Describe el tramo ocupado y si el micro necesita pasar por otra calle.": {
     "de": "Material und Maschinen können den Straßenraum verringern. Beschreiben Sie den belegten Abschnitt und ob der Bus eine andere Straße benutzen muss.",
     "en": "Material and machinery can reduce road space. Describe the occupied section and whether the bus needs to use another street.",
@@ -5934,6 +6130,13 @@
     "fr": "Menu universitaire à trois plats : entrée, plat criollo et rafraîchissement maison. Jus de fruit de la passion offert jusqu'à épuisement du pot.",
     "pt-BR": "Menu universitário de três pratos: entrada, prato principal criollo e refresco da casa. Suco de maracujá grátis enquanto durar o pote.",
     "zh-Hans": "三道菜大学套餐：开胃菜、克里奥罗主菜和自制茶点。送完即止，免费赠送百香果汁。"
+  },
+  "Mercado": {
+    "de": "Markt",
+    "en": "Market",
+    "fr": "Marché",
+    "pt-BR": "Mercado",
+    "zh-Hans": "市场"
   },
   "Mi QR para recibir": {
     "de": "Mein QR-Code zum Empfangen",
@@ -6088,6 +6291,13 @@
     "fr": "Portefeuille ",
     "pt-BR": "Carteira ",
     "zh-Hans": "钱包 "
+  },
+  "Montaña": {
+    "de": "Berg",
+    "en": "Mountain",
+    "fr": "Montagne",
+    "pt-BR": "Montanha",
+    "zh-Hans": "山"
   },
   "Mostrar ": {
     "de": "Zeigen ",
@@ -6334,6 +6544,13 @@
     "pt-BR": "Máximo de {0} caracteres",
     "zh-Hans": "最多 {0} 个字符"
   },
+  "Música": {
+    "de": "Musik",
+    "en": "Music",
+    "fr": "Musique",
+    "pt-BR": "Música",
+    "zh-Hans": "音乐"
+  },
   "N": {
     "de": "N",
     "en": "N",
@@ -6382,6 +6599,13 @@
     "fr": "NOUVEAU · VOS ARRÊTS",
     "pt-BR": "NOVO · SUAS PARADAS",
     "zh-Hans": "新·您的停靠站"
+  },
+  "Naturaleza": {
+    "de": "Natur",
+    "en": "Nature",
+    "fr": "Nature",
+    "pt-BR": "Natureza",
+    "zh-Hans": "自然"
   },
   "Navegación principal": {
     "de": "Hauptnavigation",
@@ -6669,6 +6893,13 @@
     "fr": "Nous n'avons pas pu localiser cette adresse.",
     "pt-BR": "Não foi possível localizar este endereço.",
     "zh-Hans": "我们无法找到该地址。"
+  },
+  "No pudimos obtener tu ubicación. Vuelve a tocar la flecha.": {
+    "de": "Dein Standort konnte nicht ermittelt werden. Tippe erneut auf den Pfeil.",
+    "en": "We couldn't get your location. Tap the arrow again.",
+    "fr": "Votre position est indisponible. Touchez à nouveau la flèche.",
+    "pt-BR": "Não foi possível obter sua localização. Toque na seta novamente.",
+    "zh-Hans": "无法获取你的位置，请再次轻点箭头。"
   },
   "No pudimos obtener una ubicación reciente y precisa. Vuelve a intentarlo o marca el lugar manualmente.": {
     "de": "Es konnte kein aktueller, genauer Standort ermittelt werden. Versuchen Sie es erneut oder markieren Sie die Stelle manuell.",
@@ -6970,6 +7201,13 @@
     "fr": "Pas utile",
     "pt-BR": "Não é útil",
     "zh-Hans": "没有帮助"
+  },
+  "Noche": {
+    "de": "Nacht",
+    "en": "Night",
+    "fr": "Nuit",
+    "pt-BR": "Noite",
+    "zh-Hans": "夜晚"
   },
   "Nombre": {
     "de": "Name",
@@ -7412,6 +7650,13 @@
     "pt-BR": "Relacionamento do contato",
     "zh-Hans": "联系人关系"
   },
+  "Parque": {
+    "de": "Park",
+    "en": "Park",
+    "fr": "Parc",
+    "pt-BR": "Parque",
+    "zh-Hans": "公园"
+  },
   "Pasaje ": {
     "de": "Fahrpreis ",
     "en": "Fare ",
@@ -7524,6 +7769,13 @@
     "pt-BR": "Pedidos no restaurante ou via WhatsApp. Bebidas não incluídas.",
     "zh-Hans": "在餐厅或通过 WhatsApp 点餐。不包括饮料。"
   },
+  "Peluquería": {
+    "de": "Friseursalon",
+    "en": "Hair salon",
+    "fr": "Salon de coiffure",
+    "pt-BR": "Salão de cabeleireiro",
+    "zh-Hans": "理发店"
+  },
   "Pendientes de permiso": {
     "de": "Berechtigung ausstehend",
     "en": "Awaiting permission",
@@ -7600,6 +7852,20 @@
     "fr": "Des ouvriers évacuent l'eau d'une avenue desservie par des bus, des véhicules et des piétons.",
     "pt-BR": "Trabalhadores retirando água de avenida com acesso de ônibus, veículos e pedestres.",
     "zh-Hans": "工人们正在从有公交车、车辆和行人通道的大道上清除积水。"
+  },
+  "Personalizado": {
+    "de": "Benutzerdefiniert",
+    "en": "Custom",
+    "fr": "Personnalisé",
+    "pt-BR": "Personalizado",
+    "zh-Hans": "自定义"
+  },
+  "Personas": {
+    "de": "Personen",
+    "en": "People",
+    "fr": "Personnes",
+    "pt-BR": "Pessoas",
+    "zh-Hans": "人物"
   },
   "Pizza": {
     "de": "Pizza",
@@ -8350,6 +8616,13 @@
     "pt-BR": "Referências locais · sem pagamentos",
     "zh-Hans": "仅本地卡片信息 · 不支持付款"
   },
+  "Regalo": {
+    "de": "Geschenk",
+    "en": "Gift",
+    "fr": "Cadeau",
+    "pt-BR": "Presente",
+    "zh-Hans": "礼物"
+  },
   "Registrando este dispositivo…": {
     "de": "Dieses Gerät wird registriert…",
     "en": "Registering this device…",
@@ -8903,6 +9176,13 @@
     "pt-BR": "Pular introdução",
     "zh-Hans": "跳过介绍"
   },
+  "Salud": {
+    "de": "Gesundheit",
+    "en": "Health",
+    "fr": "Santé",
+    "pt-BR": "Saúde",
+    "zh-Hans": "医疗"
+  },
   "Se abrirá la aplicación de teléfono para llamar a la central de emergencias.": {
     "de": "Die Telefon-App wird geöffnet, um den Notdienst anzurufen.",
     "en": "The Phone app will open to call emergency services.",
@@ -9386,6 +9666,13 @@
     "pt-BR": "Sobre a localização",
     "zh-Hans": "关于位置"
   },
+  "Sol": {
+    "de": "Sonne",
+    "en": "Sun",
+    "fr": "Soleil",
+    "pt-BR": "Sol",
+    "zh-Hans": "太阳"
+  },
   "Solo se eliminará la referencia local; tu tarjeta bancaria no se modifica.": {
     "de": "Es wird nur der lokale Verweis entfernt; Ihre Bankkarte ändert sich nicht.",
     "en": "Only the local reference will be removed; your bank card will not change.",
@@ -9518,6 +9805,13 @@
     "fr": "VOTRE VOYAGE",
     "pt-BR": "SUA VIAGEM",
     "zh-Hans": "您的旅行"
+  },
+  "Taller": {
+    "de": "Werkstatt",
+    "en": "Workshop",
+    "fr": "Atelier",
+    "pt-BR": "Oficina",
+    "zh-Hans": "维修店"
   },
   "También puedes pedirle a Siri que active o desactive VoiceOver.": {
     "de": "Sie können Siri auch bitten, VoiceOver ein- oder auszuschalten.",
@@ -9974,6 +10268,13 @@
     "pt-BR": "Trabalhadores e um veículo municipal reparando um trecho da calçada.",
     "zh-Hans": "工人和一辆市政车辆正在修复一段人行道。"
   },
+  "Trabajo": {
+    "de": "Arbeit",
+    "en": "Work",
+    "fr": "Travail",
+    "pt-BR": "Trabalho",
+    "zh-Hans": "工作"
+  },
   "Transporte": {
     "de": "Verkehr",
     "en": "Transport",
@@ -10015,6 +10316,13 @@
     "fr": "Tracé estimé, sans données Apple Maps",
     "pt-BR": "Trajeto estimado, sem dados do Apple Maps",
     "zh-Hans": "估算路线，无 Apple 地图数据"
+  },
+  "Tren": {
+    "de": "Zug",
+    "en": "Train",
+    "fr": "Train",
+    "pt-BR": "Trem",
+    "zh-Hans": "火车"
   },
   "Tres tiempos con segundo a elección y refresco de carambola. El menú más apretado de La Esperanza, pensado para la semana de exámenes.": {
     "de": "Drei Gänge mit einem Hauptgericht Ihrer Wahl und einer Sternfrucht-Erfrischung. Das engste Menü in La Esperanza, gemacht für die Prüfungswoche.",
@@ -10078,6 +10386,13 @@
     "fr": "Votre ville, plus proche.",
     "pt-BR": "Sua cidade, mais perto.",
     "zh-Hans": "让你的城市更近。"
+  },
+  "Tu lugar": {
+    "de": "Dein Ort",
+    "en": "Your place",
+    "fr": "Votre lieu",
+    "pt-BR": "Seu lugar",
+    "zh-Hans": "你的地点"
   },
   "Tu micro, mejor identificado": {
     "de": "Helfen Sie dabei, Ihren Bus zu identifizieren",
@@ -10226,6 +10541,13 @@
     "pt-BR": "Fixe o local para salvar",
     "zh-Hans": "固定要保存的位置"
   },
+  "Ubicación": {
+    "de": "Standort",
+    "en": "Location",
+    "fr": "Emplacement",
+    "pt-BR": "Localização",
+    "zh-Hans": "位置"
+  },
   "Ubicación ajustada en el mapa": {
     "de": "Standort auf der Karte angepasst",
     "en": "Location adjusted on the map",
@@ -10246,6 +10568,13 @@
     "fr": "Emplacement trouvé ✓",
     "pt-BR": "Localização encontrada ✓",
     "zh-Hans": "已找到位置 ✓"
+  },
+  "Ubicación lista": {
+    "de": "Standort ausgewählt",
+    "en": "Location ready",
+    "fr": "Emplacement défini",
+    "pt-BR": "Localização definida",
+    "zh-Hans": "位置已选定"
   },
   "Una barrera temporal puede bloquear el lugar habitual de subida. Antes de abordar en España, revisa el punto y reporta el cambio si afecta tu ruta.": {
     "de": "Eine temporäre Barriere kann den üblichen Einstiegspunkt blockieren. Überprüfen Sie vor dem Einsteigen in España den Standort und melden Sie eine Änderung, die sich auf Ihre Route auswirkt.",
@@ -10351,6 +10680,13 @@
     "fr": "Utilisez ce point",
     "pt-BR": "Utilize este ponto",
     "zh-Hans": "利用这个点"
+  },
+  "Usar icono de la categoría": {
+    "de": "Kategoriesymbol verwenden",
+    "en": "Use category icon",
+    "fr": "Utiliser l’icône de la catégorie",
+    "pt-BR": "Usar ícone da categoria",
+    "zh-Hans": "使用分类图标"
   },
   "Usar punto": {
     "de": "Punkt verwenden",

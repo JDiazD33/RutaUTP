@@ -86,7 +86,7 @@ struct RootView: View {
             case .bienvenida:    BienvenidaView()
             case .mapaPrincipal: MapaView(locationService: locationService).id(busesUTPActivos)
             case .rutas:         RutasView(locationService: locationService).id(busesUTPActivos)
-            case .guardado:      GuardadoView().id(busesUTPActivos)
+            case .guardado:      GuardadoView(locationService: locationService).id(busesUTPActivos)
             case .seguridad:     SeguridadView(locationService: locationService).id(busesUTPActivos)
             case .perfil:        PerfilView()
             case .trackingDemo:  RouteTrackingDemoView(model: trackingStore.model)
