@@ -195,7 +195,9 @@ struct AyudaCercanaSheet: View {
     let locationService: LocationServiceProtocol
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var router: AppRouter
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
     @State private var resultados: [MKMapItem] = []
+    @State private var indiceSeleccionado: Int?
     @State private var buscando = true
     @State private var error: String?
     @State private var revision = 0
@@ -216,64 +218,25 @@ struct AyudaCercanaSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+            GeometryReader { espacio in
+                VStack(alignment: .leading, spacing: 12) {
                     Text(referencia)
                         .font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
-                    Map(position: $camara) {
-                        if usaUbicacion { UserAnnotation() }
-                        ForEach(Array(resultados.enumerated()), id: \.offset) { _, item in
-                            Marker(item.name ?? categoria.titulo, coordinate: item.placemark.coordinate)
-                                .tint(Color.appPrimary)
-                        }
-                    }
-                    .frame(height: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                    if buscando {
-                        ProgressView(L.t("Buscando lugares…", "Finding places…"))
-                            .frame(maxWidth: .infinity).padding(.vertical, 20)
-                    } else if let error {
-                        Text(error).font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
-                        Button(L.t("Reintentar", "Retry")) { revision += 1 }
-                            .buttonStyle(.bordered)
-                    } else if resultados.isEmpty {
-                        Text(L.t("No encontramos lugares de esta categoría cerca de la referencia.",
-                                 "No places in this category were found near the reference location."))
-                            .font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
-                        Button(L.t("Reintentar", "Retry")) { revision += 1 }
-                            .buttonStyle(.bordered)
-                    } else {
-                        ForEach(Array(resultados.enumerated()), id: \.offset) { _, item in
-                            Button { abrir(item) } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: categoria.icono)
-                                        .foregroundStyle(Color.appPrimary)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(item.name ?? categoria.titulo).font(.bodyMdMedium)
-                                        if let direccion = item.placemark.title {
-                                            Text(direccion).font(.bodySm)
-                                                .foregroundStyle(Color.onSurfaceVariant)
-                                        }
-                                        Text(distancia(item)).font(.caption)
-                                            .foregroundStyle(Color.onSurfaceVariant)
-                                    }
-                                    Spacer(minLength: 0)
-                                    Image(systemName: "arrow.up.right").foregroundStyle(Color.appPrimary)
-                                }
-                                .multilineTextAlignment(.leading)
-                                .foregroundStyle(Color.onSurface)
-                                .padding(14)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 16))
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityHint(L.t("Ver ubicación en el mapa", "View location on map"))
-                        }
-                    }
+                        .padding(.horizontal, 20)
+                    mapa
+                        .frame(height: min(230, max(120, espacio.size.height * 0.36)))
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .padding(.horizontal, 20)
+                    listado
                 }
-                .padding(20)
+                .padding(.top, 12)
             }
             .background(Color.appBackground)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if let lugarSeleccionado {
+                    destinoSeleccionado(lugarSeleccionado)
+                }
+            }
             .navigationTitle(categoria.titulo)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -285,13 +248,159 @@ struct AyudaCercanaSheet: View {
         .tint(Color.appPrimary)
         .seguirTemaForzado()
         .task(id: revision) { await cargar() }
+        .onChange(of: indiceSeleccionado) { _, indice in
+            if let indice, resultados.indices.contains(indice) {
+                centrar(resultados[indice])
+            }
+        }
         .onDisappear { busqueda?.cancel() }
+    }
+
+    private var lugarSeleccionado: MKMapItem? {
+        guard let indiceSeleccionado, resultados.indices.contains(indiceSeleccionado) else { return nil }
+        return resultados[indiceSeleccionado]
+    }
+
+    private var mapa: some View {
+        Map(position: $camara, selection: $indiceSeleccionado) {
+            if usaUbicacion { UserAnnotation() }
+            ForEach(Array(resultados.enumerated()), id: \.offset) { indice, item in
+                Marker(item.name ?? categoria.titulo, systemImage: categoria.icono,
+                       coordinate: item.placemark.coordinate)
+                    .tint(Color.appPrimary)
+                    .tag(indice)
+            }
+        }
+    }
+
+    private var listado: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                if buscando {
+                    ProgressView(L.t("Buscando lugares…", "Finding places…"))
+                        .frame(maxWidth: .infinity).padding(.vertical, 20)
+                } else if let error {
+                    Text(error).font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+                    Button(L.t("Reintentar", "Retry")) { revision += 1 }
+                        .buttonStyle(.bordered)
+                } else if resultados.isEmpty {
+                    Text(L.t("No encontramos lugares de esta categoría cerca de la referencia.",
+                             "No places in this category were found near the reference location."))
+                        .font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+                    Button(L.t("Reintentar", "Retry")) { revision += 1 }
+                        .buttonStyle(.bordered)
+                } else {
+                    Text(L.t("Toca un lugar para verlo en el mapa", "Tap a place to view it on the map"))
+                        .font(.bodyXs).foregroundStyle(Color.onSurfaceVariant)
+                        .padding(.bottom, 2)
+                    ForEach(Array(resultados.enumerated()), id: \.offset) { indice, item in
+                        Button {
+                            AppHaptics.selection()
+                            if indiceSeleccionado == indice { centrar(item) }
+                            else { indiceSeleccionado = indice }
+                        } label: {
+                            ficha(item, seleccionada: indiceSeleccionado == indice)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(L.t("Ver ubicación en el mapa", "View location on map"))
+                        .accessibilityAddTraits(indiceSeleccionado == indice ? .isSelected : [])
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+        }
+    }
+
+    private func ficha(_ item: MKMapItem, seleccionada: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: categoria.icono)
+                    .font(.bodySmMedium)
+                    .frame(width: 32, height: 32)
+                    .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(Color.onPrimaryContainer)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name ?? categoria.titulo)
+                        .font(.bodyMdMedium).foregroundStyle(Color.onSurface)
+                    Text(distancia(item)).font(.bodyXs).foregroundStyle(Color.onSurfaceVariant)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: seleccionada ? "checkmark.circle.fill" : "map")
+                    .foregroundStyle(Color.appPrimary)
+                    .accessibilityHidden(true)
+            }
+            dato(direccion(item), icono: "mappin")
+            if let telefono = textoDisponible(item.phoneNumber) {
+                dato(telefono, icono: "phone")
+            }
+            if let sitio = textoDisponible(item.url?.host) {
+                dato(sitio, icono: "globe")
+            }
+        }
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(seleccionada ? Color.primaryContainer.opacity(0.45) : Color.surfaceContainerLowest,
+                    in: RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(seleccionada ? Color.appPrimary : .clear, lineWidth: 1.5)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func dato(_ texto: String, icono: String) -> some View {
+        Label(texto, systemImage: icono)
+            .font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func destinoSeleccionado(_ item: MKMapItem) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(item.name ?? categoria.titulo)
+                .font(.bodySmMedium).foregroundStyle(Color.onSurface)
+                .lineLimit(2)
+            Button { irALaZona(item) } label: {
+                Label(L.t("Ir a esta zona", "Go to this area"), systemImage: "location.fill")
+                    .font(.bodyMdMedium)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .foregroundStyle(Color.onPrimaryFill)
+                    .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 16))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.appSurface)
+        .overlay(alignment: .top) { Color.outlineVariant.opacity(0.45).frame(height: 1) }
+    }
+
+    private func textoDisponible(_ valor: String?) -> String? {
+        guard let texto = valor?.trimmingCharacters(in: .whitespacesAndNewlines), !texto.isEmpty else { return nil }
+        return texto
+    }
+
+    private func direccion(_ item: MKMapItem) -> String {
+        textoDisponible(item.placemark.title) ?? L.t("Dirección no disponible", "Address unavailable")
+    }
+
+    private func centrar(_ item: MKMapItem) {
+        withAnimation(reducirMovimiento ? nil : .easeInOut(duration: 0.3)) {
+            camara = .region(MKCoordinateRegion(center: item.placemark.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)))
+        }
     }
 
     @MainActor
     private func cargar() async {
         buscando = true
         error = nil
+        indiceSeleccionado = nil
         resultados = []
         let ubicacion = await UbicacionPuntual.obtener(desde: locationService)
         guard !Task.isCancelled else { return }
@@ -325,12 +434,13 @@ struct AyudaCercanaSheet: View {
         let origen = CLLocation(latitude: centro.latitude, longitude: centro.longitude)
         let destino = CLLocation(latitude: item.placemark.coordinate.latitude,
                                  longitude: item.placemark.coordinate.longitude)
-        return L.f("{0} km de la referencia", "{0} km from the reference", [
-            FormatoNumero.decimal(origen.distance(from: destino) / 1_000)
-        ])
+        let kilometros = FormatoNumero.decimal(origen.distance(from: destino) / 1_000)
+        return usaUbicacion
+            ? L.f("{0} km de ti · en línea recta", "{0} km from you · straight line", [kilometros])
+            : L.f("{0} km de la referencia · en línea recta", "{0} km from the reference · straight line", [kilometros])
     }
 
-    private func abrir(_ item: MKMapItem) {
+    private func irALaZona(_ item: MKMapItem) {
         let coordenada = item.placemark.coordinate
         router.destinoPendiente = DestinoPendiente(titulo: item.name ?? categoria.titulo,
             lat: coordenada.latitude, lon: coordenada.longitude)

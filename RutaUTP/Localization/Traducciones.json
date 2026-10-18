@@ -6,6 +6,41 @@
     "pt-BR": "Adicionar contato",
     "zh-Hans": "添加联系人"
   },
+  "Toca un lugar para verlo en el mapa": {
+    "de": "Tippe auf einen Ort, um ihn auf der Karte zu sehen",
+    "en": "Tap a place to view it on the map",
+    "fr": "Touchez un lieu pour le voir sur la carte",
+    "pt-BR": "Toque em um local para vê-lo no mapa",
+    "zh-Hans": "轻点地点以在地图上查看"
+  },
+  "Ir a esta zona": {
+    "de": "Zu diesem Bereich",
+    "en": "Go to this area",
+    "fr": "Aller dans cette zone",
+    "pt-BR": "Ir para esta área",
+    "zh-Hans": "前往此区域"
+  },
+  "Dirección no disponible": {
+    "de": "Adresse nicht verfügbar",
+    "en": "Address unavailable",
+    "fr": "Adresse indisponible",
+    "pt-BR": "Endereço indisponível",
+    "zh-Hans": "暂无地址"
+  },
+  "{0} km de ti · en línea recta": {
+    "de": "{0} km von dir · Luftlinie",
+    "en": "{0} km from you · straight line",
+    "fr": "À {0} km de vous · à vol d’oiseau",
+    "pt-BR": "A {0} km de você · em linha reta",
+    "zh-Hans": "距你 {0} 公里 · 直线距离"
+  },
+  "{0} km de la referencia · en línea recta": {
+    "de": "{0} km vom Bezugspunkt · Luftlinie",
+    "en": "{0} km from the reference · straight line",
+    "fr": "À {0} km du point de référence · à vol d’oiseau",
+    "pt-BR": "A {0} km da referência · em linha reta",
+    "zh-Hans": "距参考位置 {0} 公里 · 直线距离"
+  },
   "Amarillo": {
     "de": "Gelb",
     "en": "Yellow",
