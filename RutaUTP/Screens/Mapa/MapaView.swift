@@ -46,6 +46,7 @@ private struct MapaScreenContent: View {
     @State private var showElegirEnMapa = false
     @State private var showDestinosGuardados = false
     @State private var showRouteAlternatives = false
+    @State private var routeDetailsPresented = false
     /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
     /// debajo del botón de mi ubicación.
     @State private var panelColapsado = false
@@ -98,11 +99,11 @@ private struct MapaScreenContent: View {
 
     var body: some View {
         GeometryReader { geometry in
-            contenido(maximumGuideHeight: max(120, geometry.size.height * 0.46))
+            contenido(maximumPanelHeight: min(270, geometry.size.height * 0.34))
         }
     }
 
-    private func contenido(maximumGuideHeight: CGFloat) -> some View {
+    private func contenido(maximumPanelHeight: CGFloat) -> some View {
         ZStack(alignment: .bottom) {
 
             // ── MAPA DE FONDO (iOS 17+ MapKit con MapPolyline) ──
@@ -146,13 +147,16 @@ private struct MapaScreenContent: View {
                     }
 
                     if vm.busquedaResultado != nil {
-                        RouteSummaryPanel(vm: vm, maximumGuideHeight: maximumGuideHeight, onConfirmBoarding: {
+                        RouteSummaryPanel(vm: vm, maximumPanelHeight: maximumPanelHeight, onConfirmBoarding: {
                             cancelarPreguntaDeViaje()
                             showBoardingConfirmation = true
                         }, onShowAlternatives: {
                             campoEnfocado = false
                             vm.cancelarSeleccionAlternativa()
                             showRouteAlternatives = true
+                        }, onDetailsPresentationChange: { presented in
+                            routeDetailsPresented = presented
+                            if presented { cancelarPreguntaDeViaje() }
                         })
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
@@ -470,7 +474,7 @@ private struct MapaScreenContent: View {
                     }
                     // Mantener el recordatorio pendiente sin interrumpir otras pantallas.
                     guard scenePhase == .active else { return }
-                    if !showReportarSheet && !showElegirEnMapa && !showDestinosGuardados && !showRouteAlternatives && !mostrarDrawer && !modoColocarMarcador
+                    if !showReportarSheet && !showElegirEnMapa && !showDestinosGuardados && !showRouteAlternatives && !routeDetailsPresented && !mostrarDrawer && !modoColocarMarcador
                         && vm.busSeleccionado == nil && !campoEnfocado {
                         boardingReminderDate = nil
                         showBoardingConfirmation = true
