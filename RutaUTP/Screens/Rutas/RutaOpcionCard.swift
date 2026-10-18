@@ -1,9 +1,14 @@
 import SwiftUI
 
 struct RutaOpcionCard: View {
+    enum Accesorio: Equatable {
+        case detalle, añadir, guardada
+    }
+
     @Environment(\.self) private var entorno
     let ruta: RutaOpcion
     var distanciaLugar: String? = nil
+    var accesorio: Accesorio = .detalle
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -37,9 +42,7 @@ struct RutaOpcionCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.onSurfaceVariant)
+                indicadorAccion
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -62,6 +65,14 @@ struct RutaOpcionCard: View {
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Color.onSurface)
             }
+            if accesorio == .guardada {
+                Label(L.t("Guardada", "Saved"), systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.onSurfaceVariant)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.surfaceContainerLow, in: Capsule())
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,8 +85,30 @@ struct RutaOpcionCard: View {
         .accessibilityLabel(L.t("Línea ", "Line ") + ruta.lineaConLetra + ", " + ruta.empresa)
         .accessibilityValue([ruta.recorridoLocalizado, distanciaLugar, L.t("Pasaje ", "Fare ") + ruta.costo,
                              L.f("{0} paraderos", "{0} stops", ["\(ruta.numParaderos)"]),
-                             ruta.frecuenciaMin > 0 ? ruta.frecuenciaTexto : nil]
+                             ruta.frecuenciaMin > 0 ? ruta.frecuenciaTexto : nil,
+                             accesorio == .guardada ? L.t("Guardada", "Saved") : nil]
             .compactMap { $0 }.joined(separator: ". "))
+    }
+
+    @ViewBuilder private var indicadorAccion: some View {
+        switch accesorio {
+        case .detalle:
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.onSurfaceVariant)
+        case .añadir:
+            Image(systemName: "plus")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(colorTextoLetra)
+                .frame(width: 44, height: 44)
+                .background(ruta.colorLinea, in: Circle())
+        case .guardada:
+            Image(systemName: "bookmark.fill")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Color.onSurfaceVariant)
+                .frame(width: 44, height: 44)
+                .background(Color.surfaceContainerLow, in: Circle())
+        }
     }
 
     /// Conserva el color de la ruta y elige texto legible en colores claros u oscuros.

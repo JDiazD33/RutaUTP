@@ -942,9 +942,7 @@ private struct MapaElegirExpandido: View {
 // MARK: - Add Linea sheet (selector de líneas GTFS reales)
 struct AddLineaSheet: View {
     let catalogo: [RutaOpcion]
-    /// true mientras el feed no se ha intentado cargar. Sin esto, un catálogo
-    /// vacío se mostraba siempre como "Cargando…", también cuando el feed
-    /// había fallado, sin salida ni explicación.
+    /// Distingue carga, fallo y catálogo vacío sin ocultar los errores del feed.
     let cargando: Bool
     var errorCatalogo: FalloCargaGTFS? = nil
     var onRetry: () -> Void = {}
@@ -952,101 +950,44 @@ struct AddLineaSheet: View {
     var onSave: (RutaOpcion) -> Bool
 
     @Environment(\.dismiss) private var dismiss
-    @State private var texto: String = ""
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var texto = ""
     @State private var errorAlGuardar = false
+    @FocusState private var busquedaEnfocada: Bool
 
     private var filtradas: [RutaOpcion] {
-        let t = texto.trimmingCharacters(in: .whitespaces)
-        guard !t.isEmpty else { return catalogo }
+        let consulta = texto.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !consulta.isEmpty else { return catalogo }
         return catalogo.filter {
-            $0.linea.localizedCaseInsensitiveContains(t)
-            || $0.empresa.localizedCaseInsensitiveContains(t)
-            || $0.recorrido.localizedCaseInsensitiveContains(t)
+            $0.linea.localizedCaseInsensitiveContains(consulta)
+            || $0.empresa.localizedCaseInsensitiveContains(consulta)
+            || $0.recorrido.localizedCaseInsensitiveContains(consulta)
         }
     }
 
     var body: some View {
+        let rutas = filtradas
         NavigationStack {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L.t("Guardar línea", "Save line"))
-                    .font(.headlineMd)
-
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.onSurfaceVariant)
-                    TextField(L.t("Buscar línea, empresa o avenida", "Search line, company or avenue"), text: $texto)
-                        .font(.bodySm)
-                        .autocorrectionDisabled()
-                        .accessibilityLabel(L.t("Buscar línea para guardar", "Search for a line to save"))
-                    if !texto.isEmpty {
-                        Button {
-                            texto = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.onSurfaceVariant.opacity(0.6))
-                                .frame(minWidth: 44, minHeight: 44)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(L.t("Borrar búsqueda", "Clear search"))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-
-                if cargando {
-                    VStack(spacing: 10) {
-                        ProgressView()
-                        Text(L.t("Cargando líneas oficiales…", "Loading official routes…"))
-                            .font(.bodySm)
-                            .foregroundStyle(.onSurfaceVariant)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error = errorCatalogo {
-                    VStack(spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 26))
-                            .foregroundStyle(.onSurfaceVariant)
-                        Text(error.mensajeUsuario)
-                            .font(.bodySm)
-                            .foregroundStyle(.onSurfaceVariant)
-                            .multilineTextAlignment(.center)
-                        Button(L.t("Reintentar", "Try again"), action: onRetry)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if catalogo.isEmpty {
-                    Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
-                         : L.t("El catálogo no contiene líneas.", "The catalog contains no routes."))
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(20)
-                } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 8) {
-                            ForEach(filtradas) { ruta in
-                                filaCatalogo(ruta)
-                            }
-                            if filtradas.isEmpty {
-                                Text(L.t("Sin coincidencias para ", "No matches for ") + "“\(texto)”")
-                                    .font(.bodySm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                                    .padding(.vertical, 24)
-                            }
-                        }
-                        .padding(.bottom, 12)
-                    }
-                }
+            VStack(alignment: .leading, spacing: 16) {
+                encabezado(total: rutas.count)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                buscador
+                    .padding(.horizontal, 20)
+                resultados(rutas)
             }
-            .padding(20)
+            .background(Color.appBackground.ignoresSafeArea())
+            .navigationTitle(L.t("Añadir línea", "Add line"))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.appBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.t("Cancelar", "Cancel")) { dismiss() }
                 }
             }
         }
+        .tint(Color.appPrimary)
         .alert(L.t("No se pudo guardar la línea", "Unable to save line"), isPresented: $errorAlGuardar) {
             Button(L.t("Aceptar", "OK"), role: .cancel) {}
         } message: {
@@ -1055,10 +996,134 @@ struct AddLineaSheet: View {
         }
     }
 
+    private func encabezado(total: Int) -> some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+        return layout {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L.t("Elige tu ruta", "Pick your route"))
+                    .font(.headlineSm)
+                    .foregroundStyle(Color.onSurface)
+                    .accessibilityAddTraits(.isHeader)
+                Text(L.t("Toca una línea para guardarla.", "Tap a line to save it."))
+                    .font(.bodySm)
+                    .foregroundStyle(Color.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if !cargando, errorCatalogo == nil, !catalogo.isEmpty {
+                Text("\(total)")
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.onPrimaryContainer)
+                    .padding(12)
+                    .background(Color.primaryContainer, in: Capsule())
+                    .accessibilityLabel(L.f("{0} rutas encontradas", "{0} routes found", ["\(total)"]))
+            }
+        }
+    }
+
+    private var buscador: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Color.onSurfaceVariant)
+                .accessibilityHidden(true)
+            TextField(L.t("Buscar línea, empresa o avenida", "Search line, company or avenue"), text: $texto)
+                .font(.bodySm)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .submitLabel(.search)
+                .focused($busquedaEnfocada)
+                .onSubmit { busquedaEnfocada = false }
+                .accessibilityLabel(L.t("Buscar línea para guardar", "Search for a line to save"))
+            if !texto.isEmpty {
+                Button { texto = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.onSurfaceVariant)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Borrar búsqueda", "Clear search"))
+            }
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
+        .padding(.vertical, 4)
+        .frame(minHeight: 52)
+        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.outlineVariant.opacity(0.4), lineWidth: 1)
+        }
+    }
+
+    private func resultados(_ rutas: [RutaOpcion]) -> some View {
+        ScrollView(showsIndicators: false) {
+            LazyVStack(alignment: .leading, spacing: 14) {
+                if cargando {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text(L.t("Cargando rutas…", "Loading routes…"))
+                            .font(.bodySm)
+                            .foregroundStyle(Color.onSurfaceVariant)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                } else if let error = errorCatalogo {
+                    VStack(spacing: 12) {
+                        estado(icono: "exclamationmark.triangle", mensaje: error.mensajeUsuario)
+                        Button(L.t("Reintentar", "Try again"), action: onRetry)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.onPrimaryFill)
+                            .padding(.horizontal, 20)
+                            .frame(minHeight: 44)
+                            .background(Color.primaryFill, in: Capsule())
+                            .buttonStyle(.plain)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                } else if catalogo.isEmpty {
+                    estado(icono: "bus", mensaje: TransporteApp.rutasUTPPendientes
+                           ? TransporteApp.mensajePendiente
+                           : L.t("El catálogo no contiene líneas.", "The catalog contains no routes."))
+                } else if rutas.isEmpty {
+                    estado(icono: "magnifyingglass", mensaje:
+                            L.t("Sin coincidencias para ", "No matches for ") + "“\(texto)”")
+                } else {
+                    ForEach(rutas) { ruta in
+                        filaCatalogo(ruta)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 24)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private func estado(icono: String, mensaje: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: icono)
+                .font(.title)
+                .accessibilityHidden(true)
+            Text(mensaje)
+                .font(.bodySm)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(Color.onSurfaceVariant)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+    }
+
     private func filaCatalogo(_ ruta: RutaOpcion) -> some View {
         let guardada = yaGuardadas.contains(ruta.id)
         return Button {
             guard !guardada else { return }
+            busquedaEnfocada = false
             guard onSave(ruta) else {
                 errorAlGuardar = true
                 return
@@ -1066,55 +1131,10 @@ struct AddLineaSheet: View {
             AppHaptics.success()
             dismiss()
         } label: {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(ruta.colorLinea)
-                    .frame(width: 4, height: 42)
-                ZStack {
-                    Circle().fill(ruta.colorLinea.opacity(0.14)).frame(width: 38, height: 38)
-                    Text(ruta.linea)
-                        .font(.system(size: 12, weight: .heavy))
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                        .foregroundStyle(ruta.colorLinea)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(ruta.empresa)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
-                        .lineLimit(1)
-                    Text(ruta.recorridoLocalizado)
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .lineLimit(1)
-                }
-                Spacer()
-                if guardada {
-                    Label(L.t("Guardada", "Saved"), systemImage: "checkmark.circle.fill")
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                } else {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(.appPrimary)
-                }
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.surfaceContainerLowest)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
-                    )
-            )
+            RutaOpcionCard(ruta: ruta, accesorio: guardada ? .guardada : .añadir)
         }
         .buttonStyle(.plain)
         .disabled(guardada)
-        .opacity(guardada ? 0.55 : 1)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L.t("Línea ", "Line ") + ruta.linea + ", " + ruta.empresa)
-        .accessibilityValue(ruta.recorridoLocalizado + (guardada ? L.t(", guardada", ", saved") : ""))
         .accessibilityHint(guardada ? "" : L.t("Añade esta línea a Guardado", "Adds this line to Saved"))
         .accessibilityAddTraits(guardada ? .isSelected : [])
     }

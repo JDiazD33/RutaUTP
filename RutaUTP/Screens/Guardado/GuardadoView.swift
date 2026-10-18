@@ -101,7 +101,8 @@ struct GuardadoView: View {
                 onRetry: { Task { await vm.cargarCatalogo(reintentar: true) } },
                 yaGuardadas: vm.idsLineasGuardadas
             ) { vm.añadirLinea($0) }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedLinea) { linea in
             LineaDetailSheet(linea: linea,

@@ -10058,6 +10058,13 @@
     "pt-BR": "Toque em um lugar para ver mais opções.",
     "zh-Hans": "点按一个地点即可获得更多选项。"
   },
+  "Toca una línea para guardarla.": {
+    "de": "Tippe auf eine Linie, um sie zu speichern.",
+    "en": "Tap a line to save it.",
+    "fr": "Touchez une ligne pour l’enregistrer.",
+    "pt-BR": "Toque em uma linha para salvá-la.",
+    "zh-Hans": "轻点一条线路即可收藏。"
+  },
   "Todavía no": {
     "de": "Noch nicht",
     "en": "Not yet",
