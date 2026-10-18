@@ -614,7 +614,7 @@ final class TransitItineraryTests: XCTestCase {
         XCTAssertEqual(fastest.plan.route.id, "frequent")
     }
 
-    func testRecomendadaAceptaAlgoMasDeTiempoParaEvitarUnTransbordo() async throws {
+    func testUnDirectoCortoEvitaTransbordosEnTodasLasCategoriasYEnElRespaldo() async throws {
         let (first, second) = transferNetwork
         let a = line("A", first.shape, headway: 2, duration: 2)
         let b = line("B", second.shape, headway: 2, duration: 2)
@@ -626,8 +626,50 @@ final class TransitItineraryTests: XCTestCase {
         let fastest = try XCTUnwrap(options.highlights.first { $0.categories.contains(.fastest) })
         XCTAssertEqual(recommended.plan.route.id, "direct")
         XCTAssertNil(recommended.plan.transfer)
-        XCTAssertNotNil(fastest.plan.transfer)
-        XCTAssertGreaterThan(recommended.plan.estimatedJourneySeconds, fastest.plan.estimatedJourneySeconds)
+        XCTAssertNil(fastest.plan.transfer)
+        XCTAssertTrue(options.highlights.allSatisfy { $0.plan.transfer == nil })
+        XCTAssertTrue(options.alternatives.allSatisfy { $0.transfer == nil })
+        XCTAssertTrue(options.candidates.allSatisfy { $0.transfer == nil },
+                      "Un fallo de Directions no debe reintroducir el transbordo descartado")
+    }
+
+    func testNoOfreceUnMicroDePocosMetrosParaSubirDespuesALaB() async throws {
+        let origin = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.04)
+        let connection = CLLocationCoordinate2D(latitude: -8.1, longitude: -79.039)
+        let destination = CLLocationCoordinate2D(latitude: -8.08, longitude: -79.039)
+        let feeder = line("feeder", [origin, connection], headway: 0, duration: 1)
+        let b = line("B", [connection, destination], headway: 2)
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [feeder, b]),
+            origin: origin, destination: destination, radius: 200)
+        let recommended = try XCTUnwrap(options.highlights.first { $0.categories.contains(.recommended) })
+        XCTAssertEqual(recommended.plan.route.id, "B")
+        XCTAssertNil(recommended.plan.transfer)
+        XCTAssertTrue(options.alternatives.allSatisfy { $0.transfer == nil })
+        XCTAssertTrue(options.candidates.allSatisfy { $0.transfer == nil })
+    }
+
+    func testConservaTransbordosConTramosUtilesCuandoNoExisteDirecto() async throws {
+        let (a, b) = transferNetwork
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [a, b]),
+            origin: a.shape[0], destination: b.shape[1], radius: 50)
+        let recommended = try XCTUnwrap(options.highlights.first { $0.categories.contains(.recommended) })
+        let transfer = try XCTUnwrap(recommended.plan.transfer)
+        XCTAssertGreaterThan(recommended.plan.firstBusMeters, TransitItinerary.minimumTransferRideMeters)
+        XCTAssertGreaterThan(transfer.busMeters, TransitItinerary.minimumTransferRideMeters)
+    }
+
+    func testSoloOfreceTransbordoFrenteAUnDirectoLargoConAhorroImportante() async throws {
+        let (a, b) = transferNetwork
+        let detour = line("detour", [a.shape[0],
+            CLLocationCoordinate2D(latitude: -8.4, longitude: -79.4), b.shape[1]])
+        let options = await TransitPlanner().options(in: GTFSRouteCatalog(routes: [a, b, detour]),
+            origin: a.shape[0], destination: b.shape[1], radius: 50)
+        let recommended = try XCTUnwrap(options.highlights.first { $0.categories.contains(.recommended) })
+        let direct = try XCTUnwrap(options.alternatives.first { $0.route.id == "detour" && $0.transfer == nil })
+        XCTAssertNotNil(recommended.plan.transfer)
+        XCTAssertGreaterThan(direct.estimatedJourneySeconds, 45 * 60)
+        XCTAssertGreaterThanOrEqual(direct.estimatedJourneySeconds - recommended.plan.estimatedJourneySeconds,
+                                    max(15 * 60, direct.estimatedJourneySeconds * 0.25))
     }
 
     func testUnaLineaConOtraSubidaConservaLaOpcionCercana() async throws {
