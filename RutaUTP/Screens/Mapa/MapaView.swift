@@ -45,6 +45,7 @@ private struct MapaScreenContent: View {
     /// Selector de destino en el mapa para el acceso con VoiceOver.
     @State private var showElegirEnMapa = false
     @State private var showDestinosGuardados = false
+    @State private var showRouteAlternatives = false
     /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
     /// debajo del botón de mi ubicación.
     @State private var panelColapsado = false
@@ -87,7 +88,7 @@ private struct MapaScreenContent: View {
     /// Reutilizar el mecanismo evita tener dos animaciones distintas para el
     /// mismo movimiento; lo único que cambia es la causa.
     private var panelesRetirados: Bool {
-        modoColocarMarcador || vm.calculandoItinerario || viajeActivo
+        modoColocarMarcador || vm.buscandoItinerarioInicial || viajeActivo
     }
 
     private var mostrandoRuta: Bool { vm.itinerario != nil }
@@ -96,6 +97,12 @@ private struct MapaScreenContent: View {
     }
 
     var body: some View {
+        GeometryReader { geometry in
+            contenido(maximumGuideHeight: max(120, geometry.size.height * 0.46))
+        }
+    }
+
+    private func contenido(maximumGuideHeight: CGFloat) -> some View {
         ZStack(alignment: .bottom) {
 
             // ── MAPA DE FONDO (iOS 17+ MapKit con MapPolyline) ──
@@ -139,9 +146,13 @@ private struct MapaScreenContent: View {
                     }
 
                     if vm.busquedaResultado != nil {
-                        RouteSummaryPanel(vm: vm, onConfirmBoarding: {
+                        RouteSummaryPanel(vm: vm, maximumGuideHeight: maximumGuideHeight, onConfirmBoarding: {
                             cancelarPreguntaDeViaje()
                             showBoardingConfirmation = true
+                        }, onShowAlternatives: {
+                            campoEnfocado = false
+                            vm.cancelarSeleccionAlternativa()
+                            showRouteAlternatives = true
                         })
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
@@ -295,6 +306,10 @@ private struct MapaScreenContent: View {
         }
         .onChange(of: viajeActivo) { _, active in
             vm.actualizarActividadVisual(pantallaVisible && scenePhase == .active && !active)
+            if active {
+                showRouteAlternatives = false
+                vm.cancelarSeleccionAlternativa()
+            }
             if !active { mostrarAvisoViaje = false }
         }
         .onChange(of: SedeTrabajoStore.shared.sede?.id) { _, _ in
@@ -307,39 +322,46 @@ private struct MapaScreenContent: View {
             guard !viajeActivo else { return }
             guard let polyline = vm.routePolyline else { return }
             programarPreguntaDeViaje(en: 30)
-            // Acercar el inicio del viaje; el usuario conserva el zoom y arrastre manual.
+            // Comparar líneas mostrando su recorrido completo, con espacio
+            // alrededor para la guía flotante y los controles del mapa.
             let rect = polyline.boundingMapRect
-            withAnimation(.easeInOut(duration: 0.4)) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.4)) {
                 panelColapsado = true
-                if let origin = vm.userRealCoordinate {
-                    cameraPosition = .region(MapaViewModel.regionDePersona(origin, duranteViaje: true))
-                } else {
-                    cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
-                                                       dy: -max(rect.height * 0.65, 1800)))
-                }
+                cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
+                                                   dy: -max(rect.height * 0.65, 1800)))
             }
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
-            cancelarPreguntaDeViaje()
             guard !viajeActivo else { return }
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
-            withAnimation(.easeInOut(duration: 0.3)) { cameraPosition = .region(vm.region) }
+            // Una respuesta cacheada puede instalar la guía en el mismo render.
+            // Conservar entonces el encuadre completo y su recordatorio nuevo.
+            guard vm.itinerario == nil else { return }
+            cancelarPreguntaDeViaje()
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
+                cameraPosition = .region(vm.region)
+            }
         }
         .onChange(of: vm.busquedaResultado?.titulo) { _, _ in
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
             if vm.busquedaResultado == nil { cancelarPreguntaDeViaje() }
         }
         .onChange(of: vm.calculandoItinerario) { _, calculating in
-            if calculating { cancelarPreguntaDeViaje() }
+            if calculating {
+                cancelarPreguntaDeViaje()
+            } else if boardingReminderDate == nil, vm.itinerario != nil, !viajeActivo {
+                // Cancelar o fallar una alternativa conserva el viaje anterior.
+                programarPreguntaDeViaje(en: 30)
+            }
         }
         .onChange(of: vm.region.center.latitude) { _, _ in
-            guard !viajeActivo else { return }
+            guard !viajeActivo, vm.itinerario == nil else { return }
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
         }
         .onChange(of: vm.region.center.longitude) { _, _ in
-            guard !viajeActivo else { return }
+            guard !viajeActivo, vm.itinerario == nil else { return }
             withAnimation {
                 cameraPosition = .region(vm.region)
             }
@@ -357,6 +379,9 @@ private struct MapaScreenContent: View {
                                       locationService: vm.sharedLocationService,
                                       suggestedRouteID: vm.itinerario?.route.id,
                                       onRemindLater: { programarPreguntaDeViaje(en: 120) })
+        }
+        .sheet(isPresented: $showRouteAlternatives) {
+            RouteAlternativesSheet(vm: vm)
         }
         .sheet(isPresented: $showReportarSheet) {
             // La ruta del itinerario calculado entra ya seleccionada: si el
@@ -445,7 +470,7 @@ private struct MapaScreenContent: View {
                     }
                     // Mantener el recordatorio pendiente sin interrumpir otras pantallas.
                     guard scenePhase == .active else { return }
-                    if !showReportarSheet && !showElegirEnMapa && !showDestinosGuardados && !mostrarDrawer && !modoColocarMarcador
+                    if !showReportarSheet && !showElegirEnMapa && !showDestinosGuardados && !showRouteAlternatives && !mostrarDrawer && !modoColocarMarcador
                         && vm.busSeleccionado == nil && !campoEnfocado {
                         boardingReminderDate = nil
                         showBoardingConfirmation = true
@@ -609,7 +634,7 @@ private struct MapaScreenContent: View {
     /// Conserva el aviso y su cancelación arriba, y los controles alineados abajo.
     @ViewBuilder
     private var ventanaCargaItinerario: some View {
-        if vm.calculandoItinerario && !modoColocarMarcador && !viajeActivo {
+        if vm.buscandoItinerarioInicial && !modoColocarMarcador && !viajeActivo {
             VStack {
                 HStack(spacing: 10) {
                     ProgressView()
