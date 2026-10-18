@@ -2,6 +2,22 @@ import Foundation
 import CoreLocation
 import MapKit
 
+struct TransitRouteOptions {
+    let candidates: [TransitItinerary]
+    let alternatives: [TransitItinerary]
+    let highlights: [TransitRouteHighlight]
+    static let empty = TransitRouteOptions(candidates: [], alternatives: [], highlights: [])
+}
+
+enum TransitRouteCategory: CaseIterable {
+    case recommended, fastest, closestBoarding
+}
+
+struct TransitRouteHighlight {
+    var plan: TransitItinerary
+    var categories: [TransitRouteCategory]
+}
+
 /// Un viaje directo o con un transbordo, usando paraderos y shapes del GTFS.
 /// Los radios se verifican primero en línea recta y después sobre la caminata disponible.
 struct TransitItinerary {
@@ -46,6 +62,16 @@ struct TransitItinerary {
     var lineDescription: String {
         route.linea + (transfer.map { " → " + $0.route.linea } ?? "")
     }
+    /// Una alternativa representa una combinación de líneas, no cada pareja de paraderos.
+    var routeIDs: [String] { [route.id] + (transfer.map { [$0.route.id] } ?? []) }
+    /// Distingue paraderos y vueltas de una misma línea. Resolver las caminatas
+    /// no cambia esta identidad ni convierte la opción cercana en otra subida.
+    var optionID: [String] {
+        routeIDs + [board.id, firstAlight.id, transfer?.board.id ?? "", alight.id,
+                    String(firstBusMeters), String(transfer?.busMeters ?? 0)]
+    }
+    var boardingWaitSeconds: Double { Double(max(0, route.headwayMin)) * 30 }
+    var estimatedJourneySeconds: Double { totalSeconds + boardingWaitSeconds }
     static let maximumTransferWalk: Double = 350
     var transferWalkMeters: Double { transfer?.walkMeters ?? 0 }
     var walkingWithinTransferLimit: Bool { transferWalkMeters <= Self.maximumTransferWalk }
@@ -81,19 +107,22 @@ struct TransitItinerary {
     static func candidates(in routes: [RutaGTFS], origin: CLLocationCoordinate2D,
                            destination: CLLocationCoordinate2D, radius: Double) -> [TransitItinerary] {
         var geometry: [TransitGeometryKey: TransitRouteGeometry] = [:]
-        return search(in: routes, origin: origin, destination: destination, radius: radius, geometry: &geometry)
+        return search(in: routes, origin: origin, destination: destination, radius: radius, geometry: &geometry).candidates
     }
 
     fileprivate static func search(in routes: [RutaGTFS], origin: CLLocationCoordinate2D,
                                   destination: CLLocationCoordinate2D, radius: Double,
                                   geometry: inout [TransitGeometryKey: TransitRouteGeometry],
-                                  trustedCatalog: Bool = false) -> [TransitItinerary] {
+                                  trustedCatalog: Bool = false,
+                                  includeLineAlternatives: Bool = false,
+                                  requiredRouteIDs: [String]? = nil) -> TransitRouteOptions {
         guard radius.isFinite, radius > 0, CLLocationCoordinate2DIsValid(origin),
-              CLLocationCoordinate2DIsValid(destination) else { return [] }
+              CLLocationCoordinate2DIsValid(destination) else { return .empty }
         var prepared: [PreparedTransitRoute] = []
         for (routeIndex, route) in routes.enumerated()
         where route.shape.count >= 2 && route.paraderos.count >= 2 {
-            if Task.isCancelled { return [] }
+            if Task.isCancelled { return .empty }
+            if let requiredRouteIDs, !requiredRouteIDs.contains(route.id) { continue }
             let start = route.paraderos.map { PolylineMatching.distanceMeters(origin, $0.coordinate) }
             let end = route.paraderos.map { PolylineMatching.distanceMeters(destination, $0.coordinate) }
             guard start.contains(where: { $0 <= radius }) || end.contains(where: { $0 <= radius }) else { continue }
@@ -112,14 +141,17 @@ struct TransitItinerary {
         let cellSize = maximumTransferWalk * MKMapPointsPerMeterAtLatitude(min(85, maximumLatitude)) * 1.02
         // Cada mejor subida/bajada y cada rejilla se calculan una sola vez por línea.
         let departures = prepared.map { $0.bestDepartures() }
+        let closestDepartures = includeLineAlternatives
+            ? prepared.map { $0.bestDepartures(closestBoarding: true) } : []
         let arrivals = prepared.map { route in
             Dictionary(grouping: route.bestArrivals()) {
                 TransitGridCell(point: route.stopPoints[$0.0], size: cellSize)
             }
         }
         var choices: [TransitChoice] = []
+        var closestTransferChoices: [TransitChoice] = []
         for (firstIndex, first) in prepared.enumerated() {
-            if Task.isCancelled { return [] }
+            if Task.isCancelled { return .empty }
             for board in first.boarding {
                 for alight in first.arriving where first.validRide(board, alight) {
                     let score = first.startCost(board, alight) + first.endWalk[alight] / 1.4
@@ -131,42 +163,83 @@ struct TransitItinerary {
             guard !departures[firstIndex].isEmpty else { continue }
             for (secondIndex, second) in prepared.enumerated()
             where second.route.id != first.route.id && !second.arriving.isEmpty {
-                var best: (score: Double, board: Int, exit: Int, enter: Int, alight: Int)?
-                let nearby = arrivals[secondIndex]
-                for (board, exit) in departures[firstIndex] {
-                    if Task.isCancelled { return [] }
-                    let firstCost = first.startCost(board, exit)
-                    let cell = TransitGridCell(point: first.stopPoints[exit], size: cellSize)
-                    for dx in -1...1 {
-                        for dy in -1...1 {
-                            for (enter, alight) in nearby[TransitGridCell(x: cell.x + dx, y: cell.y + dy)] ?? [] {
-                                let lowerBound = firstCost + second.endCost(enter, alight)
-                                if let best, lowerBound >= best.score { continue }
-                                let walking = PolylineMatching.distanceMeters(first.route.paraderos[exit].coordinate,
-                                                                              second.route.paraderos[enter].coordinate)
-                                guard walking + first.connectorMeters[exit] + second.connectorMeters[enter] <= maximumTransferWalk else { continue }
-                                let score = lowerBound + walking / 1.4
-                                if best == nil || score < best!.score { best = (score, board, exit, enter, alight) }
+                func bestConnection(closestBoarding: Bool) -> TransitChoice? {
+                    var best: (score: Double, walk: Double, board: Int, exit: Int, enter: Int, alight: Int)?
+                    let nearby = arrivals[secondIndex]
+                    let stops = closestBoarding ? closestDepartures[firstIndex] : departures[firstIndex]
+                    for (board, exit) in stops {
+                        if Task.isCancelled { return nil }
+                        let boardWalk = first.startWalk[board] + first.connectorMeters[board]
+                        if closestBoarding, let best, boardWalk > best.walk { continue }
+                        let firstCost = first.startCost(board, exit)
+                        let cell = TransitGridCell(point: first.stopPoints[exit], size: cellSize)
+                        for dx in -1...1 {
+                            for dy in -1...1 {
+                                for (enter, alight) in nearby[TransitGridCell(x: cell.x + dx, y: cell.y + dy)] ?? [] {
+                                    let lowerBound = firstCost + second.endCost(enter, alight)
+                                    if let best, (!closestBoarding || boardWalk == best.walk),
+                                       lowerBound >= best.score { continue }
+                                    let walking = PolylineMatching.distanceMeters(first.route.paraderos[exit].coordinate,
+                                                                                  second.route.paraderos[enter].coordinate)
+                                    guard walking + first.connectorMeters[exit] + second.connectorMeters[enter] <= maximumTransferWalk else { continue }
+                                    let score = lowerBound + walking / 1.4
+                                    if best == nil || (closestBoarding && boardWalk < best!.walk)
+                                        || score < best!.score {
+                                        best = (score, boardWalk, board, exit, enter, alight)
+                                    }
+                                }
                             }
                         }
                     }
+                    if let best {
+                        let waiting = Double(max(0, second.route.headwayMin)) * 30 + 120
+                        return TransitChoice(first: firstIndex, board: best.board, exit: best.exit,
+                            second: secondIndex, enter: best.enter, alight: best.alight,
+                            score: best.score + waiting + 180, order: first.route.id + second.route.id,
+                            tie: "\(best.board):\(best.exit):\(best.enter):\(best.alight)")
+                    }
+                    return nil
                 }
-                if let best {
-                    let waiting = Double(max(0, second.route.headwayMin)) * 30 + 120
-                    choices.append(TransitChoice(first: firstIndex, board: best.board, exit: best.exit,
-                        second: secondIndex, enter: best.enter, alight: best.alight,
-                        score: best.score + waiting + 180, order: first.route.id + second.route.id,
-                        tie: "\(best.board):\(best.exit):\(best.enter):\(best.alight)"))
+                if let best = bestConnection(closestBoarding: false) { choices.append(best) }
+                if includeLineAlternatives, let nearest = bestConnection(closestBoarding: true) {
+                    closestTransferChoices.append(nearest)
                 }
             }
         }
-        // El orden usa las mismas distancias y penalización que el itinerario final.
-        // Solo se materializan 32 opciones; los consumidores consultan hasta cuatro.
-        return choices.sorted {
-            if $0.score != $1.score { return $0.score < $1.score }
-            if $0.order != $1.order { return $0.order < $1.order }
-            return $0.tie < $1.tie
-        }.prefix(32).map { choice in
+        func precedes(_ lhs: TransitChoice, _ rhs: TransitChoice) -> Bool {
+            if lhs.score != rhs.score { return lhs.score < rhs.score }
+            if lhs.order != rhs.order { return lhs.order < rhs.order }
+            return lhs.tie < rhs.tie
+        }
+        func routeIDs(_ choice: TransitChoice) -> [String] {
+            [prepared[choice.first].route.id]
+                + (choice.second.map { [prepared[$0].route.id] } ?? [])
+        }
+        let eligible = requiredRouteIDs.map { required in
+            choices.filter { routeIDs($0) == required }
+        } ?? choices
+        let ranked = eligible.sorted(by: precedes)
+        let selected: [TransitChoice]
+        if includeLineAlternatives {
+            var seen = Set<[String]>()
+            var direct: [TransitChoice] = []
+            var transfers: [TransitChoice] = []
+            for choice in ranked {
+                let ids = routeIDs(choice)
+                guard seen.insert(ids).inserted else { continue }
+                if choice.second == nil {
+                    // Conservar todas las líneas directas: los transbordos y
+                    // otras paradas de una línea no deben expulsar a otra línea.
+                    direct.append(choice)
+                } else if transfers.count < 32 {
+                    transfers.append(choice)
+                }
+            }
+            selected = (direct + transfers).sorted(by: precedes)
+        } else {
+            selected = []
+        }
+        func makePlan(_ choice: TransitChoice) -> TransitItinerary {
             let first = prepared[choice.first]
             var plan = first.plan(choice.board, choice.exit, origin: origin, destination: destination)
             if let secondIndex = choice.second {
@@ -178,6 +251,67 @@ struct TransitItinerary {
             }
             return plan
         }
+        func boardWalk(_ choice: TransitChoice) -> Double {
+            let first = prepared[choice.first]
+            return first.startWalk[choice.board] + first.connectorMeters[choice.board]
+        }
+        func journeyTime(_ choice: TransitChoice) -> Double {
+            // El score histórico añade tres minutos de preferencia por viajes
+            // directos. Esa preferencia no es tiempo real del recorrido.
+            choice.score - (choice.second == nil ? 0 : 180)
+                + Double(max(0, prepared[choice.first].route.headwayMin)) * 30
+        }
+        func recommendationScore(_ choice: TransitChoice) -> Double {
+            let first = prepared[choice.first]
+            var walk = boardWalk(choice) + first.connectorMeters[choice.exit]
+            if let secondIndex = choice.second {
+                let second = prepared[secondIndex]
+                walk += PolylineMatching.distanceMeters(first.route.paraderos[choice.exit].coordinate,
+                                                        second.route.paraderos[choice.enter].coordinate)
+                    + second.connectorMeters[choice.enter] + second.connectorMeters[choice.alight]
+                    + second.endWalk[choice.alight]
+            } else {
+                walk += first.endWalk[choice.exit]
+            }
+            // Prima el tiempo; una caminata adicional sigue compensando cuando
+            // ahorra bastante viaje. Tres minutos ponderan el transbordo.
+            return journeyTime(choice) + 0.35 * walk / 1.4 + (choice.second == nil ? 0 : 180)
+        }
+        func minimum(in pool: [TransitChoice], score: (TransitChoice) -> Double) -> TransitChoice? {
+            pool.min { lhs, rhs in
+                let a = score(lhs), b = score(rhs)
+                return a == b ? precedes(lhs, rhs) : a < b
+            }
+        }
+        var highlights: [TransitRouteHighlight] = []
+        if includeLineAlternatives {
+            let winners: [(TransitRouteCategory, TransitChoice?)] = [
+                (.recommended, minimum(in: choices, score: recommendationScore)),
+                (.fastest, minimum(in: choices, score: journeyTime)),
+                (.closestBoarding, (choices + closestTransferChoices).min { lhs, rhs in
+                    let a = boardWalk(lhs), b = boardWalk(rhs)
+                    if a != b { return a < b }
+                    let t1 = journeyTime(lhs), t2 = journeyTime(rhs)
+                    return t1 == t2 ? precedes(lhs, rhs) : t1 < t2
+                })
+            ]
+            for (category, winner) in winners {
+                guard let winner else { continue }
+                let plan = makePlan(winner)
+                if let index = highlights.firstIndex(where: { $0.plan.optionID == plan.optionID }) {
+                    highlights[index].categories.append(category)
+                } else {
+                    highlights.append(TransitRouteHighlight(plan: plan, categories: [category]))
+                }
+            }
+        }
+        var alternatives = selected.map(makePlan)
+        for highlight in highlights where !alternatives.contains(where: { $0.optionID == highlight.plan.optionID }) {
+            alternatives.append(highlight.plan)
+        }
+        // La vía anterior conserva su orden y límite para tracking y consumidores.
+        return TransitRouteOptions(candidates: ranked.prefix(32).map(makePlan),
+                                   alternatives: alternatives, highlights: highlights)
     }
 
     func withWalkingDirections(using service: RouteCalculationService) async -> TransitItinerary {
@@ -335,7 +469,7 @@ private struct PreparedTransitRoute {
     }
     /// Barrido ordenado: mantener la mejor subida anterior evita volver a
     /// comparar todas las subidas en cada paradero y en cada pareja de líneas.
-    func bestDepartures() -> [(Int, Int)] {
+    func bestDepartures(closestBoarding: Bool = false) -> [(Int, Int)] {
         let eligible = boarding.filter { connectorMeters[$0] < 80 }
         var cursor = 0
         var best: (stop: Int, cost: Double)?
@@ -345,7 +479,12 @@ private struct PreparedTransitRoute {
                 let board = eligible[cursor]
                 guard board < exit, distances[indices[exit]] - distances[indices[board]] > 50 else { break }
                 let cost = (startWalk[board] + connectorMeters[board]) / 1.4 - distances[indices[board]] / speed
-                if best == nil || cost < best!.cost { best = (board, cost) }
+                let walk = startWalk[board] + connectorMeters[board]
+                let bestWalk = best.map { startWalk[$0.stop] + connectorMeters[$0.stop] } ?? .infinity
+                if best == nil || (closestBoarding && walk < bestWalk)
+                    || ((!closestBoarding || walk == bestWalk) && cost < best!.cost) {
+                    best = (board, cost)
+                }
                 cursor += 1
             }
             if connectorMeters[exit] < 80, let best { result.append((best.stop, exit)) }
@@ -408,7 +547,7 @@ actor TransitPlanner {
             return ids.contains(id)
         }
         return TransitItinerary.search(in: routes, origin: origin, destination: destination,
-                                       radius: radius, geometry: &geometry)
+                                       radius: radius, geometry: &geometry).candidates
     }
 
     /// La revisión pertenece al snapshot completo; cambiarlo invalida todo,
@@ -420,6 +559,32 @@ actor TransitPlanner {
             self.catalog = catalog
         }
         return TransitItinerary.search(in: catalog.routes, origin: origin, destination: destination,
-                                       radius: radius, geometry: &geometry, trustedCatalog: true)
+                                       radius: radius, geometry: &geometry, trustedCatalog: true).candidates
+    }
+
+    /// Todas las líneas directas, hasta 32 transbordos y los tres criterios destacados.
+    /// Solo resuelve geometría local; las caminatas se consultan al elegir.
+    func options(in catalog: GTFSRouteCatalog, origin: CLLocationCoordinate2D,
+                 destination: CLLocationCoordinate2D, radius: Double) -> TransitRouteOptions {
+        if self.catalog?.sharesRevision(with: catalog) != true {
+            geometry.removeAll(keepingCapacity: true)
+            self.catalog = catalog
+        }
+        return TransitItinerary.search(in: catalog.routes, origin: origin, destination: destination,
+                                       radius: radius, geometry: &geometry, trustedCatalog: true,
+                                       includeLineAlternatives: true)
+    }
+
+    /// Reintentos de paraderos de la combinación elegida, sin sustituir sus líneas.
+    func candidates(for routeIDs: [String], in catalog: GTFSRouteCatalog,
+                    origin: CLLocationCoordinate2D, destination: CLLocationCoordinate2D,
+                    radius: Double) -> [TransitItinerary] {
+        if self.catalog?.sharesRevision(with: catalog) != true {
+            geometry.removeAll(keepingCapacity: true)
+            self.catalog = catalog
+        }
+        return TransitItinerary.search(in: catalog.routes, origin: origin, destination: destination,
+                                       radius: radius, geometry: &geometry, trustedCatalog: true,
+                                       requiredRouteIDs: routeIDs).candidates
     }
 }
