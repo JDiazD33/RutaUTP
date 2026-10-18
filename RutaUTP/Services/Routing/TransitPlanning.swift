@@ -272,22 +272,6 @@ struct TransitItinerary {
             }
             return plan
         }
-        func recommendationScore(_ choice: TransitChoice) -> Double {
-            let first = prepared[choice.first]
-            var walk = boardWalk(choice) + first.connectorMeters[choice.exit]
-            if let secondIndex = choice.second {
-                let second = prepared[secondIndex]
-                walk += PolylineMatching.distanceMeters(first.route.paraderos[choice.exit].coordinate,
-                                                        second.route.paraderos[choice.enter].coordinate)
-                    + second.connectorMeters[choice.enter] + second.connectorMeters[choice.alight]
-                    + second.endWalk[choice.alight]
-            } else {
-                walk += first.endWalk[choice.exit]
-            }
-            // Prima el tiempo; una caminata adicional sigue compensando cuando
-            // ahorra bastante viaje. Tres minutos ponderan el transbordo.
-            return journeyTime(choice) + 0.35 * walk / 1.4 + (choice.second == nil ? 0 : 180)
-        }
         func minimum(in pool: [TransitChoice], score: (TransitChoice) -> Double) -> TransitChoice? {
             pool.min { lhs, rhs in
                 let a = score(lhs), b = score(rhs)
@@ -296,15 +280,18 @@ struct TransitItinerary {
         }
         var highlights: [TransitRouteHighlight] = []
         if includeLineAlternatives {
+            // La recomendada es la subida más cercana, aunque otra línea
+            // llegue antes al destino. El tiempo solo desempata caminatas iguales.
+            let closest = (eligible + closestTransferChoices.filter(usefulForComparison)).min { lhs, rhs in
+                let a = boardWalk(lhs), b = boardWalk(rhs)
+                if a != b { return a < b }
+                let t1 = journeyTime(lhs), t2 = journeyTime(rhs)
+                return t1 == t2 ? precedes(lhs, rhs) : t1 < t2
+            }
             let winners: [(TransitRouteCategory, TransitChoice?)] = [
-                (.recommended, minimum(in: eligible, score: recommendationScore)),
+                (.recommended, closest),
                 (.fastest, minimum(in: eligible, score: journeyTime)),
-                (.closestBoarding, (eligible + closestTransferChoices.filter(usefulForComparison)).min { lhs, rhs in
-                    let a = boardWalk(lhs), b = boardWalk(rhs)
-                    if a != b { return a < b }
-                    let t1 = journeyTime(lhs), t2 = journeyTime(rhs)
-                    return t1 == t2 ? precedes(lhs, rhs) : t1 < t2
-                })
+                (.closestBoarding, closest)
             ]
             for (category, winner) in winners {
                 guard let winner else { continue }

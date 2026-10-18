@@ -1083,9 +1083,22 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
             self.catalogoAlternativas = catalog
             self.alternativasItinerario = options.alternatives
             self.rutasDestacadas = options.highlights
+            let nearest = options.alternatives.sorted { lhs, rhs in
+                if lhs.walkToBoardMeters != rhs.walkToBoardMeters {
+                    return lhs.walkToBoardMeters < rhs.walkToBoardMeters
+                }
+                if lhs.estimatedJourneySeconds != rhs.estimatedJourneySeconds {
+                    return lhs.estimatedJourneySeconds < rhs.estimatedJourneySeconds
+                }
+                return lhs.optionID.lexicographicallyPrecedes(rhs.optionID)
+            }
             var checked = Set<[String]>()
-            for candidate in options.highlights.map(\.plan) + options.candidates.prefix(4) {
+            // Si la subida más cercana no cumple Directions, reintentar por
+            // cercanía; no saltar a la más rápida con una caminata mucho mayor.
+            let recommended = options.highlights.filter { $0.categories.contains(.recommended) }.map(\.plan)
+            for candidate in recommended + nearest {
                 guard checked.insert(candidate.optionID).inserted else { continue }
+                guard checked.count <= 4 else { break }
                 let plan = await candidate.withWalkingDirections(using: self.routeService)
                 guard !Task.isCancelled, self.routeRevision == revision else { return }
                 let installed = InstalledTransitItinerary(plan: plan)
@@ -1097,12 +1110,13 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                     continue
                 }
                 if !self.rutasDestacadas.contains(where: { $0.categories.contains(.recommended) }) {
-                    if let index = self.rutasDestacadas.firstIndex(where: { $0.plan.optionID == plan.optionID }) {
-                        self.rutasDestacadas[index].categories.insert(.recommended, at: 0)
-                    } else {
-                        self.rutasDestacadas.insert(TransitRouteHighlight(plan: plan, categories: [.recommended]), at: 0)
-                        self.rutasDestacadas = Array(self.rutasDestacadas.prefix(3))
+                    let previous = self.categorias(de: plan)
+                    self.rutasDestacadas.removeAll { $0.plan.optionID == plan.optionID }
+                    let categories = TransitRouteCategory.allCases.filter {
+                        $0 == .recommended || $0 == .closestBoarding || previous.contains($0)
                     }
+                    self.rutasDestacadas.insert(TransitRouteHighlight(plan: plan, categories: categories), at: 0)
+                    self.rutasDestacadas = Array(self.rutasDestacadas.prefix(3))
                 }
                 self.instalarItinerario(installed)
                 return
