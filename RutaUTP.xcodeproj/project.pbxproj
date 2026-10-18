@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BD6000000000000000000002 /* Transportes3DView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000001 /* Transportes3DView.swift */; };
+		BD6000000000000000000004 /* VisorTransporte3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000003 /* VisorTransporte3D.swift */; };
+		BD6000000000000000000006 /* Transportes3D in Resources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000005 /* Transportes3D */; };
 		A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */; };
 		ECF34513F945499ABD8EB439 /* PushRutasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE808E3026E54669B06DFE24 /* PushRutasService.swift */; };
 		F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2972779301B74337A0930235 /* NotificacionesView.swift */; };
@@ -210,6 +213,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BD6000000000000000000001 /* Transportes3DView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DView.swift; sourceTree = "<group>"; };
+		BD6000000000000000000003 /* VisorTransporte3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisorTransporte3D.swift; sourceTree = "<group>"; };
+		BD6000000000000000000005 /* Transportes3D */ = {isa = PBXFileReference; lastKnownFileType = folder; path = RutaUTP/Resources/Transportes3D; sourceTree = SOURCE_ROOT; };
 		EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvisosDiarios.swift; sourceTree = "<group>"; };
 		AE808E3026E54669B06DFE24 /* PushRutasService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRutasService.swift; sourceTree = "<group>"; };
 		C193FD90B1EF4256AB1FBEDF /* RutaUTP-Push.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "RutaUTP-Push.entitlements"; sourceTree = "<group>"; };
@@ -689,6 +695,9 @@
 		0A8004DA300AD9FE004E1676 /* Rutas */ = {
 			isa = PBXGroup;
 			children = (
+				BD6000000000000000000001 /* Transportes3DView.swift */,
+				BD6000000000000000000003 /* VisorTransporte3D.swift */,
+				BD6000000000000000000005 /* Transportes3D */,
 				BC0200000000000000000009 /* RutasViewModel.swift */,
 				BD5200000000000000000001 /* IndiceBusquedaRuta.swift */,
 				BC020000000000000000000B /* RutaOpcionCard.swift */,
@@ -1032,6 +1041,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD6000000000000000000006 /* Transportes3D in Resources */,
 				011AA33A80B14650A13C1445 /* Traducciones.json in Resources */,
 				E60A8B46C22E426A9D19981D /* InfoPlist.strings in Resources */,
 				BD3000000000000000000004 /* sedes-empresas-trujillo.json in Resources */,
@@ -1058,6 +1068,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BD6000000000000000000002 /* Transportes3DView.swift in Sources */,
+				BD6000000000000000000004 /* VisorTransporte3D.swift in Sources */,
 				F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */,
 				0D5914DEA00142519A50A1E1 /* NotificacionesService.swift in Sources */,
 				A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */,

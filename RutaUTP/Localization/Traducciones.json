@@ -349,6 +349,13 @@
     "pt-BR": "Abre empresas disponíveis e permite escolher seu local de trabalho",
     "zh-Hans": "打开可用的公司并让您选择工作场所"
   },
+  "Abre los modelos para girarlos y ampliarlos": {
+    "de": "Öffnet die Modelle zum Drehen und Vergrößern",
+    "en": "Opens the models to rotate and zoom",
+    "fr": "Ouvre les modèles pour les faire pivoter et zoomer",
+    "pt-BR": "Abre os modelos para girar e ampliar",
+    "zh-Hans": "打开模型以旋转和缩放"
+  },
   "Abre sus sedes; los colores se aplican al confirmar": {
     "de": "Öffnet seine Arbeitsplätze; Farben gelten, wenn Sie bestätigen",
     "en": "Opens its workplaces; colors apply when you confirm",
@@ -1721,6 +1728,13 @@
     "pt-BR": "Carregando linhas…",
     "zh-Hans": "正在加载线路…"
   },
+  "Cargando modelo…": {
+    "de": "Modell wird geladen…",
+    "en": "Loading model…",
+    "fr": "Chargement du modèle…",
+    "pt-BR": "Carregando modelo…",
+    "zh-Hans": "正在加载模型…"
+  },
   "Cargando paraderos…": {
     "de": "Haltestellen werden geladen…",
     "en": "Loading stops…",
@@ -2015,6 +2029,13 @@
     "pt-BR": "Av. América Sur está bloqueado depois das 18h. Mansiche pode ser uma opção melhor.",
     "zh-Hans": "AV。 América Sur 下午 6 点后就堵车了。 Mansiche 可能是更好的选择。"
   },
+  "Colectivo": {
+    "de": "Sammeltaxi",
+    "en": "Shared taxi",
+    "fr": "Taxi collectif",
+    "pt-BR": "Táxi compartilhado",
+    "zh-Hans": "合乘出租车"
+  },
   "Coloca el marcador donde estás ahora": {
     "de": "Platziert die Markierung an der Stelle, an der Sie sich gerade befinden",
     "en": "Places the marker where you are now",
@@ -2099,6 +2120,20 @@
     "pt-BR": "Delegacia Víctor Larco",
     "zh-Hans": "Víctor Larco 警察局"
   },
+  "Compara el tiempo estimado y cuánto necesitas caminar. Las distancias aproximadas se comprueban al elegir una ruta.": {
+    "de": "Vergleiche die geschätzte Dauer und die Gehstrecke. Ungefähre Entfernungen werden bei der Routenauswahl überprüft.",
+    "en": "Compare estimated time and how far you need to walk. Approximate distances are checked when you choose a route.",
+    "fr": "Comparez le temps estimé et la distance à parcourir à pied. Les distances approximatives sont vérifiées lorsque vous choisissez un itinéraire.",
+    "pt-BR": "Compare o tempo estimado e quanto você precisa caminhar. As distâncias aproximadas são verificadas ao escolher uma rota.",
+    "zh-Hans": "比较预计用时和所需步行距离。选择路线时会核实估算的步行距离。"
+  },
+  "Compara líneas y distancias a pie para elegir otro recorrido.": {
+    "de": "Vergleiche Linien und Gehstrecken, um eine andere Route zu wählen.",
+    "en": "Compare lines and walking distances to choose another route.",
+    "fr": "Comparez les lignes et les distances à pied pour choisir un autre itinéraire.",
+    "pt-BR": "Compare linhas e distâncias a pé para escolher outro trajeto.",
+    "zh-Hans": "比较线路和步行距离，选择其他路线。"
+  },
   "Comparte algo útil con otros estudiantes": {
     "de": "Teilen Sie etwas Hilfreiches mit anderen Schülern",
     "en": "Share something helpful with other students",
@@ -2154,6 +2189,13 @@
     "fr": "Achats",
     "pt-BR": "Compras",
     "zh-Hans": "购物"
+  },
+  "Comprobando caminatas…": {
+    "de": "Gehstrecken werden überprüft…",
+    "en": "Checking walks…",
+    "fr": "Vérification des trajets à pied…",
+    "pt-BR": "Verificando os trajetos a pé…",
+    "zh-Hans": "正在核实步行路线…"
   },
   "Comprobando datos locales…": {
     "de": "Lokale Daten prüfen…",
@@ -2826,6 +2868,13 @@
     "fr": "Faites glisser pour explorer plus d'arrêts",
     "pt-BR": "Deslize para explorar mais paradas",
     "zh-Hans": "左右滑动查看更多站点"
+  },
+  "Desliza para ver otras rutas": {
+    "de": "Wische, um andere Routen zu sehen",
+    "en": "Swipe to see other routes",
+    "fr": "Balayez pour voir d’autres itinéraires",
+    "pt-BR": "Deslize para ver outras rotas",
+    "zh-Hans": "左右滑动查看其他路线"
   },
   "Desliza para ver tu transporte": {
     "de": "Wischen Sie, um Ihren Transport zu sehen",
@@ -3940,6 +3989,13 @@
     "pt-BR": "Aguarde 30 segundos entre relatórios. Repetir isso não adicionará outra confirmação.",
     "zh-Hans": "两次报告之间等待 30 秒。重复它不会添加另一个确认。"
   },
+  "Espera del primer micro no disponible.": {
+    "de": "Wartezeit auf den ersten Bus nicht verfügbar.",
+    "en": "First bus waiting time unavailable.",
+    "fr": "Temps d’attente du premier bus indisponible.",
+    "pt-BR": "Espera pelo primeiro ônibus indisponível.",
+    "zh-Hans": "暂无首班公交等候时间。"
+  },
   "Esperando detectar el viaje en la línea {0}": {
     "de": "Warten auf eine Fahrt auf der Linie {0}",
     "en": "Waiting to detect a trip on line {0}",
@@ -4402,6 +4458,20 @@
     "pt-BR": "Academia",
     "zh-Hans": "健身房"
   },
+  "Girar a la derecha": {
+    "de": "Nach rechts drehen",
+    "en": "Rotate right",
+    "fr": "Tourner à droite",
+    "pt-BR": "Girar para a direita",
+    "zh-Hans": "向右旋转"
+  },
+  "Girar a la izquierda": {
+    "de": "Nach links drehen",
+    "en": "Rotate left",
+    "fr": "Tourner à gauche",
+    "pt-BR": "Girar para a esquerda",
+    "zh-Hans": "向左旋转"
+  },
   "Gracias por aportar a la comunidad UTP. En esta versión de prueba la publicación no se comparte con otros usuarios.": {
     "de": "Vielen Dank für Ihren Beitrag zur UTP-Community. In dieser Testversion wird der Beitrag nicht mit anderen Benutzern geteilt.",
     "en": "Thanks for contributing to the UTP community. In this trial version the post isn't shared with other users.",
@@ -4829,6 +4899,13 @@
     "pt-BR": "Valor inválido",
     "zh-Hans": "金额无效"
   },
+  "Incluye ~{0} min de espera del primer micro.": {
+    "de": "Enthält ca. {0} Min. Wartezeit auf den ersten Bus.",
+    "en": "Includes ~{0} min waiting for the first bus.",
+    "fr": "Comprend environ {0} min d’attente pour le premier bus.",
+    "pt-BR": "Inclui cerca de {0} min de espera pelo primeiro ônibus.",
+    "zh-Hans": "包含约 {0} 分钟的首班公交等候时间。"
+  },
   "Información sobre el correo personal": {
     "de": "Informationen zur persönlichen E-Mail",
     "en": "Information about the personal email",
@@ -5004,6 +5081,13 @@
     "pt-BR": "As pesquisas e rotas de locais usam os serviços do Apple Maps. Essas solicitações enviam à Apple o texto, endereços ou coordenadas de pesquisa necessárias, que podem incluir sua localização como ponto de partida.",
     "zh-Hans": "地点搜索和路线导航使用 Apple 地图服务。这些请求会向 Apple 发送必要的搜索文本、地址或坐标，其中可能包括您的位置作为起点。"
   },
+  "La caminata de esta opción supera el límite permitido. Elige otra ruta.": {
+    "de": "Die Gehstrecke dieser Option überschreitet die zulässige Grenze. Wähle eine andere Route.",
+    "en": "This option's walking distance exceeds the allowed limit. Choose another route.",
+    "fr": "La distance à pied de cette option dépasse la limite autorisée. Choisissez un autre itinéraire.",
+    "pt-BR": "A distância a pé desta opção ultrapassa o limite permitido. Escolha outra rota.",
+    "zh-Hans": "此选项的步行距离超出允许范围。请选择其他路线。"
+  },
   "La clave «{0}» no está en el manifiesto": {
     "de": "Der Schlüssel „{0}“ ist nicht im Manifest enthalten",
     "en": "Key “{0}” is not in the manifest",
@@ -5143,6 +5227,13 @@
     "fr": "Lettre de la ligne : ",
     "pt-BR": "Letra da linha: ",
     "zh-Hans": "线路字母："
+  },
+  "Letra, línea o empresa": {
+    "de": "Buchstabe, Linie oder Unternehmen",
+    "en": "Letter, line or company",
+    "fr": "Lettre, ligne ou compagnie",
+    "pt-BR": "Letra, linha ou empresa",
+    "zh-Hans": "字母、线路或公司"
   },
   "Letra, línea, empresa o avenida": {
     "de": "Buchstabe, Linie, Unternehmen oder Straße",
@@ -6215,6 +6306,13 @@
     "pt-BR": "Os ônibus estão lotados na Av. Larco. Três passaram sem parar no caminho para UTP.",
     "zh-Hans": "Av 上的巴士已满员。 Larco。三人在前往UTP的路上不停歇地通过了。"
   },
+  "Micro, combi y colectivo": {
+    "de": "Bus, Kleinbus und Sammeltaxi",
+    "en": "Bus, minibus and shared taxi",
+    "fr": "Bus, minibus et taxi collectif",
+    "pt-BR": "Ônibus, micro-ônibus e táxi compartilhado",
+    "zh-Hans": "公交车、小巴和合乘出租车"
+  },
   "Micro, línea ": {
     "de": "Bus, Linie ",
     "en": "Bus, line ",
@@ -6256,6 +6354,20 @@
     "fr": "Mercredi-Dim 11h00-20h00",
     "pt-BR": "Quarta a Dom, 11h00-20h00",
     "zh-Hans": "周三至周日 11:00-20:00"
+  },
+  "Modelo 3D de {0}": {
+    "de": "3D-Modell: {0}",
+    "en": "3D model of {0}",
+    "fr": "Modèle 3D de {0}",
+    "pt-BR": "Modelo 3D de {0}",
+    "zh-Hans": "{0}的3D模型"
+  },
+  "Modelos de referencia": {
+    "de": "Beispielmodelle",
+    "en": "Reference models",
+    "fr": "Modèles de référence",
+    "pt-BR": "Modelos de referência",
+    "zh-Hans": "参考模型"
   },
   "Modo Señas": {
     "de": "Gebärdensprachmodus",
@@ -6334,12 +6446,40 @@
     "pt-BR": "Um mototáxi ultrapassou o sinal vermelho em España e Mansiche. Felizmente parou a tempo.",
     "zh-Hans": "一辆摩托车在España和Mansiche处闯红灯。幸好及时停了下来。"
   },
+  "Mover a la derecha": {
+    "de": "Nach rechts verschieben",
+    "en": "Move right",
+    "fr": "Déplacer vers la droite",
+    "pt-BR": "Mover para a direita",
+    "zh-Hans": "向右移动"
+  },
+  "Mover a la izquierda": {
+    "de": "Nach links verschieben",
+    "en": "Move left",
+    "fr": "Déplacer vers la gauche",
+    "pt-BR": "Mover para a esquerda",
+    "zh-Hans": "向左移动"
+  },
+  "Mover abajo": {
+    "de": "Nach unten verschieben",
+    "en": "Move down",
+    "fr": "Déplacer vers le bas",
+    "pt-BR": "Mover para baixo",
+    "zh-Hans": "向下移动"
+  },
   "Mover antes": {
     "de": "Nach vorne verschieben",
     "en": "Move earlier",
     "fr": "Déplacer avant",
     "pt-BR": "Mover para antes",
     "zh-Hans": "向前移动"
+  },
+  "Mover arriba": {
+    "de": "Nach oben verschieben",
+    "en": "Move up",
+    "fr": "Déplacer vers le haut",
+    "pt-BR": "Mover para cima",
+    "zh-Hans": "向上移动"
   },
   "Mover después": {
     "de": "Nach hinten verschieben",
@@ -6417,6 +6557,13 @@
     "fr": "Montrez ce code pour recevoir un virement.",
     "pt-BR": "Mostre este código para receber uma transferência.",
     "zh-Hans": "显示此代码即可接收转账。"
+  },
+  "Muestra este recorrido en el mapa.": {
+    "de": "Zeigt diese Route auf der Karte.",
+    "en": "Shows this route on the map.",
+    "fr": "Affiche cet itinéraire sur la carte.",
+    "pt-BR": "Mostra este trajeto no mapa.",
+    "zh-Hans": "在地图上显示此路线。"
   },
   "Muestra información de esta línea": {
     "de": "Zeigt Informationen für diese Linie an",
@@ -6523,6 +6670,13 @@
     "pt-BR": "Arraste e aperte para ampliar. Mantenha o cartão inteiro dentro da moldura.",
     "zh-Hans": "拖动并捏合即可缩放。将整张卡片放在框架内。"
   },
+  "Más cercana": {
+    "de": "Nächster Einstieg",
+    "en": "Closest boarding",
+    "fr": "Embarquement le plus proche",
+    "pt-BR": "Embarque mais próximo",
+    "zh-Hans": "最近上车点"
+  },
   "Más frecuencia": {
     "de": "Häufigere Fahrten",
     "en": "More frequency",
@@ -6536,6 +6690,13 @@
     "fr": "En savoir plus",
     "pt-BR": "Mais informações",
     "zh-Hans": "更多信息"
+  },
+  "Más rápida": {
+    "de": "Am schnellsten",
+    "en": "Fastest",
+    "fr": "Le plus rapide",
+    "pt-BR": "Mais rápida",
+    "zh-Hans": "最快"
   },
   "Máximo {0} caracteres": {
     "de": "Höchstens {0} Zeichen",
@@ -6754,6 +6915,13 @@
     "pt-BR": "Nenhuma parada corresponde a esta pesquisa",
     "zh-Hans": "没有符合此搜索的停靠点"
   },
+  "No hay rutas que coincidan con tu búsqueda.": {
+    "de": "Keine Routen entsprechen deiner Suche.",
+    "en": "No routes match your search.",
+    "fr": "Aucun itinéraire ne correspond à votre recherche.",
+    "pt-BR": "Nenhuma rota corresponde à sua busca.",
+    "zh-Hans": "没有符合搜索条件的路线。"
+  },
   "No hay sedes verificadas de {0} disponibles para elegir en Trujillo por ahora.": {
     "de": "Derzeit stehen in Trujillo keine verifizierten {0}-Arbeitsplätze zur Auswahl.",
     "en": "There are no verified {0} workplaces available to select in Trujillo at present.",
@@ -6823,6 +6991,13 @@
     "fr": "Nous n'avons pas pu confirmer la réception. Réessayez une fois connecté.",
     "pt-BR": "Não foi possível confirmar o recebimento. Tente novamente quando estiver conectado.",
     "zh-Hans": "我们无法确认收货。连接后重试。"
+  },
+  "No pudimos confirmar la ruta recomendada. Revisa Otras rutas para elegir otra línea.": {
+    "de": "Die empfohlene Route konnte nicht bestätigt werden. Sieh unter Andere Routen nach, um eine andere Linie zu wählen.",
+    "en": "We couldn't confirm the recommended route. Check Other routes to choose another line.",
+    "fr": "Nous n'avons pas pu confirmer l'itinéraire recommandé. Consultez Autres itinéraires pour choisir une autre ligne.",
+    "pt-BR": "Não foi possível confirmar a rota recomendada. Consulte Outras rotas para escolher outra linha.",
+    "zh-Hans": "无法确认推荐路线。请在“其他路线”中选择其他线路。"
   },
   "No pudimos conservar la agenda diaria. Intenta de nuevo; tus datos anteriores se conservan.": {
     "de": "Der tägliche Zeitplan konnte nicht gespeichert werden. Versuche es erneut; deine bisherigen Daten bleiben erhalten.",
@@ -7047,6 +7222,13 @@
     "fr": "Itinéraires à pied indisponibles. Vérifiez votre connexion.",
     "pt-BR": "Rotas a pé indisponíveis. Verifique sua conexão.",
     "zh-Hans": "无法找到步行路线。检查您的连接。"
+  },
+  "No se pudo cargar el modelo.": {
+    "de": "Das Modell konnte nicht geladen werden.",
+    "en": "The model could not be loaded.",
+    "fr": "Impossible de charger le modèle.",
+    "pt-BR": "Não foi possível carregar o modelo.",
+    "zh-Hans": "无法加载模型。"
   },
   "No se pudo completar el pago. Inténtalo de nuevo.": {
     "de": "Die Zahlung konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
@@ -7363,6 +7545,13 @@
     "pt-BR": "Cuidado ao esperar o ônibus no centro da cidade: os veículos ficam próximos à calçada. Escolha um ponto de embarque que mantenha o acesso de pedestres livre.",
     "zh-Hans": "在市中心等公交车时要小心：车辆停在人行道旁边。选择一个保证行人通道畅通的上车点。"
   },
+  "Opciones según tiempos y caminatas estimados.": {
+    "de": "Optionen nach geschätzten Zeiten und Fußwegen.",
+    "en": "Options based on estimated times and walks.",
+    "fr": "Options basées sur les durées et les trajets à pied estimés.",
+    "pt-BR": "Opções com base em tempos e caminhadas estimados.",
+    "zh-Hans": "选项根据预计时间和步行距离计算。"
+  },
   "Organiza referencias guardadas en este dispositivo. No permite pagar": {
     "de": "Auf diesem Gerät gespeicherte Referenzen organisieren. Zahlungen werden nicht unterstützt",
     "en": "Organize references saved on this device. Payments are not supported",
@@ -7397,6 +7586,13 @@
     "fr": "Autre",
     "pt-BR": "Outro",
     "zh-Hans": "其他"
+  },
+  "Otras rutas": {
+    "de": "Andere Routen",
+    "en": "Other routes",
+    "fr": "Autres itinéraires",
+    "pt-BR": "Outras rotas",
+    "zh-Hans": "其他路线"
   },
   "Otro": {
     "de": "Andere",
@@ -8546,6 +8742,13 @@
     "pt-BR": "Receber notificações",
     "zh-Hans": "接收通知"
   },
+  "Recomendada": {
+    "de": "Empfohlen",
+    "en": "Recommended",
+    "fr": "Recommandé",
+    "pt-BR": "Recomendada",
+    "zh-Hans": "推荐"
+  },
   "Recordarme en 2 minutos": {
     "de": "Erinnere mich in 2 Minuten daran",
     "en": "Remind me in 2 minutes",
@@ -8812,6 +9015,13 @@
     "pt-BR": "Redefinir enquadramento",
     "zh-Hans": "重置取景"
   },
+  "Restablecer vista": {
+    "de": "Ansicht zurücksetzen",
+    "en": "Reset view",
+    "fr": "Réinitialiser la vue",
+    "pt-BR": "Redefinir visualização",
+    "zh-Hans": "重置视图"
+  },
   "Restante": {
     "de": "Übrig",
     "en": "Remaining",
@@ -8917,12 +9127,33 @@
     "pt-BR": "Ruta UTP Trujillo é um aplicativo protótipo que ajuda você a navegar no transporte público até o campus da Universidad Tecnológica del Perú (Trujillo). Ao utilizar este aplicativo você aceita as condições aqui descritas.",
     "zh-Hans": "Ruta UTP Trujillo 是一款原型应用程序，可帮助您导航公共交通前往秘鲁理工大学校园 (Trujillo)。使用此应用程序即表示您接受此处描述的条件。"
   },
+  "Ruta anterior": {
+    "de": "Vorherige Route",
+    "en": "Previous route",
+    "fr": "Itinéraire précédent",
+    "pt-BR": "Rota anterior",
+    "zh-Hans": "上一条路线"
+  },
   "Ruta real · ": {
     "de": "Echte Route · ",
     "en": "Real route · ",
     "fr": "Itinéraire réel · ",
     "pt-BR": "Rota real · ",
     "zh-Hans": "真实路线· "
+  },
+  "Ruta siguiente": {
+    "de": "Nächste Route",
+    "en": "Next route",
+    "fr": "Itinéraire suivant",
+    "pt-BR": "Próxima rota",
+    "zh-Hans": "下一条路线"
+  },
+  "Ruta {0} de {1}": {
+    "de": "Route {0} von {1}",
+    "en": "Route {0} of {1}",
+    "fr": "Itinéraire {0} sur {1}",
+    "pt-BR": "Rota {0} de {1}",
+    "zh-Hans": "路线 {0}，共 {1} 条"
   },
   "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.": {
     "de": "RutaUTP benötigt Zugriff auf die Kamera, damit Sie Ihr Profilfoto aufnehmen können.",
@@ -9617,6 +9848,13 @@
     "pt-BR": "Não selecionado",
     "zh-Hans": "未选择"
   },
+  "Sin transbordos": {
+    "de": "Ohne Umstieg",
+    "en": "No transfers",
+    "fr": "Sans correspondance",
+    "pt-BR": "Sem baldeações",
+    "zh-Hans": "无需换乘"
+  },
   "Sin ubicación guardada": {
     "de": "Kein gespeicherter Standort",
     "en": "No saved location",
@@ -9952,6 +10190,13 @@
     "fr": "Tipakay de poulet frit doré avec riz chaufa en portion familiale pour quatre, 20 % de rabais.",
     "pt-BR": "Tipakay de frango frito dourado com arroz chaufa em porção familiar para quatro pessoas, 20% de desconto.",
     "zh-Hans": "黄金炸鸡 Tipakay 配 chaufa 米饭，家庭四人份，20% 折扣。"
+  },
+  "Tipo de transporte": {
+    "de": "Fahrzeugtyp",
+    "en": "Vehicle type",
+    "fr": "Type de véhicule",
+    "pt-BR": "Tipo de veículo",
+    "zh-Hans": "车辆类型"
   },
   "Titular": {
     "de": "Kontoinhaber",
@@ -10310,6 +10555,13 @@
     "pt-BR": "Transporte próximo",
     "zh-Hans": "附近公交"
   },
+  "Transportes en 3D": {
+    "de": "Verkehrsmittel in 3D",
+    "en": "Transport in 3D",
+    "fr": "Transports en 3D",
+    "pt-BR": "Transportes em 3D",
+    "zh-Hans": "3D交通工具"
+  },
   "Traza el camino desde tu ubicación en el mapa.": {
     "de": "Zeichnen Sie die Route von Ihrem Standort aus auf der Karte ein.",
     "en": "Plot the journey from your location on the map.",
@@ -10393,6 +10645,13 @@
     "fr": "Votre ville, plus proche.",
     "pt-BR": "Sua cidade, mais perto.",
     "zh-Hans": "让你的城市更近。"
+  },
+  "Tu elección": {
+    "de": "Deine Wahl",
+    "en": "Your choice",
+    "fr": "Votre choix",
+    "pt-BR": "Sua escolha",
+    "zh-Hans": "你的选择"
   },
   "Tu lugar": {
     "de": "Dein Ort",
@@ -10582,6 +10841,13 @@
     "fr": "Emplacement défini",
     "pt-BR": "Localização definida",
     "zh-Hans": "位置已选定"
+  },
+  "Un dedo para girar; dos para mover o ampliar.": {
+    "de": "Mit einem Finger drehen; mit zwei Fingern verschieben oder zoomen.",
+    "en": "One finger to rotate; two to pan or zoom.",
+    "fr": "Un doigt pour faire pivoter ; deux pour déplacer ou zoomer.",
+    "pt-BR": "Um dedo para girar; dois para mover ou ampliar.",
+    "zh-Hans": "单指旋转；双指移动或缩放。"
   },
   "Una barrera temporal puede bloquear el lugar habitual de subida. Antes de abordar en España, revisa el punto y reporta el cambio si afecta tu ruta.": {
     "de": "Eine temporäre Barriere kann den üblichen Einstiegspunkt blockieren. Überprüfen Sie vor dem Einsteigen in España den Standort und melden Sie eine Änderung, die sich auf Ihre Route auswirkt.",
@@ -10877,6 +11143,13 @@
     "pt-BR": "Ver ou alterar ponto",
     "zh-Hans": "查看或更改点"
   },
+  "Ver otras rutas": {
+    "de": "Weitere Routen ansehen",
+    "en": "See other routes",
+    "fr": "Voir les autres itinéraires",
+    "pt-BR": "Ver outras rotas",
+    "zh-Hans": "查看其他路线"
+  },
   "Ver promoción": {
     "de": "Angebot ansehen",
     "en": "View offer",
@@ -11002,6 +11275,13 @@
     "fr": "Vue aérienne d'une rue sans trottoir et travaux routiers.",
     "pt-BR": "Vista aérea de uma rua com pavimento e obras removidas.",
     "zh-Hans": "人行道和道路工程被拆除的街道的鸟瞰图。"
+  },
+  "Vista previa con caminatas aproximadas.": {
+    "de": "Vorschau mit ungefähren Gehstrecken.",
+    "en": "Preview with approximate walks.",
+    "fr": "Aperçu avec des trajets à pied approximatifs.",
+    "pt-BR": "Prévia com trajetos a pé aproximados.",
+    "zh-Hans": "预览中的步行路线为估算值。"
   },
   "Vista previa del recorte": {
     "de": "Vorschau des Zuschnitts",
@@ -11311,12 +11591,26 @@
     "pt-BR": "{0} linhas passam por {1}",
     "zh-Hans": "{0} 条线路经过 {1}"
   },
+  "{0} m a pie en el transbordo": {
+    "de": "{0} m Fußweg beim Umstieg",
+    "en": "{0} m walking at the transfer",
+    "fr": "{0} m à pied pour la correspondance",
+    "pt-BR": "{0} m a pé na baldeação",
+    "zh-Hans": "换乘时步行 {0} 米"
+  },
   "{0} m en línea recta": {
     "de": "{0} m Luftlinie",
     "en": "{0} m straight-line distance",
     "fr": "{0} m à vol d'oiseau",
     "pt-BR": "{0} m em linha reta",
     "zh-Hans": "直线距离 {0} 米"
+  },
+  "{0} m para subir · {1} m al destino": {
+    "de": "{0} m zum Einstieg · {1} m zum Ziel",
+    "en": "{0} m to board · {1} m to destination",
+    "fr": "{0} m pour monter · {1} m à destination",
+    "pt-BR": "{0} m até o embarque · {1} m até o destino",
+    "zh-Hans": "步行 {0} 米上车 · 下车后步行 {1} 米到达目的地"
   },
   "{0} min": {
     "de": "{0} min",
@@ -11325,12 +11619,26 @@
     "pt-BR": "{0} min",
     "zh-Hans": "{0} 分钟"
   },
+  "{0} min a pie para subir · {1} m": {
+    "de": "{0} Min. zu Fuß zum Einstieg · {1} m",
+    "en": "{0} min walk to board · {1} m",
+    "fr": "{0} min à pied pour embarquer · {1} m",
+    "pt-BR": "{0} min a pé até embarcar · {1} m",
+    "zh-Hans": "步行 {0} 分钟上车 · {1} 米"
+  },
   "{0} min a pie · {1} m": {
     "de": "{0} min Fußweg · {1} m",
     "en": "{0} min walk · {1} m",
     "fr": "{0} minutes à pied · {1} m",
     "pt-BR": "{0} min caminhada · {1} m",
     "zh-Hans": "{0} 分钟步行 · {1} 米"
+  },
+  "{0} min en total": {
+    "de": "{0} Min. insgesamt",
+    "en": "{0} min total",
+    "fr": "{0} min au total",
+    "pt-BR": "{0} min no total",
+    "zh-Hans": "全程 {0} 分钟"
   },
   "{0} paraderos": {
     "de": "{0} Haltestellen",
@@ -12045,194 +12353,5 @@
     "fr": "Urgences",
     "pt-BR": "Emergências",
     "zh-Hans": "紧急求助"
-  },
-  "Compara el tiempo estimado y cuánto necesitas caminar. Las distancias aproximadas se comprueban al elegir una ruta.": {
-    "de": "Vergleiche die geschätzte Dauer und die Gehstrecke. Ungefähre Entfernungen werden bei der Routenauswahl überprüft.",
-    "en": "Compare estimated time and how far you need to walk. Approximate distances are checked when you choose a route.",
-    "fr": "Comparez le temps estimé et la distance à parcourir à pied. Les distances approximatives sont vérifiées lorsque vous choisissez un itinéraire.",
-    "pt-BR": "Compare o tempo estimado e quanto você precisa caminhar. As distâncias aproximadas são verificadas ao escolher uma rota.",
-    "zh-Hans": "比较预计用时和所需步行距离。选择路线时会核实估算的步行距离。"
-  },
-  "Compara líneas y distancias a pie para elegir otro recorrido.": {
-    "de": "Vergleiche Linien und Gehstrecken, um eine andere Route zu wählen.",
-    "en": "Compare lines and walking distances to choose another route.",
-    "fr": "Comparez les lignes et les distances à pied pour choisir un autre itinéraire.",
-    "pt-BR": "Compare linhas e distâncias a pé para escolher outro trajeto.",
-    "zh-Hans": "比较线路和步行距离，选择其他路线。"
-  },
-  "Comprobando caminatas…": {
-    "de": "Gehstrecken werden überprüft…",
-    "en": "Checking walks…",
-    "fr": "Vérification des trajets à pied…",
-    "pt-BR": "Verificando os trajetos a pé…",
-    "zh-Hans": "正在核实步行路线…"
-  },
-  "Desliza para ver otras rutas": {
-    "de": "Wische, um andere Routen zu sehen",
-    "en": "Swipe to see other routes",
-    "fr": "Balayez pour voir d’autres itinéraires",
-    "pt-BR": "Deslize para ver outras rotas",
-    "zh-Hans": "左右滑动查看其他路线"
-  },
-  "Espera del primer micro no disponible.": {
-    "de": "Wartezeit auf den ersten Bus nicht verfügbar.",
-    "en": "First bus waiting time unavailable.",
-    "fr": "Temps d’attente du premier bus indisponible.",
-    "pt-BR": "Espera pelo primeiro ônibus indisponível.",
-    "zh-Hans": "暂无首班公交等候时间。"
-  },
-  "Incluye ~{0} min de espera del primer micro.": {
-    "de": "Enthält ca. {0} Min. Wartezeit auf den ersten Bus.",
-    "en": "Includes ~{0} min waiting for the first bus.",
-    "fr": "Comprend environ {0} min d’attente pour le premier bus.",
-    "pt-BR": "Inclui cerca de {0} min de espera pelo primeiro ônibus.",
-    "zh-Hans": "包含约 {0} 分钟的首班公交等候时间。"
-  },
-  "La caminata de esta opción supera el límite permitido. Elige otra ruta.": {
-    "de": "Die Gehstrecke dieser Option überschreitet die zulässige Grenze. Wähle eine andere Route.",
-    "en": "This option's walking distance exceeds the allowed limit. Choose another route.",
-    "fr": "La distance à pied de cette option dépasse la limite autorisée. Choisissez un autre itinéraire.",
-    "pt-BR": "A distância a pé desta opção ultrapassa o limite permitido. Escolha outra rota.",
-    "zh-Hans": "此选项的步行距离超出允许范围。请选择其他路线。"
-  },
-  "Letra, línea o empresa": {
-    "de": "Buchstabe, Linie oder Unternehmen",
-    "en": "Letter, line or company",
-    "fr": "Lettre, ligne ou compagnie",
-    "pt-BR": "Letra, linha ou empresa",
-    "zh-Hans": "字母、线路或公司"
-  },
-  "Muestra este recorrido en el mapa.": {
-    "de": "Zeigt diese Route auf der Karte.",
-    "en": "Shows this route on the map.",
-    "fr": "Affiche cet itinéraire sur la carte.",
-    "pt-BR": "Mostra este trajeto no mapa.",
-    "zh-Hans": "在地图上显示此路线。"
-  },
-  "Más cercana": {
-    "de": "Nächster Einstieg",
-    "en": "Closest boarding",
-    "fr": "Embarquement le plus proche",
-    "pt-BR": "Embarque mais próximo",
-    "zh-Hans": "最近上车点"
-  },
-  "Más rápida": {
-    "de": "Am schnellsten",
-    "en": "Fastest",
-    "fr": "Le plus rapide",
-    "pt-BR": "Mais rápida",
-    "zh-Hans": "最快"
-  },
-  "No hay rutas que coincidan con tu búsqueda.": {
-    "de": "Keine Routen entsprechen deiner Suche.",
-    "en": "No routes match your search.",
-    "fr": "Aucun itinéraire ne correspond à votre recherche.",
-    "pt-BR": "Nenhuma rota corresponde à sua busca.",
-    "zh-Hans": "没有符合搜索条件的路线。"
-  },
-  "No pudimos confirmar la ruta recomendada. Revisa Otras rutas para elegir otra línea.": {
-    "de": "Die empfohlene Route konnte nicht bestätigt werden. Sieh unter Andere Routen nach, um eine andere Linie zu wählen.",
-    "en": "We couldn't confirm the recommended route. Check Other routes to choose another line.",
-    "fr": "Nous n'avons pas pu confirmer l'itinéraire recommandé. Consultez Autres itinéraires pour choisir une autre ligne.",
-    "pt-BR": "Não foi possível confirmar a rota recomendada. Consulte Outras rotas para escolher outra linha.",
-    "zh-Hans": "无法确认推荐路线。请在“其他路线”中选择其他线路。"
-  },
-  "Opciones según tiempos y caminatas estimados.": {
-    "de": "Optionen nach geschätzten Zeiten und Fußwegen.",
-    "en": "Options based on estimated times and walks.",
-    "fr": "Options basées sur les durées et les trajets à pied estimés.",
-    "pt-BR": "Opções com base em tempos e caminhadas estimados.",
-    "zh-Hans": "选项根据预计时间和步行距离计算。"
-  },
-  "Otras rutas": {
-    "de": "Andere Routen",
-    "en": "Other routes",
-    "fr": "Autres itinéraires",
-    "pt-BR": "Outras rotas",
-    "zh-Hans": "其他路线"
-  },
-  "Recomendada": {
-    "de": "Empfohlen",
-    "en": "Recommended",
-    "fr": "Recommandé",
-    "pt-BR": "Recomendada",
-    "zh-Hans": "推荐"
-  },
-  "Ruta anterior": {
-    "de": "Vorherige Route",
-    "en": "Previous route",
-    "fr": "Itinéraire précédent",
-    "pt-BR": "Rota anterior",
-    "zh-Hans": "上一条路线"
-  },
-  "Ruta siguiente": {
-    "de": "Nächste Route",
-    "en": "Next route",
-    "fr": "Itinéraire suivant",
-    "pt-BR": "Próxima rota",
-    "zh-Hans": "下一条路线"
-  },
-  "Ruta {0} de {1}": {
-    "de": "Route {0} von {1}",
-    "en": "Route {0} of {1}",
-    "fr": "Itinéraire {0} sur {1}",
-    "pt-BR": "Rota {0} de {1}",
-    "zh-Hans": "路线 {0}，共 {1} 条"
-  },
-  "Sin transbordos": {
-    "de": "Ohne Umstieg",
-    "en": "No transfers",
-    "fr": "Sans correspondance",
-    "pt-BR": "Sem baldeações",
-    "zh-Hans": "无需换乘"
-  },
-  "Tu elección": {
-    "de": "Deine Wahl",
-    "en": "Your choice",
-    "fr": "Votre choix",
-    "pt-BR": "Sua escolha",
-    "zh-Hans": "你的选择"
-  },
-  "Ver otras rutas": {
-    "de": "Weitere Routen ansehen",
-    "en": "See other routes",
-    "fr": "Voir les autres itinéraires",
-    "pt-BR": "Ver outras rotas",
-    "zh-Hans": "查看其他路线"
-  },
-  "Vista previa con caminatas aproximadas.": {
-    "de": "Vorschau mit ungefähren Gehstrecken.",
-    "en": "Preview with approximate walks.",
-    "fr": "Aperçu avec des trajets à pied approximatifs.",
-    "pt-BR": "Prévia com trajetos a pé aproximados.",
-    "zh-Hans": "预览中的步行路线为估算值。"
-  },
-  "{0} m a pie en el transbordo": {
-    "de": "{0} m Fußweg beim Umstieg",
-    "en": "{0} m walking at the transfer",
-    "fr": "{0} m à pied pour la correspondance",
-    "pt-BR": "{0} m a pé na baldeação",
-    "zh-Hans": "换乘时步行 {0} 米"
-  },
-  "{0} m para subir · {1} m al destino": {
-    "de": "{0} m zum Einstieg · {1} m zum Ziel",
-    "en": "{0} m to board · {1} m to destination",
-    "fr": "{0} m pour monter · {1} m à destination",
-    "pt-BR": "{0} m até o embarque · {1} m até o destino",
-    "zh-Hans": "步行 {0} 米上车 · 下车后步行 {1} 米到达目的地"
-  },
-  "{0} min a pie para subir · {1} m": {
-    "de": "{0} Min. zu Fuß zum Einstieg · {1} m",
-    "en": "{0} min walk to board · {1} m",
-    "fr": "{0} min à pied pour embarquer · {1} m",
-    "pt-BR": "{0} min a pé até embarcar · {1} m",
-    "zh-Hans": "步行 {0} 分钟上车 · {1} 米"
-  },
-  "{0} min en total": {
-    "de": "{0} Min. insgesamt",
-    "en": "{0} min total",
-    "fr": "{0} min au total",
-    "pt-BR": "{0} min no total",
-    "zh-Hans": "全程 {0} 分钟"
   }
 }

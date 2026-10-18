@@ -15,6 +15,7 @@ struct RutasView: View {
     @EnvironmentObject var router: AppRouter
     @StateObject private var viewModel = RutasViewModel()
     @State private var rutaSeleccionada: RutaOpcion? = nil
+    @State private var mostrarTransportes3D = false
 
     #if DEBUG
     @State private var debugExplorador: Bool = false
@@ -52,6 +53,9 @@ struct RutasView: View {
         }
         .onChange(of: router.rutaPendiente) { _, _ in
             consumirRutaPendiente()
+        }
+        .sheet(isPresented: $mostrarTransportes3D) {
+            Transportes3DView()
         }
         #if DEBUG
         .fullScreenCover(isPresented: $debugExplorador) {
@@ -116,6 +120,36 @@ struct RutasView: View {
             buscador
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(alignment: .leading, spacing: 14) {
+                    Button {
+                        mostrarTransportes3D = true
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "cube.transparent.fill")
+                                .font(.system(size: 26, weight: .medium))
+                                .foregroundStyle(Color.onPrimaryContainer)
+                                .frame(width: 54, height: 54)
+                                .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 16))
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(L.t("Transportes en 3D", "Transport in 3D"))
+                                    .font(.headlineSm)
+                                    .foregroundStyle(Color.onSurface)
+                                Text(L.t("Micro, combi y colectivo", "Bus, minibus and shared taxi"))
+                                    .font(.bodySm)
+                                    .foregroundStyle(Color.onSurfaceVariant)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.onSurfaceVariant)
+                                .accessibilityHidden(true)
+                        }
+                        .padding(16)
+                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 22))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(L.t("Abre los modelos para girarlos y ampliarlos", "Opens the models to rotate and zoom"))
+
                     HStack(alignment: .center) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(L.signable("rutas.elegir", "Elige tu ruta", "Pick your route"))
