@@ -2,12 +2,15 @@ import SwiftUI
 
 struct ModoBusesUTPSection: View {
     @AppStorage(PreferenciasApp.busesUTP) private var activado = false
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L.t("Transporte", "Transport"))
-                .font(.title3.weight(.bold))
-                .foregroundStyle(Color.onSurface)
+                .font(.footnote.weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .padding(.horizontal, 16)
                 .accessibilityAddTraits(.isHeader)
 
             VStack(alignment: .leading, spacing: 12) {
@@ -15,23 +18,22 @@ struct ModoBusesUTPSection: View {
                     get: { activado && TransporteApp.busesUTPDisponibles },
                     set: { activado = $0 && TransporteApp.busesUTPDisponibles }
                 )) {
-                    HStack(spacing: 14) {
+                    HStack(spacing: 12) {
                         Image(systemName: "bus.fill")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.onPrimaryContainer)
-                            .frame(width: 38, height: 38)
-                            .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 12))
+                            .font(.body.weight(.regular))
+                            .foregroundStyle(colorScheme == .dark ? Color.primaryFixed : Color.appPrimary)
+                            .frame(width: 28, height: 28)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(L.t("Buses UTP", "UTP buses"))
-                                .font(.bodyMdMedium)
+                                .font(.bodyMd)
                                 .foregroundStyle(Color.onSurface)
                             Text(activado
                                  ? (TransporteApp.rutasUTPPendientes
                                     ? L.t("Rutas pendientes", "Routes pending")
                                     : L.t("Modo UTP activado", "UTP mode on"))
                                  : L.t("Transporte urbano", "City transport"))
-                                .font(.caption)
+                                .font(.footnote)
                                 .foregroundStyle(Color.onSurfaceVariant)
                         }
                         .fixedSize(horizontal: false, vertical: true)
@@ -47,6 +49,7 @@ struct ModoBusesUTPSection: View {
                     .font(.caption)
                     .foregroundStyle(Color.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 40)
 
                 DisclosureGroup(L.t("Más información", "More information")) {
                     Text(TransporteApp.rutasUTPPendientes
@@ -61,11 +64,8 @@ struct ModoBusesUTPSection: View {
                 .tint(.appPrimary)
             }
             .padding(16)
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.outlineVariant.opacity(0.18), lineWidth: 0.5)
-            }
+            .background(Color(uiColor: .secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 }

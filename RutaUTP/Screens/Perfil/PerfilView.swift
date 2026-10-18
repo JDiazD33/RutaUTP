@@ -12,10 +12,12 @@ struct PerfilView: View {
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
     @ScaledMetric(relativeTo: .title2) private var avatarSize = 72.0
 
     private var apilarContenido: Bool { textSize >= .xxxLarge }
+    private var acentoPerfil: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     // Dato institucional del prototipo. DatosPersonalesSheet lo presenta como
     // "solo lectura" (viene de la universidad), así que aquí no se edita.
@@ -84,17 +86,17 @@ struct PerfilView: View {
 
             ZStack(alignment: .bottom) {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 28) {
                         hero
                             .padding(.horizontal, 20)
 
                         billetera
                             .padding(.horizontal, 20)
 
+                        PerfilCuponesGuardados()
+
                         configuracion
                             .padding(.horizontal, 20)
-
-                        PerfilCuponesGuardados()
                     }
                     .padding(.top, 20)
                     .padding(.bottom, 24)
@@ -319,18 +321,20 @@ struct PerfilView: View {
         VStack(alignment: .leading, spacing: 14) {
             (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
                               : AnyLayout(HStackLayout(alignment: .center, spacing: 12))) {
-                tituloSeccion(L.t("Mi billetera", "My wallet"))
+                Text(L.t("Mi billetera", "My wallet"))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color.onSurface)
+                    .accessibilityAddTraits(.isHeader)
                 if !apilarContenido { Spacer(minLength: 0) }
                 Button {
                     AppHaptics.impact(.light)
                     mostrarCredenciales = true
                 } label: {
                     Label(L.t("Credenciales", "Credentials"), systemImage: "slider.horizontal.3")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.onPrimaryContainer)
-                        .padding(.horizontal, 12)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(acentoPerfil)
                         .frame(minHeight: 44)
-                        .background(Color.primaryContainer, in: Capsule())
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(L.t("Elige qué carnés aparecen en tu billetera", "Choose which cards appear in your wallet"))
@@ -347,31 +351,29 @@ struct PerfilView: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
-            if mostrarCarnetFoto || mostrarCarnetDigital {
-                (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-                                  : AnyLayout(HStackLayout(alignment: .top, spacing: 12))) {
-                    if mostrarCarnetFoto {
-                        tarjetaBilletera(icono: CarnetPerfil.foto.icono,
-                                        titulo: CarnetPerfil.foto.tituloBreve(para: empresa),
-                                        detalle: hayCarnetGuardado
-                                            ? L.t("Ver foto", "View photo")
-                                            : L.t("Añadir foto", "Add photo")) {
-                            empresaDelCarnet = empresa
-                            showCarnetScanner = true
-                        }
-                    }
-                    if mostrarCarnetDigital {
-                        tarjetaBilletera(icono: CarnetPerfil.digital.icono,
-                                        titulo: CarnetPerfil.digital.tituloBreve(para: empresa),
-                                        detalle: L.t("Muestra · sin validez", "Sample · not valid")) {
-                            empresaDelCarnet = empresa
-                            showCarneDigital = true
-                        }
-                    }
-                }
-            }
-
             grupoFilas {
+                if mostrarCarnetFoto {
+                    chevronRow(icon: CarnetPerfil.foto.icono, iconColor: .appPrimary,
+                               label: CarnetPerfil.foto.tituloBreve(para: empresa),
+                               detalle: hayCarnetGuardado
+                                   ? L.t("Ver foto", "View photo")
+                                   : L.t("Añadir foto", "Add photo")) {
+                        AppHaptics.impact(.light)
+                        empresaDelCarnet = empresa
+                        showCarnetScanner = true
+                    }
+                    separadorFila
+                }
+                if mostrarCarnetDigital {
+                    chevronRow(icon: CarnetPerfil.digital.icono, iconColor: .appPrimary,
+                               label: CarnetPerfil.digital.tituloBreve(para: empresa),
+                               detalle: L.t("Muestra · sin validez", "Sample · not valid")) {
+                        AppHaptics.impact(.light)
+                        empresaDelCarnet = empresa
+                        showCarneDigital = true
+                    }
+                    separadorFila
+                }
                 chevronRow(icon: "creditcard.fill", iconColor: .appPrimary,
                            label: L.t("Mis tarjetas", "My cards"),
                            detalle: L.t("Referencias locales · sin pagos", "Local references · no payments")) {
@@ -384,47 +386,9 @@ struct PerfilView: View {
         }
     }
 
-    private func tarjetaBilletera(icono: String, titulo: String, detalle: String,
-                                  accion: @escaping () -> Void) -> some View {
-        Button {
-            AppHaptics.impact(.light)
-            accion()
-        } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    iconoFila(icono, color: .appPrimary)
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.onSurfaceVariant)
-                        .accessibilityHidden(true)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(titulo).font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.onSurface)
-                    Text(detalle).font(.caption)
-                        .foregroundStyle(Color.onSurfaceVariant)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.outlineVariant.opacity(0.18), lineWidth: 0.5)
-            }
-            .contentShape(RoundedRectangle(cornerRadius: 20))
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(titulo)
-        .accessibilityValue(detalle)
-    }
-
     // MARK: - Ajustes
     private var configuracion: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 28) {
             if TransporteApp.busesUTPDisponibles { ModoBusesUTPSection() }
 
             VStack(alignment: .leading, spacing: 12) {
@@ -487,6 +451,7 @@ struct PerfilView: View {
                 .font(.footnote)
                 .foregroundStyle(Color.onSurfaceVariant)
                 .tint(.appPrimary)
+                .padding(.horizontal, 16)
             }
         }
     }
@@ -512,69 +477,68 @@ struct PerfilView: View {
 
     private func tituloSeccion(_ titulo: String) -> some View {
         Text(titulo)
-            .font(.title3.weight(.bold))
-            .foregroundStyle(Color.onSurface)
+            .font(.footnote.weight(.semibold))
+            .textCase(.uppercase)
+            .foregroundStyle(Color.onSurfaceVariant)
+            .padding(.horizontal, 16)
             .accessibilityAddTraits(.isHeader)
     }
 
     private func grupoFilas<Contenido: View>(@ViewBuilder contenido: () -> Contenido) -> some View {
         VStack(spacing: 0, content: contenido)
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.outlineVariant.opacity(0.18), lineWidth: 0.5)
-            }
+            .background(Color(uiColor: .secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var separadorFila: some View {
-        Divider().padding(.leading, 68).accessibilityHidden(true)
+        Divider().padding(.leading, 56).accessibilityHidden(true)
     }
 
     private func iconoFila(_ icono: String, color: Color) -> some View {
         Image(systemName: icono)
-            .font(.body.weight(.semibold))
-            .foregroundStyle(color == .appPrimary ? Color.onPrimaryContainer : color)
-            .frame(width: 38, height: 38)
-            .background(color == .appPrimary ? Color.primaryContainer : color.opacity(0.12),
-                        in: RoundedRectangle(cornerRadius: 12))
+            .font(.body.weight(.regular))
+            .foregroundStyle(colorScheme == .dark ? Color.primaryFixed : color)
+            .frame(width: 28, height: 28)
             .accessibilityHidden(true)
     }
 
     private func toggleRow(icon: String, iconColor: Color, label: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             iconoFila(icon, color: iconColor)
             Toggle(isOn: isOn) {
                 Text(label)
-                    .font(.bodyMdMedium)
+                    .font(.bodyMd)
                     .foregroundStyle(Color.onSurface)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .tint(.appPrimary)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, 12)
+        .frame(minHeight: 60)
     }
 
     private func chevronRow(icon: String, iconColor: Color, label: String,
                             detalle: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 iconoFila(icon, color: iconColor)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(label).font(.bodyMdMedium).foregroundStyle(Color.onSurface)
+                    Text(label).font(.bodyMd).foregroundStyle(Color.onSurface)
                     if let detalle {
-                        Text(detalle).font(.caption).foregroundStyle(Color.onSurfaceVariant)
+                        Text(detalle).font(.footnote).foregroundStyle(Color.onSurfaceVariant)
                     }
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.onSurfaceVariant)
+                    .foregroundStyle(Color.onSurfaceVariant.opacity(0.55))
                     .accessibilityHidden(true)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
+            .frame(minHeight: 60)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
