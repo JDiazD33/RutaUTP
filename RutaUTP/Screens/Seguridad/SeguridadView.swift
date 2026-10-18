@@ -20,6 +20,8 @@ struct SeguridadView: View {
     @State private var showLlamarContacto = false
     @State private var showConfigurarContacto = false
     @State private var seccion: Seccion = .ayuda
+    @Namespace private var indicadorSeccion
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
     @State private var categoriaCercana: CategoriaAyudaCercana?
     @AppStorage("emergencia_nombre") private var contactoNombre = ""
     @AppStorage("emergencia_numero") private var contactoNumero = ""
@@ -54,6 +56,7 @@ struct SeguridadView: View {
         var titulo: String {
             self == .ayuda ? L.t("Ayuda", "Help") : L.t("Comunidad", "Community")
         }
+        var icono: String { self == .ayuda ? "heart.text.square" : "person.2" }
     }
 
     /// DEBUG: `--comunidad` deja solo la sección de comunidad y `--zonas` solo
@@ -319,12 +322,37 @@ struct SeguridadView: View {
     }
 
     private var selectorSeccion: some View {
-        Picker(L.t("Seguridad", "Safety"), selection: $seccion) {
+        HStack(spacing: 20) {
             ForEach(Seccion.allCases) { opcion in
-                Text(opcion.titulo).tag(opcion)
+                let seleccionada = seccion == opcion
+                Button {
+                    AppHaptics.selection()
+                    withAnimation(reducirMovimiento ? nil : .easeInOut(duration: 0.2)) {
+                        seccion = opcion
+                    }
+                } label: {
+                    Label(opcion.titulo, systemImage: opcion.icono)
+                        .font(.bodyMdMedium)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(seleccionada ? Color.appPrimary : Color.onSurfaceVariant)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .padding(.bottom, 8)
+                        .contentShape(Rectangle())
+                        .overlay(alignment: .bottom) {
+                            if seleccionada {
+                                Capsule().fill(Color.appPrimary).frame(height: 3)
+                                    .matchedGeometryEffect(id: "seccion", in: indicadorSeccion)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(seleccionada ? .isSelected : [])
             }
         }
-        .pickerStyle(.segmented)
+        .background(alignment: .bottom) {
+            Color.outlineVariant.opacity(0.45).frame(height: 1)
+        }
         .padding(.horizontal, 20)
         .padding(.bottom, 4)
     }
@@ -390,9 +418,12 @@ struct SeguridadView: View {
                     if numeroContacto == nil { showConfigurarContacto = true }
                     else { showLlamarContacto = true }
                 } label: {
-                    accesoLabel(L.t("Llamar a mi contacto", "Call my contact"), icono: "person.crop.circle")
+                    contactoLabel
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(numeroContacto == nil
+                    ? L.t("Añadir contacto", "Add contact")
+                    : L.t("Llamar a mi contacto", "Call my contact"))
                 .accessibilityHint(numeroContacto == nil
                     ? L.t("Configura tu contacto de emergencia", "Set up your emergency contact")
                     : contactoNombre)
@@ -412,6 +443,42 @@ struct SeguridadView: View {
                 .seniable("seguridad.reportar", conGesto: false)
             }
         }
+    }
+
+    private var contactoLabel: some View {
+        let nombre = contactoNombre.trimmingCharacters(in: .whitespacesAndNewlines)
+        let iniciales = nombre.split(whereSeparator: \.isWhitespace).prefix(2)
+            .compactMap(\.first).map(String.init).joined().uppercased()
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                ZStack {
+                    Circle().fill(Color.surfaceContainerLowest.opacity(0.8))
+                    if numeroContacto != nil, !iniciales.isEmpty {
+                        Text(iniciales).font(.bodySmMedium)
+                    } else {
+                        Image(systemName: "person.fill").font(.bodySm)
+                    }
+                }
+                .frame(width: 32, height: 32)
+                Spacer(minLength: 4)
+                Image(systemName: numeroContacto == nil ? "plus" : "phone.fill")
+                    .font(.bodySmMedium)
+            }
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(numeroContacto == nil ? L.t("Añadir contacto", "Add contact") : L.t("Llamar", "Call"))
+                    .font(.bodyMdMedium)
+                Text(numeroContacto != nil && !nombre.isEmpty ? nombre : L.t("Mi contacto", "My contact"))
+                    .font(.bodyXs)
+            }
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(Color.onPrimaryContainer)
+        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
+        .padding(16)
+        .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 18))
+        .contentShape(RoundedRectangle(cornerRadius: 18))
     }
 
     private func accesoLabel(_ titulo: String, icono: String) -> some View {

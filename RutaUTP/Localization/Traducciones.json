@@ -1,4 +1,11 @@
 {
+  "Añadir contacto": {
+    "de": "Kontakt hinzufügen",
+    "en": "Add contact",
+    "fr": "Ajouter un contact",
+    "pt-BR": "Adicionar contato",
+    "zh-Hans": "添加联系人"
+  },
   "Amarillo": {
     "de": "Gelb",
     "en": "Yellow",
