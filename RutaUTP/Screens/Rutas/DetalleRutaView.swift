@@ -90,6 +90,9 @@ struct DetalleRutaView: View {
                                 .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
                         )
 
+                        IdentificacionRuta3DView(identificacion: IdentificacionRuta3D(ruta: ruta),
+                                                activo: !showExplorador && !showCarPlay)
+
                         // Stats grid (datos del feed GTFS)
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                                   spacing: 12) {

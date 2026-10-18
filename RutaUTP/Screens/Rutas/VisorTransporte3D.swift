@@ -8,6 +8,7 @@ struct VisorTransporte3D: UIViewRepresentable {
     let color: UIColor
     let intento: Int
     let orden: OrdenTransporte3D?
+    let identificacion: IdentificacionRuta3D?
     @Binding var estado: EstadoTransporte3D
 
     func makeUIView(context: Context) -> VistaTransporte3D {
@@ -19,7 +20,7 @@ struct VisorTransporte3D: UIViewRepresentable {
     }
 
     func updateUIView(_ view: VistaTransporte3D, context: Context) {
-        view.actualizar(tipo: tipo, color: color, intento: intento, orden: orden)
+        view.actualizar(tipo: tipo, color: color, intento: intento, orden: orden, identificacion: identificacion)
     }
 
     static func dismantleUIView(_ view: VistaTransporte3D, coordinator: ()) {
@@ -35,6 +36,8 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
     private let camara = PerspectiveCamera()
     private var modelo: Entity?
     private var contornos: [(Entity, [Int])] = []
+    private var carrocerias: [(Entity, [Int])] = []
+    private var identificacion: IdentificacionRuta3D?
     private var carga: Task<Void, Never>?
     private var cargaAnterior: AnyCancellable?
     private var generacion = UUID()
@@ -89,12 +92,13 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         }
     }
 
-    func actualizar(tipo: TipoTransporte3D, color: UIColor, intento: Int, orden: OrdenTransporte3D?) {
+    func actualizar(tipo: TipoTransporte3D, color: UIColor, intento: Int, orden: OrdenTransporte3D?, identificacion: IdentificacionRuta3D?) {
+        self.identificacion = identificacion
         if !colorContorno.isEqual(color) {
             colorContorno = color
             colorear()
         }
-        let clave = "\(tipo.rawValue)-\(intento)"
+        let clave = "\(tipo.rawValue)-\(intento)-\(identificacion?.claveModelo ?? "galeria")"
         if recurso != clave {
             recurso = clave
             cargar(tipo)
@@ -111,6 +115,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         modelo?.removeFromParent()
         modelo = nil
         contornos.removeAll()
+        carrocerias.removeAll()
         generacion = UUID()
         let solicitud = generacion
         cambioEstado?(.cargando)
@@ -159,6 +164,10 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
             cambioEstado?(.fallo)
             return
         }
+        if let identificacion, identificacion.esMicro {
+            aplicarPinturaReferencia(a: entidad, colores: identificacion.colores?.colores ?? [])
+            agregarCarteles(a: entidad, identificacion: identificacion, caja: caja)
+        }
         modelo = entidad
         ancla.addChild(entidad)
         radio = simd_length(caja.extents * escala) / 2
@@ -175,6 +184,12 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                 return nil
             }
             if !indices.isEmpty { contornos.append((entidad, indices)) }
+            let indicesCarroceria = componente.materials.enumerated().compactMap { indice, material -> Int? in
+                if entidad.name == "Carroceria" { return indice }
+                if #available(iOS 18.0, *), material.name == "Carroceria" { return indice }
+                return nil
+            }
+            if !indicesCarroceria.isEmpty { carrocerias.append((entidad, indicesCarroceria)) }
         }
         for hijo in entidad.children { registrarContornos(hijo) }
     }
@@ -187,6 +202,64 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
             }
             entidad.components.set(componente)
         }
+    }
+
+    private func aplicarPinturaReferencia(a entidad: Entity, colores: [ColorMicroReferencia]) {
+        guard let principal = colores.first else { return }
+        for (parte, indices) in carrocerias {
+            guard var componente = parte.components[ModelComponent.self] else { continue }
+            for indice in indices {
+                componente.materials[indice] = SimpleMaterial(color: UIColor(principal.color), roughness: 0.6, isMetallic: false)
+            }
+            parte.components.set(componente)
+        }
+        // Franjas esquematicas sobre la carroceria del micro, sin tapar las ruedas.
+        // No se reproducen graficos, marcas ni una pintura exacta de una unidad.
+        for (indice, color) in colores.dropFirst().enumerated() {
+            let alto: Float = indice == 0 ? 0.16 : 0.07
+            let y: Float = indice == 0 ? 1.28 : 1.44
+            for lado in [Float(-1), Float(1)] {
+                let franja = ModelEntity(mesh: .generateBox(size: [0.025, alto, 6.5]),
+                                         materials: [SimpleMaterial(color: UIColor(color.color), roughness: 0.6, isMetallic: false)])
+                franja.position = [lado * 1.18, y, -0.45]
+                entidad.addChild(franja)
+            }
+        }
+    }
+
+    private func agregarCarteles(a entidad: Entity, identificacion: IdentificacionRuta3D, caja: BoundingBox) {
+        guard !identificacion.letra.isEmpty else { return }
+        let plantilla = Entity()
+        plantilla.name = "CartelDeRuta"
+        plantilla.addChild(ModelEntity(mesh: .generateBox(size: [1.32, 0.91, 0.025], cornerRadius: 0.008),
+                                        materials: [UnlitMaterial(color: .white)]))
+        plantilla.addChild(textoCartel(identificacion.codigo, ancho: 1.10, alto: 0.18, y: 0.26))
+        plantilla.addChild(textoCartel(identificacion.letra, ancho: 1.15, alto: 0.47, y: -0.09))
+        // +Z es el frente del recurso. Las letras forman parte de la escena 3D.
+        let posiciones: [(SIMD3<Float>, Float)] = [
+            ([-0.36, 2.12, caja.max.z - 0.08], 0),
+            ([0, 2.12, caja.min.z - 0.04], .pi),
+            ([1.20, 2.12, 1.80], .pi / 2),
+            ([-1.20, 2.12, 1.80], -.pi / 2)
+        ]
+        for (posicion, angulo) in posiciones {
+            let cartel = plantilla.clone(recursive: true)
+            cartel.position = posicion
+            cartel.orientation = simd_quatf(angle: angulo, axis: [0, 1, 0])
+            entidad.addChild(cartel)
+        }
+    }
+
+    private func textoCartel(_ texto: String, ancho: Float, alto: Float, y: Float) -> Entity {
+        let malla = MeshResource.generateText(texto, extrusionDepth: 0.008,
+                                             font: .systemFont(ofSize: 1, weight: .heavy),
+                                             containerFrame: .zero, alignment: .center, lineBreakMode: .byClipping)
+        let letras = ModelEntity(mesh: malla, materials: [UnlitMaterial(color: .black)])
+        let caja = letras.visualBounds(relativeTo: nil)
+        let escala = min(ancho / max(caja.extents.x, 0.001), alto / max(caja.extents.y, 0.001))
+        letras.scale = SIMD3(repeating: escala)
+        letras.position = [-caja.center.x * escala, y - caja.center.y * escala, 0.025]
+        return letras
     }
 
     private func encuadrar() {
@@ -270,6 +343,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         cargaAnterior = nil
         modelo = nil
         contornos.removeAll()
+        carrocerias.removeAll()
         render.scene.anchors.removeAll()
         cambioEstado = nil
     }

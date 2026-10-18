@@ -27,44 +27,36 @@ struct OrdenTransporte3D {
 enum EstadoTransporte3D { case cargando, listo, fallo }
 
 struct Transportes3DView: View {
+    var identificacion: IdentificacionRuta3D? = nil
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.scenePhase) private var scenePhase
     @State private var tipo: TipoTransporte3D = .micro
-    @State private var estado: EstadoTransporte3D = .cargando
-    @State private var intento = 0
-    @State private var orden: OrdenTransporte3D?
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Picker(L.t("Tipo de transporte", "Vehicle type"), selection: $tipo) {
-                        ForEach(TipoTransporte3D.allCases) { tipo in
-                            Text(tipo.nombre).tag(tipo)
+                    if let identificacion {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(identificacion.codigo + " · " + identificacion.letra)
+                                .font(.headlineSm)
+                            Text(identificacion.empresa)
+                                .font(.bodySm)
+                                .foregroundStyle(Color.onSurfaceVariant)
                         }
+                        ColoresReferenciaRutaView(referencia: identificacion.colores)
+                    } else {
+                        Picker(L.t("Tipo de transporte", "Vehicle type"), selection: $tipo) {
+                            ForEach(TipoTransporte3D.allCases) { tipo in
+                                Text(tipo.nombre).tag(tipo)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(Color.appPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("transportes3d.tipo")
                     }
-                    .pickerStyle(.menu)
-                    .tint(Color.appPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("transportes3d.tipo")
-
-                    visor
-
-                    HStack(spacing: 8) {
-                        control("arrow.counterclockwise", L.t("Girar a la izquierda", "Rotate left"), .izquierda)
-                        control("arrow.clockwise", L.t("Girar a la derecha", "Rotate right"), .derecha)
-                        control("plus.magnifyingglass", L.t("Acercar", "Zoom in"), .acercar)
-                        control("minus.magnifyingglass", L.t("Alejar", "Zoom out"), .alejar)
-                        control("arrow.uturn.backward", L.t("Restablecer vista", "Reset view"), .restablecer)
-                    }
-                    .disabled(estado != .listo)
-
-                    Text(L.t("Un dedo para girar; dos para mover o ampliar.", "One finger to rotate; two to pan or zoom."))
-                        .font(.bodySm)
-                        .foregroundStyle(Color.onSurfaceVariant)
-                    Text(L.t("Modelos de referencia", "Reference models"))
-                        .font(.caption)
-                        .foregroundStyle(Color.onSurfaceVariant)
+                    PanelTransporte3D(tipo: identificacion == nil ? tipo : .micro, identificacion: identificacion)
+                        .id(identificacion?.claveModelo ?? tipo.rawValue)
                 }
                 .padding(20)
             }
@@ -81,15 +73,48 @@ struct Transportes3DView: View {
         .presentationDragIndicator(.visible)
         .presentationDetents([.large])
     }
+}
+
+/// El detalle y la galeria comparten el mismo visor y sus alternativas accesibles.
+struct PanelTransporte3D: View {
+    let tipo: TipoTransporte3D
+    var identificacion: IdentificacionRuta3D? = nil
+    var activo = true
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var estado: EstadoTransporte3D = .cargando
+    @State private var intento = 0
+    @State private var orden: OrdenTransporte3D?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            visor
+            HStack(spacing: 6) {
+                control("arrow.counterclockwise", L.t("Girar a la izquierda", "Rotate left"), .izquierda)
+                control("arrow.clockwise", L.t("Girar a la derecha", "Rotate right"), .derecha)
+                control("plus.magnifyingglass", L.t("Acercar", "Zoom in"), .acercar)
+                control("minus.magnifyingglass", L.t("Alejar", "Zoom out"), .alejar)
+                control("arrow.uturn.backward", L.t("Restablecer vista", "Reset view"), .restablecer)
+            }
+            .disabled(estado != .listo || !activo)
+            Text(L.t("Un dedo para girar; dos para mover o ampliar.", "One finger to rotate; two to pan or zoom."))
+                .font(.bodySm)
+                .foregroundStyle(Color.onSurfaceVariant)
+            Text(L.t("Modelos de referencia", "Reference models"))
+                .font(.caption)
+                .foregroundStyle(Color.onSurfaceVariant)
+        }
+    }
 
     private var visor: some View {
         ZStack {
             Color.white
-            if scenePhase == .active {
+            if scenePhase == .active && activo {
                 VisorTransporte3D(tipo: tipo, color: UIColor(PaletasEmpresa.actual.colorMarca),
-                                 intento: intento, orden: orden, estado: $estado)
+                                 intento: intento, orden: orden, identificacion: identificacion, estado: $estado)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(L.f("Modelo 3D de {0}", "3D model of {0}", [tipo.nombre]))
+                    .accessibilityLabel(identificacion.map {
+                        L.f("Modelo 3D: {0}, letra {1}, {2}", "3D model: {0}, letter {1}, {2}", [$0.codigo, $0.letra, $0.empresa])
+                    } ?? L.f("Modelo 3D de {0}", "3D model of {0}", [tipo.nombre]))
                     .accessibilityAction(named: L.t("Mover a la izquierda", "Move left")) { enviar(.moverIzquierda) }
                     .accessibilityAction(named: L.t("Mover a la derecha", "Move right")) { enviar(.moverDerecha) }
                     .accessibilityAction(named: L.t("Mover arriba", "Move up")) { enviar(.moverArriba) }
@@ -128,7 +153,7 @@ struct Transportes3DView: View {
         Button { enviar(accion) } label: {
             Image(systemName: simbolo)
                 .font(.system(size: 18, weight: .medium))
-                .frame(maxWidth: .infinity, minHeight: 48)
+                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 48)
                 .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)

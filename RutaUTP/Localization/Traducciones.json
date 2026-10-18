@@ -1,4 +1,95 @@
 {
+  "Amarillo": {
+    "de": "Gelb",
+    "en": "Yellow",
+    "fr": "Jaune",
+    "pt-BR": "Amarelo",
+    "zh-Hans": "黄色"
+  },
+  "Ampliar modelo 3D": {
+    "de": "3D-Modell vergrößern",
+    "en": "Expand 3D model",
+    "fr": "Agrandir le modèle 3D",
+    "pt-BR": "Expandir modelo 3D",
+    "zh-Hans": "展开3D模型"
+  },
+  "Azul": {
+    "de": "Blau",
+    "en": "Blue",
+    "fr": "Bleu",
+    "pt-BR": "Azul",
+    "zh-Hans": "蓝色"
+  },
+  "Blanco": {
+    "de": "Weiß",
+    "en": "White",
+    "fr": "Blanc",
+    "pt-BR": "Branco",
+    "zh-Hans": "白色"
+  },
+  "Color por confirmar": {
+    "de": "Farbe noch zu bestätigen",
+    "en": "Color to be confirmed",
+    "fr": "Couleur à confirmer",
+    "pt-BR": "Cor a confirmar",
+    "zh-Hans": "颜色待确认"
+  },
+  "Colores de referencia": {
+    "de": "Referenzfarben",
+    "en": "Reference colors",
+    "fr": "Couleurs de référence",
+    "pt-BR": "Cores de referência",
+    "zh-Hans": "参考颜色"
+  },
+  "Letra": {
+    "de": "Buchstabe",
+    "en": "Letter",
+    "fr": "Lettre",
+    "pt-BR": "Letra",
+    "zh-Hans": "字母"
+  },
+  "Los colores pueden variar entre unidades.": {
+    "de": "Die Farben können je nach Fahrzeug variieren.",
+    "en": "Colors may vary between vehicles.",
+    "fr": "Les couleurs peuvent varier selon le véhicule.",
+    "pt-BR": "As cores podem variar entre os veículos.",
+    "zh-Hans": "不同车辆的颜色可能有所不同。"
+  },
+  "Modelo 3D: {0}, letra {1}, {2}": {
+    "de": "3D-Modell: {0}, Buchstabe {1}, {2}",
+    "en": "3D model: {0}, letter {1}, {2}",
+    "fr": "Modèle 3D : {0}, lettre {1}, {2}",
+    "pt-BR": "Modelo 3D: {0}, letra {1}, {2}",
+    "zh-Hans": "3D模型：{0}，字母{1}，{2}"
+  },
+  "Modelo de esta categoría próximamente": {
+    "de": "Modell für diese Kategorie folgt in Kürze",
+    "en": "Model for this category coming soon",
+    "fr": "Modèle de cette catégorie bientôt disponible",
+    "pt-BR": "Modelo desta categoria em breve",
+    "zh-Hans": "此类别模型即将推出"
+  },
+  "Reconoce tu transporte": {
+    "de": "Erkenne dein Fahrzeug",
+    "en": "Recognize your vehicle",
+    "fr": "Reconnaissez votre véhicule",
+    "pt-BR": "Reconheça seu transporte",
+    "zh-Hans": "识别你的车辆"
+  },
+  "Rojo": {
+    "de": "Rot",
+    "en": "Red",
+    "fr": "Rouge",
+    "pt-BR": "Vermelho",
+    "zh-Hans": "红色"
+  },
+  "Verde": {
+    "de": "Grün",
+    "en": "Green",
+    "fr": "Vert",
+    "pt-BR": "Verde",
+    "zh-Hans": "绿色"
+  },
   " en Google Maps": {
     "de": " in Google Maps",
     "en": " in Google Maps",
