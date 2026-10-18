@@ -65,18 +65,6 @@ struct PerfilView: View {
             : L.t("COLABORADOR · ", "EMPLOYEE · ") + empresa.nombre.uppercased()
     }
 
-    /// Inkafarma conserva el amarillo, con fondos suaves solo en esta cabecera.
-    private var coloresCabecera: [Color] {
-        empresa == .inkafarma
-            ? [Color(light: "#FFF4B5", dark: "#3C381C"),
-               Color(light: "#FFF9DF", dark: "#252A1C"),
-               Color(light: "#EAF3DF", dark: "#193623")]
-            : [.primaryFill, .primaryContainer, .primaryGradientEnd]
-    }
-    private var tintaCabecera: Color {
-        empresa == .inkafarma ? Color(light: "#193D23", dark: "#E8EED2") : .onPrimaryFill
-    }
-
     var body: some View {
         ZStack(alignment: .top) {
             Color.appBackground.ignoresSafeArea()
@@ -335,13 +323,7 @@ struct PerfilView: View {
             MonederoCard(store: monederoStore,
                          onRecargar: { showRecargarSaldo = true },
                          onMostrarQR: { showQRPasaje = true },
-                         tinta: tintaCabecera,
                          empresa: empresa)
-                .padding(6)
-                .background {
-                    LinearGradient(colors: coloresCabecera, startPoint: .topLeading, endPoint: .bottomTrailing)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
             grupoFilas {
                 if mostrarCarnetFoto {

@@ -1,4 +1,25 @@
 {
+  "Mostrar saldo": {
+    "de": "Guthaben anzeigen",
+    "en": "Show balance",
+    "fr": "Afficher le solde",
+    "pt-BR": "Mostrar saldo",
+    "zh-Hans": "显示余额"
+  },
+  "Ocultar saldo": {
+    "de": "Guthaben ausblenden",
+    "en": "Hide balance",
+    "fr": "Masquer le solde",
+    "pt-BR": "Ocultar saldo",
+    "zh-Hans": "隐藏余额"
+  },
+  "Saldo oculto": {
+    "de": "Guthaben ausgeblendet",
+    "en": "Balance hidden",
+    "fr": "Solde masqué",
+    "pt-BR": "Saldo oculto",
+    "zh-Hans": "余额已隐藏"
+  },
   "Añadir contacto": {
     "de": "Kontakt hinzufügen",
     "en": "Add contact",
