@@ -73,6 +73,8 @@ struct TransitItinerary {
     var boardingWaitSeconds: Double { Double(max(0, route.headwayMin)) * 30 }
     var estimatedJourneySeconds: Double { totalSeconds + boardingWaitSeconds }
     static let maximumTransferWalk: Double = 350
+    /// En la comparación del mapa un transbordo debe aportar dos tramos útiles.
+    static let minimumTransferRideMeters: Double = 800
     var transferWalkMeters: Double { transfer?.walkMeters ?? 0 }
     var walkingWithinTransferLimit: Bool { transferWalkMeters <= Self.maximumTransferWalk }
     // Frecuencia del feed: espera media estimada, no una predicción en vivo.
@@ -140,11 +142,12 @@ struct TransitItinerary {
         let maximumLatitude = prepared.flatMap { $0.route.paraderos }.map { abs($0.lat) }.max() ?? 0
         let cellSize = maximumTransferWalk * MKMapPointsPerMeterAtLatitude(min(85, maximumLatitude)) * 1.02
         // Cada mejor subida/bajada y cada rejilla se calculan una sola vez por línea.
-        let departures = prepared.map { $0.bestDepartures() }
+        let minimumRide = includeLineAlternatives ? minimumTransferRideMeters : 50
+        let departures = prepared.map { $0.bestDepartures(minimumRideMeters: minimumRide) }
         let closestDepartures = includeLineAlternatives
-            ? prepared.map { $0.bestDepartures(closestBoarding: true) } : []
+            ? prepared.map { $0.bestDepartures(closestBoarding: true, minimumRideMeters: minimumRide) } : []
         let arrivals = prepared.map { route in
-            Dictionary(grouping: route.bestArrivals()) {
+            Dictionary(grouping: route.bestArrivals(minimumRideMeters: minimumRide)) {
                 TransitGridCell(point: route.stopPoints[$0.0], size: cellSize)
             }
         }
@@ -215,9 +218,27 @@ struct TransitItinerary {
             [prepared[choice.first].route.id]
                 + (choice.second.map { [prepared[$0].route.id] } ?? [])
         }
+        func boardWalk(_ choice: TransitChoice) -> Double {
+            let first = prepared[choice.first]
+            return first.startWalk[choice.board] + first.connectorMeters[choice.board]
+        }
+        func journeyTime(_ choice: TransitChoice) -> Double {
+            choice.score - (choice.second == nil ? 0 : 180)
+                + Double(max(0, prepared[choice.first].route.headwayMin)) * 30
+        }
+        let fastestDirectTime = choices.lazy.filter { $0.second == nil }.map(journeyTime).min()
+        func usefulForComparison(_ choice: TransitChoice) -> Bool {
+            guard includeLineAlternatives, choice.second != nil,
+                  let directTime = fastestDirectTime else { return true }
+            // Tener que cambiar de micro no compensa pequeños ahorros del
+            // modelo. Solo ofrecerlo frente a un directo en un viaje largo,
+            // ahorrando como mínimo quince minutos y una cuarta parte del viaje.
+            let saving = directTime - journeyTime(choice)
+            return directTime >= 45 * 60 && saving >= max(15 * 60, directTime * 0.25)
+        }
         let eligible = requiredRouteIDs.map { required in
             choices.filter { routeIDs($0) == required }
-        } ?? choices
+        } ?? choices.filter(usefulForComparison)
         let ranked = eligible.sorted(by: precedes)
         let selected: [TransitChoice]
         if includeLineAlternatives {
@@ -251,16 +272,6 @@ struct TransitItinerary {
             }
             return plan
         }
-        func boardWalk(_ choice: TransitChoice) -> Double {
-            let first = prepared[choice.first]
-            return first.startWalk[choice.board] + first.connectorMeters[choice.board]
-        }
-        func journeyTime(_ choice: TransitChoice) -> Double {
-            // El score histórico añade tres minutos de preferencia por viajes
-            // directos. Esa preferencia no es tiempo real del recorrido.
-            choice.score - (choice.second == nil ? 0 : 180)
-                + Double(max(0, prepared[choice.first].route.headwayMin)) * 30
-        }
         func recommendationScore(_ choice: TransitChoice) -> Double {
             let first = prepared[choice.first]
             var walk = boardWalk(choice) + first.connectorMeters[choice.exit]
@@ -286,9 +297,9 @@ struct TransitItinerary {
         var highlights: [TransitRouteHighlight] = []
         if includeLineAlternatives {
             let winners: [(TransitRouteCategory, TransitChoice?)] = [
-                (.recommended, minimum(in: choices, score: recommendationScore)),
-                (.fastest, minimum(in: choices, score: journeyTime)),
-                (.closestBoarding, (choices + closestTransferChoices).min { lhs, rhs in
+                (.recommended, minimum(in: eligible, score: recommendationScore)),
+                (.fastest, minimum(in: eligible, score: journeyTime)),
+                (.closestBoarding, (eligible + closestTransferChoices.filter(usefulForComparison)).min { lhs, rhs in
                     let a = boardWalk(lhs), b = boardWalk(rhs)
                     if a != b { return a < b }
                     let t1 = journeyTime(lhs), t2 = journeyTime(rhs)
@@ -469,7 +480,7 @@ private struct PreparedTransitRoute {
     }
     /// Barrido ordenado: mantener la mejor subida anterior evita volver a
     /// comparar todas las subidas en cada paradero y en cada pareja de líneas.
-    func bestDepartures(closestBoarding: Bool = false) -> [(Int, Int)] {
+    func bestDepartures(closestBoarding: Bool = false, minimumRideMeters: Double = 50) -> [(Int, Int)] {
         let eligible = boarding.filter { connectorMeters[$0] < 80 }
         var cursor = 0
         var best: (stop: Int, cost: Double)?
@@ -477,7 +488,7 @@ private struct PreparedTransitRoute {
         for exit in route.paraderos.indices {
             while cursor < eligible.count {
                 let board = eligible[cursor]
-                guard board < exit, distances[indices[exit]] - distances[indices[board]] > 50 else { break }
+                guard board < exit, distances[indices[exit]] - distances[indices[board]] > minimumRideMeters else { break }
                 let cost = (startWalk[board] + connectorMeters[board]) / 1.4 - distances[indices[board]] / speed
                 let walk = startWalk[board] + connectorMeters[board]
                 let bestWalk = best.map { startWalk[$0.stop] + connectorMeters[$0.stop] } ?? .infinity
@@ -492,7 +503,7 @@ private struct PreparedTransitRoute {
         return result
     }
 
-    func bestArrivals() -> [(Int, Int)] {
+    func bestArrivals(minimumRideMeters: Double = 50) -> [(Int, Int)] {
         let eligible = Array(arriving.filter { connectorMeters[$0] < 80 }.reversed())
         var cursor = 0
         var best: (stop: Int, cost: Double)?
@@ -500,7 +511,7 @@ private struct PreparedTransitRoute {
         for enter in route.paraderos.indices.reversed() {
             while cursor < eligible.count {
                 let alight = eligible[cursor]
-                guard alight > enter, distances[indices[alight]] - distances[indices[enter]] > 50 else { break }
+                guard alight > enter, distances[indices[alight]] - distances[indices[enter]] > minimumRideMeters else { break }
                 let cost = (endWalk[alight] + connectorMeters[alight]) / 1.4 + distances[indices[alight]] / speed
                 if best == nil || cost <= best!.cost { best = (alight, cost) }
                 cursor += 1
