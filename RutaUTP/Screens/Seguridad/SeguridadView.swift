@@ -25,6 +25,7 @@ struct SeguridadView: View {
     @State private var categoriaCercana: CategoriaAyudaCercana?
     @AppStorage("emergencia_nombre") private var contactoNombre = ""
     @AppStorage("emergencia_numero") private var contactoNumero = ""
+    @AppStorage("emergencia_parentesco") private var contactoParentesco = ""
     @State private var selectedReporte: ReporteComunidad?
     @State private var comentarAlAbrir = false
     /// Likes/dislikes de la sección Comunidad (compartido entre las cards
@@ -47,6 +48,8 @@ struct SeguridadView: View {
     @StateObject private var lugaresVM = SeguridadLugaresModel()
     @State private var selectedLugar: LugarGuardado?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.colorScheme) private var colorScheme
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
 
@@ -309,14 +312,15 @@ struct SeguridadView: View {
     private var header: some View {
         HStack {
             Text(L.t("Seguridad", "Safety"))
-                .font(.headlineLgMobile)
+                .font(.title.weight(.semibold))
                 .accessibilityAddTraits(.isHeader)
             Spacer()
             Image(systemName: "shield.lefthalf.filled")
                 .font(.title3)
+                .foregroundStyle(acento)
                 .accessibilityHidden(true)
         }
-        .foregroundStyle(Color.appPrimary)
+        .foregroundStyle(Color.onSurface)
         .padding(.horizontal, 20)
         .frame(height: 54)
     }
@@ -335,13 +339,13 @@ struct SeguridadView: View {
                         .font(.bodyMdMedium)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                        .foregroundStyle(seleccionada ? Color.appPrimary : Color.onSurfaceVariant)
+                        .foregroundStyle(seleccionada ? acento : Color.onSurfaceVariant)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .padding(.bottom, 8)
                         .contentShape(Rectangle())
                         .overlay(alignment: .bottom) {
                             if seleccionada {
-                                Capsule().fill(Color.appPrimary).frame(height: 3)
+                                Capsule().fill(acento).frame(height: 3)
                                     .matchedGeometryEffect(id: "seccion", in: indicadorSeccion)
                             }
                         }
@@ -385,7 +389,7 @@ struct SeguridadView: View {
     private func reloj(_ fecha: Date) -> some View {
         Text(FormatoFecha.fecha(fecha, plantilla: "jmm"))
             .font(.title3.weight(.semibold)).monospacedDigit()
-            .foregroundStyle(Color.appPrimary)
+            .foregroundStyle(acento)
             .fixedSize()
     }
 
@@ -413,23 +417,37 @@ struct SeguridadView: View {
                 ? AnyLayout(VStackLayout(spacing: 10))
                 : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
             layout {
-                Button {
-                    AppHaptics.selection()
-                    if numeroContacto == nil { showConfigurarContacto = true }
-                    else { showLlamarContacto = true }
-                } label: {
-                    contactoLabel
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(numeroContacto == nil
-                    ? L.t("Añadir contacto", "Add contact")
-                    : L.t("Llamar a mi contacto", "Call my contact"))
-                .accessibilityHint(numeroContacto == nil
-                    ? L.t("Configura tu contacto de emergencia", "Set up your emergency contact")
-                    : contactoNombre)
-                .contextMenu {
-                    Button(L.t("Editar contacto", "Edit contact"), systemImage: "pencil") {
-                        showConfigurarContacto = true
+                ZStack(alignment: .topTrailing) {
+                    Button {
+                        AppHaptics.selection()
+                        if numeroContacto == nil { showConfigurarContacto = true }
+                        else { showLlamarContacto = true }
+                    } label: {
+                        contactoLabel
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(numeroContacto == nil
+                        ? L.t("Añadir contacto", "Add contact")
+                        : L.t("Llamar a mi contacto", "Call my contact"))
+                    .accessibilityHint(numeroContacto == nil
+                        ? L.t("Configura tu contacto de emergencia", "Set up your emergency contact")
+                        : contactoNombre)
+                    .contextMenu {
+                        Button(L.t("Editar contacto", "Edit contact"), systemImage: "pencil") {
+                            showConfigurarContacto = true
+                        }
+                    }
+                    if numeroContacto != nil {
+                        Button { showConfigurarContacto = true } label: {
+                            Image(systemName: "pencil")
+                                .font(.bodySmMedium)
+                                .foregroundStyle(acento)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(L.t("Editar contacto de emergencia", "Edit emergency contact"))
+                        .padding(4)
                     }
                 }
                 Button {
@@ -449,35 +467,42 @@ struct SeguridadView: View {
         let nombre = contactoNombre.trimmingCharacters(in: .whitespacesAndNewlines)
         let iniciales = nombre.split(whereSeparator: \.isWhitespace).prefix(2)
             .compactMap(\.first).map(String.init).joined().uppercased()
+        let relacion = Parentesco(rawValue: contactoParentesco)?.label ?? contactoParentesco
+        let detalle = numeroContacto != nil && !nombre.isEmpty
+            ? [nombre, relacion].filter { !$0.isEmpty }.joined(separator: " · ")
+            : L.t("Mi contacto", "My contact")
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 ZStack {
-                    Circle().fill(Color.surfaceContainerLowest.opacity(0.8))
+                    Circle().fill(Color(uiColor: .tertiarySystemGroupedBackground))
                     if numeroContacto != nil, !iniciales.isEmpty {
-                        Text(iniciales).font(.bodySmMedium)
+                        Text(iniciales).font(.bodySmMedium).lineLimit(1).minimumScaleFactor(0.5)
                     } else {
                         Image(systemName: "person.fill").font(.bodySm)
                     }
                 }
                 .frame(width: 32, height: 32)
                 Spacer(minLength: 4)
-                Image(systemName: numeroContacto == nil ? "plus" : "phone.fill")
+                Image(systemName: "plus")
                     .font(.bodySmMedium)
+                    .opacity(numeroContacto == nil ? 1 : 0)
             }
+            .foregroundStyle(acento)
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(numeroContacto == nil ? L.t("Añadir contacto", "Add contact") : L.t("Llamar", "Call"))
                     .font(.bodyMdMedium)
-                Text(numeroContacto != nil && !nombre.isEmpty ? nombre : L.t("Mi contacto", "My contact"))
+                Text(detalle)
                     .font(.bodyXs)
             }
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .foregroundStyle(Color.onPrimaryContainer)
+        .foregroundStyle(Color.onSurface)
         .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
         .padding(16)
-        .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 18))
+        .background(Color(uiColor: .secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 18))
     }
 
@@ -496,7 +521,7 @@ struct SeguridadView: View {
 
     private var cercaDeTi: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(L.t("Cerca de ti", "Near you")).font(.headlineSm)
+            Text(L.t("Cerca de ti", "Near you")).font(.title3.weight(.semibold))
                 .foregroundStyle(Color.onSurface)
             let layout = dynamicTypeSize.isAccessibilitySize
                 ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
@@ -516,7 +541,7 @@ struct SeguridadView: View {
 
     private func accesoCercano(_ titulo: String, icono: String) -> some View {
         VStack(spacing: 8) {
-            Image(systemName: icono).font(.title3).foregroundStyle(Color.appPrimary)
+            Image(systemName: icono).font(.title3).foregroundStyle(acento)
             Text(titulo).font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
                 .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
         }
