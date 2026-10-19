@@ -23,9 +23,10 @@ struct SeguridadView: View {
     @Namespace private var indicadorSeccion
     @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
     @State private var categoriaCercana: CategoriaAyudaCercana?
-    @AppStorage("emergencia_nombre") private var contactoNombre = ""
-    @AppStorage("emergencia_numero") private var contactoNumero = ""
-    @AppStorage("emergencia_parentesco") private var contactoParentesco = ""
+    @AppStorage(ContactoEmergencia.claveNombre) private var contactoNombre = ""
+    @AppStorage(ContactoEmergencia.claveNumero) private var contactoNumero = ""
+    @AppStorage(ContactoEmergencia.claveParentesco) private var contactoParentesco = ""
+    @AppStorage(ContactoEmergencia.claveAlternativo) private var contactoAlternativo = ""
     @State private var selectedReporte: ReporteComunidad?
     @State private var comentarAlAbrir = false
     /// Likes/dislikes de la sección Comunidad (compartido entre las cards
@@ -245,7 +246,7 @@ struct SeguridadView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showConfigurarContacto) {
-            ContactoSeguridadSheet()
+            ContactoEmergenciaSheet()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -255,9 +256,16 @@ struct SeguridadView: View {
                     UIApplication.shared.open(url)
                 }
             }
+            if let alternativo = ContactoEmergencia.telefonoValido(contactoAlternativo), alternativo != numeroContacto {
+                Button(L.t("Llamar al otro número", "Call the alternate number")) {
+                    if let url = URL(string: "tel://" + alternativo) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
             Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
         } message: {
-            Text([contactoNombre, numeroContacto ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
+            Text(detalleContacto)
         }
         .alert(L.t("Llamar al 105", "Call 105"), isPresented: $showLlamarAlert) {
             Button(L.t("Llamar", "Call")) {
@@ -393,7 +401,15 @@ struct SeguridadView: View {
             .fixedSize()
     }
 
-    private var numeroContacto: String? { telefonoContactoValido(contactoNumero) }
+    private var numeroContacto: String? { ContactoEmergencia.telefonoValido(contactoNumero) }
+
+    private var detalleContacto: String {
+        var datos = [contactoNombre, numeroContacto ?? ""]
+        if let alternativo = ContactoEmergencia.telefonoValido(contactoAlternativo), alternativo != numeroContacto {
+            datos.append(L.t("Teléfono alternativo", "Alternate phone") + ": " + alternativo)
+        }
+        return datos.filter { !$0.isEmpty }.joined(separator: "\n")
+    }
 
     private var accesosRapidos: some View {
         VStack(spacing: 10) {
@@ -759,57 +775,6 @@ struct SeguridadView: View {
         }
     }
 
-}
-
-private func telefonoContactoValido(_ valor: String) -> String? {
-    let limpio = valor.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard limpio.allSatisfy({ "0123456789+()- .".contains($0) }),
-          limpio.filter({ $0 == "+" }).count <= 1,
-          !limpio.contains("+") || limpio.hasPrefix("+") else { return nil }
-    let digitos = valor.filter { $0 >= "0" && $0 <= "9" }
-    guard (7...15).contains(digitos.count) else { return nil }
-    return limpio.hasPrefix("+") ? "+" + digitos : digitos
-}
-
-private struct ContactoSeguridadSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage("emergencia_nombre") private var nombreGuardado = ""
-    @AppStorage("emergencia_numero") private var numeroGuardado = ""
-    @State private var nombre = ""
-    @State private var numero = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section(L.t("Contacto de emergencia", "Emergency contact")) {
-                    TextField(L.t("Nombre", "Name"), text: $nombre)
-                        .textContentType(.name)
-                    TextField(L.t("Teléfono", "Phone"), text: $numero)
-                        .keyboardType(.phonePad).textContentType(.telephoneNumber)
-                }
-            }
-            .navigationTitle(L.t("Mi contacto", "My contact"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L.t("Guardar", "Save")) {
-                        guard let telefono = telefonoContactoValido(numero) else { return }
-                        nombreGuardado = nombre.trimmingCharacters(in: .whitespacesAndNewlines)
-                        numeroGuardado = telefono
-                        dismiss()
-                    }
-                    .disabled(nombre.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              || telefonoContactoValido(numero) == nil)
-                }
-            }
-        }
-        .tint(Color.appPrimary)
-        .onAppear { nombre = nombreGuardado; numero = numeroGuardado }
-        .seguirTemaForzado()
-    }
 }
 
 // MARK: - Reportar Sheet

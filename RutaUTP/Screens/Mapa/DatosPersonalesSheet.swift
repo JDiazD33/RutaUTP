@@ -5,104 +5,10 @@
 //  Datos personales del estudiante: ficha de solo lectura, datos
 //  editables y contacto de emergencia.
 //  
-//  Estaba dentro de `SideDrawer.swift`. Se lleva consigo `Parentesco`
-//  y su selector, que solo usa esta hoja.
+//  El contacto usa el mismo editor y las mismas claves que Seguridad.
 
 import SwiftUI
 import UIKit
-// MARK: - Lista de parentesco
-enum Parentesco: String, CaseIterable, Identifiable {
-    case padreMadre          = "Padre/Madre"
-    case tutorApoderado      = "Tutor/Apoderado"
-    case conyugePareja       = "Conyuge/Pareja de hecho"
-    case hermano             = "Hermano(a)"
-    case hijo                = "Hijo(a)"
-    case otro                = "Otro"
-
-    var id: String { rawValue }
-
-    /// Texto visible. El `rawValue` se guarda en `UserDefaults`
-    /// (`emergencia_parentesco`), así que se mantiene como clave estable y no
-    /// se traduce: cambiar el rawValue invalidaría el dato ya guardado.
-    var label: String {
-        switch self {
-        case .padreMadre:     return L.t("Padre/Madre", "Parent")
-        case .tutorApoderado: return L.t("Tutor/Apoderado", "Guardian")
-        case .conyugePareja:  return L.t("Conyuge/Pareja de hecho", "Spouse/Partner")
-        case .hermano:        return L.t("Hermano(a)", "Sibling")
-        case .hijo:           return L.t("Hijo(a)", "Child")
-        case .otro:           return L.t("Otro", "Other")
-        }
-    }
-}
-
-// MARK: - Selector de parentesco (ventanita)
-private struct ParentescoPickerSheet: View {
-    @Binding var seleccion: String
-    @Environment(\.dismiss) private var dismiss
-    @State private var local: String
-
-    init(seleccion: Binding<String>) {
-        self._seleccion = seleccion
-        self._local = State(initialValue: seleccion.wrappedValue)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SheetHeader(icon: "person.2.fill", iconColor: .appPrimary, title: L.t("Parentesco", "Relationship"))
-
-            VStack(spacing: 8) {
-                ForEach(Parentesco.allCases) { op in
-                    Button {
-                        AppHaptics.selection()
-                        local = op.rawValue
-                    } label: {
-                        HStack {
-                            Image(systemName: local == op.rawValue ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(local == op.rawValue ? Color.appPrimary : Color.onSurfaceVariant)
-                                .accessibilityHidden(true)
-                            Text(op.label)
-                                .font(.bodyMd)
-                                .foregroundStyle(.onSurface)
-                            Spacer()
-                        }
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(local == op.rawValue ? Color.primaryContainer.opacity(0.25) : Color.surfaceContainerLow)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(op.label)
-                    .accessibilityValue(local == op.rawValue
-                                        ? L.t("Seleccionado", "Selected")
-                                        : L.t("No seleccionado", "Not selected"))
-                    .accessibilityHint(L.t("Doble toque para elegir ", "Double tap to choose ") + op.label)
-                    .accessibilityAddTraits(local == op.rawValue ? [.isButton, .isSelected] : .isButton)
-                }
-            }
-
-            Spacer()
-
-            Button {
-                AppHaptics.success()
-                seleccion = local
-                dismiss()
-            } label: {
-                Text(L.t("Aceptar", "OK"))
-                    .font(.headlineSm)
-                    .foregroundStyle(.onPrimaryFill)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Aceptar parentesco", "Confirm relationship"))
-            .accessibilityHint(L.t("Doble toque para confirmar la selección", "Double tap to confirm the selection"))
-        }
-        .padding(20)
-    }
-}
-
 // MARK: - 7. DATOS PERSONALES SHEET
 struct DatosPersonalesSheet: View {
     // Datos institucionales (solo lectura)
@@ -119,9 +25,9 @@ struct DatosPersonalesSheet: View {
     @AppStorage("perfil_correoPersonal") private var correoPersonal: String = "joaquin.diaz@gmail.com"
 
     // Datos del contacto de emergencia (persisten)
-    @AppStorage("emergencia_nombre") private var emergenciaNombre: String = ""
-    @AppStorage("emergencia_parentesco") private var emergenciaParentesco: String = ""
-    @AppStorage("emergencia_numero") private var emergenciaNumero: String = ""
+    @AppStorage(ContactoEmergencia.claveNombre) private var emergenciaNombre: String = ""
+    @AppStorage(ContactoEmergencia.claveParentesco) private var emergenciaParentesco: String = ""
+    @AppStorage(ContactoEmergencia.claveNumero) private var emergenciaNumero: String = ""
 
     // Edición datos personales
     @State private var editandoDatos: Bool = false
@@ -136,12 +42,8 @@ struct DatosPersonalesSheet: View {
     @State private var ajustarFoto = false
     @State private var showCamera: Bool = false
 
-    // Edición contacto de emergencia
-    @State private var editandoEmergencia: Bool = false
-    @State private var emergenciaNombreInput: String = ""
-    @State private var emergenciaParentescoInput: String = ""
-    @State private var emergenciaNumeroInput: String = ""
-    @State private var showParentescoPicker: Bool = false
+    @State private var mostrarContacto = false
+    @AppStorage(ContactoEmergencia.claveAlternativo) private var emergenciaAlternativo = ""
 
     private let boxShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
 
@@ -152,10 +54,6 @@ struct DatosPersonalesSheet: View {
     /// guardado en `emergencia_parentesco`. Para mostrar hay que pasar por
     /// `label`, que sí traduce. Sin esto, con la app en inglés se leía
     /// "Padre/Madre" en lugar de "Parent".
-    private var parentescoTexto: String? {
-        textoParentesco(emergenciaParentescoInput)
-    }
-
     private var parentescoGuardadoTexto: String? {
         textoParentesco(emergenciaParentesco)
     }
@@ -415,145 +313,23 @@ struct DatosPersonalesSheet: View {
                                             "Personal email used to recover your institutional email password"))
                 }
 
-                // ── Contacto de Emergencia + editar ──
+                // El contacto se edita con el mismo formulario que en Seguridad.
                 HStack {
                     Text(L.t("Contacto de Emergencia", "Emergency contact"))
-                        .font(.headlineXs)
-                        .foregroundStyle(.onSurface)
+                        .font(.headlineXs).foregroundStyle(Color.onSurface)
                     Spacer()
                     Button {
                         AppHaptics.impact(.light)
-                        toggleEdicionEmergencia()
+                        mostrarContacto = true
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: editandoEmergencia ? "checkmark" : "pencil")
-                                .font(.system(size: 12, weight: .semibold))
-                                .accessibilityHidden(true)
-                            Text(editandoEmergencia ? L.t("Listo", "Done") : L.t("editar datos", "edit details"))
-                                .font(.labelCapsSm)
-                                .appTracking(AppTracking.wideLabel)
-                        }
-                        .foregroundStyle(Color.appPrimary)
+                        Label(L.t("Editar", "Edit"), systemImage: "pencil")
+                            .font(.bodySmMedium).foregroundStyle(Color.onSurface)
+                            .frame(minHeight: 44)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(editandoEmergencia ? L.t("Listo", "Done") : L.t("Editar contacto de emergencia", "Edit emergency contact"))
-                    .accessibilityHint(editandoEmergencia
-                               ? L.t("Doble toque para cerrar la edición", "Double tap to close editing")
-                               : L.t("Doble toque para editar el contacto de emergencia", "Double tap to edit the emergency contact"))
+                    .accessibilityLabel(L.t("Editar contacto de emergencia", "Edit emergency contact"))
                 }
-
-                if editandoEmergencia {
-                    // ── Formulario inline de contacto de emergencia ──
-                    VStack(alignment: .leading, spacing: 14) {
-                        // Nombre del contacto
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L.t("Nombre del contacto", "Contact name"))
-                                .font(.bodySmMedium)
-                                .foregroundStyle(.onSurface)
-                            TextField(L.t("Ingresa el nombre del contacto", "Enter the contact name"), text: Binding(
-                                get: { emergenciaNombreInput },
-                                set: { newValue in
-                                    let filtrado = newValue.filter { $0.isLetter || $0.isWhitespace }
-                                    emergenciaNombreInput = String(filtrado.prefix(20))
-                                }
-                            ))
-                            .font(.bodyMd)
-                            .foregroundStyle(.onSurface)
-                            .textInputAutocapitalization(.words)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                            .background(boxShape.fill(Color.surfaceContainerLow))
-                            .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.6), lineWidth: 1))
-                            .accessibilityLabel(L.t("Nombre del contacto, solo letras, máximo 20", "Contact name, letters only, up to 20"))
-                        }
-
-                        // Parentesco (combo box)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L.t("Parentesco", "Relationship"))
-                                .font(.bodySmMedium)
-                                .foregroundStyle(.onSurface)
-                            Button {
-                                AppHaptics.impact(.light)
-                                showParentescoPicker = true
-                            } label: {
-                                HStack {
-                                    Text(parentescoTexto ?? L.t("Seleccionar", "Select"))
-                                        .font(.bodyMd)
-                                        .foregroundStyle(parentescoTexto == nil ? Color.onSurfaceVariant : Color.onSurface)
-                                    Spacer()
-                                    Image(systemName: "chevron.down")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(Color.appPrimary)
-                                        .accessibilityHidden(true)
-                                }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
-                                .background(boxShape.fill(Color.surfaceContainerLow))
-                                .overlay(boxShape.stroke(Color.appPrimary.opacity(0.5), lineWidth: 1))
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(L.t("Parentesco del contacto", "Relationship of the contact"))
-                            .accessibilityValue(parentescoTexto ?? L.t("No seleccionado", "Not selected"))
-                            .accessibilityHint(L.t("Doble toque para elegir una opción de parentesco", "Double tap to choose a relationship option"))
-                            .accessibilityAddTraits(.isButton)
-                        }
-
-                        // Número del contacto
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(L.t("Número del Contacto", "Contact number"))
-                                .font(.bodySmMedium)
-                                .foregroundStyle(.onSurface)
-                            TextField("99999999999", text: Binding(
-                                get: { emergenciaNumeroInput },
-                                set: { newValue in
-                                    let filtrado = newValue.filter { $0.isNumber }
-                                    emergenciaNumeroInput = String(filtrado.prefix(11))
-                                }
-                            ))
-                            .font(.bodyMd)
-                            .foregroundStyle(.onSurface)
-                            .keyboardType(.numberPad)
-                            .textInputAutocapitalization(.never)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                            .background(boxShape.fill(Color.surfaceContainerLow))
-                            .overlay(boxShape.stroke(Color.outlineVariant.opacity(0.6), lineWidth: 1))
-                            .accessibilityLabel(L.t("Número del contacto, solo números, máximo 11 dígitos", "Contact number, numbers only, up to 11 digits"))
-                        }
-
-                        // Botones Guardar / Cancelar
-                        Button {
-                            AppHaptics.success()
-                            guardarEmergencia()
-                        } label: {
-                            Text(L.t("Guardar", "Save"))
-                                .font(.bodyMdMedium)
-                                .foregroundStyle(.onPrimaryFill)
-                                .frame(maxWidth: .infinity, minHeight: 48)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(L.t("Guardar contacto de emergencia", "Save emergency contact"))
-                        .accessibilityHint(L.t("Doble toque para guardar los datos del contacto", "Double tap to save the contact details"))
-
-                        Button {
-                            AppHaptics.impact(.light)
-                            cancelarEmergencia()
-                        } label: {
-                            Text(L.t("Cancelar", "Cancel"))
-                                .font(.bodyMdMedium)
-                                .foregroundStyle(Color.appPrimary)
-                                .frame(maxWidth: .infinity, minHeight: 48)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appPrimary, lineWidth: 1.5))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(L.t("Cancelar edición del contacto", "Cancel contact editing"))
-                        .accessibilityHint(L.t("Doble toque para descartar los cambios", "Double tap to discard the changes"))
-                    }
-                } else {
-                    tarjetaEmergenciaGuardada
-                }
+                tarjetaEmergenciaGuardada
 
                 Spacer(minLength: 24)
 
@@ -585,9 +361,6 @@ struct DatosPersonalesSheet: View {
         .onAppear {
             telefonoInput = telefono
             correoPersonalInput = correoPersonal
-            emergenciaNombreInput = emergenciaNombre
-            emergenciaParentescoInput = emergenciaParentesco
-            emergenciaNumeroInput = emergenciaNumero
         }
         .task {
             guard perfilImage == nil else { return }
@@ -612,9 +385,10 @@ struct DatosPersonalesSheet: View {
         .modifier(EditorFotoPerfilModifier(camara: $showCamera, galeria: $showGaleria, ajustar: $ajustarFoto) { img in
             perfilImage = img
         })
-        .sheet(isPresented: $showParentescoPicker) {
-            ParentescoPickerSheet(seleccion: $emergenciaParentescoInput)
-                .seguirTemaForzado()
+        .sheet(isPresented: $mostrarContacto) {
+            ContactoEmergenciaSheet()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -626,6 +400,11 @@ struct DatosPersonalesSheet: View {
             emergenciaFila(icon: "person.2.fill", titulo: L.t("Parentesco", "Relationship"), valor: parentescoGuardadoTexto ?? "")
             Divider().padding(.leading, 48).accessibilityHidden(true)
             emergenciaFila(icon: "phone.fill", titulo: L.t("Número", "Number"), valor: emergenciaNumero)
+            if !emergenciaAlternativo.isEmpty {
+                Divider().padding(.leading, 48).accessibilityHidden(true)
+                emergenciaFila(icon: "phone.arrow.triangle.2.circlepath",
+                               titulo: L.t("Teléfono alternativo", "Alternate phone"), valor: emergenciaAlternativo)
+            }
         }
         .padding(14)
         .background(boxShape.fill(Color.surfaceContainerLow))
@@ -643,6 +422,7 @@ struct DatosPersonalesSheet: View {
         return L.t("Nombre ", "Name ") + nombre
             + L.t(", parentesco ", ", relationship ") + parentesco
             + L.t(", número ", ", number ") + numero
+            + (emergenciaAlternativo.isEmpty ? "" : ", " + L.t("Teléfono alternativo", "Alternate phone") + ": " + emergenciaAlternativo)
     }
 
     @ViewBuilder
@@ -712,29 +492,4 @@ struct DatosPersonalesSheet: View {
         .accessibilityLabel(titulo + ": " + (valor.isEmpty ? L.t("vacío", "empty") : valor))
     }
 
-    // MARK: - Contacto de emergencia: acciones
-    private func toggleEdicionEmergencia() {
-        if editandoEmergencia {
-            editandoEmergencia = false
-        } else {
-            emergenciaNombreInput = emergenciaNombre
-            emergenciaParentescoInput = emergenciaParentesco
-            emergenciaNumeroInput = emergenciaNumero
-            editandoEmergencia = true
-        }
-    }
-
-    private func guardarEmergencia() {
-        emergenciaNombre = emergenciaNombreInput
-        emergenciaParentesco = emergenciaParentescoInput
-        emergenciaNumero = emergenciaNumeroInput
-        editandoEmergencia = false
-    }
-
-    private func cancelarEmergencia() {
-        emergenciaNombreInput = emergenciaNombre
-        emergenciaParentescoInput = emergenciaParentesco
-        emergenciaNumeroInput = emergenciaNumero
-        editandoEmergencia = false
-    }
 }

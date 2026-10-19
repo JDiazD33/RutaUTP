@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BD7100000000000000000002 /* ContactoEmergenciaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */; };
 		BD6100000000000000000002 /* IdentificacionRuta3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6100000000000000000001 /* IdentificacionRuta3D.swift */; };
 		BD6000000000000000000002 /* Transportes3DView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000001 /* Transportes3DView.swift */; };
 		BD6000000000000000000004 /* VisorTransporte3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000003 /* VisorTransporte3D.swift */; };
@@ -214,6 +215,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactoEmergenciaSheet.swift; sourceTree = "<group>"; };
 		BD6100000000000000000001 /* IdentificacionRuta3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificacionRuta3D.swift; sourceTree = "<group>"; };
 		BD6000000000000000000001 /* Transportes3DView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DView.swift; sourceTree = "<group>"; };
 		BD6000000000000000000003 /* VisorTransporte3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisorTransporte3D.swift; sourceTree = "<group>"; };
@@ -681,6 +683,7 @@
 				4F2E7C64D7D04DA791B0E496 /* VistaPreviaQR.swift */,
 				673B05E345C64DF6B61C83B4 /* EscanerQRModel.swift */,
 				BD4000000000000000000001 /* PerfilPreferenciasVisuales.swift */,
+				BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */,
 				BC0200000000000000000011 /* VoiceOverHelpSheet.swift */,
 				BC0200000000000000000013 /* PerfilCuponesGuardados.swift */,
 				0AC4E0A220260907004E1676 /* CarneDigitalView.swift */,
@@ -1207,6 +1210,7 @@
 				0A80042A300AD9FE004E1676 /* ProfileImageStore.swift in Sources */,
 				0A800428300AD9FE004E1676 /* ImagePicker.swift in Sources */,
 				0A800426300AD9FE004E1676 /* DatosPersonalesSheet.swift in Sources */,
+				BD7100000000000000000002 /* ContactoEmergenciaSheet.swift in Sources */,
 				0A800424300AD9FE004E1676 /* DrawerSheets.swift in Sources */,
 				0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */,
 				0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */,

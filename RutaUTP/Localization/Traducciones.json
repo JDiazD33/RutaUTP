@@ -1,4 +1,144 @@
 {
+  "Amigo(a)": {
+    "de": "Freund/in",
+    "en": "Friend",
+    "fr": "Ami(e)",
+    "pt-BR": "Amigo(a)",
+    "zh-Hans": "朋友"
+  },
+  "Abuelo(a)": {
+    "de": "Großelternteil",
+    "en": "Grandparent",
+    "fr": "Grand-parent",
+    "pt-BR": "Avô/Avó",
+    "zh-Hans": "祖父母"
+  },
+  "Tío(a)": {
+    "de": "Tante/Onkel",
+    "en": "Aunt/Uncle",
+    "fr": "Oncle/Tante",
+    "pt-BR": "Tio(a)",
+    "zh-Hans": "叔伯姨舅"
+  },
+  "Primo(a)": {
+    "de": "Cousin/Cousine",
+    "en": "Cousin",
+    "fr": "Cousin(e)",
+    "pt-BR": "Primo(a)",
+    "zh-Hans": "堂表兄弟姐妹"
+  },
+  "Usa entre 7 y 15 dígitos, con código de país si hace falta.": {
+    "de": "Verwende 7 bis 15 Ziffern, bei Bedarf mit Ländervorwahl.",
+    "en": "Use 7 to 15 digits, with a country code if needed.",
+    "fr": "Utilisez 7 à 15 chiffres, avec l’indicatif du pays si nécessaire.",
+    "pt-BR": "Use de 7 a 15 dígitos, com código do país se necessário.",
+    "zh-Hans": "请输入7至15位数字，必要时包含国家代码。"
+  },
+  "Usa un número diferente al principal.": {
+    "de": "Verwende eine andere Nummer als die Hauptnummer.",
+    "en": "Use a different number from the primary one.",
+    "fr": "Utilisez un numéro différent du numéro principal.",
+    "pt-BR": "Use um número diferente do principal.",
+    "zh-Hans": "请输入与主要号码不同的号码。"
+  },
+  "Sin especificar": {
+    "de": "Nicht angegeben",
+    "en": "Not specified",
+    "fr": "Non précisé",
+    "pt-BR": "Não especificado",
+    "zh-Hans": "未指定"
+  },
+  "Elegir de Contactos": {
+    "de": "Aus Kontakten auswählen",
+    "en": "Choose from Contacts",
+    "fr": "Choisir dans Contacts",
+    "pt-BR": "Escolher em Contatos",
+    "zh-Hans": "从通讯录选择"
+  },
+  "Nombre y apellido": {
+    "de": "Vor- und Nachname",
+    "en": "Full name",
+    "fr": "Nom et prénom",
+    "pt-BR": "Nome e sobrenome",
+    "zh-Hans": "姓名"
+  },
+  "Teléfono principal": {
+    "de": "Hauptnummer",
+    "en": "Primary phone",
+    "fr": "Téléphone principal",
+    "pt-BR": "Telefone principal",
+    "zh-Hans": "主要电话号码"
+  },
+  "Teléfono alternativo (opcional)": {
+    "de": "Weitere Nummer (optional)",
+    "en": "Alternate phone (optional)",
+    "fr": "Téléphone secondaire (facultatif)",
+    "pt-BR": "Telefone alternativo (opcional)",
+    "zh-Hans": "备用电话（可选）"
+  },
+  "Quitar contacto": {
+    "de": "Kontakt entfernen",
+    "en": "Remove contact",
+    "fr": "Retirer le contact",
+    "pt-BR": "Remover contato",
+    "zh-Hans": "移除联系人"
+  },
+  "¿Quitar contacto de emergencia?": {
+    "de": "Notfallkontakt entfernen?",
+    "en": "Remove emergency contact?",
+    "fr": "Retirer le contact d’urgence ?",
+    "pt-BR": "Remover contato de emergência?",
+    "zh-Hans": "移除紧急联系人？"
+  },
+  "Se quitará de Perfil y Seguridad.": {
+    "de": "Er wird aus Profil und Sicherheit entfernt.",
+    "en": "It will be removed from Profile and Safety.",
+    "fr": "Il sera retiré de Profil et Sécurité.",
+    "pt-BR": "Será removido de Perfil e Segurança.",
+    "zh-Hans": "将从个人资料和安全页面中移除。"
+  },
+  "El mismo contacto en Perfil y Seguridad": {
+    "de": "Derselbe Kontakt in Profil und Sicherheit",
+    "en": "The same contact in Profile and Safety",
+    "fr": "Le même contact dans Profil et Sécurité",
+    "pt-BR": "O mesmo contato em Perfil e Segurança",
+    "zh-Hans": "个人资料与安全页面共用此联系人"
+  },
+  "Ej. +51 999 888 777": {
+    "de": "Z. B. +51 999 888 777",
+    "en": "E.g. +51 999 888 777",
+    "fr": "Ex. +51 999 888 777",
+    "pt-BR": "Ex.: +51 999 888 777",
+    "zh-Hans": "例如 +51 999 888 777"
+  },
+  "Guardar contacto": {
+    "de": "Kontakt speichern",
+    "en": "Save contact",
+    "fr": "Enregistrer le contact",
+    "pt-BR": "Salvar contato",
+    "zh-Hans": "保存联系人"
+  },
+  "Llamar al otro número": {
+    "de": "Weitere Nummer anrufen",
+    "en": "Call the alternate number",
+    "fr": "Appeler le numéro secondaire",
+    "pt-BR": "Ligar para o número alternativo",
+    "zh-Hans": "拨打备用号码"
+  },
+  "Editar": {
+    "de": "Bearbeiten",
+    "en": "Edit",
+    "fr": "Modifier",
+    "pt-BR": "Editar",
+    "zh-Hans": "编辑"
+  },
+  "Teléfono alternativo": {
+    "de": "Weitere Telefonnummer",
+    "en": "Alternate phone",
+    "fr": "Téléphone secondaire",
+    "pt-BR": "Telefone alternativo",
+    "zh-Hans": "备用电话"
+  },
   "Mostrar saldo": {
     "de": "Guthaben anzeigen",
     "en": "Show balance",
