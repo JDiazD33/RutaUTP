@@ -298,42 +298,42 @@ struct GuardadoView: View {
         .padding(.bottom, 4)
     }
 
-    // MARK: - Lugares section
+    // MARK: - Lugares
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(L.t("Toca un lugar para ver más opciones.", "Tap a place for more options."))
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-
             if vm.datosLugaresInvalidos {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L.t("No se pudieron leer tus lugares. Los datos originales se conservaron; no se guardarán cambios hasta poder leerlos.",
                              "Your places could not be read. The original data was preserved; changes will not be saved until it can be read."))
-                        .font(.bodyMd)
-                        .foregroundStyle(.onSurfaceVariant)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Button(L.t("Reintentar lectura", "Retry reading")) {
                         vm.reintentarLecturaLugares()
                     }
                     .buttonStyle(.bordered)
+                    .tint(acento)
                 }
-                .padding(20)
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             } else if vm.lugares.isEmpty {
                 emptyState(icono: "bookmark.slash",
                            titulo: L.t("Aún no tienes lugares guardados", "No saved places yet"),
                            subtitulo: L.t("Toca Añadir lugar para guardar tu primer lugar.", "Tap Add place to save your first place."))
-                    .padding(.top, 60)
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: 0) {
                     ForEach(vm.lugares) { lugar in
+                        if lugar.id != vm.lugares.first?.id {
+                            Divider().padding(.leading, 72).padding(.trailing, 16)
+                        }
                         lugarRow(lugar)
                     }
                 }
-                .padding(.horizontal, 20)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
+        .padding(.horizontal, 20)
     }
 
     private func lugarRow(_ lugar: LugarGuardado) -> some View {
@@ -341,46 +341,34 @@ struct GuardadoView: View {
             AppHaptics.selection()
             selectedLugar = lugar
         } label: {
-            HStack(spacing: 14) {
-                iconCircle(lugar: lugar)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(lugar.nombre)
-                            .font(.bodyMdMedium)
-                            .foregroundStyle(.onSurface)
-                        if lugar.esFrecuente {
-                            Text(L.t("FRECUENTE", "FREQUENT"))
-                                .font(.labelCapsMd)
-                                .foregroundStyle(.onTertiary)
-                                .appTracking(AppTracking.wideLabel)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(RoundedRectangle(cornerRadius: 4).fill(Color.tertiary))
-                        }
-                    }
-                    HStack(spacing: 4) {
-                        Image(systemName: "mappin")
-                            .font(.system(size: 9))
+            HStack(spacing: 12) {
+                iconoLugar(lugar)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(lugar.nombre)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !lugar.direccion.isEmpty {
                         Text(lugar.direccion)
-                            .font(.bodySm)
-                            .lineLimit(1)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     }
-                    .foregroundStyle(.onSurfaceVariant)
+                    if lugar.esFrecuente {
+                        Label(L.t("Frecuente", "Frequent"), systemImage: "star.fill")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.onSurfaceVariant)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.surfaceContainerLowest)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
-                    )
-            )
+            .multilineTextAlignment(.leading)
+            .padding(16)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -391,77 +379,94 @@ struct GuardadoView: View {
                            : L.t("Muestra las opciones del lugar guardado", "Shows saved place options"))
     }
 
-    private func iconCircle(lugar: LugarGuardado) -> some View {
-        let isPrimary = lugar.esFijo
-        let bg: Color = isPrimary ? .primaryFill : .primaryContainer.opacity(0.15)
-        let fg: Color = isPrimary ? .onPrimaryFill : .appPrimary
-        return ZStack {
-            Circle().fill(bg).frame(width: 48, height: 48)
-            Image(systemName: lugar.icono)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(fg)
-        }
+    private func iconoLugar(_ lugar: LugarGuardado) -> some View {
+        Image(systemName: lugar.icono)
+            .font(.system(size: min(tamanoIcono, 24), weight: .medium))
+            .foregroundStyle(lugar.esFijo ? acento : Color(uiColor: .secondaryLabel))
+            .frame(width: 44, height: 44)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .accessibilityHidden(true)
     }
 
-    // MARK: - Lineas section (líneas GTFS guardadas)
+    // MARK: - Líneas guardadas
     private var lineasSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let respaldoLineas {
-                Text(L.t("El original se guardó antes de reiniciar las líneas.",
-                         "The original data was backed up before resetting saved lines."))
-                    .font(.bodySm)
-                ShareLink(item: respaldoLineas) {
-                    Label(L.t("Compartir respaldo", "Share backup"), systemImage: "square.and.arrow.up")
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(L.t("El original se guardó antes de reiniciar las líneas.",
+                             "The original data was backed up before resetting saved lines."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    ShareLink(item: respaldoLineas) {
+                        Label(L.t("Compartir respaldo", "Share backup"), systemImage: "square.and.arrow.up")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .tint(acento)
                 }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
             if vm.datosLineasInvalidos {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(L.t("No se pudieron leer tus líneas guardadas. Los datos originales se conservan y los cambios están bloqueados.",
                              "Your saved lines could not be read. The original data has been preserved and changes are blocked."))
-                        .font(.bodySm)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Button(L.t("Reintentar lectura", "Retry reading")) { vm.cargarLineas() }
-                    Button(L.t("Respaldar y reiniciar líneas", "Back up and reset saved lines")) {
+                        .buttonStyle(.bordered)
+                        .tint(acento)
+                    Button(L.t("Respaldar y reiniciar líneas", "Back up and reset saved lines"), role: .destructive) {
                         confirmarReinicioLineas = true
                     }
                 }
-                .padding(20)
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
-            Text(vm.lineasGuardadas.isEmpty
-                 ? L.t("Guarda líneas oficiales del feed para tenerlas a la mano.", "Save official feed lines to have them handy.")
-                 : L.f("{0} línea(s) guardada(s) del feed oficial.", "{0} saved line(s) from the official feed.", ["\(vm.lineasGuardadas.count)"]))
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-
-            if vm.cargandoCatalogo {
+            if !vm.catalogoCargado || vm.cargandoCatalogo {
                 ProgressView(L.t("Cargando líneas…", "Loading routes…"))
+                    .font(.subheadline)
+                    .tint(acento)
                     .frame(maxWidth: .infinity)
-                    .padding(20)
+                    .padding(24)
             } else if let error = vm.errorCatalogo {
-                VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text(error.mensajeUsuario)
-                        .font(.bodySm)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Button(L.t("Reintentar", "Try again")) {
                         Task { await vm.cargarCatalogo(reintentar: true) }
                     }
+                    .buttonStyle(.bordered)
+                    .tint(acento)
                     .disabled(vm.cargandoCatalogo)
                 }
-                .padding(20)
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             } else if vm.lineasGuardadas.isEmpty {
-                emptyState(icono: "bus.badge.clock",
-                           titulo: L.t("No tienes líneas guardadas", "No saved lines"),
-                           subtitulo: L.t("Toca Añadir línea para consultar el catálogo oficial.", "Tap Add line to browse the official catalog."))
-                    .padding(.top, 60)
+                if !vm.datosLineasInvalidos {
+                    emptyState(icono: "bus.badge.clock",
+                               titulo: L.t("No tienes líneas guardadas", "No saved lines"),
+                               subtitulo: L.t("Toca Añadir línea para consultar el catálogo oficial.", "Tap Add line to browse the official catalog."))
+                }
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: 0) {
                     ForEach(vm.lineasGuardadas) { linea in
+                        if linea.id != vm.lineasGuardadas.first?.id {
+                            Divider().padding(.leading, 32).padding(.trailing, 16)
+                        }
                         lineaRow(linea)
                     }
                 }
-                .padding(.horizontal, 20)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
+        .padding(.horizontal, 20)
     }
 
     private func lineaRow(_ linea: RutaOpcion) -> some View {
@@ -469,68 +474,64 @@ struct GuardadoView: View {
             AppHaptics.selection()
             selectedLinea = linea
         } label: {
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 3)
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 2)
                     .fill(linea.colorLinea)
-                    .frame(width: 4, height: 46)
-                ZStack {
-                    Circle().fill(linea.colorLinea.opacity(0.14)).frame(width: 42, height: 42)
-                    Text(linea.linea)
-                        .font(.system(size: 13, weight: .heavy))
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                        .foregroundStyle(linea.colorLinea)
-                }
-                VStack(alignment: .leading, spacing: 2) {
+                    .frame(width: 4, height: 44)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L.t("Línea ", "Line ") + linea.lineaConLetra)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(linea.empresa)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
-                        .lineLimit(1)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     Text(linea.recorridoLocalizado)
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .lineLimit(1)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                    Label(linea.frecuenciaTexto, systemImage: "clock")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(linea.frecuenciaTexto)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(linea.colorLinea)
-                    Text(L.t("frecuencia", "frequency"))
-                        .font(.labelCapsSm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.surfaceContainerLowest)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
-                    )
-            )
+            .multilineTextAlignment(.leading)
+            .padding(16)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Línea ", "Line ") + linea.lineaConLetra + ", " + linea.empresa)
+        .accessibilityValue(linea.recorridoLocalizado + ". " + L.t("frecuencia", "frequency") + ": " + linea.frecuenciaTexto)
     }
 
-    // MARK: - Empty state
+    // MARK: - Estados vacíos
     private func emptyState(icono: String, titulo: String, subtitulo: String) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             Image(systemName: icono)
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(.onSurfaceVariant)
+                .font(.system(size: min(tamanoEstado, 40), weight: .regular))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             Text(titulo)
-                .font(.bodyMdMedium)
-                .foregroundStyle(.onSurface)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
             Text(subtitulo)
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .multilineTextAlignment(.center)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
+        .padding(24)
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     // MARK: - Sample data
