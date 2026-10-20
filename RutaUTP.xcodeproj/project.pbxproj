@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BD7200000000000000000002 /* AvisosLineasSeguridad.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7200000000000000000001 /* AvisosLineasSeguridad.swift */; };
 		BD7100000000000000000002 /* ContactoEmergenciaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */; };
 		BD6100000000000000000002 /* IdentificacionRuta3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6100000000000000000001 /* IdentificacionRuta3D.swift */; };
 		BD6000000000000000000002 /* Transportes3DView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000001 /* Transportes3DView.swift */; };
@@ -215,6 +216,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		BD7200000000000000000001 /* AvisosLineasSeguridad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvisosLineasSeguridad.swift; sourceTree = "<group>"; };
 		BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactoEmergenciaSheet.swift; sourceTree = "<group>"; };
 		BD6100000000000000000001 /* IdentificacionRuta3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificacionRuta3D.swift; sourceTree = "<group>"; };
 		BD6000000000000000000001 /* Transportes3DView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DView.swift; sourceTree = "<group>"; };
@@ -717,6 +719,7 @@
 			isa = PBXGroup;
 			children = (
 				62EE7C67585548A1BC4EB681 /* RouteChangesLocationModel.swift */,
+				BD7200000000000000000001 /* AvisosLineasSeguridad.swift */,
 				0A8004DB300AD9FE004E1676 /* SeguridadView.swift */,
 				0A800433300AD9FE004E1676 /* SeguridadLugaresModel.swift */,
 				0A80042F300AD9FE004E1676 /* SeguridadLugares.swift */,
@@ -1229,6 +1232,7 @@
 				AA9900000000000000000B02 /* BusEn3D.swift in Sources */,
 				0A800507300AD9FE004E1676 /* MapaView.swift in Sources */,
 				0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */,
+				BD7200000000000000000002 /* AvisosLineasSeguridad.swift in Sources */,
 				0A800510300AD9FE004E1676 /* SeguridadView.swift in Sources */,
 				0A800434300AD9FE004E1676 /* SeguridadLugaresModel.swift in Sources */,
 				0A800430300AD9FE004E1676 /* SeguridadLugares.swift in Sources */,
