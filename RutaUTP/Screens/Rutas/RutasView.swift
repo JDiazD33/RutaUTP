@@ -194,7 +194,7 @@ struct RutasView: View {
                 Image(systemName: "cube.transparent")
                     .font(.title3)
                     .foregroundStyle(acento)
-                    .frame(width: 28)
+                    .frame(minWidth: 28)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L.t("Transportes en 3D", "Transport in 3D"))
