@@ -1,4 +1,165 @@
 {
+  "Avisos de tus líneas": {
+    "en": "Your line alerts",
+    "fr": "Avis de vos lignes",
+    "pt-BR": "Avisos das suas linhas",
+    "de": "Hinweise zu deinen Linien",
+    "zh-Hans": "你的线路提醒"
+  },
+  "Tus guardadas y tu viaje activo": {
+    "en": "Your saved lines and active trip",
+    "fr": "Vos lignes enregistrées et votre trajet en cours",
+    "pt-BR": "Suas linhas salvas e sua viagem em andamento",
+    "de": "Deine gespeicherten Linien und deine laufende Fahrt",
+    "zh-Hans": "已收藏线路和当前行程"
+  },
+  "No pudimos leer tus líneas guardadas": {
+    "en": "Couldn't read your saved lines",
+    "fr": "Impossible de lire vos lignes enregistrées",
+    "pt-BR": "Não foi possível ler suas linhas salvas",
+    "de": "Deine gespeicherten Linien konnten nicht gelesen werden",
+    "zh-Hans": "无法读取已收藏线路"
+  },
+  "Reintenta la lectura para incluirlas en los avisos.": {
+    "en": "Try reading them again to include them in alerts.",
+    "fr": "Réessayez de les lire pour les inclure dans les avis.",
+    "pt-BR": "Tente ler novamente para incluí-las nos avisos.",
+    "de": "Versuche erneut, sie zu laden, um Hinweise dazu zu erhalten.",
+    "zh-Hans": "请重新读取，以便显示这些线路的提醒。"
+  },
+  "Empieza con tus líneas": {
+    "en": "Start with your lines",
+    "fr": "Commencez par vos lignes",
+    "pt-BR": "Comece com suas linhas",
+    "de": "Beginne mit deinen Linien",
+    "zh-Hans": "从你的线路开始"
+  },
+  "Guarda una línea para ver sus obras, cierres y desvíos aquí.": {
+    "en": "Save a line to see its roadworks, closures and detours here.",
+    "fr": "Enregistrez une ligne pour voir ici ses travaux, fermetures et déviations.",
+    "pt-BR": "Salve uma linha para ver aqui suas obras, bloqueios e desvios.",
+    "de": "Speichere eine Linie, um hier Baustellen, Sperrungen und Umleitungen zu sehen.",
+    "zh-Hans": "收藏一条线路，即可在此查看施工、封路和绕行信息。"
+  },
+  "Elegir líneas": {
+    "en": "Choose lines",
+    "fr": "Choisir des lignes",
+    "pt-BR": "Escolher linhas",
+    "de": "Linien auswählen",
+    "zh-Hans": "选择线路"
+  },
+  "Sin información actualizada": {
+    "en": "No up-to-date information",
+    "fr": "Aucune information à jour",
+    "pt-BR": "Sem informações atualizadas",
+    "de": "Keine aktuellen Informationen",
+    "zh-Hans": "暂无最新信息"
+  },
+  "No podemos consultar los avisos ahora. Se actualizarán al conectar.": {
+    "en": "We can't check alerts now. They'll update when connected.",
+    "fr": "Impossible de consulter les avis pour le moment. Ils seront actualisés à la connexion.",
+    "pt-BR": "Não podemos consultar os avisos agora. Eles serão atualizados ao conectar.",
+    "de": "Hinweise sind gerade nicht abrufbar. Sie werden bei bestehender Verbindung aktualisiert.",
+    "zh-Hans": "暂时无法查询提醒，连接后将自动更新。"
+  },
+  "Actualizar": {
+    "en": "Refresh",
+    "fr": "Actualiser",
+    "pt-BR": "Atualizar",
+    "de": "Aktualisieren",
+    "zh-Hans": "刷新"
+  },
+  "Sin avisos vigentes": {
+    "en": "No current alerts",
+    "fr": "Aucun avis en cours",
+    "pt-BR": "Sem avisos vigentes",
+    "de": "Keine aktuellen Hinweise",
+    "zh-Hans": "暂无有效提醒"
+  },
+  "Ver menos": {
+    "en": "Show less",
+    "fr": "Voir moins",
+    "pt-BR": "Ver menos",
+    "de": "Weniger anzeigen",
+    "zh-Hans": "收起"
+  },
+  "Ver todos los avisos ({0})": {
+    "en": "View all alerts ({0})",
+    "fr": "Voir tous les avis ({0})",
+    "pt-BR": "Ver todos os avisos ({0})",
+    "de": "Alle Hinweise anzeigen ({0})",
+    "zh-Hans": "查看全部提醒（{0}）"
+  },
+  "Reportes de la comunidad": {
+    "en": "Community reports",
+    "fr": "Signalements de la communauté",
+    "pt-BR": "Relatos da comunidade",
+    "de": "Meldungen der Community",
+    "zh-Hans": "社区报告"
+  },
+  "En tu viaje": {
+    "en": "On your trip",
+    "fr": "Sur votre trajet",
+    "pt-BR": "Na sua viagem",
+    "de": "Auf deiner Fahrt",
+    "zh-Hans": "当前行程"
+  },
+  "Ver en mapa": {
+    "en": "View on map",
+    "fr": "Voir sur la carte",
+    "pt-BR": "Ver no mapa",
+    "de": "Auf der Karte ansehen",
+    "zh-Hans": "在地图中查看"
+  },
+  "Desvío de ruta": {
+    "en": "Route detour",
+    "fr": "Déviation de ligne",
+    "pt-BR": "Desvio de rota",
+    "de": "Linienumleitung",
+    "zh-Hans": "线路绕行"
+  },
+  "{0} cuentas · hasta {1}": {
+    "en": "{0} accounts · until {1}",
+    "fr": "{0} comptes · jusqu’à {1}",
+    "pt-BR": "{0} contas · até {1}",
+    "de": "{0} Konten · bis {1}",
+    "zh-Hans": "{0} 个账号 · 截至 {1}"
+  },
+  "Este aviso ya no está vigente": {
+    "en": "This alert is no longer current",
+    "fr": "Cet avis n’est plus en vigueur",
+    "pt-BR": "Este aviso não está mais vigente",
+    "de": "Dieser Hinweis ist nicht mehr aktuell",
+    "zh-Hans": "此提醒已失效"
+  },
+  "Lugar del aviso": {
+    "en": "Alert location",
+    "fr": "Lieu du signalement",
+    "pt-BR": "Local do aviso",
+    "de": "Ort der Meldung",
+    "zh-Hans": "提醒位置"
+  },
+  "Guarda un paradero en el mapa y lo encontrarás aquí.": {
+    "en": "Save a stop on the map to find it here.",
+    "fr": "Enregistrez un arrêt sur la carte pour le retrouver ici.",
+    "pt-BR": "Salve um ponto no mapa para encontrá-lo aqui.",
+    "de": "Speichere eine Haltestelle auf der Karte, um sie hier zu finden.",
+    "zh-Hans": "在地图中收藏站点，即可在此找到。"
+  },
+  "Línea guardada": {
+    "en": "Saved line",
+    "fr": "Ligne enregistrée",
+    "pt-BR": "Linha salva",
+    "de": "Gespeicherte Linie",
+    "zh-Hans": "已收藏线路"
+  },
+  "No hay avisos confirmados para tus líneas ahora.": {
+    "en": "No confirmed alerts for your lines right now.",
+    "fr": "Aucun avis confirmé pour vos lignes en ce moment.",
+    "pt-BR": "Não há avisos confirmados para suas linhas agora.",
+    "de": "Für deine Linien gibt es derzeit keine bestätigten Hinweise.",
+    "zh-Hans": "你的线路目前暂无已确认提醒。"
+  },
   "Amigo(a)": {
     "de": "Freund/in",
     "en": "Friend",
