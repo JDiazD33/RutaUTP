@@ -523,6 +523,12 @@ struct SoporteSheet: View {
 
 // MARK: - 5. SOBRE NOSOTROS SHEET
 struct SobreNosotrosSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @ScaledMetric(relativeTo: .title2) private var tamanoMarca = 30
+    @ScaledMetric(relativeTo: .body) private var tamanoIcono = 18
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+
     /// Leer la version instalada evita que el texto quede desfasado del bundle.
     private var version: String? {
         guard let numero = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
@@ -531,70 +537,111 @@ struct SobreNosotrosSheet: View {
     }
 
     var body: some View {
-        MenuDetailSheet(title: L.t("Sobre Nosotros", "About Us")) {
-            MenuDetailHero(
-                icon: "bus.fill",
-                title: "Ruta UTP Trujillo",
-                subtitle: L.t("Tu ciudad, más cerca.", "Your city, closer."),
-                badge: version
-            )
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    identidad
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L.t("Sobre la app", "About the app"))
-                    .font(.headline)
-                    .foregroundStyle(.onSurface)
-                    .accessibilityAddTraits(.isHeader)
-                Text(L.t("Aplicación prototipo de movilidad en Trujillo para estudiantes y colaboradores. Permite elegir una sede de trabajo, buscar rutas de micros y combis, guardar lugares y consultar reportes comunitarios y seguimiento.",
-                         "Prototype mobility app in Trujillo for students and employees. Choose a workplace, find bus and van routes, save places, and view community reports and tracking."))
-                    .font(.body)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            VStack(spacing: 0) {
-                featureRow(icon: "map.fill", title: L.t("Rutas", "Routes"),
-                           detail: L.t("Explora líneas y paraderos para planificar tu viaje.",
-                                       "Explore routes and stops to plan your trip."))
-                Divider().padding(.horizontal, 18)
-                featureRow(icon: "bookmark.fill", title: L.t("Guardado", "Saved"),
-                           detail: L.t("Ten a mano tus lugares y líneas favoritas.",
-                                       "Keep your favorite places and routes close at hand."))
-                Divider().padding(.horizontal, 18)
-                featureRow(icon: "location.fill", title: L.t("Tu viaje", "Your trip"),
-                           detail: L.t("Sigue tu avance durante el recorrido.",
-                                       "Follow your progress along the route."))
-            }
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L.t("Equipo de desarrollo", "Development team"))
-                    .font(.headline)
-                    .foregroundStyle(.onSurface)
-                    .accessibilityAddTraits(.isHeader)
-
-                VStack(alignment: .leading, spacing: 18) {
-                    creditoRow(L.t("Diseño y desarrollo", "Design and development"),
-                               "Universidad Tecnológica del Perú S.A.C")
-                    Divider()
-                    creditoRow(L.t("Institución", "Institution"), "Universidad Tecnológica del Perú")
-                    Divider()
-                    Link(destination: URL(string: "https://www.flaticon.com/uicons")!) {
-                        HStack(spacing: 12) {
-                            Text("Uicons by Flaticon")
-                                .font(.subheadline.weight(.semibold))
-                            Spacer(minLength: 4)
-                            Image(systemName: "arrow.up.right")
-                                .accessibilityHidden(true)
-                        }
-                        .frame(minHeight: 44)
-                        .foregroundStyle(.appPrimary)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L.t("Sobre la app", "About the app"))
+                            .font(.headline)
+                            .foregroundStyle(.onSurface)
+                            .accessibilityAddTraits(.isHeader)
+                        Text(L.t("Aplicación prototipo de movilidad en Trujillo para estudiantes y colaboradores. Permite elegir una sede de trabajo, buscar rutas de micros y combis, guardar lugares y consultar reportes comunitarios y seguimiento.",
+                                 "Prototype mobility app in Trujillo for students and employees. Choose a workplace, find bus and van routes, save places, and view community reports and tracking."))
+                            .font(.body)
+                            .foregroundStyle(.onSurfaceVariant)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .accessibilityLabel(L.t("Iconos de negocios por Flaticon", "Business icons by Flaticon"))
+
+                    VStack(spacing: 0) {
+                        featureRow(icon: "map.fill", title: L.t("Rutas", "Routes"),
+                                   detail: L.t("Explora líneas y paraderos para planificar tu viaje.",
+                                               "Explore routes and stops to plan your trip."))
+                        Divider().padding(.horizontal, 18)
+                        featureRow(icon: "bookmark.fill", title: L.t("Guardado", "Saved"),
+                                   detail: L.t("Ten a mano tus lugares y líneas favoritas.",
+                                               "Keep your favorite places and routes close at hand."))
+                        Divider().padding(.horizontal, 18)
+                        featureRow(icon: "location.fill", title: L.t("Tu viaje", "Your trip"),
+                                   detail: L.t("Sigue tu avance durante el recorrido.",
+                                               "Follow your progress along the route."))
+                    }
+                    .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L.t("Equipo de desarrollo", "Development team"))
+                            .font(.headline)
+                            .foregroundStyle(.onSurface)
+                            .accessibilityAddTraits(.isHeader)
+
+                        VStack(alignment: .leading, spacing: 18) {
+                            creditoRow(L.t("Diseño y desarrollo", "Design and development"),
+                                       "Universidad Tecnológica del Perú S.A.C")
+                            Divider()
+                            creditoRow(L.t("Institución", "Institution"), "Universidad Tecnológica del Perú")
+                            Divider()
+                            Link(destination: URL(string: "https://www.flaticon.com/uicons")!) {
+                                HStack(spacing: 12) {
+                                    Text("Uicons by Flaticon")
+                                        .font(.subheadline.weight(.semibold))
+                                    Spacer(minLength: 4)
+                                    Image(systemName: "arrow.up.right")
+                                        .accessibilityHidden(true)
+                                }
+                                .frame(minHeight: 44)
+                                .foregroundStyle(.appPrimary)
+                            }
+                            .accessibilityLabel(L.t("Iconos de negocios por Flaticon", "Business icons by Flaticon"))
+                        }
+                        .padding(20)
+                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+                    }
                 }
+                .frame(maxWidth: 600, alignment: .leading)
+                .frame(maxWidth: .infinity)
                 .padding(20)
-                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(L.t("Sobre Nosotros", "About Us"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Cerrar", "Close")) { dismiss() }
+                }
             }
         }
+        .tint(acento)
+        .accessibilityAction(.escape) { dismiss() }
+    }
+
+    private var identidad: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "bus")
+                .font(.system(size: min(tamanoMarca, 40), weight: .medium))
+                .foregroundStyle(.primary)
+                .frame(width: 76, height: 76)
+                .background(Color(uiColor: .secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.bottom, 4)
+                .accessibilityHidden(true)
+            Text("Ruta UTP Trujillo")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
+            Text(L.t("Tu ciudad, más cerca.", "Your city, closer."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            if let version {
+                Text(version)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
     }
 
     private func featureRow(icon: String, title: String, detail: String) -> some View {
