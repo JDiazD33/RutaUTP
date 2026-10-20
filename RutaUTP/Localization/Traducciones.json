@@ -1,4 +1,25 @@
 {
+  "Buscar rutas": {
+    "en": "Search routes",
+    "fr": "Rechercher des itinéraires",
+    "pt-BR": "Buscar rotas",
+    "de": "Routen suchen",
+    "zh-Hans": "搜索路线"
+  },
+  "Hasta {0} m del lugar": {
+    "en": "Within {0} m of this place",
+    "fr": "À {0} m maximum de ce lieu",
+    "pt-BR": "Até {0} m deste local",
+    "de": "Im Umkreis von {0} m um diesen Ort",
+    "zh-Hans": "距此地点 {0} 米以内"
+  },
+  "1 ruta encontrada": {
+    "en": "1 route found",
+    "fr": "1 itinéraire trouvé",
+    "pt-BR": "1 rota encontrada",
+    "de": "1 Route gefunden",
+    "zh-Hans": "找到 1 条路线"
+  },
   "1 lugar": {
     "en": "1 place",
     "fr": "1 lieu",

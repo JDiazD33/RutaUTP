@@ -23,6 +23,12 @@ struct RutasView: View {
     #endif
 
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
+    @FocusState private var busquedaEnfocada: Bool
+    @ScaledMetric(relativeTo: .title) private var tamanoEstado = 28
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -244,91 +250,101 @@ struct RutasView: View {
 
     // MARK: - Buscador de rutas
     private var buscador: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.onSurfaceVariant)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
-                TextField(L.t("Letra, línea, empresa o avenida", "Letter, line, company or avenue"), text: $viewModel.textoBusqueda)
-                    .font(.bodySm)
+                TextField(L.t("Buscar rutas", "Search routes"), text: $viewModel.textoBusqueda)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .tint(acento)
+                    .focused($busquedaEnfocada)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .submitLabel(.search)
+                    .onSubmit { busquedaEnfocada = false }
                     .accessibilityLabel(L.t("Buscar rutas por letra, línea, empresa o avenida", "Search routes by letter, line, company or avenue"))
                 if !viewModel.textoBusqueda.isEmpty {
                     Button { viewModel.textoBusqueda = "" } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(Color.onSurfaceVariant)
+                            .foregroundStyle(.secondary)
                             .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L.t("Borrar búsqueda de rutas", "Clear route search"))
                 }
             }
-            .padding(.leading, 14)
-            .padding(.trailing, 8)
+            .padding(.leading, 16)
+            .padding(.trailing, viewModel.textoBusqueda.isEmpty ? 16 : 4)
             .frame(minHeight: 52)
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 16))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.outlineVariant.opacity(0.4), lineWidth: 1)
+            .background(superficie, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            if busquedaEnfocada && viewModel.textoBusqueda.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(L.t("Ejemplo: A · M-34 · empresa · Mansiche", "Example: A · M-34 · company · Mansiche"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
             }
-            Text(L.t("Ejemplo: A · M-34 · empresa · Mansiche", "Example: A · M-34 · company · Mansiche"))
-                .font(.caption)
-                .foregroundStyle(Color.onSurfaceVariant)
-                .padding(.horizontal, 3)
             if let cerca = viewModel.filtroCerca {
-                HStack(spacing: 8) {
-                    Image(systemName: "location.fill")
+                HStack(spacing: 12) {
+                    Image(systemName: "location")
+                        .foregroundStyle(acento)
                         .accessibilityHidden(true)
-                    Text(L.t("Cerca de ", "Near ") + cerca.titulo + " · \(Int(RutasViewModel.radioCercaMetros)) m")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L.t("Cerca de ", "Near ") + cerca.titulo)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        Text(L.f("Hasta {0} m del lugar", "Within {0} m of this place", ["\(Int(RutasViewModel.radioCercaMetros))"]))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
-                        withAnimation { viewModel.limpiarFiltroCerca() }
+                        withAnimation(reducirMovimiento ? nil : .easeInOut(duration: 0.2)) {
+                            viewModel.limpiarFiltroCerca()
+                        }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
                             .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L.t("Quitar filtro de cercanía", "Clear nearby filter"))
                 }
-                .foregroundStyle(Color.onPrimaryContainer)
-                .padding(.leading, 12)
-                .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 12))
+                .padding(.leading, 16)
+                .padding(.trailing, 4)
+                .padding(.vertical, 6)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
     }
 
-    // MARK: - Header
+    // MARK: - Cabecera
     private var header: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "bus.fill")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(.appPrimary)
-                .accessibilityHidden(true)
+        HStack {
             Text(TransporteApp.busesUTPActivos ? L.t("Rutas UTP", "UTP routes")
                  : L.signable("rutas.titulo", "Rutas", "Routes"))
-                .font(.headlineLgMobile)
-                .foregroundStyle(.appPrimary)
+                .font(.title.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
                 .seniable("rutas.titulo")
                 .accessibilityAddTraits(.isHeader)
-            Spacer()
+            Spacer(minLength: 28)
+            Image(systemName: "bus.fill")
+                .font(.title3)
+                .foregroundStyle(acento)
+                .accessibilityHidden(true)
         }
+        .foregroundStyle(Color.onSurface)
         .padding(.horizontal, 20)
-        .frame(height: 56)
-        .background(Color.appSurface)
-        .overlay(
-            Rectangle()
-                .fill(Color.outlineVariant.opacity(0.25))
-                .frame(height: 1),
-            alignment: .bottom
-        )
-        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .frame(minHeight: 54)
     }
+
 }
 
 #Preview {
