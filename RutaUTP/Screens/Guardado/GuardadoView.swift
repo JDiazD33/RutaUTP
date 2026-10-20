@@ -19,6 +19,14 @@ struct GuardadoView: View {
     let locationService: LocationServiceProtocol
     @EnvironmentObject private var router: AppRouter
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
+    @Namespace private var indicadorTab
+    @ScaledMetric(relativeTo: .body) private var tamanoIcono = 20
+    @ScaledMetric(relativeTo: .title) private var tamanoEstado = 32
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
     @StateObject private var vm = GuardadoViewModel()
     @State private var selectedTab: Tab = .lugares
 
@@ -47,6 +55,7 @@ struct GuardadoView: View {
             VStack(spacing: 0) {
                 header
                 tabs
+                accionesGuardado
                 ScrollView(.vertical, showsIndicators: false) {
                     Group {
                         switch selectedTab {
@@ -54,7 +63,7 @@ struct GuardadoView: View {
                         case .lineas:  lineasSection
                         }
                     }
-                    .padding(.bottom, 90)
+                    .padding(.bottom, 24)
                 }
             }
             .padding(.bottom, tabBarHeight)
@@ -162,30 +171,51 @@ struct GuardadoView: View {
     private func procesarHookDebug() {}
     #endif
 
-    // MARK: - Header
+    // MARK: - Cabecera y acciones
     private var header: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "bookmark.fill")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.appPrimary)
-                .accessibilityHidden(true)
+        HStack {
             Text(L.signable("guardado.titulo", "Guardado", "Saved"))
-                .font(.headlineLgMobile)
-                .foregroundStyle(.appPrimary)
+                .font(.title.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
                 .seniable("guardado.titulo", distintivoDx: 10)
                 .accessibilityAddTraits(.isHeader)
-            Spacer()
+            Spacer(minLength: 28)
+            Image(systemName: "bookmark.fill")
+                .font(.title3)
+                .foregroundStyle(acento)
+                .accessibilityHidden(true)
+        }
+        .foregroundStyle(Color.onSurface)
+        .padding(.horizontal, 20)
+        .frame(minHeight: 54)
+    }
+
+    private var accionesGuardado: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(spacing: 12))
+        return layout {
+            Text(resumenGuardado)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             botonAñadir
         }
-        .padding(.horizontal, 16)
-        .frame(height: 56)
-        .background(Color.appSurface)
-        .overlay(
-            Rectangle()
-                .fill(Color.outlineVariant.opacity(0.25))
-                .frame(height: 1),
-            alignment: .bottom
-        )
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+    }
+
+    private var resumenGuardado: String {
+        if selectedTab == .lugares {
+            guard !vm.datosLugaresInvalidos else { return L.t("Lugares", "Places") }
+            return vm.lugares.count == 1 ? L.t("1 lugar", "1 place")
+                : L.f("{0} lugares", "{0} places", ["\(vm.lugares.count)"])
+        }
+        guard vm.catalogoCargado, !vm.cargandoCatalogo,
+              vm.errorCatalogo == nil, !vm.datosLineasInvalidos else { return L.t("Líneas", "Lines") }
+        return vm.lineasGuardadas.count == 1 ? L.t("1 línea", "1 line")
+            : L.f("{0} líneas", "{0} lines", ["\(vm.lineasGuardadas.count)"])
     }
 
     /// Botón "Añadir" contextual: añade lugar o línea según el tab activo.
@@ -194,7 +224,7 @@ struct GuardadoView: View {
             AppHaptics.impact(.medium)
             // Modo Señas: deja ver el videito antes de que el sheet tape el miniplayer.
             SeniasPresenter.shared.ejecutarTrasVerSenia(clave: selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea") {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                withAnimation(reducirMovimiento ? nil : .spring(response: 0.3, dampingFraction: 0.7)) {
                     switch selectedTab {
                     case .lugares: showAddLugar = true
                     case .lineas:  showAddLinea = true
@@ -202,78 +232,70 @@ struct GuardadoView: View {
                 }
             }
         } label: {
-            HStack(spacing: 7) {
-                Image(systemName: selectedTab == .lugares ? "plus.circle.fill" : "bus.doubledecker.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .symbolRenderingMode(.hierarchical)
+            Label {
                 Text(selectedTab == .lugares
                      ? L.signable("guardado.anadir_lugar", "Añadir lugar", "Add place")
                      : L.signable("guardado.anadir_linea", "Añadir línea", "Add line"))
-                    .font(.labelCapsMd)
-                    .appTracking(AppTracking.wideLabel)
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "plus").accessibilityHidden(true)
             }
-            .foregroundStyle(.onPrimaryFill)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 9)
-            .background(
-                Capsule().fill(
-                    LinearGradient(
-                        colors: [.primaryFill, .primaryFill.opacity(0.78)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: .appPrimary.opacity(0.40), radius: 7, x: 0, y: 3)
-            )
-            .overlay(
-                Capsule().stroke(Color.white.opacity(0.25), lineWidth: 0.8)
-            )
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil, minHeight: 28)
         }
-        .buttonStyle(PressableCapsuleStyle())
+        .buttonStyle(.borderedProminent)
+        .controlSize(.regular)
+        .tint(Color.primaryFill)
+        .foregroundStyle(Color.onPrimaryFill)
         .disabled(selectedTab == .lugares ? vm.datosLugaresInvalidos : vm.datosLineasInvalidos)
-        .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .accessibilityLabel(selectedTab == .lugares ? L.t("Añadir lugar guardado", "Add saved place") : L.t("Añadir línea guardada", "Add saved line"))
         .seniable(selectedTab == .lugares ? "guardado.anadir_lugar" : "guardado.anadir_linea", conGesto: false)
     }
 
     // MARK: - Tabs
     private var tabs: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 20) {
             ForEach(Tab.allCases) { t in
                 Button {
                     AppHaptics.selection()
                     let clave = t == .lugares ? "guardado.lugares" : "guardado.lineas"
                     SeniasPresenter.shared.ejecutarTrasVerSenia(clave: clave) {
-                        withAnimation(.easeInOut(duration: 0.2)) { selectedTab = t }
+                        withAnimation(reducirMovimiento ? nil : .easeInOut(duration: 0.2)) { selectedTab = t }
                     }
                 } label: {
-                    VStack(spacing: 6) {
+                    Label {
                         Text(t == .lugares
                              ? L.signable("guardado.lugares", "Lugares", "Places")
                              : L.signable("guardado.lineas", "Líneas", "Lines"))
-                            .font(.bodyMdMedium)
-                            .foregroundStyle(selectedTab == t ? Color.appPrimary : Color.onSurfaceVariant)
-                            // El distintivo va en el TEXTO (al terminar la
-                            // palabra) pero SIN gesto: conGesto false.
                             .seniable(t == .lugares ? "guardado.lugares" : "guardado.lineas",
                                       distintivoDx: 10, conGesto: false)
-                        Rectangle()
-                            .fill(selectedTab == t ? Color.primaryFill : Color.clear)
-                            .frame(height: 2)
+                    } icon: {
+                        Image(systemName: t == .lugares ? "mappin.and.ellipse" : "bus")
+                            .accessibilityHidden(true)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .font(.body.weight(.medium))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(selectedTab == t ? acento : Color(uiColor: .secondaryLabel))
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .padding(.bottom, 8)
+                    .contentShape(Rectangle())
+                    .overlay(alignment: .bottom) {
+                        if selectedTab == t {
+                            Capsule().fill(acento).frame(height: 3)
+                                .matchedGeometryEffect(id: "tab", in: indicadorTab)
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selectedTab == t ? .isSelected : [])
             }
         }
-        .background(Color.appSurface)
-        .overlay(
-            Rectangle()
-                .fill(Color.outlineVariant.opacity(0.25))
-                .frame(height: 0.5),
-            alignment: .bottom
-        )
+        .background(alignment: .bottom) {
+            Color(uiColor: .separator).opacity(0.35).frame(height: 1)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 4)
     }
 
     // MARK: - Lugares section

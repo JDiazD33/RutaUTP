@@ -1,4 +1,32 @@
 {
+  "1 lugar": {
+    "en": "1 place",
+    "fr": "1 lieu",
+    "pt-BR": "1 lugar",
+    "de": "1 Ort",
+    "zh-Hans": "1 个地点"
+  },
+  "{0} lugares": {
+    "en": "{0} places",
+    "fr": "{0} lieux",
+    "pt-BR": "{0} lugares",
+    "de": "{0} Orte",
+    "zh-Hans": "{0} 个地点"
+  },
+  "1 línea": {
+    "en": "1 line",
+    "fr": "1 ligne",
+    "pt-BR": "1 linha",
+    "de": "1 Linie",
+    "zh-Hans": "1 条线路"
+  },
+  "{0} líneas": {
+    "en": "{0} lines",
+    "fr": "{0} lignes",
+    "pt-BR": "{0} linhas",
+    "de": "{0} Linien",
+    "zh-Hans": "{0} 条线路"
+  },
   "Avisos de tus líneas": {
     "en": "Your line alerts",
     "fr": "Avis de vos lignes",
