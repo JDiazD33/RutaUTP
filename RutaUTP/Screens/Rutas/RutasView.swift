@@ -126,85 +126,37 @@ struct RutasView: View {
             buscador
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    Button {
-                        mostrarTransportes3D = true
-                    } label: {
-                        HStack(spacing: 14) {
-                            Image(systemName: "cube.transparent.fill")
-                                .font(.system(size: 26, weight: .medium))
-                                .foregroundStyle(Color.onPrimaryContainer)
-                                .frame(width: 54, height: 54)
-                                .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 16))
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(L.t("Transportes en 3D", "Transport in 3D"))
-                                    .font(.headlineSm)
-                                    .foregroundStyle(Color.onSurface)
-                                Text(L.t("Micro, combi y colectivo", "Bus, minibus and shared taxi"))
-                                    .font(.bodySm)
-                                    .foregroundStyle(Color.onSurfaceVariant)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color.onSurfaceVariant)
-                                .accessibilityHidden(true)
-                        }
-                        .padding(16)
-                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 22))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(L.t("Abre los modelos para girarlos y ampliarlos", "Opens the models to rotate and zoom"))
-
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L.signable("rutas.elegir", "Elige tu ruta", "Pick your route"))
-                                .font(.headlineSm)
-                                .foregroundStyle(Color.onSurface)
-                                .seniable("rutas.elegir", distintivoDx: 10)
-                                .accessibilityAddTraits(.isHeader)
-                            Text(TransporteApp.rutasUTPPendientes
-                                 ? L.t("Buses UTP · rutas próximamente", "UTP buses · routes coming soon")
-                                 : L.t("Encuentra tu micro y revisa su recorrido", "Find your bus and check its route"))
-                                .font(.bodySm)
-                                .foregroundStyle(Color.onSurfaceVariant)
-                        }
-                        Spacer(minLength: 8)
-                        if !viewModel.cargando && viewModel.errorCarga == nil && !viewModel.feedVacio {
-                            Text("\(rutas.count)")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.onPrimaryContainer)
-                                .padding(12)
-                                .background(Color.primaryContainer, in: Capsule())
-                                .accessibilityLabel(L.f("{0} rutas encontradas", "{0} routes found", ["\(rutas.count)"]))
-                        }
-                    }
-                    .padding(.vertical, 6)
+                    accesoTransportes3D
+                    encabezadoResultados(total: rutas.count)
 
                     if viewModel.cargando {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                            Text(L.t("Cargando rutas…", "Loading routes…"))
-                                .font(.bodySm)
-                                .foregroundStyle(Color.onSurfaceVariant)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 32)
+                        ProgressView(L.t("Cargando rutas…", "Loading routes…"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .tint(acento)
+                            .frame(maxWidth: .infinity)
+                            .padding(24)
+                            .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     } else if let error = viewModel.errorCarga {
-                        VStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Image(systemName: "exclamationmark.triangle")
-                                .font(.system(size: 26))
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                                .accessibilityHidden(true)
                             Text(error.mensajeUsuario)
-                                .font(.bodySm)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
                             Button(L.t("Reintentar", "Try again")) {
                                 Task { await viewModel.cargar(reintentar: true) }
                             }
+                            .buttonStyle(.bordered)
+                            .tint(acento)
                             .frame(minHeight: 44)
                         }
-                        .foregroundStyle(Color.onSurfaceVariant)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 32)
-                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(24)
+                        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     } else if viewModel.feedVacio {
                         estadoVacio(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
                                     : L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
@@ -234,18 +186,96 @@ struct RutasView: View {
         .background(Color.appBackground.ignoresSafeArea())
     }
 
+    private var accesoTransportes3D: some View {
+        Button {
+            mostrarTransportes3D = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "cube.transparent")
+                    .font(.title3)
+                    .foregroundStyle(acento)
+                    .frame(width: 28)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L.t("Transportes en 3D", "Transport in 3D"))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text(L.t("Micro, combi y colectivo", "Bus, minibus and shared taxi"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+            .multilineTextAlignment(.leading)
+            .padding(16)
+            .contentShape(Rectangle())
+            .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(L.t("Abre los modelos para girarlos y ampliarlos", "Opens the models to rotate and zoom"))
+    }
+
+    private func encabezadoResultados(total: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 28) {
+                    tituloResultados.fixedSize()
+                    contadorResultados(total).fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    tituloResultados
+                    contadorResultados(total)
+                }
+            }
+            if TransporteApp.rutasUTPPendientes {
+                Text(L.t("Buses UTP · rutas próximamente", "UTP buses · routes coming soon"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+    }
+
+    private var tituloResultados: some View {
+        Text(L.signable("rutas.elegir", "Elige tu ruta", "Pick your route"))
+            .font(.headline)
+            .foregroundStyle(.primary)
+            .fixedSize(horizontal: false, vertical: true)
+            .seniable("rutas.elegir", distintivoDx: 10)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder private func contadorResultados(_ total: Int) -> some View {
+        if !viewModel.cargando && viewModel.errorCarga == nil && !viewModel.feedVacio {
+            Text(total == 1 ? L.t("1 ruta encontrada", "1 route found")
+                 : L.f("{0} rutas encontradas", "{0} routes found", ["\(total)"]))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private func estadoVacio(_ mensaje: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "bus")
-                .font(.system(size: 28))
+                .font(.system(size: min(tamanoEstado, 40), weight: .regular))
                 .accessibilityHidden(true)
             Text(L.aviso(mensaje))
-                .font(.bodySm)
-                .multilineTextAlignment(.center)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .foregroundStyle(Color.onSurfaceVariant)
+        .multilineTextAlignment(.center)
+        .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
+        .padding(24)
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     // MARK: - Buscador de rutas
