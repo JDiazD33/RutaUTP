@@ -455,9 +455,6 @@ struct SeguridadView: View {
                         accesoCercano(categoria.titulo, icono: categoria.icono)
                     }.buttonStyle(.plain)
                 }
-                Button { showParaderosMap = true } label: {
-                    accesoCercano(L.t("Paraderos", "Stops"), icono: "bus")
-                }.buttonStyle(.plain)
             }
         }
     }
