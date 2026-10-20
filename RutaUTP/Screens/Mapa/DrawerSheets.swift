@@ -355,6 +355,12 @@ private struct TextoContribucionJustificado: UIViewRepresentable {
 
 // MARK: - 4. SOPORTE SHEET
 struct SoporteSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @ScaledMetric(relativeTo: .title2) private var tamanoCabecera = 28
+    @ScaledMetric(relativeTo: .body) private var tamanoIcono = 18
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var busqueda = ""
     @State private var preguntaAbierta: Int?
@@ -401,92 +407,98 @@ struct SoporteSheet: View {
     }
 
     var body: some View {
-        MenuDetailSheet(title: L.t("Soporte", "Support")) {
-            MenuDetailHero(
-                icon: "headphones",
-                title: L.t("¿En qué te ayudamos?", "How can we help?"),
-                subtitle: L.t("Encuentra respuestas para usar la app y moverte por Trujillo.",
-                              "Find answers about using the app and getting around Trujillo.")
-            )
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    if busqueda.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        encabezado
+                    }
 
-            buscador
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text(L.t("Preguntas frecuentes", "Frequently asked questions"))
-                    .font(.headline)
-                    .foregroundStyle(.onSurface)
-                    .accessibilityAddTraits(.isHeader)
-
-                if preguntasFiltradas.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L.t("No encontramos respuestas", "No answers found"))
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(L.t("Preguntas frecuentes", "Frequently asked questions"))
                             .font(.headline)
                             .foregroundStyle(.onSurface)
-                        Text(L.t("Prueba con otra palabra o borra la búsqueda.",
-                                 "Try another word or clear the search."))
-                            .font(.subheadline)
-                            .foregroundStyle(.onSurfaceVariant)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-                    .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
-                } else {
-                    ForEach(preguntasFiltradas) { pregunta in
-                        preguntaRow(pregunta)
-                    }
-                }
-            }
+                            .accessibilityAddTraits(.isHeader)
 
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.appPrimary)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L.t("Ayuda sin conexión", "Offline help"))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.onSurface)
-                    Text(L.t("Puedes consultar estas respuestas aunque no tengas internet.",
-                             "You can read these answers even without an internet connection."))
-                        .font(.footnote)
-                        .foregroundStyle(.onSurfaceVariant)
+                        if preguntasFiltradas.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(L.t("No encontramos respuestas", "No answers found"))
+                                    .font(.headline)
+                                    .foregroundStyle(.onSurface)
+                                Text(L.t("Prueba con otra palabra o borra la búsqueda.",
+                                         "Try another word or clear the search."))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.onSurfaceVariant)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(20)
+                            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
+                        } else {
+                            ForEach(preguntasFiltradas) { pregunta in
+                                preguntaRow(pregunta)
+                            }
+                        }
+                    }
+
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.appPrimary)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(L.t("Ayuda sin conexión", "Offline help"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.onSurface)
+                            Text(L.t("Puedes consultar estas respuestas aunque no tengas internet.",
+                                     "You can read these answers even without an internet connection."))
+                                .font(.footnote)
+                                .foregroundStyle(.onSurfaceVariant)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                .frame(maxWidth: 600, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .padding(20)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(L.t("Soporte", "Support"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Cerrar", "Close")) { dismiss() }
                 }
             }
-            .accessibilityElement(children: .combine)
+            .searchable(text: $busqueda,
+                        placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: L.t("Buscar en la ayuda", "Search help"))
+            .autocorrectionDisabled()
+            .submitLabel(.search)
         }
+        .tint(acento)
+        .accessibilityAction(.escape) { dismiss() }
     }
 
-    private var buscador: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.onSurfaceVariant)
+    private var encabezado: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: "headphones")
+                .font(.system(size: min(tamanoCabecera, 36), weight: .medium))
+                .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
-            TextField(L.t("Buscar en la ayuda", "Search help"), text: $busqueda)
-                .font(.body)
-                .foregroundStyle(.onSurface)
-                .submitLabel(.search)
-                .autocorrectionDisabled()
-                .accessibilityLabel(L.t("Buscar en la ayuda", "Search help"))
-            if !busqueda.isEmpty {
-                Button {
-                    busqueda = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.onSurfaceVariant)
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Borrar búsqueda", "Clear search"))
-            }
+            Text(L.t("¿En qué te ayudamos?", "How can we help?"))
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.primary)
+                .accessibilityAddTraits(.isHeader)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(L.t("Encuentra respuestas para usar la app y moverte por Trujillo.",
+                     "Find answers about using the app and getting around Trujillo."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.leading, 16)
-        .padding(.trailing, busqueda.isEmpty ? 16 : 4)
-        .frame(minHeight: 52)
-        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 18))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(Color.outlineVariant, lineWidth: 1)
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8)
     }
 
     private func preguntaRow(_ pregunta: Pregunta) -> some View {
