@@ -538,70 +538,62 @@ struct SobreNosotrosSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+            Form {
+                Section {
                     identidad
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(L.t("Sobre la app", "About the app"))
-                            .font(.headline)
-                            .foregroundStyle(.onSurface)
-                            .accessibilityAddTraits(.isHeader)
-                        Text(L.t("Aplicación prototipo de movilidad en Trujillo para estudiantes y colaboradores. Permite elegir una sede de trabajo, buscar rutas de micros y combis, guardar lugares y consultar reportes comunitarios y seguimiento.",
-                                 "Prototype mobility app in Trujillo for students and employees. Choose a workplace, find bus and van routes, save places, and view community reports and tracking."))
-                            .font(.body)
-                            .foregroundStyle(.onSurfaceVariant)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    VStack(spacing: 0) {
-                        featureRow(icon: "map.fill", title: L.t("Rutas", "Routes"),
-                                   detail: L.t("Explora líneas y paraderos para planificar tu viaje.",
-                                               "Explore routes and stops to plan your trip."))
-                        Divider().padding(.horizontal, 18)
-                        featureRow(icon: "bookmark.fill", title: L.t("Guardado", "Saved"),
-                                   detail: L.t("Ten a mano tus lugares y líneas favoritas.",
-                                               "Keep your favorite places and routes close at hand."))
-                        Divider().padding(.horizontal, 18)
-                        featureRow(icon: "location.fill", title: L.t("Tu viaje", "Your trip"),
-                                   detail: L.t("Sigue tu avance durante el recorrido.",
-                                               "Follow your progress along the route."))
-                    }
-                    .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(L.t("Equipo de desarrollo", "Development team"))
-                            .font(.headline)
-                            .foregroundStyle(.onSurface)
-                            .accessibilityAddTraits(.isHeader)
-
-                        VStack(alignment: .leading, spacing: 18) {
-                            creditoRow(L.t("Diseño y desarrollo", "Design and development"),
-                                       "Universidad Tecnológica del Perú S.A.C")
-                            Divider()
-                            creditoRow(L.t("Institución", "Institution"), "Universidad Tecnológica del Perú")
-                            Divider()
-                            Link(destination: URL(string: "https://www.flaticon.com/uicons")!) {
-                                HStack(spacing: 12) {
-                                    Text("Uicons by Flaticon")
-                                        .font(.subheadline.weight(.semibold))
-                                    Spacer(minLength: 4)
-                                    Image(systemName: "arrow.up.right")
-                                        .accessibilityHidden(true)
-                                }
-                                .frame(minHeight: 44)
-                                .foregroundStyle(.appPrimary)
-                            }
-                            .accessibilityLabel(L.t("Iconos de negocios por Flaticon", "Business icons by Flaticon"))
-                        }
-                        .padding(20)
-                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
-                    }
+                        .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
-                .frame(maxWidth: 600, alignment: .leading)
-                .frame(maxWidth: .infinity)
-                .padding(20)
+
+                Section {
+                    Text(L.t("Aplicación prototipo de movilidad en Trujillo para estudiantes y colaboradores. Permite elegir una sede de trabajo, buscar rutas de micros y combis, guardar lugares y consultar reportes comunitarios y seguimiento.",
+                             "Prototype mobility app in Trujillo for students and employees. Choose a workplace, find bus and van routes, save places, and view community reports and tracking."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    featureRow(icon: "map", title: L.t("Rutas", "Routes"),
+                               detail: L.t("Explora líneas y paraderos para planificar tu viaje.",
+                                           "Explore routes and stops to plan your trip."))
+                    featureRow(icon: "bookmark", title: L.t("Guardado", "Saved"),
+                               detail: L.t("Ten a mano tus lugares y líneas favoritas.",
+                                           "Keep your favorite places and routes close at hand."))
+                    featureRow(icon: "location", title: L.t("Tu viaje", "Your trip"),
+                               detail: L.t("Sigue tu avance durante el recorrido.",
+                                           "Follow your progress along the route."))
+                } header: {
+                    Text(L.t("Sobre la app", "About the app"))
+                }
+                .textCase(nil)
+                .listRowBackground(Color(uiColor: .secondarySystemGroupedBackground))
+
+                Section {
+                    creditoRow(L.t("Diseño y desarrollo", "Design and development"),
+                               "Universidad Tecnológica del Perú S.A.C")
+                    creditoRow(L.t("Institución", "Institution"), "Universidad Tecnológica del Perú")
+                    Link(destination: URL(string: "https://www.flaticon.com/uicons")!) {
+                        HStack(spacing: 12) {
+                            Text("Uicons by Flaticon")
+                                .font(.body)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 4)
+                            Image(systemName: "arrow.up.right")
+                                .font(.subheadline)
+                                .accessibilityHidden(true)
+                        }
+                        .frame(minHeight: 44)
+                        .foregroundStyle(acento)
+                    }
+                    .accessibilityLabel(L.t("Iconos de negocios por Flaticon", "Business icons by Flaticon"))
+                } header: {
+                    Text(L.t("Equipo de desarrollo", "Development team"))
+                }
+                .textCase(nil)
+                .listRowBackground(Color(uiColor: .secondarySystemGroupedBackground))
             }
+            .formStyle(.grouped)
+            .listSectionSpacing(24)
+            .scrollContentBackground(.hidden)
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(L.t("Sobre Nosotros", "About Us"))
             .navigationBarTitleDisplayMode(.inline)
@@ -645,33 +637,41 @@ struct SobreNosotrosSheet: View {
     }
 
     private func featureRow(icon: String, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            MenuDetailIcon(icon: icon)
+        Label {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.onSurface)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
                     .font(.subheadline)
-                    .foregroundStyle(.onSurfaceVariant)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.vertical, 4)
+        } icon: {
+            Image(systemName: icon)
+                .font(.system(size: min(tamanoIcono, 24)))
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+                .accessibilityHidden(true)
         }
+        .labelStyle(.titleAndIcon)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
         .accessibilityElement(children: .combine)
     }
 
     private func creditoRow(_ rol: String, _ nombre: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             Text(rol)
                 .font(.footnote)
-                .foregroundStyle(.onSurfaceVariant)
+                .foregroundStyle(.secondary)
             Text(nombre)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.onSurface)
+                .font(.body)
+                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
     }
 }
