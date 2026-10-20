@@ -374,17 +374,17 @@ struct SoporteSheet: View {
 
     private var preguntas: [Pregunta] {
         [
-            Pregunta(id: 0, icono: "exclamationmark.bubble.fill",
+            Pregunta(id: 0, icono: "exclamationmark.bubble",
                      titulo: L.t("¿Cómo reporto un incidente?", "How do I report an incident?"),
                      respuesta: L.t("Toca el botón REPORTAR en el mapa o en Seguridad y describe la situación.",
                                     "Tap the REPORT button on the map or in Safety and describe the situation.")
                         + "\n\n" + L.t("En esta versión de prueba, los reportes no se envían a un servidor.",
                                              "In this trial version, reports are not sent to a server.")),
-            Pregunta(id: 1, icono: "bookmark.fill",
+            Pregunta(id: 1, icono: "bookmark",
                      titulo: L.t("¿Cómo guardo un lugar?", "How do I save a place?"),
                      respuesta: L.t("En la pantalla de Guardado, presiona + Añadir y completa los datos.",
                                     "In the Saved screen, tap + Add and fill in the details.")),
-            Pregunta(id: 2, icono: "location.fill",
+            Pregunta(id: 2, icono: "location",
                      titulo: L.t("¿Cómo cambio mi destino?", "How do I change my destination?"),
                      respuesta: L.t("En el mapa, toca un chip (tu sede, Centro, Huanchaco o tus lugares guardados) para cambiar rápido. Elige tu sede en Ajustes.",
                                     "On the map, tap a chip (your workplace, Downtown, Huanchaco or your saved places) to switch quickly. Choose your workplace in Settings.")),
@@ -408,59 +408,46 @@ struct SoporteSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    if busqueda.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Form {
+                if busqueda.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Section {
                         encabezado
+                            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(L.t("Preguntas frecuentes", "Frequently asked questions"))
-                            .font(.headline)
-                            .foregroundStyle(.onSurface)
-                            .accessibilityAddTraits(.isHeader)
-
-                        if preguntasFiltradas.isEmpty {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(L.t("No encontramos respuestas", "No answers found"))
-                                    .font(.headline)
-                                    .foregroundStyle(.onSurface)
-                                Text(L.t("Prueba con otra palabra o borra la búsqueda.",
-                                         "Try another word or clear the search."))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.onSurfaceVariant)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(20)
-                            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
-                        } else {
-                            ForEach(preguntasFiltradas) { pregunta in
-                                preguntaRow(pregunta)
-                            }
-                        }
-                    }
-
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(.appPrimary)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L.t("Ayuda sin conexión", "Offline help"))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.onSurface)
-                            Text(L.t("Puedes consultar estas respuestas aunque no tengas internet.",
-                                     "You can read these answers even without an internet connection."))
-                                .font(.footnote)
-                                .foregroundStyle(.onSurfaceVariant)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
                 }
-                .frame(maxWidth: 600, alignment: .leading)
-                .frame(maxWidth: .infinity)
-                .padding(20)
+
+                Section {
+                    if preguntasFiltradas.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(L.t("No encontramos respuestas", "No answers found"))
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Text(L.t("Prueba con otra palabra o borra la búsqueda.",
+                                     "Try another word or clear the search."))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                    } else {
+                        ForEach(preguntasFiltradas) { pregunta in
+                            preguntaRow(pregunta)
+                        }
+                    }
+                } header: {
+                    Text(L.t("Preguntas frecuentes", "Frequently asked questions"))
+                } footer: {
+                    ayudaSinConexion
+                }
+                .textCase(nil)
+                .listRowBackground(Color(uiColor: .secondarySystemGroupedBackground))
             }
+            .formStyle(.grouped)
+            .listSectionSpacing(24)
+            .scrollContentBackground(.hidden)
             .background(Color(uiColor: .systemGroupedBackground))
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(L.t("Soporte", "Support"))
@@ -501,6 +488,20 @@ struct SoporteSheet: View {
         .padding(.vertical, 8)
     }
 
+    private var ayudaSinConexion: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(L.t("Ayuda sin conexión", "Offline help"), systemImage: "wifi.slash")
+                .font(.footnote.weight(.medium))
+            Text(L.t("Puedes consultar estas respuestas aunque no tengas internet.",
+                     "You can read these answers even without an internet connection."))
+                .font(.footnote)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(.secondary)
+        .padding(.top, 8)
+        .accessibilityElement(children: .combine)
+    }
+
     private func preguntaRow(_ pregunta: Pregunta) -> some View {
         DisclosureGroup(isExpanded: Binding(
             get: { preguntaAbierta == pregunta.id },
@@ -512,24 +513,26 @@ struct SoporteSheet: View {
         )) {
             Text(pregunta.respuesta)
                 .font(.body)
-                .foregroundStyle(.onSurfaceVariant)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 12)
-                .padding(.bottom, 4)
+                .padding(.vertical, 8)
         } label: {
-            HStack(spacing: 12) {
-                MenuDetailIcon(icon: pregunta.icono)
+            Label {
                 Text(pregunta.titulo)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.onSurface)
+                    .font(.body)
+                    .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: pregunta.icono)
+                    .font(.system(size: min(tamanoIcono, 24)))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24)
+                    .accessibilityHidden(true)
             }
+            .labelStyle(.titleAndIcon)
             .frame(minHeight: 44, alignment: .leading)
         }
-        .tint(.appPrimary)
-        .padding(16)
-        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
     }
 }
 
@@ -685,112 +688,6 @@ struct SobreNosotrosSheet: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-    }
-}
-
-// MARK: - Presentacion compartida de Soporte y Sobre Nosotros
-private struct MenuDetailSheet<Content: View>: View {
-    @Environment(\.dismiss) private var dismiss
-    let title: String
-    private let content: Content
-
-    init(title: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.onSurface)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 0)
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.onSurface)
-                        .frame(width: 44, height: 44)
-                        .background(Color.surfaceContainerHigh, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Cerrar", "Close"))
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    content
-                }
-                .frame(maxWidth: 600, alignment: .leading)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-                .padding(.bottom, 28)
-            }
-            .scrollDismissesKeyboard(.interactively)
-        }
-        .background(Color.appSurface.ignoresSafeArea())
-        .accessibilityAction(.escape) { dismiss() }
-    }
-}
-
-private struct MenuDetailHero: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    var badge: String? = nil
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: icon)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.onPrimaryFill)
-                .frame(width: 60, height: 60)
-                .background(Color.onPrimaryFill.opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title)
-                    .font(.system(.title2, design: .rounded).weight(.bold))
-                    .accessibilityAddTraits(.isHeader)
-                Text(subtitle)
-                    .font(.subheadline)
-            }
-            .foregroundStyle(.onPrimaryFill)
-            .fixedSize(horizontal: false, vertical: true)
-
-            if let badge {
-                Text(badge)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.onSurface)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.surfaceContainerLowest, in: Capsule())
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(24)
-        .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 28))
-    }
-}
-
-private struct MenuDetailIcon: View {
-    let icon: String
-
-    var body: some View {
-        Image(systemName: icon)
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(.onPrimaryContainer)
-            .frame(width: 40, height: 40)
-            .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 13))
-            .accessibilityHidden(true)
     }
 }
 
