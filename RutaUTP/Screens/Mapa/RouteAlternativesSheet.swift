@@ -71,6 +71,7 @@ struct RouteAlternativesSheet: View {
     }
 
     private func fila(_ plan: TransitItinerary) -> some View {
+        let metrics = ItineraryMetrics(plan: plan)
         let seleccionada = vm.itinerario?.optionID == plan.optionID
         let comprobando = vm.seleccionandoAlternativa == plan.optionID
         return Button {
@@ -97,17 +98,19 @@ struct RouteAlternativesSheet: View {
                         .foregroundStyle(Color.onSurfaceVariant)
                     Label(L.f("{0} m para subir · {1} m al destino",
                               "{0} m to board · {1} m to destination",
-                              ["\(Int(ceil(plan.walkToBoardMeters)))", "\(Int(ceil(plan.walkToDestinationMeters)))"]),
+                              ["\(Int(ceil(metrics.walkToBoardMeters)))",
+                               "\(Int(ceil(metrics.walkToDestinationMeters)))"]),
                           systemImage: "figure.walk")
                         .font(.caption)
                         .foregroundStyle(Color.onSurfaceVariant)
-                    if let transfer = plan.transfer {
+                    if plan.transfer != nil {
                         Text(L.f("{0} m a pie en el transbordo", "{0} m walking at the transfer",
-                                 ["\(Int(ceil(transfer.walkMeters)))"]))
+                                 ["\(Int(ceil(metrics.transferWalkMeters)))"]))
                             .font(.caption)
                             .foregroundStyle(Color.onSurfaceVariant)
                     }
-                    Text("~" + L.f("{0} min", "{0} min", ["\(max(1, Int(ceil(plan.estimatedJourneySeconds / 60))))"]))
+                    Text("~" + L.f("{0} min", "{0} min",
+                                  ["\(max(1, Int(ceil((metrics.totalSeconds + plan.boardingWaitSeconds) / 60))))"]))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.onSurface)
                 }
