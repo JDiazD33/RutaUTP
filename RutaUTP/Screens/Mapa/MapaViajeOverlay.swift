@@ -17,20 +17,12 @@ struct MapaViajeOverlay<ReportButton: View, LocationButton: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
-                Button {
+                BotonMenuMapa {
+                    AppHaptics.impact(.light)
                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) {
                         mostrarDrawer = true
                     }
-                } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.onSurface)
-                        .frame(width: 44, height: 44)
-                        .background(.regularMaterial, in: Circle())
-                        .contentShape(Circle())
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Abrir menú", "Open menu"))
                 .accessibilityFocused($menuFocused)
 
                 Group {
