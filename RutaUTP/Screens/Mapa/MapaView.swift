@@ -47,9 +47,6 @@ private struct MapaScreenContent: View {
     @State private var showDestinosGuardados = false
     @State private var showRouteAlternatives = false
     @State private var routeDetailsPresented = false
-    /// Panel "Transportes cercanos" colapsado: solo queda el ícono de bus
-    /// debajo del botón de mi ubicación.
-    @State private var panelColapsado = false
     /// El punto central se confirma al dejar de mover el mapa durante un segundo.
     @State private var modoColocarMarcador = false
     @State private var confirmacionMarcador: Task<Void, Never>?
@@ -173,20 +170,6 @@ private struct MapaScreenContent: View {
 
                 // Todo lo de ABAJO se va por abajo, por el mismo motivo.
                 VStack(spacing: 0) {
-                    // Accesos originales del mapa: marcador arriba, ubicación debajo.
-                    if !mostrandoRuta {
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 10) {
-                                botonColocarMarcador
-                                botonMiUbicacion
-                            }
-                            .padding(.trailing, 20)
-                            .padding(.bottom, 8)
-                        }
-                        .transition(.opacity)
-                    }
-
                     if mostrandoRuta {
                         HStack(alignment: .center) {
                             botonReportar
@@ -198,8 +181,7 @@ private struct MapaScreenContent: View {
                         .padding(.bottom, 56)
                         .transition(.opacity)
                     } else {
-                        NearbyTransportPanel(vm: vm, panelColapsado: $panelColapsado,
-                                             reportButton: botonReportar)
+                        NearbyTransportPanel(vm: vm, mapControls: controlesMapaSinRuta)
                             .padding(.bottom, tabBarHeight)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
@@ -277,11 +259,6 @@ private struct MapaScreenContent: View {
             vm.iniciarGPS()
             vm.refrescarDestinos() // chips: refleja lo guardado en Guardado
             consumirDestinoPendiente()
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--colapsar") {
-                panelColapsado = true
-            }
-            #endif
         }
         .onDisappear {
             pantallaVisible = false
@@ -330,7 +307,6 @@ private struct MapaScreenContent: View {
             // alrededor para la guía flotante y los controles del mapa.
             let rect = polyline.boundingMapRect
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.4)) {
-                panelColapsado = true
                 cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
                                                    dy: -max(rect.height * 0.65, 1800)))
             }
@@ -377,7 +353,7 @@ private struct MapaScreenContent: View {
                 cameraPosition = .region(vm.region)
             }
         }
-        .animation(.easeInOut(duration: 0.28), value: mostrarDrawer)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: mostrarDrawer)
         .sheet(isPresented: $showBoardingConfirmation) {
             BoardingConfirmationSheet(coordinator: trackingCoordinator,
                                       locationService: vm.sharedLocationService,
@@ -508,6 +484,20 @@ private struct MapaScreenContent: View {
         #endif
         vm.seleccionarLugar(titulo: destino.titulo, coordenada: destino.coordinate)
         vm.textoBusqueda = destino.titulo
+    }
+
+    private var controlesMapaSinRuta: some View {
+        HStack(alignment: .bottom, spacing: 12) {
+            botonReportar
+                .frame(minHeight: 44)
+            Spacer(minLength: 12)
+            VStack(spacing: 10) {
+                botonColocarMarcador
+                botonMiUbicacion
+            }
+        }
+        .frame(minHeight: 44)
+        .padding(.horizontal, 20)
     }
 
     // MARK: - Botón Mi Ubicación (centra el mapa en el GPS real)
