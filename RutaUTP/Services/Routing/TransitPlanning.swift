@@ -121,12 +121,30 @@ struct TransitItinerary {
         guard radius.isFinite, radius > 0, CLLocationCoordinate2DIsValid(origin),
               CLLocationCoordinate2DIsValid(destination) else { return .empty }
         var prepared: [PreparedTransitRoute] = []
+        var endpointDistances: [TransitStopCoordinateKey: (start: Double, end: Double)] = [:]
         for (routeIndex, route) in routes.enumerated()
         where route.shape.count >= 2 && route.paraderos.count >= 2 {
             if Task.isCancelled { return .empty }
             if let requiredRouteIDs, !requiredRouteIDs.contains(route.id) { continue }
-            let start = route.paraderos.map { PolylineMatching.distanceMeters(origin, $0.coordinate) }
-            let end = route.paraderos.map { PolylineMatching.distanceMeters(destination, $0.coordinate) }
+            var start: [Double] = []
+            var end: [Double] = []
+            start.reserveCapacity(route.paraderos.count)
+            end.reserveCapacity(route.paraderos.count)
+            for stop in route.paraderos {
+                let coordinate = stop.coordinate
+                let key = TransitStopCoordinateKey(coordinate)
+                let distances: (start: Double, end: Double)
+                if let cached = endpointDistances[key] {
+                    distances = cached
+                } else {
+                    distances = (
+                        start: PolylineMatching.distanceMeters(origin, coordinate),
+                        end: PolylineMatching.distanceMeters(destination, coordinate))
+                    endpointDistances[key] = distances
+                }
+                start.append(distances.start)
+                end.append(distances.end)
+            }
             guard start.contains(where: { $0 <= radius }) || end.contains(where: { $0 <= radius }) else { continue }
             let cached: TransitRouteGeometry
             let key: TransitGeometryKey = trustedCatalog ? .catalogIndex(routeIndex) : .routeID(route.id)
@@ -433,6 +451,16 @@ private struct TransitPlanKey: Hashable {
 fileprivate enum TransitGeometryKey: Hashable {
     case routeID(String)
     case catalogIndex(Int)
+}
+
+private struct TransitStopCoordinateKey: Hashable {
+    let latitudeBits: UInt64
+    let longitudeBits: UInt64
+
+    init(_ coordinate: CLLocationCoordinate2D) {
+        latitudeBits = coordinate.latitude.bitPattern
+        longitudeBits = coordinate.longitude.bitPattern
+    }
 }
 
 /// Geometría inmutable reutilizable entre búsquedas, invalidada si cambia el feed.
