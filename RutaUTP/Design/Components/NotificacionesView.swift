@@ -41,7 +41,7 @@ struct NotificacionesView: View {
                 Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
             }
         }
-        .tint(.appPrimary)
+        .tintePreferencias()
     }
 
     private func contenido(ahora: Date) -> some View {
@@ -60,7 +60,7 @@ struct NotificacionesView: View {
                     HStack(spacing: 12) {
                         ProgressView()
                         Text(L.t("Actualizando avisos…", "Updating notifications…"))
-                            .font(.subheadline).foregroundStyle(.onSurfaceVariant)
+                            .font(.subheadline).foregroundStyle(EstiloPreferencias.textoSecundario)
                     }
                     .accessibilityElement(children: .combine)
                 }
@@ -129,7 +129,7 @@ struct NotificacionesView: View {
                 }
                 .disabled(!servicio.permiteAviso(ahora.addingTimeInterval(5)) || servicio.programando)
                 if let mensaje = servicio.mensajePrueba {
-                    Text(L.aviso(mensaje)).font(.footnote).foregroundStyle(.onSurfaceVariant)
+                    Text(L.aviso(mensaje)).font(.footnote).foregroundStyle(EstiloPreferencias.textoSecundario)
                 }
                 NavigationLink { informacion } label: {
                     Label(L.t("Cómo funcionan los avisos", "How notifications work"), systemImage: "info.circle")
@@ -261,7 +261,7 @@ struct NotificacionesView: View {
                         set: { valor in Task { await push.cambiar(valor) } }
                     ))
                     .disabled(!push.disponibleEnVersion || push.datosInvalidos || servicio.preferencias.datosInvalidos)
-                    Text(push.textoEstado).font(.subheadline).foregroundStyle(.onSurfaceVariant)
+                    Text(push.textoEstado).font(.subheadline).foregroundStyle(EstiloPreferencias.textoSecundario)
                 } footer: {
                     Text(L.t("Reportes de la comunidad sobre tus líneas guardadas.", "Community reports about your saved lines."))
                 }
@@ -319,7 +319,7 @@ struct NotificacionesView: View {
                     DatePicker(L.t("Hasta", "Until"), selection: horaSilencio(inicio: false), displayedComponents: .hourAndMinute)
                     if servicio.preferencias.configuracion.inicioSilencio == servicio.preferencias.configuracion.finSilencio {
                         Text(L.t("Silencio todo el día.", "Muted all day."))
-                            .font(.footnote).foregroundStyle(.onSurfaceVariant)
+                            .font(.footnote).foregroundStyle(EstiloPreferencias.textoSecundario)
                     }
                 }
             } header: { Text(L.t("Horario de silencio", "Quiet hours")) }
@@ -445,7 +445,7 @@ struct NotificacionesView: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.down")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.onSurfaceVariant)
+                    .foregroundStyle(EstiloPreferencias.textoSecundario)
                     .accessibilityHidden(true)
             }
         }
@@ -497,31 +497,25 @@ private struct FilaNotificaciones: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: simbolo)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.onPrimaryFill)
-                .frame(width: 30, height: 30)
-                .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 7))
-                .accessibilityHidden(true)
+            IconoPreferencias(simbolo: simbolo)
             VStack(alignment: .leading, spacing: 3) {
-                Text(titulo).font(.body).foregroundStyle(.onSurface)
+                Text(titulo).font(.body).foregroundStyle(EstiloPreferencias.texto)
                 if let detalle {
-                    Text(detalle).font(.subheadline).foregroundStyle(.onSurfaceVariant)
+                    Text(detalle).font(.subheadline).foregroundStyle(EstiloPreferencias.textoSecundario)
                 }
             }
+            .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
         }
         .frame(minHeight: 44)
-        .padding(.vertical, 3)
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
     }
 }
 
 private extension View {
     func estiloFormularioNotificaciones() -> some View {
-        self.scrollContentBackground(.hidden)
-            .background(Color.appSurface)
-            .foregroundStyle(.onSurface)
+        self.estiloFormularioPreferencias()
     }
 }
 
@@ -642,7 +636,7 @@ private struct EditorRecordatorioView: View {
             }
             .interactiveDismissDisabled(guardando)
         }
-        .tint(.appPrimary)
+        .tintePreferencias()
     }
 }
 
@@ -651,22 +645,29 @@ private struct SeleccionDiasNotificaciones: View {
     let onToggle: (Int) -> Void
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 8) {
-            ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { dia in
-                let seleccionado = seleccionados.contains(dia)
-                Button { onToggle(dia) } label: {
-                    Text(DiasNotificaciones.nombre(dia, corto: true))
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(seleccionado ? Color.onPrimaryFill : Color.onSurface)
-                        .background(seleccionado ? Color.primaryFill : Color.surfaceContainerHigh, in: RoundedRectangle(cornerRadius: 12))
+        ForEach([2, 3, 4, 5, 6, 7, 1], id: \.self) { dia in
+            let seleccionado = seleccionados.contains(dia)
+            Button { onToggle(dia) } label: {
+                HStack(spacing: 12) {
+                    Text(DiasNotificaciones.nombre(dia, corto: false))
+                        .font(.body)
+                        .foregroundStyle(EstiloPreferencias.texto)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    if seleccionado {
+                        Image(systemName: "checkmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(DiasNotificaciones.nombre(dia, corto: false))
-                .accessibilityAddTraits(seleccionado ? .isSelected : [])
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(DiasNotificaciones.nombre(dia, corto: false))
+            .accessibilityAddTraits(seleccionado ? .isSelected : [])
         }
-        .padding(.vertical, 4)
     }
 }
 

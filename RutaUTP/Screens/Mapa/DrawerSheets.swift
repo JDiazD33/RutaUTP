@@ -226,9 +226,7 @@ struct AjustesSheet: View {
                     .accessibilityHint(L.t("Muestra qué datos se envían y cuándo", "Shows which data is sent and when"))
                 } header: { Text(L.t("Servicios", "Services")) }
             }
-            .scrollContentBackground(.hidden)
-            .background(Color.appSurface)
-            .foregroundStyle(.onSurface)
+            .estiloFormularioPreferencias()
             .navigationTitle(L.t("Ajustes", "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -237,7 +235,7 @@ struct AjustesSheet: View {
                 }
             }
         }
-        .tint(.appPrimary)
+        .tintePreferencias()
         .sheet(isPresented: $mostrarNotificaciones) {
             NotificacionesView().seguirTemaForzado().presentationDetents([.large])
         }
