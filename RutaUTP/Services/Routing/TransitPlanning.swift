@@ -193,10 +193,16 @@ struct TransitItinerary {
             ? prepared.map {
                 $0.bestDepartures(closestBoarding: true, minimumRideMeters: minimumRide)
             } : []
-        let arrivals: [[TransitGridCell: [(Int, Int)]]] = searchTransfers
+        typealias TransitArrival = (enter: Int, alight: Int, endCost: Double)
+        let arrivals: [[TransitGridCell: [TransitArrival]]] = searchTransfers
             ? prepared.map { route in
-                Dictionary(grouping: route.bestArrivals(minimumRideMeters: minimumRide)) {
-                    TransitGridCell(point: route.stopPoints[$0.0], size: cellSize)
+                let entries: [TransitArrival] =
+                    route.bestArrivals(minimumRideMeters: minimumRide).map { pair in
+                        (enter: pair.0, alight: pair.1,
+                         endCost: route.endCost(pair.0, pair.1))
+                    }
+                return Dictionary(grouping: entries) {
+                    TransitGridCell(point: route.stopPoints[$0.enter], size: cellSize)
                 }
             } : []
         var choices: [TransitChoice] = []
@@ -221,8 +227,10 @@ struct TransitItinerary {
                         let cell = TransitGridCell(point: first.stopPoints[exit], size: cellSize)
                         for dx in -1...1 {
                             for dy in -1...1 {
-                                for (enter, alight) in nearby[TransitGridCell(x: cell.x + dx, y: cell.y + dy)] ?? [] {
-                                    let lowerBound = firstCost + second.endCost(enter, alight)
+                                for (enter, alight, endCost) in nearby[
+                                    TransitGridCell(x: cell.x + dx, y: cell.y + dy)
+                                ] ?? [] {
+                                    let lowerBound = firstCost + endCost
                                     if let best, (!closestBoarding || boardWalk == best.walk),
                                        lowerBound >= best.score { continue }
                                     let walking = PolylineMatching.distanceMeters(first.route.paraderos[exit].coordinate,
