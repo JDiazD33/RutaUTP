@@ -1083,15 +1083,14 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
             self.catalogoAlternativas = catalog
             self.alternativasItinerario = options.alternatives
             self.rutasDestacadas = options.highlights
-            let nearest = options.alternatives.sorted { lhs, rhs in
-                if lhs.walkToBoardMeters != rhs.walkToBoardMeters {
-                    return lhs.walkToBoardMeters < rhs.walkToBoardMeters
-                }
-                if lhs.estimatedJourneySeconds != rhs.estimatedJourneySeconds {
-                    return lhs.estimatedJourneySeconds < rhs.estimatedJourneySeconds
-                }
-                return lhs.optionID.lexicographicallyPrecedes(rhs.optionID)
-            }
+            let nearest = options.alternatives.map { plan in
+                (plan: plan, walk: plan.walkToBoardMeters,
+                 journey: plan.estimatedJourneySeconds, id: plan.optionID)
+            }.sorted { lhs, rhs in
+                if lhs.walk != rhs.walk { return lhs.walk < rhs.walk }
+                if lhs.journey != rhs.journey { return lhs.journey < rhs.journey }
+                return lhs.id.lexicographicallyPrecedes(rhs.id)
+            }.map(\.plan)
             var checked = Set<[String]>()
             // Si la subida más cercana no cumple Directions, reintentar por
             // cercanía; no saltar a la más rápida con una caminata mucho mayor.
