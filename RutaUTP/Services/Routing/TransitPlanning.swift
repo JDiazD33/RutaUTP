@@ -139,31 +139,56 @@ struct TransitItinerary {
             prepared.append(PreparedTransitRoute(route: route, geometry: cached,
                                                  startWalk: start, endWalk: end, radius: radius))
         }
-        let maximumLatitude = prepared.flatMap { $0.route.paraderos }.map { abs($0.lat) }.max() ?? 0
-        let cellSize = maximumTransferWalk * MKMapPointsPerMeterAtLatitude(min(85, maximumLatitude)) * 1.02
-        // Cada mejor subida/bajada y cada rejilla se calculan una sola vez por línea.
-        let minimumRide = includeLineAlternatives ? minimumTransferRideMeters : 50
-        let departures = prepared.map { $0.bestDepartures(minimumRideMeters: minimumRide) }
-        let closestDepartures = includeLineAlternatives
-            ? prepared.map { $0.bestDepartures(closestBoarding: true, minimumRideMeters: minimumRide) } : []
-        let arrivals = prepared.map { route in
-            Dictionary(grouping: route.bestArrivals(minimumRideMeters: minimumRide)) {
-                TransitGridCell(point: route.stopPoints[$0.0], size: cellSize)
-            }
+        func journeyTime(_ choice: TransitChoice) -> Double {
+            choice.score - (choice.second == nil ? 0 : 180)
+                + Double(max(0, prepared[choice.first].route.headwayMin)) * 30
         }
-        var choices: [TransitChoice] = []
-        var closestTransferChoices: [TransitChoice] = []
+        var directChoices = [[TransitChoice]](repeating: [], count: prepared.count)
         for (firstIndex, first) in prepared.enumerated() {
             if Task.isCancelled { return .empty }
             for board in first.boarding {
                 for alight in first.arriving where first.validRide(board, alight) {
                     let score = first.startCost(board, alight) + first.endWalk[alight] / 1.4
-                    choices.append(TransitChoice(first: firstIndex, board: board, exit: alight,
+                    directChoices[firstIndex].append(TransitChoice(
+                        first: firstIndex, board: board, exit: alight,
                         second: nil, enter: 0, alight: alight, score: score,
                         order: first.route.id, tie: "\(board):\(alight)"))
                 }
             }
-            guard !departures[firstIndex].isEmpty else { continue }
+        }
+        let fastestDirectTime = directChoices.lazy.flatMap { $0 }.map(journeyTime).min()
+        // El filtro del mapa rechaza todos los transbordos frente a un directo corto.
+        let directDiscardsTransfers = includeLineAlternatives
+            && requiredRouteIDs == nil
+            && (fastestDirectTime.map { $0 < 45 * 60 } ?? false)
+        let searchTransfers = !directDiscardsTransfers
+        let maximumLatitude = searchTransfers
+            ? (prepared.flatMap { $0.route.paraderos }.map { abs($0.lat) }.max() ?? 0)
+            : 0
+        let cellSize = maximumTransferWalk
+            * MKMapPointsPerMeterAtLatitude(min(85, maximumLatitude)) * 1.02
+        // Cada mejor subida/bajada y cada rejilla se calculan una sola vez por línea.
+        let minimumRide = includeLineAlternatives ? minimumTransferRideMeters : 50
+        let departures = searchTransfers
+            ? prepared.map { $0.bestDepartures(minimumRideMeters: minimumRide) } : []
+        let closestDepartures = searchTransfers && includeLineAlternatives
+            ? prepared.map {
+                $0.bestDepartures(closestBoarding: true, minimumRideMeters: minimumRide)
+            } : []
+        let arrivals: [[TransitGridCell: [(Int, Int)]]] = searchTransfers
+            ? prepared.map { route in
+                Dictionary(grouping: route.bestArrivals(minimumRideMeters: minimumRide)) {
+                    TransitGridCell(point: route.stopPoints[$0.0], size: cellSize)
+                }
+            } : []
+        var choices: [TransitChoice] = []
+        var closestTransferChoices: [TransitChoice] = []
+        for (firstIndex, first) in prepared.enumerated() {
+            if Task.isCancelled { return .empty }
+            // Mantener directos de A, transbordos de A, directos de B, etc.
+            choices.append(contentsOf: directChoices[firstIndex])
+            directChoices[firstIndex].removeAll()
+            guard searchTransfers, !departures[firstIndex].isEmpty else { continue }
             for (secondIndex, second) in prepared.enumerated()
             where second.route.id != first.route.id && !second.arriving.isEmpty {
                 func bestConnection(closestBoarding: Bool) -> TransitChoice? {
@@ -222,11 +247,6 @@ struct TransitItinerary {
             let first = prepared[choice.first]
             return first.startWalk[choice.board] + first.connectorMeters[choice.board]
         }
-        func journeyTime(_ choice: TransitChoice) -> Double {
-            choice.score - (choice.second == nil ? 0 : 180)
-                + Double(max(0, prepared[choice.first].route.headwayMin)) * 30
-        }
-        let fastestDirectTime = choices.lazy.filter { $0.second == nil }.map(journeyTime).min()
         func usefulForComparison(_ choice: TransitChoice) -> Bool {
             guard includeLineAlternatives, choice.second != nil,
                   let directTime = fastestDirectTime else { return true }
