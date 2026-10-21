@@ -186,7 +186,7 @@ struct TransitItinerary {
             && (fastestDirectTime.map { $0 < 45 * 60 } ?? false)
         let searchTransfers = !directDiscardsTransfers
         let maximumLatitude = searchTransfers
-            ? (prepared.flatMap { $0.route.paraderos }.map { abs($0.lat) }.max() ?? 0)
+            ? (prepared.lazy.flatMap { $0.route.paraderos }.map { abs($0.lat) }.max() ?? 0)
             : 0
         let cellSize = maximumTransferWalk
             * MKMapPointsPerMeterAtLatitude(min(85, maximumLatitude)) * 1.02
