@@ -13228,5 +13228,47 @@
     "pt-BR": "Será salvo sem avisos enquanto as notificações estiverem desativadas.",
     "de": "Wird ohne Hinweis gespeichert, solange Mitteilungen deaktiviert sind.",
     "zh-Hans": "通知关闭期间，提醒将保存但不会发送通知。"
+  },
+  "Personalización": {
+    "en": "Personalization",
+    "fr": "Personnalisation",
+    "pt-BR": "Personalização",
+    "de": "Personalisierung",
+    "zh-Hans": "个性化"
+  },
+  "Servicios": {
+    "en": "Services",
+    "fr": "Services",
+    "pt-BR": "Serviços",
+    "de": "Dienste",
+    "zh-Hans": "服务"
+  },
+  "Temática de colores": {
+    "en": "Color theme",
+    "fr": "Thème de couleurs",
+    "pt-BR": "Tema de cores",
+    "de": "Farbthema",
+    "zh-Hans": "颜色主题"
+  },
+  "Uso de ubicaciones": {
+    "en": "Location data use",
+    "fr": "Utilisation des données de localisation",
+    "pt-BR": "Uso dos dados de localização",
+    "de": "Nutzung von Standortdaten",
+    "zh-Hans": "位置数据的使用"
+  },
+  "Solo con la app abierta": {
+    "en": "Only while the app is open",
+    "fr": "Uniquement lorsque l’app est ouverte",
+    "pt-BR": "Só com o app aberto",
+    "de": "Nur bei geöffneter App",
+    "zh-Hans": "仅在应用打开时"
+  },
+  "Servicio no configurado": {
+    "en": "Service not configured",
+    "fr": "Service non configuré",
+    "pt-BR": "Serviço não configurado",
+    "de": "Dienst nicht eingerichtet",
+    "zh-Hans": "服务尚未配置"
   }
 }

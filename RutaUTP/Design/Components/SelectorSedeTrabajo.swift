@@ -5,54 +5,16 @@ struct SelectorSedeTrabajo: View {
 
     var body: some View {
         let sede = TransporteApp.sedeSeleccionada
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L.t("MI SEDE DE TRABAJO", "MY WORKPLACE"))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-                .accessibilityAddTraits(.isHeader)
-            Text(L.t("Elige la sede que aparecerá como referencia al abrir el mapa.",
-                     "Choose the workplace shown as a reference when you open the map."))
-                .font(.caption)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-            if sede?.empresa == .utp {
-                Text(L.t("UTP es la opción predeterminada. Puedes elegir otra empresa y sede cuando quieras.",
-                         "UTP is the default option. You can choose another company and workplace at any time."))
-                    .font(.caption)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Button { mostrarSelector = true } label: {
-                HStack(spacing: 12) {
-                    if let empresa = sede?.empresa {
-                        LogoEmpresa(empresa: empresa).frame(width: 64, height: 28)
-                    } else {
-                        Image(systemName: "building.2.fill")
-                            .foregroundStyle(Color.appPrimary).accessibilityHidden(true)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(sede?.nombre ?? L.t("Elegir empresa y sede", "Choose company and workplace"))
-                            .font(.body.weight(.medium))
-                        if let sede {
-                            Text(sede.direccion).font(.caption).foregroundStyle(.onSurfaceVariant)
-                        }
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.right").foregroundStyle(.onSurfaceVariant)
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(L.t("Mi sede de trabajo", "My workplace"))
-            .accessibilityValue(sede.map { $0.nombre + ", " + $0.direccion }
-                ?? L.t("Sin sede elegida", "No workplace selected"))
-            .accessibilityHint(L.t("Muestra las empresas y sedes disponibles", "Shows available companies and workplaces"))
+        Button { mostrarSelector = true } label: {
+            FilaAjustes(titulo: L.t("Mi sede de trabajo", "My workplace"), simbolo: "mappin.and.ellipse",
+                        detalle: sede?.nombre ?? L.t("Sin sede elegida", "No workplace selected"))
         }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Mi sede de trabajo", "My workplace"))
+        .accessibilityValue(sede.map { $0.nombre + ", " + $0.direccion }
+            ?? L.t("Sin sede elegida", "No workplace selected"))
+        .accessibilityHint(L.t("Muestra las empresas y sedes disponibles", "Shows available companies and workplaces"))
         .sheet(isPresented: $mostrarSelector) {
             SedeTrabajoSheet()
                 .seguirTemaForzado()

@@ -149,64 +149,58 @@ struct CiudadSheet: View {
 
 // MARK: - 3. AJUSTES SHEET
 struct AjustesSheet: View {
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
 
-    /// El consentimiento no se aplica al tocar el interruptor: primero se
-    /// explica el alcance. Es un permiso para publicar tu ubicación, y el
-    /// usuario tiene que poder saber qué se envía y cuándo antes de aceptarlo.
+    /// La confirmación completa se presenta antes de activar la contribución.
     @State private var mostrarConsentimiento = false
     @State private var mostrarDetallesContribucion = false
     @State private var mostrarNotificaciones = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                SheetHeader(icon: "gearshape.fill", iconColor: .onSurfaceVariant,
-                            title: L.t("Ajustes", "Settings"))
-
-                // Tema
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L.t("APARIENCIA", "APPEARANCE"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    HStack(spacing: 12) {
-                        temaButton(.light, icon: "sun.max.fill", label: L.t("Claro", "Light"))
-                        temaButton(.dark, icon: "moon.fill", label: L.t("Oscuro", "Dark"))
-                    }
-                }
-
-                // La temática es independiente del modo claro/oscuro.
-                SelectorTematicaEmpresa()
-
-                SelectorSedeTrabajo()
-
-                Button { mostrarNotificaciones = true } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "bell.fill").accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L.t("Notificaciones", "Notifications")).font(.headline)
-                            TimelineView(.periodic(from: .now, by: 60)) { contexto in
-                                Text(NotificacionesService.shared.resumen(ahora: contexto.date)).font(.subheadline)
-                            }
+        NavigationStack {
+            Form {
+                Section {
+                    // Tema
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(L.t("APARIENCIA", "APPEARANCE"))
+                            .font(.labelCapsMd)
+                            .foregroundStyle(.onSurfaceVariant)
+                            .appTracking(AppTracking.wideLabel)
+                        HStack(spacing: 12) {
+                            temaButton(.light, icon: "sun.max.fill", label: L.t("Claro", "Light"))
+                            temaButton(.dark, icon: "moon.fill", label: L.t("Oscuro", "Dark"))
                         }
-                        Spacer(minLength: 8)
-                        Image(systemName: "chevron.right").accessibilityHidden(true)
                     }
-                    .foregroundStyle(.onSurface)
-                    .padding(16)
-                    .frame(minHeight: 44)
-                    .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 16))
-                }
-                .buttonStyle(.plain)
 
-                // Contribución asociada a la cuenta de instalación y al viaje.
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L.t("CONTRIBUCIÓN", "CONTRIBUTION"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+                .listRowBackground(Color.clear)
+
+                Section {
+                    SelectorTematicaEmpresa()
+                    SelectorSedeTrabajo()
+                    if TematicaEmpresaStore.shared.seleccion != .utp || !TransporteApp.utpComoReferencia {
+                        Button {
+                            AppHaptics.selection()
+                            TransporteApp.usarSedeTrabajo(CatalogoSedesTrabajo.campusUTP)
+                        } label: {
+                            Label(L.t("Volver a UTP", "Return to UTP"), systemImage: "arrow.uturn.backward")
+                                .frame(minHeight: 44)
+                        }
+                        .accessibilityHint(L.t("Restaura los colores UTP y el campus de Trujillo en el mapa", "Restores UTP colors and the Trujillo campus on the map"))
+                    }
+                } header: { Text(L.t("Personalización", "Personalization")) }
+
+                Section {
+                    Button { mostrarNotificaciones = true } label: {
+                        TimelineView(.periodic(from: .now, by: 60)) { contexto in
+                            FilaAjustes(titulo: L.t("Notificaciones", "Notifications"), simbolo: "bell.fill",
+                                        detalle: NotificacionesService.shared.resumen(ahora: contexto.date))
+                        }
+                    }
+                    .buttonStyle(.plain)
 
                     Toggle(isOn: Binding(
                         get: { trackingCoordinator.isEnabled },
@@ -218,31 +212,32 @@ struct AjustesSheet: View {
                             }
                         }
                     )) {
-                        Text(L.t("Ayudar con ubicaciones", "Help with locations"))
-                            .font(.bodyMdMedium)
-                            .fixedSize(horizontal: false, vertical: true)
+                        FilaAjustes(titulo: L.t("Ayudar con ubicaciones", "Help with locations"), simbolo: "location.fill",
+                                    detalle: resumenContribucion, muestraFlecha: false)
                     }
-                    .tint(.appPrimary)
                     .disabled(!trackingCoordinator.isPublisherConfigured)
-                    .padding(16)
-                    .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
                     .accessibilityHint(TextoConsentimientoContribucion.pistaAccesibilidad)
 
-                    TextoContribucionJustificado(texto: descripcionContribucion, color: .onSurfaceVariant)
-                        .frame(maxWidth: .infinity)
-
-                    Button(L.t("Ver detalles", "View details")) {
-                        mostrarDetallesContribucion = true
+                    Button { mostrarDetallesContribucion = true } label: {
+                        Label(L.t("Uso de ubicaciones", "Location data use"), systemImage: "info.circle")
+                            .font(.subheadline)
+                            .frame(minHeight: 44)
                     }
-                    .font(.bodyXsMedium)
-                    .foregroundStyle(.appPrimary)
                     .accessibilityHint(L.t("Muestra qué datos se envían y cuándo", "Shows which data is sent and when"))
-                }
-
-                Spacer()
+                } header: { Text(L.t("Servicios", "Services")) }
             }
-            .padding(20)
+            .scrollContentBackground(.hidden)
+            .background(Color.appSurface)
+            .foregroundStyle(.onSurface)
+            .navigationTitle(L.t("Ajustes", "Settings"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Cerrar", "Close")) { dismiss() }
+                }
+            }
         }
+        .tint(.appPrimary)
         .sheet(isPresented: $mostrarNotificaciones) {
             NotificacionesView().seguirTemaForzado().presentationDetents([.large])
         }
@@ -272,17 +267,10 @@ struct AjustesSheet: View {
         }
     }
 
-    private var descripcionContribucion: String {
-        if !trackingCoordinator.isPublisherConfigured {
-            return L.t("La ayuda con ubicaciones estará disponible cuando se configure el servicio de esta instalación.",
-                       "Location sharing will be available once the service is configured for this installation.")
-        }
-        if trackingCoordinator.isEnabled {
-            return L.t("Estás ayudando con ubicaciones. Consulta el estado de tu viaje en la tarjeta inferior del mapa.",
-                       "You are sharing locations. Check your trip status in the card at the bottom of the map.")
-        }
-        return L.t("Al confirmar tu viaje, ayudas a ubicar buses. Solo se envían datos con la app abierta.",
-                   "After confirming your trip, you help locate buses. Data is sent only while the app is open.")
+    private var resumenContribucion: String {
+        trackingCoordinator.isPublisherConfigured
+            ? L.t("Solo con la app abierta", "Only while the app is open")
+            : L.t("Servicio no configurado", "Service not configured")
     }
 
     private enum TemaOpcion { case light, dark }
@@ -318,38 +306,6 @@ struct AjustesSheet: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.t("Apariencia ", "Appearance ") + label)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
-/// Resumen compacto; la explicación completa se consulta mediante «Ver detalles».
-private struct TextoContribucionJustificado: UIViewRepresentable {
-    let texto: String
-    let color: Color
-
-    func makeUIView(context: Context) -> UILabel {
-        let label = UILabel()
-        label.numberOfLines = 3
-        label.textAlignment = .justified
-        label.lineBreakMode = .byTruncatingTail
-        label.adjustsFontForContentSizeCategory = true
-        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        return label
-    }
-
-    func updateUIView(_ uiView: UILabel, context: Context) {
-        uiView.text = texto
-        uiView.font = UIFont.preferredFont(forTextStyle: .footnote, compatibleWith: uiView.traitCollection)
-        uiView.textColor = UIColor(color).resolvedColor(with: UITraitCollection(
-            userInterfaceStyle: context.environment.colorScheme == .dark ? .dark : .light
-        ))
-        uiView.accessibilityLabel = texto
-    }
-
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UILabel, context: Context) -> CGSize? {
-        guard let width = proposal.width, width > 0 else { return nil }
-        let size = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: ceil(size.height))
     }
 }
 
