@@ -531,6 +531,13 @@
     "pt-BR": "Cores de referência",
     "zh-Hans": "参考颜色"
   },
+  "Colores orientativos, pendientes de confirmar.": {
+    "de": "Vorläufige Farben, noch zu bestätigen.",
+    "en": "Indicative colors, awaiting confirmation.",
+    "fr": "Couleurs indicatives, à confirmer.",
+    "pt-BR": "Cores indicativas, a confirmar.",
+    "zh-Hans": "配色仅供参考，尚待确认。"
+  },
   "Letra": {
     "de": "Buchstabe",
     "en": "Letter",

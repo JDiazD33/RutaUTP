@@ -220,25 +220,33 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
             let y: Float
             let mitadAncho: Float
             let largo: Float
+            let z: Float
             switch tipo {
             case .micro:
                 alto = indice == 0 ? 0.16 : 0.07
                 y = indice == 0 ? 1.28 : 1.44
                 mitadAncho = 1.18
                 largo = 6.5
+                z = -0.45
             case .combi:
                 let paso = Float(0.26) / Float(max(colores.count - 1, 1))
                 alto = paso * 0.72
                 y = 1.0 + Float(indice) * paso
                 mitadAncho = 0.99
                 largo = 3.9
+                z = -0.45
             case .colectivo:
-                return
+                let paso = Float(0.20) / Float(max(colores.count - 1, 1))
+                alto = paso * 0.70
+                y = 0.78 + Float(indice) * paso
+                mitadAncho = 0.911
+                largo = 4.0
+                z = 0
             }
             for lado in [Float(-1), Float(1)] {
                 let franja = ModelEntity(mesh: .generateBox(size: [0.025, alto, largo]),
                                          materials: [SimpleMaterial(color: UIColor(color.color), roughness: 0.6, isMetallic: false)])
-                franja.position = [lado * mitadAncho, y, -0.45]
+                franja.position = [lado * mitadAncho, y, z]
                 entidad.addChild(franja)
             }
         }
@@ -267,14 +275,29 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                 ([-1.0, 1.75, -0.85], simd_quatf(angle: -.pi / 2, axis: [0, 1, 0]))
             ]
         case .colectivo:
-            return
+            factor = 0.43
+            // Carteles pequenos sobre ambos cristales, siguiendo el sedan del USDZ.
+            posiciones = [
+                ([-0.27, 1.29, 0.79], simd_quatf(angle: -atan(Float(0.673 / 0.481)), axis: [1, 0, 0])),
+                ([0, 1.34, -1.13], simd_quatf(angle: .pi, axis: [0, 1, 0])
+                    * simd_quatf(angle: -atan(Float(0.740 / 0.495)), axis: [1, 0, 0]))
+            ]
         }
         let plantilla = Entity()
         plantilla.name = "CartelDeRuta"
         plantilla.addChild(ModelEntity(mesh: .generateBox(size: [1.32 * factor, 0.91 * factor, 0.025], cornerRadius: 0.008),
                                         materials: [UnlitMaterial(color: .white)]))
         plantilla.addChild(textoCartel(identificacion.codigo, ancho: 1.10 * factor, alto: 0.18 * factor, y: 0.26 * factor))
-        plantilla.addChild(textoCartel(identificacion.letra, ancho: 1.15 * factor, alto: 0.47 * factor, y: -0.09 * factor))
+        let letra = textoCartel(identificacion.letraPrincipal,
+                               ancho: (identificacion.distintivoLetra == nil ? 1.15 : 0.75) * factor,
+                               alto: 0.47 * factor, y: -0.09 * factor)
+        if let distintivo = identificacion.distintivoLetra {
+            letra.position.x -= 0.18 * factor
+            let marca = textoCartel(distintivo, ancho: 0.32 * factor, alto: 0.18 * factor, y: -0.22 * factor)
+            marca.position.x += 0.44 * factor
+            plantilla.addChild(marca)
+        }
+        plantilla.addChild(letra)
         // +Z es el frente del recurso. Las letras forman parte de la escena 3D.
         for (posicion, orientacion) in posiciones {
             let cartel = plantilla.clone(recursive: true)

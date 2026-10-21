@@ -60,13 +60,26 @@ enum ColorTransporteReferencia: String {
     }
 }
 
-/// Colores observados en una referencia; no certifican toda la flota actual.
+/// Paletas de referencias visuales o descripciones; no certifican toda la flota.
 struct ColoresTransporteReferencia {
     let linea: String
     let letra: String
     let empresa: String
     let colores: [ColorTransporteReferencia]
     let fuente: URL?
+    let modelo: TipoTransporte3D?
+    let esOrientativa: Bool
+
+    init(linea: String, letra: String, empresa: String, colores: [ColorTransporteReferencia],
+         fuente: URL?, modelo: TipoTransporte3D? = nil, esOrientativa: Bool = false) {
+        self.linea = linea
+        self.letra = letra
+        self.empresa = empresa
+        self.colores = colores
+        self.fuente = fuente
+        self.modelo = modelo
+        self.esOrientativa = esOrientativa
+    }
 }
 
 struct IdentificacionRuta3D {
@@ -95,13 +108,28 @@ struct IdentificacionRuta3D {
     /// Modelos esquematicos por categoria del catalogo urbano, no por route_type 3.
     var tipoModelo: TipoTransporte3D? {
         guard !routeID.hasPrefix("utp:") else { return nil }
+        // La referencia ya comprobo ID, codigo, letra y empresa en el inicializador.
+        if let modelo = colores?.modelo { return modelo }
+        // El Excel asigna el minibus de Miramar a esta referencia concreta.
+        // La otra T2 conserva su referencia de combi; no se generaliza a la flota.
+        if routeID == "17522705", codigo == "C-44",
+           letra == "T2", empresa == "Miramar" { return .micro }
         if codigo.hasPrefix("M-") { return .micro }
         if codigo.hasPrefix("C-") { return .combi }
         return nil
     }
     var claveModelo: String { [routeID, codigo, letra, empresa].joined(separator: "|") }
 
-    // Fotografias aportadas por el usuario y publicacion original de Salaverry.
+    var letraPrincipal: String { distintivoLetra == nil ? letra : "C2" }
+
+    // La variante verificada lleva C2 y un VR pequeno; su identidad sigue siendo C2VR.
+    var distintivoLetra: String? {
+        guard routeID == "17554634", codigo == "M-15",
+              letra == "C2VR", empresa == "El Cortijo" else { return nil }
+        return "VR"
+    }
+
+    // Fotografias, publicaciones y descripciones aportadas por el usuario.
     // Los tonos son aproximaciones visuales. No se reutilizan fotos ni graficos.
     // Las variantes con corazon quedan separadas y no heredan una foto de la base.
     private static let referencias: [String: ColoresTransporteReferencia] = [
@@ -150,7 +178,7 @@ struct IdentificacionRuta3D {
     private static let fuenteSalaverry = URL(string: "https://trujilloexperiencefreewt.blogspot.com/p/como-llegar-puerto-salaverry.html")
 }
 
-/// Identificacion por linea; micros y combis comparten controles, no la geometria.
+/// Micros, combis y colectivos comparten controles, con su propia geometria.
 struct IdentificacionRuta3DView: View {
     let identificacion: IdentificacionRuta3D
     var activo = true
@@ -199,10 +227,18 @@ struct IdentificacionRuta3DView: View {
                 VStack(spacing: 2) {
                     Text(L.t("Letra", "Letter"))
                         .font(.caption)
-                    Text(identificacion.letra.isEmpty ? "—" : identificacion.letra)
-                        .font(.system(size: 34, weight: .black, design: .rounded))
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(identificacion.letraPrincipal.isEmpty ? "—" : identificacion.letraPrincipal)
+                        if let distintivo = identificacion.distintivoLetra {
+                            Text(distintivo)
+                                .font(.system(size: 14, weight: .black, design: .rounded))
+                        }
+                    }
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(identificacion.letra.isEmpty ? "—" : identificacion.letra))
                 }
                 .foregroundStyle(Color.onPrimaryContainer)
                 .frame(width: 88, height: 78)
@@ -234,7 +270,9 @@ struct ColoresReferenciaRutaView: View {
                     HStack(spacing: 12) { muestras(referencia) }
                     VStack(alignment: .leading, spacing: 8) { muestras(referencia) }
                 }
-                Text(L.t("Los colores pueden variar entre unidades.", "Colors may vary between vehicles."))
+                Text(referencia.esOrientativa
+                     ? L.t("Colores orientativos, pendientes de confirmar.", "Indicative colors, awaiting confirmation.")
+                     : L.t("Los colores pueden variar entre unidades.", "Colors may vary between vehicles."))
                     .font(.caption)
                     .foregroundStyle(Color.onSurfaceVariant)
                 if let fuente = referencia.fuente {
