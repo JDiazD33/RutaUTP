@@ -280,7 +280,10 @@ struct TransitItinerary {
         } else {
             selected = []
         }
+        var plansByChoice: [TransitPlanKey: TransitItinerary] = [:]
         func makePlan(_ choice: TransitChoice) -> TransitItinerary {
+            let key = TransitPlanKey(choice)
+            if let cached = plansByChoice[key] { return cached }
             let first = prepared[choice.first]
             var plan = first.plan(choice.board, choice.exit, origin: origin, destination: destination)
             if let secondIndex = choice.second {
@@ -290,6 +293,7 @@ struct TransitItinerary {
                     bus: next.bus, busDibujo: next.busDibujo, busMeters: next.firstBusMeters, busSpeed: next.busSpeed)
                 plan.walkToDestination = next.walkToDestination
             }
+            plansByChoice[key] = plan
             return plan
         }
         func minimum(in pool: [TransitChoice], score: (TransitChoice) -> Double) -> TransitChoice? {
@@ -404,6 +408,24 @@ private struct TransitChoice {
     let score: Double
     let order: String
     let tie: String
+}
+
+private struct TransitPlanKey: Hashable {
+    let first: Int
+    let board: Int
+    let exit: Int
+    let second: Int?
+    let enter: Int
+    let alight: Int
+
+    init(_ choice: TransitChoice) {
+        first = choice.first
+        board = choice.board
+        exit = choice.exit
+        second = choice.second
+        enter = choice.enter
+        alight = choice.alight
+    }
 }
 
 /// Los arrays sin identidad siguen usando ID y comparación de geometría.
