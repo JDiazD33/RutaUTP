@@ -130,7 +130,8 @@ struct TransitItinerary {
             var end: [Double] = []
             start.reserveCapacity(route.paraderos.count)
             end.reserveCapacity(route.paraderos.count)
-            for stop in route.paraderos {
+            for (position, stop) in route.paraderos.enumerated() {
+                if (position & 255) == 0, Task.isCancelled { return .empty }
                 let coordinate = stop.coordinate
                 let key = TransitStopCoordinateKey(coordinate)
                 let distances: (start: Double, end: Double)
@@ -151,8 +152,9 @@ struct TransitItinerary {
             if let entry = geometry[key], trustedCatalog || entry.matches(route) {
                 cached = entry
             } else {
-                cached = TransitRouteGeometry(route: route)
-                geometry[key] = cached
+                guard let built = TransitRouteGeometry(route: route) else { return .empty }
+                cached = built
+                geometry[key] = built
             }
             prepared.append(PreparedTransitRoute(route: route, geometry: cached,
                                                  startWalk: start, endWalk: end, radius: radius))
@@ -165,7 +167,10 @@ struct TransitItinerary {
         for (firstIndex, first) in prepared.enumerated() {
             if Task.isCancelled { return .empty }
             for board in first.boarding {
-                for alight in first.arriving where first.validRide(board, alight) {
+                if Task.isCancelled { return .empty }
+                for (position, alight) in first.arriving.enumerated() {
+                    if (position & 255) == 0, Task.isCancelled { return .empty }
+                    guard first.validRide(board, alight) else { continue }
                     let score = first.startCost(board, alight) + first.endWalk[alight] / 1.4
                     directChoices[firstIndex].append(TransitChoice(
                         first: firstIndex, board: board, exit: alight,
@@ -205,6 +210,7 @@ struct TransitItinerary {
                     TransitGridCell(point: route.stopPoints[$0.enter], size: cellSize)
                 }
             } : []
+        if Task.isCancelled { return .empty }
         var choices: [TransitChoice] = []
         var closestTransferChoices: [TransitChoice] = []
         for (firstIndex, first) in prepared.enumerated() {
@@ -227,9 +233,11 @@ struct TransitItinerary {
                         let cell = TransitGridCell(point: first.stopPoints[exit], size: cellSize)
                         for dx in -1...1 {
                             for dy in -1...1 {
-                                for (enter, alight, endCost) in nearby[
+                                for (position, entry) in (nearby[
                                     TransitGridCell(x: cell.x + dx, y: cell.y + dy)
-                                ] ?? [] {
+                                ] ?? []).enumerated() {
+                                    if (position & 255) == 0, Task.isCancelled { return nil }
+                                    let (enter, alight, endCost) = entry
                                     let lowerBound = firstCost + endCost
                                     if let best, (!closestBoarding || boardWalk == best.walk),
                                        lowerBound >= best.score { continue }
@@ -255,9 +263,11 @@ struct TransitItinerary {
                     return nil
                 }
                 if let best = bestConnection(closestBoarding: false) { choices.append(best) }
+                if Task.isCancelled { return .empty }
                 if includeLineAlternatives, let nearest = bestConnection(closestBoarding: true) {
                     closestTransferChoices.append(nearest)
                 }
+                if Task.isCancelled { return .empty }
             }
         }
         func precedes(_ lhs: TransitChoice, _ rhs: TransitChoice) -> Bool {
@@ -285,6 +295,7 @@ struct TransitItinerary {
         let eligible = requiredRouteIDs.map { required in
             choices.filter { routeIDs($0) == required }
         } ?? choices.filter(usefulForComparison)
+        if Task.isCancelled { return .empty }
         let ranked = eligible.sorted(by: precedes)
         let selected: [TransitChoice]
         if includeLineAlternatives {
@@ -302,6 +313,7 @@ struct TransitItinerary {
                     transfers.append(choice)
                 }
             }
+            if Task.isCancelled { return .empty }
             selected = (direct + transfers).sorted(by: precedes)
         } else {
             selected = []
@@ -353,13 +365,17 @@ struct TransitItinerary {
                 }
             }
         }
+        if Task.isCancelled { return .empty }
         var alternatives = selected.map(makePlan)
         for highlight in highlights where !alternatives.contains(where: { $0.optionID == highlight.plan.optionID }) {
             alternatives.append(highlight.plan)
         }
         // La vía anterior conserva su orden y límite para tracking y consumidores.
-        return TransitRouteOptions(candidates: ranked.prefix(32).map(makePlan),
-                                   alternatives: alternatives, highlights: highlights)
+        if Task.isCancelled { return .empty }
+        let options = TransitRouteOptions(candidates: ranked.prefix(32).map(makePlan),
+                                          alternatives: alternatives, highlights: highlights)
+        if Task.isCancelled { return .empty }
+        return options
     }
 
     func withWalkingDirections(using service: RouteCalculationService) async -> TransitItinerary {
@@ -484,17 +500,20 @@ fileprivate struct TransitRouteGeometry {
             $0.latitude == $1.latitude && $0.longitude == $1.longitude
         }
     }
-    init(route: RutaGTFS) {
+    init?(route: RutaGTFS) {
+        guard !Task.isCancelled else { return nil }
         self.route = route
         stopPoints = route.paraderos.map { MKMapPoint($0.coordinate) }
         let shapePoints = route.shape.map { MKMapPoint($0) }
         var indices: [Int] = []
         var lower = 0
         for stop in route.paraderos {
+            if Task.isCancelled { return nil }
             let point = MKMapPoint(stop.coordinate)
             var nearest = lower
             var bestDistance = Double.infinity
             for index in lower..<shapePoints.count {
+                if (index & 255) == 0, Task.isCancelled { return nil }
                 let dx = point.x - shapePoints[index].x
                 let dy = point.y - shapePoints[index].y
                 let distance = dx * dx + dy * dy
@@ -513,8 +532,10 @@ fileprivate struct TransitRouteGeometry {
         self.connectorMeters = connectorMeters
         var distances = [0.0]
         for i in 1..<route.shape.count {
+            if (i & 255) == 0, Task.isCancelled { return nil }
             distances.append(distances.last! + PolylineMatching.distanceMeters(route.shape[i-1], route.shape[i]))
         }
+        if Task.isCancelled { return nil }
         self.distances = distances
     }
 }
