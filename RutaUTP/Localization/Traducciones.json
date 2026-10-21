@@ -12990,5 +12990,243 @@
     "fr": "Urgences",
     "pt-BR": "Emergências",
     "zh-Hans": "紧急求助"
+  },
+  "Cambios sin sincronizar. El servidor aún usa tus ajustes anteriores.": {
+    "en": "Changes haven't synced. The server still uses your previous settings.",
+    "fr": "Modifications non synchronisées. Le serveur utilise encore vos anciens réglages.",
+    "pt-BR": "Alterações não sincronizadas. O servidor ainda usa seus ajustes anteriores.",
+    "de": "Änderungen nicht synchronisiert. Der Server verwendet noch deine bisherigen Einstellungen.",
+    "zh-Hans": "更改尚未同步。服务器仍使用之前的设置。"
+  },
+  "Tus avisos": {
+    "en": "Your notifications",
+    "fr": "Vos notifications",
+    "pt-BR": "Seus avisos",
+    "de": "Deine Mitteilungen",
+    "zh-Hans": "你的通知"
+  },
+  "Días y horas de silencio": {
+    "en": "Quiet days and hours",
+    "fr": "Jours et heures de silence",
+    "pt-BR": "Dias e horários de silêncio",
+    "de": "Ruhetage und Ruhezeiten",
+    "zh-Hans": "静音日期与时段"
+  },
+  "Sonido": {
+    "en": "Sound",
+    "fr": "Son",
+    "pt-BR": "Som",
+    "de": "Ton",
+    "zh-Hans": "声音"
+  },
+  "Sonido desactivado en iOS": {
+    "en": "Sound is off in iOS",
+    "fr": "Son désactivé dans iOS",
+    "pt-BR": "Som desativado no iOS",
+    "de": "Ton in iOS deaktiviert",
+    "zh-Hans": "iOS 中的声音已关闭"
+  },
+  "Probar notificación": {
+    "en": "Test notification",
+    "fr": "Tester une notification",
+    "pt-BR": "Testar notificação",
+    "de": "Mitteilung testen",
+    "zh-Hans": "测试通知"
+  },
+  "Aviso local en 5 segundos": {
+    "en": "Local notification in 5 seconds",
+    "fr": "Notification locale dans 5 secondes",
+    "pt-BR": "Aviso local em 5 segundos",
+    "de": "Lokale Mitteilung in 5 Sekunden",
+    "zh-Hans": "5 秒后发送本地通知"
+  },
+  "Cómo funcionan los avisos": {
+    "en": "How notifications work",
+    "fr": "Comment fonctionnent les notifications",
+    "pt-BR": "Como funcionam os avisos",
+    "de": "So funktionieren Mitteilungen",
+    "zh-Hans": "通知的工作方式"
+  },
+  "Permitir en Ajustes de iOS": {
+    "en": "Allow in iOS Settings",
+    "fr": "Autoriser dans les réglages iOS",
+    "pt-BR": "Permitir nos Ajustes do iOS",
+    "de": "In den iOS-Einstellungen erlauben",
+    "zh-Hans": "在 iOS 设置中允许"
+  },
+  "Banners desactivados en iOS": {
+    "en": "Banners are off in iOS",
+    "fr": "Bannières désactivées dans iOS",
+    "pt-BR": "Banners desativados no iOS",
+    "de": "Banner in iOS deaktiviert",
+    "zh-Hans": "iOS 中的横幅已关闭"
+  },
+  "Elige otro destino para reanudar este recordatorio.": {
+    "en": "Choose another destination to resume this reminder.",
+    "fr": "Choisissez une autre destination pour réactiver ce rappel.",
+    "pt-BR": "Escolha outro destino para retomar este lembrete.",
+    "de": "Wähle ein anderes Ziel, um diese Erinnerung fortzusetzen.",
+    "zh-Hans": "选择其他目的地以恢复此提醒。"
+  },
+  "Hora, días y destino. Tú eliges.": {
+    "en": "Time, days and destination. Your choice.",
+    "fr": "Heure, jours et destination. À vous de choisir.",
+    "pt-BR": "Horário, dias e destino. Você escolhe.",
+    "de": "Uhrzeit, Tage und Ziel. Du entscheidest.",
+    "zh-Hans": "时间、日期和目的地，由你选择。"
+  },
+  "Consejos generales, en un horario al azar.": {
+    "en": "General tips, at a random time.",
+    "fr": "Des conseils généraux, à une heure aléatoire.",
+    "pt-BR": "Dicas gerais, em um horário aleatório.",
+    "de": "Allgemeine Tipps zu einer zufälligen Uhrzeit.",
+    "zh-Hans": "在随机时间提供一般建议。"
+  },
+  "Horario y cantidad": {
+    "en": "Time and frequency",
+    "fr": "Horaire et fréquence",
+    "pt-BR": "Horário e quantidade",
+    "de": "Zeitraum und Häufigkeit",
+    "zh-Hans": "时段与次数"
+  },
+  "Sin avisos programados. Revisa la franja y los silencios.": {
+    "en": "No notifications scheduled. Check the window and quiet settings.",
+    "fr": "Aucune notification programmée. Vérifiez la plage horaire et les périodes de silence.",
+    "pt-BR": "Nenhum aviso agendado. Confira a faixa de horário e os silêncios.",
+    "de": "Keine Mitteilungen geplant. Prüfe den Zeitraum und die Ruhezeiten.",
+    "zh-Hans": "暂无已安排的通知。请检查时段和静音设置。"
+  },
+  "Reportes de la comunidad sobre tus líneas guardadas.": {
+    "en": "Community reports about your saved lines.",
+    "fr": "Signalements de la communauté sur vos lignes enregistrées.",
+    "pt-BR": "Relatos da comunidade sobre suas linhas salvas.",
+    "de": "Community-Meldungen zu deinen gespeicherten Linien.",
+    "zh-Hans": "关于你收藏线路的社区报告。"
+  },
+  "Registro válido hasta": {
+    "en": "Registration valid until",
+    "fr": "Inscription valable jusqu’au",
+    "pt-BR": "Registro válido até",
+    "de": "Registrierung gültig bis",
+    "zh-Hans": "注册有效期至"
+  },
+  "Abre la app para renovar el registro.": {
+    "en": "Open the app to renew registration.",
+    "fr": "Ouvrez l’app pour renouveler l’inscription.",
+    "pt-BR": "Abra o app para renovar o registro.",
+    "de": "Öffne die App, um die Registrierung zu erneuern.",
+    "zh-Hans": "打开应用以续期注册。"
+  },
+  "Silencio todo el día.": {
+    "en": "Muted all day.",
+    "fr": "Silence toute la journée.",
+    "pt-BR": "Silêncio o dia todo.",
+    "de": "Den ganzen Tag stumm.",
+    "zh-Hans": "全天静音。"
+  },
+  "Puede cruzar la medianoche. Horas iguales silencian todo el día.": {
+    "en": "Can cross midnight. Matching times mute the entire day.",
+    "fr": "Peut dépasser minuit. Des heures identiques activent le silence toute la journée.",
+    "pt-BR": "Pode passar da meia-noite. Horários iguais silenciam o dia todo.",
+    "de": "Kann über Mitternacht gehen. Gleiche Uhrzeiten schalten den ganzen Tag stumm.",
+    "zh-Hans": "可跨越午夜。起止时间相同表示全天静音。"
+  },
+  "Programado hasta": {
+    "en": "Scheduled until",
+    "fr": "Programmé jusqu’au",
+    "pt-BR": "Agendado até",
+    "de": "Geplant bis",
+    "zh-Hans": "已安排至"
+  },
+  "Agenda": {
+    "en": "Schedule",
+    "fr": "Programmation",
+    "pt-BR": "Agenda",
+    "de": "Zeitplan",
+    "zh-Hans": "通知日程"
+  },
+  "Abre la app para renovar la agenda.": {
+    "en": "Open the app to renew the schedule.",
+    "fr": "Ouvrez l’app pour renouveler la programmation.",
+    "pt-BR": "Abra o app para renovar a agenda.",
+    "de": "Öffne die App, um den Zeitplan zu erneuern.",
+    "zh-Hans": "打开应用以更新通知日程。"
+  },
+  "Entrega y sonido": {
+    "en": "Delivery and sound",
+    "fr": "Réception et son",
+    "pt-BR": "Entrega e som",
+    "de": "Zustellung und Ton",
+    "zh-Hans": "送达与声音"
+  },
+  "Hora, días y destino": {
+    "en": "Time, days and destination",
+    "fr": "Heure, jours et destination",
+    "pt-BR": "Horário, dias e destino",
+    "de": "Uhrzeit, Tage und Ziel",
+    "zh-Hans": "时间、日期和目的地"
+  },
+  "Desactivados": {
+    "en": "Off",
+    "fr": "Désactivées",
+    "pt-BR": "Desativados",
+    "de": "Aus",
+    "zh-Hans": "已关闭"
+  },
+  "No disponible en esta versión": {
+    "en": "Unavailable in this version",
+    "fr": "Indisponible dans cette version",
+    "pt-BR": "Indisponível nesta versão",
+    "de": "In dieser Version nicht verfügbar",
+    "zh-Hans": "此版本不可用"
+  },
+  "Pendiente de sincronizar": {
+    "en": "Waiting to sync",
+    "fr": "En attente de synchronisation",
+    "pt-BR": "Aguardando sincronização",
+    "de": "Synchronisierung ausstehend",
+    "zh-Hans": "等待同步"
+  },
+  "Sincronizando…": {
+    "en": "Syncing…",
+    "fr": "Synchronisation…",
+    "pt-BR": "Sincronizando…",
+    "de": "Wird synchronisiert…",
+    "zh-Hans": "正在同步…"
+  },
+  "Revisar servicio": {
+    "en": "Check service",
+    "fr": "Vérifier le service",
+    "pt-BR": "Verificar serviço",
+    "de": "Dienst prüfen",
+    "zh-Hans": "检查服务"
+  },
+  "Sin silencios": {
+    "en": "No quiet settings",
+    "fr": "Aucune période de silence",
+    "pt-BR": "Sem silêncios",
+    "de": "Keine Ruhezeiten",
+    "zh-Hans": "未设置静音"
+  },
+  "Sin pausa": {
+    "en": "Not paused",
+    "fr": "Aucune pause",
+    "pt-BR": "Sem pausa",
+    "de": "Nicht pausiert",
+    "zh-Hans": "未暂停"
+  },
+  "Elige una franja dentro del mismo día. Se respetan pausas y silencios.": {
+    "en": "Choose a window within the same day. Pauses and quiet settings apply.",
+    "fr": "Choisissez une plage dans la même journée. Les pauses et périodes de silence sont respectées.",
+    "pt-BR": "Escolha uma faixa dentro do mesmo dia. Pausas e silêncios são respeitados.",
+    "de": "Wähle einen Zeitraum innerhalb eines Tages. Pausen und Ruhezeiten werden berücksichtigt.",
+    "zh-Hans": "请选择同一天内的时段。暂停和静音设置仍然生效。"
+  },
+  "Se guardará sin avisos mientras las notificaciones estén desactivadas.": {
+    "en": "It will be saved without alerts while notifications are off.",
+    "fr": "Le rappel sera enregistré sans alerte tant que les notifications sont désactivées.",
+    "pt-BR": "Será salvo sem avisos enquanto as notificações estiverem desativadas.",
+    "de": "Wird ohne Hinweis gespeichert, solange Mitteilungen deaktiviert sind.",
+    "zh-Hans": "通知关闭期间，提醒将保存但不会发送通知。"
   }
 }
