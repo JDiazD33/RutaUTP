@@ -615,14 +615,13 @@ final class RouteTrackingViewModel {
 
     private func instalarShape(_ coords: [CLLocationCoordinate2D]) {
         polyCoords = coords // conservar esquinas: no atravesar manzanas
-        distanciaTotalM = PolylineMatching.totalLengthMeters(polyCoords)
-
         distanciasAcumuladas = [0]
         for i in 1..<polyCoords.count {
             distanciasAcumuladas.append(
                 distanciasAcumuladas[i - 1] + PolylineMatching.distanceMeters(polyCoords[i - 1], polyCoords[i])
             )
         }
+        distanciaTotalM = distanciasAcumuladas.last ?? 0
         demoProgreso = progreso
         ultimoFraccionPolyline = 0
         rutaRecorrida = nil
