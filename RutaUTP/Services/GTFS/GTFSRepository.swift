@@ -278,12 +278,15 @@ extension GTFSRepository {
         for i in 0..<trips.rowCount where !rutasValidas.contains(tripRoutes[i]) {
             throw invalidos("trips", i, "route_id desconocido: \(tripRoutes[i])")
         }
-        let tripRoute = diccionario(tripIds, tripRoutes)
         let tripShape = diccionario(tripIds, tripShapes)
         // route_id → trip_id
         var routeTrip: [String: String] = [:]
-        for trip in tripIds.sorted() {
-            if let route = tripRoute[trip], routeTrip[route] == nil { routeTrip[route] = trip }
+        // Conservar el límite de emparejamiento que usaba diccionario.
+        for i in 0..<min(tripIds.count, tripRoutes.count) {
+            let route = tripRoutes[i]
+            let trip = tripIds[i]
+            if let current = routeTrip[route], !(trip < current) { continue }
+            routeTrip[route] = trip
         }
 
         // 4. Shapes ordenados por secuencia
