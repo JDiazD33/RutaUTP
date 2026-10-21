@@ -2,10 +2,13 @@ import SwiftUI
 import MapKit
 
 struct MapSearchPanel: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var vm: MapaViewModel
     @FocusState.Binding var campoEnfocado: Bool
     @Binding var showDestinosGuardados: Bool
     @AccessibilityFocusState private var guardadosEnfocados: Bool
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     /// Abre los mismos paraderos que se guardan desde Seguridad.
     private var botonDestinosGuardados: some View {
@@ -15,16 +18,13 @@ struct MapSearchPanel: View {
             showDestinosGuardados = true
         } label: {
             Image(systemName: "bookmark.fill")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color.appPrimary)
-                .frame(width: 34, height: 34)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(acento)
+                .frame(minWidth: 34, minHeight: 34)
                 .background(
-                    Circle().fill(Color.surfaceContainerHighest)
+                    Circle().fill(Color.surfaceContainer)
                 )
-                .overlay(
-                    Circle().stroke(Color.outlineVariant.opacity(0.5), lineWidth: 0.5)
-                )
-                .frame(width: 44, height: 44)
+                .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -41,9 +41,9 @@ struct MapSearchPanel: View {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.onSurfaceVariant)
-                    .font(.system(size: 16))
+                    .font(.body)
                 TextField(L.t("¿A dónde vas hoy?", "Where to today?"), text: $vm.textoBusqueda)
-                    .font(.system(size: 15))
+                    .font(.body)
                     .foregroundStyle(.onSurface)
                     .focused($campoEnfocado)
                     .submitLabel(.search)
@@ -80,7 +80,7 @@ struct MapSearchPanel: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.surfaceContainerLow))
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
 
             // Lista de Sugerencias Autocompletadas (ej. UPAO)
             if !vm.sugerenciasBusqueda.isEmpty && campoEnfocado {
@@ -92,16 +92,16 @@ struct MapSearchPanel: View {
                         } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: "mappin.circle.fill")
-                                    .foregroundStyle(Color.appPrimary)
-                                    .font(.system(size: 16))
+                                    .foregroundStyle(acento)
+                                    .font(.body)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(sug.title)
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .font(.body.weight(.medium))
                                         .foregroundStyle(.onSurface)
                                         .lineLimit(1)
                                     if !sug.subtitle.isEmpty {
                                         Text(sug.subtitle)
-                                            .font(.system(size: 12))
+                                            .font(.subheadline)
                                             .foregroundStyle(.onSurfaceVariant)
                                             .lineLimit(1)
                                     }
@@ -109,7 +109,7 @@ struct MapSearchPanel: View {
                                 Spacer()
                             }
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 10)
                         }
                         .buttonStyle(.plain)
                         .accessibilityElement(children: .ignore)
@@ -122,9 +122,9 @@ struct MapSearchPanel: View {
                         }
                     }
                 }
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.surfaceContainerLowest))
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLowest))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
                 )
             }
@@ -153,7 +153,7 @@ struct MapSearchPanel: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
         .onChange(of: showDestinosGuardados) { _, abierto in
             if !abierto && vm.busquedaResultado == nil { guardadosEnfocados = true }
         }
@@ -163,7 +163,6 @@ struct MapSearchPanel: View {
         let activo = vm.destinoSeleccionado?.id == destino.id
             && vm.destinoSeleccionado?.lat == destino.lat
             && vm.destinoSeleccionado?.lon == destino.lon
-        let acento = Color.appPrimary
         return Button {
             SeniasPresenter.shared.ejecutarTrasVerSenia(clave: destino.claveSenia) {
                 campoEnfocado = false
@@ -172,23 +171,23 @@ struct MapSearchPanel: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: destino.icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(acento)
-                    .frame(width: 20)
+                    .frame(minWidth: 20)
                 Text(destino.label)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.subheadline.weight(.medium))
                     .lineLimit(1)
                 if activo {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(acento)
                 }
             }
             .foregroundStyle(Color.onSurface)
             .padding(.horizontal, 10)
-            .frame(height: 34)
-            .background(acento.opacity(activo ? 0.22 : 0.10), in: Capsule())
-            .overlay(Capsule().stroke(acento.opacity(activo ? 0.8 : 0.25), lineWidth: 1))
+            .frame(minHeight: 34)
+            .background(activo ? acento.opacity(0.12) : Color.surfaceContainerLow, in: Capsule())
+            .overlay(Capsule().stroke(activo ? acento.opacity(0.45) : Color.clear, lineWidth: 0.5))
             // Compacto a la vista, con un área cómoda para tocar.
             .frame(minHeight: 44)
             .contentShape(Rectangle())
