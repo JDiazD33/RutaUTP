@@ -412,6 +412,69 @@
     "pt-BR": "A {0} km da referência · em linha reta",
     "zh-Hans": "距参考位置 {0} 公里 · 直线距离"
   },
+  "Celeste": {
+    "de": "Hellblau",
+    "en": "Light blue",
+    "fr": "Bleu clair",
+    "pt-BR": "Azul-claro",
+    "zh-Hans": "浅蓝色"
+  },
+  "Morado": {
+    "de": "Violett",
+    "en": "Purple",
+    "fr": "Violet",
+    "pt-BR": "Roxo",
+    "zh-Hans": "紫色"
+  },
+  "Negro": {
+    "de": "Schwarz",
+    "en": "Black",
+    "fr": "Noir",
+    "pt-BR": "Preto",
+    "zh-Hans": "黑色"
+  },
+  "Verde lima": {
+    "de": "Limettengrün",
+    "en": "Lime green",
+    "fr": "Vert citron",
+    "pt-BR": "Verde-lima",
+    "zh-Hans": "青柠绿"
+  },
+  "Naranja": {
+    "de": "Orange",
+    "en": "Orange",
+    "fr": "Orange",
+    "pt-BR": "Laranja",
+    "zh-Hans": "橙色"
+  },
+  "Marrón": {
+    "de": "Braun",
+    "en": "Brown",
+    "fr": "Marron",
+    "pt-BR": "Marrom",
+    "zh-Hans": "棕色"
+  },
+  "Marrón oscuro": {
+    "de": "Dunkelbraun",
+    "en": "Dark brown",
+    "fr": "Marron foncé",
+    "pt-BR": "Marrom escuro",
+    "zh-Hans": "深棕色"
+  },
+  "Crema": {
+    "de": "Creme",
+    "en": "Cream",
+    "fr": "Crème",
+    "pt-BR": "Creme",
+    "zh-Hans": "奶油色"
+  },
+  "Gris": {
+    "de": "Grau",
+    "en": "Gray",
+    "fr": "Gris",
+    "pt-BR": "Cinza",
+    "zh-Hans": "灰色"
+  },
   "Amarillo": {
     "de": "Gelb",
     "en": "Yellow",
@@ -432,6 +495,20 @@
     "fr": "Bleu",
     "pt-BR": "Azul",
     "zh-Hans": "蓝色"
+  },
+  "Azul oscuro": {
+    "de": "Dunkelblau",
+    "en": "Dark blue",
+    "fr": "Bleu foncé",
+    "pt-BR": "Azul-escuro",
+    "zh-Hans": "深蓝色"
+  },
+  "Azul rey": {
+    "de": "Königsblau",
+    "en": "Royal blue",
+    "fr": "Bleu roi",
+    "pt-BR": "Azul royal",
+    "zh-Hans": "宝蓝色"
   },
   "Blanco": {
     "de": "Weiß",
@@ -489,6 +566,20 @@
     "pt-BR": "Reconheça seu transporte",
     "zh-Hans": "识别你的车辆"
   },
+  "Fucsia": {
+    "de": "Fuchsia",
+    "en": "Fuchsia",
+    "fr": "Fuchsia",
+    "pt-BR": "Fúcsia",
+    "zh-Hans": "紫红色"
+  },
+  "Guinda": {
+    "de": "Burgunderrot",
+    "en": "Burgundy",
+    "fr": "Bordeaux",
+    "pt-BR": "Bordô",
+    "zh-Hans": "酒红色"
+  },
   "Rojo": {
     "de": "Rot",
     "en": "Red",
@@ -496,12 +587,47 @@
     "pt-BR": "Vermelho",
     "zh-Hans": "红色"
   },
+  "Rosado": {
+    "de": "Rosa",
+    "en": "Pink",
+    "fr": "Rose",
+    "pt-BR": "Rosa",
+    "zh-Hans": "粉红色"
+  },
+  "Turquesa": {
+    "de": "Türkis",
+    "en": "Turquoise",
+    "fr": "Turquoise",
+    "pt-BR": "Turquesa",
+    "zh-Hans": "绿松石色"
+  },
   "Verde": {
     "de": "Grün",
     "en": "Green",
     "fr": "Vert",
     "pt-BR": "Verde",
     "zh-Hans": "绿色"
+  },
+  "Verde agua": {
+    "de": "Mintgrün",
+    "en": "Mint green",
+    "fr": "Vert d’eau",
+    "pt-BR": "Verde-água",
+    "zh-Hans": "薄荷绿"
+  },
+  "Verde claro": {
+    "de": "Hellgrün",
+    "en": "Light green",
+    "fr": "Vert clair",
+    "pt-BR": "Verde-claro",
+    "zh-Hans": "浅绿色"
+  },
+  "Verde oscuro": {
+    "de": "Dunkelgrün",
+    "en": "Dark green",
+    "fr": "Vert foncé",
+    "pt-BR": "Verde-escuro",
+    "zh-Hans": "深绿色"
   },
   " en Google Maps": {
     "de": " in Google Maps",
