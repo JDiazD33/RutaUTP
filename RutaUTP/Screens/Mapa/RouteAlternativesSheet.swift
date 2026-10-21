@@ -19,6 +19,7 @@ struct RouteAlternativesSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                let filtradas = opciones
                 Section {
                     Text(L.t("Compara el tiempo estimado y cuánto necesitas caminar. Las distancias aproximadas se comprueban al elegir una ruta.",
                              "Compare estimated time and how far you need to walk. Approximate distances are checked when you choose a route."))
@@ -31,8 +32,8 @@ struct RouteAlternativesSheet: View {
                             .foregroundStyle(Color.onSurfaceVariant)
                     }
                 }
-                let directas = opciones.filter { $0.transfer == nil }
-                let transbordos = opciones.filter { $0.transfer != nil }
+                let directas = filtradas.filter { $0.transfer == nil }
+                let transbordos = filtradas.filter { $0.transfer != nil }
                 if !directas.isEmpty {
                     Section(L.t("Sin transbordos", "No transfers")) {
                         ForEach(directas, id: \.optionID) { plan in fila(plan) }
@@ -43,7 +44,7 @@ struct RouteAlternativesSheet: View {
                         ForEach(transbordos, id: \.optionID) { plan in fila(plan) }
                     }
                 }
-                if opciones.isEmpty {
+                if filtradas.isEmpty {
                     Text(L.t("No hay rutas que coincidan con tu búsqueda.", "No routes match your search."))
                         .foregroundStyle(Color.onSurfaceVariant)
                 }
