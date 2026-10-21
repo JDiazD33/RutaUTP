@@ -30,6 +30,8 @@ enum DrawerItem: String, Identifiable {
 struct SideDrawer: View {
     @Binding var isOpen: Bool
     @EnvironmentObject private var router: AppRouter
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var dragOffset: CGFloat = 0
     @State private var activeSheet: DrawerItem? = nil
@@ -39,39 +41,45 @@ struct SideDrawer: View {
     @State private var revisionFoto = UUID()
     @AccessibilityFocusState(for: .voiceOver) private var enfocarMenu: Bool
 
-    private let drawerWidth: CGFloat = 300
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            // Backdrop
-            Color.black
-                .opacity(isOpen ? 0.35 : 0)
-                .ignoresSafeArea()
-                .onTapGesture { close() }
-                .animation(.easeInOut(duration: 0.28), value: isOpen)
-                .accessibilityHidden(true)
+        GeometryReader { geometry in
+            let drawerWidth = min(340, max(0, geometry.size.width - 32))
+            ZStack(alignment: .leading) {
+                // Backdrop
+                Color.black
+                    .opacity(isOpen ? 0.35 : 0)
+                    .ignoresSafeArea()
+                    .onTapGesture { close() }
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: isOpen)
+                    .accessibilityHidden(true)
 
-            // Panel
-            drawerContent
-                .frame(width: drawerWidth)
-                .background(Color.appSurface)
-                .offset(x: isOpen ? dragOffset : -drawerWidth - 20)
-                .animation(.spring(response: 0.28, dampingFraction: 0.85), value: isOpen)
-                .gesture(
-                    DragGesture()
-                        .onChanged { v in
-                            if v.translation.width < 0 {
-                                dragOffset = v.translation.width
+                // Panel
+                drawerContent
+                    .frame(width: drawerWidth)
+                    .frame(maxHeight: .infinity)
+                    .background(Color.appSurface.ignoresSafeArea(edges: .vertical))
+                    .offset(x: isOpen ? dragOffset : -drawerWidth - 20)
+                    .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.85), value: isOpen)
+                    .simultaneousGesture(
+                        DragGesture()
+                            .onChanged { v in
+                                if v.translation.width < 0,
+                                   abs(v.translation.width) > abs(v.translation.height) {
+                                    dragOffset = v.translation.width
+                                }
                             }
-                        }
-                        .onEnded { v in
-                            if v.translation.width < -60 {
-                                close()
-                            } else {
-                                dragOffset = 0
+                            .onEnded { v in
+                                if v.translation.width < -60,
+                                   abs(v.translation.width) > abs(v.translation.height) {
+                                    close()
+                                } else {
+                                    dragOffset = 0
+                                }
                             }
-                        }
-                )
+                    )
+            }
         }
         .accessibilityHidden(!isOpen)
         .accessibilityAction(.escape) { close() }
@@ -129,148 +137,144 @@ struct SideDrawer: View {
     // MARK: - Drawer content
     private var drawerContent: some View {
         VStack(spacing: 0) {
-            // Header
-            VStack(alignment: .leading, spacing: 4) {
-                Button {
-                    AppHaptics.impact(.light)
-                    activeSheet = .datosPersonales
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(Color.white.opacity(0.18))
-                            .frame(width: 52, height: 52)
-                            .overlay(Circle().stroke(Color.white.opacity(0.55), lineWidth: 2))
-                        if let fotoPerfil {
-                            Image(uiImage: fotoPerfil)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 52, height: 52)
-                                .clipShape(Circle())
-                        } else {
-                            Text("JD")
-                                .font(.headlineMd)
-                                .foregroundStyle(.onPrimaryFill)
+            encabezado
+
+            List {
+                Section {
+                    accesoPerfil
+                }
+
+                Section {
+                    Button {
+                        AppHaptics.impact(.medium)
+                        SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "perfil.idioma") {
+                            activeSheet = .idioma
                         }
+                    } label: {
+                        DrawerRowLabel(icon: "globe", iconColor: acento,
+                                       label: L.signable("perfil.idioma", "Idioma", "Language"),
+                                       detail: IdiomaManager.shared.idioma.nombreNativo)
                     }
-                    .accessibilityLabel(L.t("Foto de perfil", "Profile photo"))
-                    .accessibilityAddTraits(.isImage)
-                    .overlay(alignment: .bottomTrailing) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 18, height: 18)
-                                .overlay(Circle().stroke(Color.appPrimary.opacity(0.15), lineWidth: 0.5))
-                            Image(systemName: "pencil")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.appPrimary)
-                        }
-                        .offset(x: 2, y: 2)
-                        .accessibilityHidden(true)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L.f("Cambiar idioma. Idioma actual: {0}", "Change language. Current language: {0}", [IdiomaManager.shared.idioma.nombreNativo]))
+                    .seniable("perfil.idioma", conGesto: false)
+
+                    DrawerItemRow(icon: "bell", iconColor: acento, label: L.t("Notificaciones", "Notifications")) {
+                        activeSheet = .notificaciones
+                    }
+                    DrawerItemRow(icon: "building.2", iconColor: acento, label: L.t("Ciudad", "City")) {
+                        activeSheet = .ciudad
                     }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(fotoPerfil == nil
-                    ? L.t("Foto de perfil, JD", "Profile photo, JD")
-                    : L.t("Foto de perfil", "Profile photo"))
-                .accessibilityHint(L.t("Doble toque para ver y editar tus datos personales", "Double tap to view and edit your personal details"))
 
-                Text("Ruta UTP Trujillo")
-                    .font(.headlineSm)
-                    .foregroundStyle(.onPrimaryFill)
-                    .padding(.top, 6)
-                Text(L.t("Menú principal", "Main menu"))
-                    .font(.bodyXs)
-                    .foregroundStyle(.onPrimaryFill.opacity(0.75))
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityFocused($enfocarMenu)
-                    .accessibilityAction(named: Text(L.t("Cerrar menú", "Close menu"))) { close() }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 48)
-            .padding(.bottom, 20)
-            .padding(.horizontal, 24)
-            .background(Color.primaryFill)
-
-            // Items
-            VStack(spacing: 0) {
-                // Selección explícita entre los seis idiomas de la app.
-                Button {
-                    AppHaptics.impact(.medium)
-                    SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "perfil.idioma") {
-                        activeSheet = .idioma
+                Section {
+                    DrawerItemRow(icon: "gearshape", iconColor: acento, label: L.t("Ajustes", "Settings")) {
+                        activeSheet = .ajustes
                     }
-                } label: {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color.primaryContainer)
-                                .frame(width: 38, height: 38)
-                            Image(systemName: "globe")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(.onPrimaryContainer)
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(L.signable("perfil.idioma", "Idioma", "Language"))
-                                .font(.bodyMdMedium)
-                                .foregroundStyle(.onSurface)
-                            Text(IdiomaManager.shared.idioma.nombreNativo)
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurfaceVariant)
-                        }
-                        Spacer()
-                        Text(IdiomaManager.shared.etiqueta)
-                            .font(.system(size: 12, weight: .heavy))
-                            .foregroundStyle(.onPrimaryContainer)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(Color.primaryContainer))
+                    DrawerItemRow(icon: "headphones", iconColor: acento, label: L.t("Soporte", "Support")) {
+                        activeSheet = .soporte
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.surfaceContainerLow)
-                    )
+                    DrawerItemRow(icon: "info.circle", iconColor: acento, label: L.t("Sobre Nosotros", "About Us")) {
+                        activeSheet = .sobreNosotros
+                    }
+                    // Se conserva el acceso existente a la pantalla de tracking.
+                    DrawerItemRow(icon: "location", iconColor: acento, label: L.t("Demo de seguimiento", "Tracking demo")) {
+                        router.navigate(to: .trackingDemo)
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.f("Cambiar idioma. Idioma actual: {0}", "Change language. Current language: {0}", [IdiomaManager.shared.idioma.nombreNativo]))
-                .seniable("perfil.idioma", conGesto: false)
-                .padding(.horizontal, 8)
 
-                Divider().padding(.leading, 56).padding(.top, 6)
-
-                DrawerItemRow(icon: "bell.fill", iconColor: .tertiary, label: L.t("Notificaciones", "Notifications")) {
-                    activeSheet = .notificaciones
-                }
-                DrawerItemRow(icon: "building.2.fill", iconColor: .secondary, label: L.t("Ciudad", "City")) {
-                    activeSheet = .ciudad
-                }
-                Divider().padding(.leading, 56)
-                DrawerItemRow(icon: "gearshape.fill", iconColor: .onSurfaceVariant, label: L.t("Ajustes", "Settings")) {
-                    activeSheet = .ajustes
-                }
-                DrawerItemRow(icon: "headphones", iconColor: .onSurfaceVariant, label: L.t("Soporte", "Support")) {
-                    activeSheet = .soporte
-                }
-                DrawerItemRow(icon: "info.circle.fill", iconColor: .onSurfaceVariant, label: L.t("Sobre Nosotros", "About Us")) {
-                    activeSheet = .sobreNosotros
-                }
-                // TEMPORAL: botón para abrir la pantalla de prueba de tracking real.
-                // No aparece en el README ni en la doc oficial — se quita cuando tracking
-                // esté integrado en el flujo principal.
-                DrawerItemRow(icon: "location.fill", iconColor: .secondary, label: L.t("Demo de seguimiento", "Tracking demo")) {
-                    router.navigate(to: .trackingDemo)
-                }
-                Spacer()
-                DrawerItemRow(icon: "rectangle.portrait.and.arrow.right",
-                              iconColor: .appPrimary,
-                              label: L.t("Cerrar Sesión", "Log out"),
-                              destructive: true) {
-                    activeSheet = .cerrarSesion
+                Section {
+                    DrawerItemRow(icon: "rectangle.portrait.and.arrow.right",
+                                  iconColor: .red,
+                                  label: L.t("Cerrar Sesión", "Log out"),
+                                  destructive: true) {
+                        activeSheet = .cerrarSesion
+                    }
                 }
             }
-            .padding(.vertical, 8)
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .contentMargins(.top, 8, for: .scrollContent)
+            .contentMargins(.bottom, 32, for: .scrollContent)
         }
+    }
+
+    private var encabezado: some View {
+        HStack(spacing: 12) {
+            Text(L.t("Menú principal", "Main menu"))
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Color.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityFocused($enfocarMenu)
+                .accessibilityAction(named: Text(L.t("Cerrar menú", "Close menu"))) { close() }
+
+            Spacer(minLength: 8)
+
+            Button {
+                AppHaptics.impact(.light)
+                close()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .background(Color.surfaceContainerLow, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.t("Cerrar menú", "Close menu"))
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
+
+    private var accesoPerfil: some View {
+        Button {
+            AppHaptics.impact(.light)
+            activeSheet = .datosPersonales
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.surfaceContainerLow)
+                    if let fotoPerfil {
+                        Image(uiImage: fotoPerfil)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Text("JD")
+                            .font(.headline)
+                            .foregroundStyle(Color.onSurface)
+                    }
+                }
+                .frame(width: 52, height: 52)
+                .clipShape(Circle())
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ruta UTP Trujillo")
+                        .font(.headline)
+                        .foregroundStyle(Color.onSurface)
+                    Text(L.t("Datos personales", "Personal details"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                    .accessibilityHidden(true)
+            }
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Datos personales", "Personal details"))
+        .accessibilityHint(L.t("Doble toque para ver y editar tus datos personales", "Double tap to view and edit your personal details"))
     }
 }
 
@@ -283,25 +287,53 @@ private struct DrawerItemRow: View {
     let action: () -> Void
 
     var body: some View {
-        Button {
+        Button(role: destructive ? .destructive : nil) {
             AppHaptics.impact(.light)
             action()
         } label: {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(iconColor)
-                    .frame(width: 28)
-                    .accessibilityHidden(true)
-                Text(label)
-                    .font(.bodySmMedium)
-                    .foregroundStyle(destructive ? Color.appPrimary : Color.onSurface)
-                Spacer()
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 14)
+            DrawerRowLabel(icon: icon, iconColor: iconColor, label: label,
+                           destructive: destructive)
         }
         .buttonStyle(.plain)
         .accessibilityHint(L.t("Doble toque para abrir ", "Double tap to open ") + label)
+    }
+}
+
+private struct DrawerRowLabel: View {
+    let icon: String
+    let iconColor: Color
+    let label: String
+    var detail: String? = nil
+    var destructive: Bool = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundStyle(iconColor)
+                .frame(minWidth: 24)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label)
+                    .font(.body)
+                    .foregroundStyle(destructive ? Color.red : Color.onSurface)
+                if let detail {
+                    Text(detail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
