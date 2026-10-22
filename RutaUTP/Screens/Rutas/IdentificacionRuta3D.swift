@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum ColorTransporteReferencia: String {
-    case verde, verdeAgua, verdeClaro, verdeOscuro, turquesa, blanco, negro, azul, azulOscuro, azulRey, amarillo, rojo, rosado, fucsia, guinda, naranja, marron, marronOscuro, crema, gris, verdeLima, celeste, morado
+    case verde, verdeAgua, verdeClaro, verdeOscuro, turquesa, blanco, negro, azul, azulOscuro, azulRey, amarillo, rojo, rosado, fucsia, guinda, naranja, marron, marronOscuro, crema, marfil, gris, verdeLima, celeste, morado
 
     var color: Color {
         switch self {
@@ -27,6 +27,7 @@ enum ColorTransporteReferencia: String {
         case .marron: return Color(hex: "#956B4B")
         case .marronOscuro: return Color(hex: "#4D322F")
         case .crema: return Color(hex: "#EADDBB")
+        case .marfil: return Color(hex: "#F0E4C2")
         case .gris: return Color(hex: "#979795")
         }
     }
@@ -55,6 +56,7 @@ enum ColorTransporteReferencia: String {
         case .marron: return L.t("Marrón", "Brown")
         case .marronOscuro: return L.t("Marrón oscuro", "Dark brown")
         case .crema: return L.t("Crema", "Cream")
+        case .marfil: return L.t("Marfil", "Ivory")
         case .gris: return L.t("Gris", "Gray")
         }
     }
@@ -288,8 +290,13 @@ struct IdentificacionRuta3D {
         "17522730": .init(linea: "C-44", letra: "T2", empresa: "Miramar",
                            colores: [.azul, .blanco, .rojo],
                            fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122163245618117228/")),
+        // Primer lote de colores CT verificados en web.
+        "17573616": .init(linea: "CT-02", letra: "A", empresa: "Larco Express S.A.",
+                           colores: [.verde, .blanco],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/03/"),
+                           modelo: .colectivo),
         // Vigesimo lote: automoviles colectivos segun las fuentes de su categoria.
-        // Paletas del texto de Gemini del Excel, aceptadas como orientativas sin foto.
+        // Las referencias sin enlace mantienen las paletas orientativas del Excel.
         "17581709": .init(linea: "CT-05", letra: "V-A", empresa: "COVISA S.A.C.",
                            colores: [.blanco, .verde, .azul],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
@@ -316,8 +323,9 @@ struct IdentificacionRuta3D {
                            colores: [.blanco, .azul, .rojo],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
         "17595870": .init(linea: "CT-11", letra: "E", empresa: "Rio Seco S.A.",
-                           colores: [.blanco, .verde, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.rojo, .marfil],
+                           fuente: URL(string: "https://es.scribd.com/document/920471306/CONTRATO-DE-USO-Y-AFECTACION-DE-SERVICIOS-DE-RECORRIDO"),
+                           modelo: .colectivo),
         "17595748": .init(linea: "CT-12", letra: "SL", empresa: "Los Halcones S.A.",
                            colores: [.blanco, .naranja, .negro],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
@@ -343,11 +351,12 @@ struct IdentificacionRuta3D {
         "17581631": .init(linea: "CT-21", letra: "F", empresa: "N° 1 Florencia Express S.A.",
                            colores: [.blanco, .marron, .crema],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
-        // Vigesimoquinto lote: A, B y C de San Pedro del Amor mantienen su propio ID.
-        // Las tres descripciones de Gemini indican blanco, verde y azul, sin foto.
+        // Vigesimoquinto lote: cada letra de San Pedro del Amor mantiene su propio ID.
+        // A usa una fuente web; B, C y D conservan la descripcion orientativa del Excel.
         "17669993": .init(linea: "CT-22", letra: "A", empresa: "San Pedro del Amor S.A.",
-                           colores: [.blanco, .verde, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.rojo],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/05/auxiliado-un-motociclista-lesionado-en.html"),
+                           modelo: .colectivo),
         "17581635": .init(linea: "CT-22", letra: "B", empresa: "San Pedro del Amor S.A.",
                            colores: [.blanco, .verde, .azul],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
