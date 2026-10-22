@@ -352,22 +352,25 @@ struct IdentificacionRuta3D {
                            colores: [.blanco, .marron, .crema],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
         // Vigesimoquinto lote: cada letra de San Pedro del Amor mantiene su propio ID.
-        // A usa una fuente web; B, C y D conservan la descripcion orientativa del Excel.
+        // El rojo esta verificado a nivel empresa; la fuente no separa unidades A, B, C y D.
         "17669993": .init(linea: "CT-22", letra: "A", empresa: "San Pedro del Amor S.A.",
                            colores: [.rojo],
                            fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/05/auxiliado-un-motociclista-lesionado-en.html"),
                            modelo: .colectivo),
         "17581635": .init(linea: "CT-22", letra: "B", empresa: "San Pedro del Amor S.A.",
-                           colores: [.blanco, .verde, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.rojo],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/05/auxiliado-un-motociclista-lesionado-en.html"),
+                           modelo: .colectivo),
         "17581639": .init(linea: "CT-22", letra: "C", empresa: "San Pedro del Amor S.A.",
-                           colores: [.blanco, .verde, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
-        // Vigesimosexto lote: la D y las dos variantes de Moderno Express son independientes.
-        // Los colores proceden de sus descripciones de Gemini, sin foto verificada.
+                           colores: [.rojo],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/05/auxiliado-un-motociclista-lesionado-en.html"),
+                           modelo: .colectivo),
+        // Vigesimosexto lote: D completa las variantes verificadas de CT-22.
         "17581646": .init(linea: "CT-22", letra: "D", empresa: "San Pedro del Amor S.A.",
-                           colores: [.blanco, .verde, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.rojo],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/05/auxiliado-un-motociclista-lesionado-en.html"),
+                           modelo: .colectivo),
+        // Moderno Express conserva datos orientativos hasta su propio lote web.
         "17549691": .init(linea: "CT-23", letra: "A", empresa: "Serv. Multiples Moderno Express S.A.",
                            colores: [.blanco, .verdeOscuro, .naranja],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
