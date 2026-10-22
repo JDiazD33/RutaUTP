@@ -397,17 +397,21 @@ struct IdentificacionRuta3D {
                            fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2017/12/socorrida-mujer-lesionada-tras-ser.html"),
                            modelo: .colectivo),
         // Vigesimooctavo lote: AU, B y A mantienen su propio ID y empresa del GTFS.
-        // AU usa la fuente web de Esperanza Tours; B y CT-25 A siguen orientativas.
+        // AU y B usan la fuente web de Esperanza Tours.
         "17670129": .init(linea: "CT-24", letra: "AU", empresa: "Esperanza Tours S.R.L.",
                            colores: [.negro],
                            fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2017/12/socorrida-mujer-lesionada-tras-ser.html"),
                            modelo: .colectivo),
         "17527397": .init(linea: "CT-24", letra: "B", empresa: "Esperanza Tours S.R.L.",
-                           colores: [.blanco, .naranja, .negro],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2017/12/socorrida-mujer-lesionada-tras-ser.html"),
+                           modelo: .colectivo),
+        // Wichanzao: negro documentado en la unidad CIN-816 en 2011.
+        // Se mantiene orientativo hasta confirmar el aspecto actual de la variante A.
         "17670001": .init(linea: "CT-25", letra: "A", empresa: "Emp. Transp. Wichanzao S.A.",
-                           colores: [.blanco, .celeste, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://mundosocialtrujillo.blogspot.com/2011/06/cuatro-heridos-dejo-accidente.html?m=0"),
+                           modelo: .colectivo, esOrientativa: true),
         // Vigesimonoveno lote: B de Wichanzao y A/AU de Horizonte tienen referencias propias.
         // Las tres paletas son orientativas, segun sus descripciones de Gemini sin foto.
         "17670087": .init(linea: "CT-25", letra: "B", empresa: "Emp. Transp. Wichanzao S.A.",
