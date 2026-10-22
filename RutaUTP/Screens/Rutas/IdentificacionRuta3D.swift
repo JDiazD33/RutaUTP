@@ -372,7 +372,7 @@ struct IdentificacionRuta3D {
                            colores: [.rojo],
                            fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/05/auxiliado-un-motociclista-lesionado-en.html"),
                            modelo: .colectivo),
-        // Tercer lote CT: A, AC y B usan la evidencia web de Moderno Express.
+        // Moderno Express usa la evidencia web como referencia para A, AC, B y BC.
         // La fuente verifica plomo con verde en una unidad, sin separar variantes.
         "17549691": .init(linea: "CT-23", letra: "A", empresa: "Serv. Multiples Moderno Express S.A.",
                            colores: [.plomo, .verde],
@@ -387,14 +387,15 @@ struct IdentificacionRuta3D {
                            colores: [.plomo, .verde],
                            fuente: URL(string: "https://enfoquesperu.com/un-hombre-que-habia-sufrido-un-infarto-fallecio-pese-al-auxilio-de-los-agentes-de-seguridad-ciudadana-de-trujillo/"),
                            modelo: .colectivo),
-        // BC conserva su referencia orientativa hasta el siguiente lote.
         "17527200": .init(linea: "CT-23", letra: "BC", empresa: "Serv. Multiples Moderno Express S.A.",
-                           colores: [.blanco, .verdeOscuro, .naranja],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
-        // Esperanza Tours conserva datos orientativos hasta su propio lote web.
+                           colores: [.plomo, .verde],
+                           fuente: URL(string: "https://enfoquesperu.com/un-hombre-que-habia-sufrido-un-infarto-fallecio-pese-al-auxilio-de-los-agentes-de-seguridad-ciudadana-de-trujillo/"),
+                           modelo: .colectivo),
+        // Esperanza Tours: negro documentado en una unidad, sin distinguir A, AU o B.
         "17527270": .init(linea: "CT-24", letra: "A", empresa: "Esperanza Tours S.R.L.",
-                           colores: [.blanco, .naranja, .negro],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2017/12/socorrida-mujer-lesionada-tras-ser.html"),
+                           modelo: .colectivo),
         // Vigesimooctavo lote: AU, B y A mantienen su propio ID y empresa del GTFS.
         // Las tres paletas proceden de las descripciones de Gemini, sin foto verificada.
         "17670129": .init(linea: "CT-24", letra: "AU", empresa: "Esperanza Tours S.R.L.",
