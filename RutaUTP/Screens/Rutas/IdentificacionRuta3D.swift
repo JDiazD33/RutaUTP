@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum ColorTransporteReferencia: String {
-    case verde, verdeAgua, verdeClaro, verdeOscuro, turquesa, blanco, negro, azul, azulOscuro, azulRey, amarillo, rojo, rosado, fucsia, guinda, naranja, marron, marronOscuro, crema, marfil, gris, verdeLima, celeste, morado
+    case verde, verdeAgua, verdeClaro, verdeOscuro, turquesa, blanco, negro, azul, azulOscuro, azulRey, amarillo, rojo, rosado, fucsia, guinda, naranja, marron, marronOscuro, crema, marfil, gris, plomo, verdeLima, celeste, morado
 
     var color: Color {
         switch self {
@@ -29,6 +29,7 @@ enum ColorTransporteReferencia: String {
         case .crema: return Color(hex: "#EADDBB")
         case .marfil: return Color(hex: "#F0E4C2")
         case .gris: return Color(hex: "#979795")
+        case .plomo: return Color(hex: "#6F7477")
         }
     }
 
@@ -58,6 +59,7 @@ enum ColorTransporteReferencia: String {
         case .crema: return L.t("Crema", "Cream")
         case .marfil: return L.t("Marfil", "Ivory")
         case .gris: return L.t("Gris", "Gray")
+        case .plomo: return L.t("Plomo", "Lead gray")
         }
     }
 }
@@ -370,21 +372,26 @@ struct IdentificacionRuta3D {
                            colores: [.rojo],
                            fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2016/05/auxiliado-un-motociclista-lesionado-en.html"),
                            modelo: .colectivo),
-        // Moderno Express conserva datos orientativos hasta su propio lote web.
+        // Tercer lote CT: A, AC y B usan la evidencia web de Moderno Express.
+        // La fuente verifica plomo con verde en una unidad, sin separar variantes.
         "17549691": .init(linea: "CT-23", letra: "A", empresa: "Serv. Multiples Moderno Express S.A.",
-                           colores: [.blanco, .verdeOscuro, .naranja],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.plomo, .verde],
+                           fuente: URL(string: "https://enfoquesperu.com/un-hombre-que-habia-sufrido-un-infarto-fallecio-pese-al-auxilio-de-los-agentes-de-seguridad-ciudadana-de-trujillo/"),
+                           modelo: .colectivo),
         "17527168": .init(linea: "CT-23", letra: "AC", empresa: "Serv. Multiples Moderno Express S.A.",
-                           colores: [.blanco, .verdeOscuro, .naranja],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.plomo, .verde],
+                           fuente: URL(string: "https://enfoquesperu.com/un-hombre-que-habia-sufrido-un-infarto-fallecio-pese-al-auxilio-de-los-agentes-de-seguridad-ciudadana-de-trujillo/"),
+                           modelo: .colectivo),
         // Vigesimoseptimo lote: B y BC conservan la empresa del GTFS, no el alias Girasoles.
-        // Esperanza Tours usa su propia descripcion; las tres paletas son orientativas.
         "17549744": .init(linea: "CT-23", letra: "B", empresa: "Serv. Multiples Moderno Express S.A.",
-                           colores: [.blanco, .verdeOscuro, .naranja],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.plomo, .verde],
+                           fuente: URL(string: "https://enfoquesperu.com/un-hombre-que-habia-sufrido-un-infarto-fallecio-pese-al-auxilio-de-los-agentes-de-seguridad-ciudadana-de-trujillo/"),
+                           modelo: .colectivo),
+        // BC conserva su referencia orientativa hasta el siguiente lote.
         "17527200": .init(linea: "CT-23", letra: "BC", empresa: "Serv. Multiples Moderno Express S.A.",
                            colores: [.blanco, .verdeOscuro, .naranja],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
+        // Esperanza Tours conserva datos orientativos hasta su propio lote web.
         "17527270": .init(linea: "CT-24", letra: "A", empresa: "Esperanza Tours S.R.L.",
                            colores: [.blanco, .naranja, .negro],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
