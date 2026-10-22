@@ -397,10 +397,11 @@ struct IdentificacionRuta3D {
                            fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2017/12/socorrida-mujer-lesionada-tras-ser.html"),
                            modelo: .colectivo),
         // Vigesimooctavo lote: AU, B y A mantienen su propio ID y empresa del GTFS.
-        // Las tres paletas proceden de las descripciones de Gemini, sin foto verificada.
+        // AU usa la fuente web de Esperanza Tours; B y CT-25 A siguen orientativas.
         "17670129": .init(linea: "CT-24", letra: "AU", empresa: "Esperanza Tours S.R.L.",
-                           colores: [.blanco, .naranja, .negro],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2017/12/socorrida-mujer-lesionada-tras-ser.html"),
+                           modelo: .colectivo),
         "17527397": .init(linea: "CT-24", letra: "B", empresa: "Esperanza Tours S.R.L.",
                            colores: [.blanco, .naranja, .negro],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
