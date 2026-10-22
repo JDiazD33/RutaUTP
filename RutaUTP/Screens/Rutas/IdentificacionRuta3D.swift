@@ -418,7 +418,7 @@ struct IdentificacionRuta3D {
                            colores: [.negro],
                            fuente: URL(string: "https://mundosocialtrujillo.blogspot.com/2011/06/cuatro-heridos-dejo-accidente.html?m=0"),
                            modelo: .colectivo, esOrientativa: true),
-        // Horizonte: negro documentado a nivel empresa, sin confirmar las variantes A y AU.
+        // Horizonte: negro documentado a nivel empresa, sin confirmar las variantes A, AU y B.
         "17670006": .init(linea: "CT-26", letra: "A", empresa: "Empresa de Transportes Horizonte Ecologico S.A.",
                            colores: [.negro],
                            fuente: URL(string: "https://es.scribd.com/document/797659950/1library-co-el-principio-de-proporcionalidad-en-el-delito-de-robo-con-muerte-o-lesiones-graves-subsecuentes-prev"),
@@ -428,21 +428,25 @@ struct IdentificacionRuta3D {
                            fuente: URL(string: "https://es.scribd.com/document/797659950/1library-co-el-principio-de-proporcionalidad-en-el-delito-de-robo-con-muerte-o-lesiones-graves-subsecuentes-prev"),
                            modelo: .colectivo, esOrientativa: true),
         // Trigesimo lote: B y BU de Horizonte y L de Jose Emilio tienen referencias propias.
-        // Las tres paletas son orientativas, segun sus descripciones de Gemini sin foto.
+        // B usa la fuente de empresa; BU tiene una foto de 2020 con su propio letrero.
         "17670089": .init(linea: "CT-26", letra: "B", empresa: "Empresa de Transportes Horizonte Ecologico S.A.",
-                           colores: [.blanco, .verdeClaro, .marron],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://es.scribd.com/document/797659950/1library-co-el-principio-de-proporcionalidad-en-el-delito-de-robo-con-muerte-o-lesiones-graves-subsecuentes-prev"),
+                           modelo: .colectivo, esOrientativa: true),
         "17581473": .init(linea: "CT-26", letra: "BU", empresa: "Empresa de Transportes Horizonte Ecologico S.A.",
-                           colores: [.blanco, .verdeClaro, .marron],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://larepublica.pe/sociedad/2020/05/15/alcalde-tambien-esta-en-contra-de-taxis-colectivos-lrnd"),
+                           modelo: .colectivo),
+        // L conserva la descripcion orientativa del Excel, sin fuente verificada.
         "17581475": .init(linea: "CT-27", letra: "L", empresa: "Jose Emilio Lefebvre S.A.",
                            colores: [.blanco, .verdeClaro, .naranja],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
         // Ultimas dos filas: el directorio registra estos operadores como auto colectivos.
-        // Se usa sedan de referencia y solo los colores orientativos de las notas de Gemini.
+        // T.S. usa el contrato de 2024; TA conserva la descripcion orientativa del Excel.
         "17581474": .init(linea: "CT-28", letra: "T.S.", empresa: "Serv. Generales Salaverry S.R.L.",
-                           colores: [.blanco, .azulOscuro, .rojo],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.verde, .blanco],
+                           fuente: URL(string: "https://es.scribd.com/document/842756885/CONTRATO-EMPRESA-SALAVERRY"),
+                           modelo: .colectivo),
         "17581510": .init(linea: "CT-29", letra: "TA", empresa: "Amigos Unidos S.A.C.",
                            colores: [.blanco, .verdeOscuro, .naranja],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
