@@ -407,22 +407,26 @@ struct IdentificacionRuta3D {
                            fuente: URL(string: "https://seguridadciudadanadetrujillo.blogspot.com/2017/12/socorrida-mujer-lesionada-tras-ser.html"),
                            modelo: .colectivo),
         // Wichanzao: negro documentado en la unidad CIN-816 en 2011.
-        // Se mantiene orientativo hasta confirmar el aspecto actual de la variante A.
+        // Se mantiene orientativo hasta confirmar el aspecto actual de las variantes A y B.
         "17670001": .init(linea: "CT-25", letra: "A", empresa: "Emp. Transp. Wichanzao S.A.",
                            colores: [.negro],
                            fuente: URL(string: "https://mundosocialtrujillo.blogspot.com/2011/06/cuatro-heridos-dejo-accidente.html?m=0"),
                            modelo: .colectivo, esOrientativa: true),
         // Vigesimonoveno lote: B de Wichanzao y A/AU de Horizonte tienen referencias propias.
-        // Las tres paletas son orientativas, segun sus descripciones de Gemini sin foto.
+        // Las fuentes historicas mantienen las tres paletas como orientativas.
         "17670087": .init(linea: "CT-25", letra: "B", empresa: "Emp. Transp. Wichanzao S.A.",
-                           colores: [.blanco, .celeste, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://mundosocialtrujillo.blogspot.com/2011/06/cuatro-heridos-dejo-accidente.html?m=0"),
+                           modelo: .colectivo, esOrientativa: true),
+        // Horizonte: negro documentado a nivel empresa, sin confirmar las variantes A y AU.
         "17670006": .init(linea: "CT-26", letra: "A", empresa: "Empresa de Transportes Horizonte Ecologico S.A.",
-                           colores: [.blanco, .verdeClaro, .marron],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://es.scribd.com/document/797659950/1library-co-el-principio-de-proporcionalidad-en-el-delito-de-robo-con-muerte-o-lesiones-graves-subsecuentes-prev"),
+                           modelo: .colectivo, esOrientativa: true),
         "17581730": .init(linea: "CT-26", letra: "AU", empresa: "Empresa de Transportes Horizonte Ecologico S.A.",
-                           colores: [.blanco, .verdeClaro, .marron],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://es.scribd.com/document/797659950/1library-co-el-principio-de-proporcionalidad-en-el-delito-de-robo-con-muerte-o-lesiones-graves-subsecuentes-prev"),
+                           modelo: .colectivo, esOrientativa: true),
         // Trigesimo lote: B y BU de Horizonte y L de Jose Emilio tienen referencias propias.
         // Las tres paletas son orientativas, segun sus descripciones de Gemini sin foto.
         "17670089": .init(linea: "CT-26", letra: "B", empresa: "Empresa de Transportes Horizonte Ecologico S.A.",
