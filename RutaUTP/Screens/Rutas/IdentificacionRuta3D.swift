@@ -313,9 +313,12 @@ struct IdentificacionRuta3D {
         "17595670": .init(linea: "CT-08", letra: "AM", empresa: "Turismo Dios es mi guia S.R.L.",
                            colores: [.blanco, .verde, .azul],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
+        // Gran Chimu: unidad negra fotografiada en 2025, sin letra A legible.
+        // Se usa como referencia orientativa, sin agregar franjas de otras unidades.
         "17581512": .init(linea: "CT-09", letra: "A", empresa: "Serv. Generales nuevo Gran Chimu",
-                           colores: [.blanco, .verde, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.negro],
+                           fuente: URL(string: "https://diaadiatrujillo.pe/2025/07/19/extorsionadores-balean-colectivo-y-dejan-herido-a-chofer-en-el-porvenir/"),
+                           modelo: .colectivo, esOrientativa: true),
         "17581515": .init(linea: "CT-10", letra: "A", empresa: "Huracan S.A.C.",
                            colores: [.blanco, .azul, .rojo],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
@@ -442,14 +445,16 @@ struct IdentificacionRuta3D {
                            colores: [.blanco, .verdeClaro, .naranja],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
         // Ultimas dos filas: el directorio registra estos operadores como auto colectivos.
-        // T.S. usa el contrato de 2024; TA conserva la descripcion orientativa del Excel.
+        // T.S. usa el contrato de 2024; TA usa una referencia historica de empresa.
         "17581474": .init(linea: "CT-28", letra: "T.S.", empresa: "Serv. Generales Salaverry S.R.L.",
                            colores: [.verde, .blanco],
                            fuente: URL(string: "https://es.scribd.com/document/842756885/CONTRATO-EMPRESA-SALAVERRY"),
                            modelo: .colectivo),
+        // Amigos Unidos: flota roja descrita en 2015; aspecto actual de TA por confirmar.
         "17581510": .init(linea: "CT-29", letra: "TA", empresa: "Amigos Unidos S.A.C.",
-                           colores: [.blanco, .verdeOscuro, .naranja],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.rojo],
+                           fuente: URL(string: "https://diariocorreo.pe/edicion/la-libertad/linea-roja-la-ruta-que-lleva-a-los-varones-a-el-milagro-568705/?outputType=amp"),
+                           modelo: .colectivo, esOrientativa: true),
         "17434299": .init(linea: "M-07", letra: "V", empresa: "Nuevo California",
                            colores: [.verde, .blanco],
                            fuente: URL(string: "https://onibusbrasil.com/MiguelBusologoTrujillo/14432887")),
