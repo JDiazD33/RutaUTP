@@ -299,13 +299,23 @@ struct IdentificacionRuta3D {
                            colores: [.blanco, .verdeOscuro, .rojo, .fucsia],
                            fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122160482732117228/")),
         // Decimoctavo lote: cada T2 tiene su propia foto de micro o combi.
-        // CT-01 A conserva su estado pendiente hasta su propio lote.
         "17522705": .init(linea: "C-44", letra: "T2", empresa: "Miramar",
                            colores: [.azul, .blanco, .rojo],
                            fuente: URL(string: "https://www.facebook.com/bcurbanofficial/posts/638387222046321/")),
         "17522730": .init(linea: "C-44", letra: "T2", empresa: "Miramar",
                            colores: [.azul, .blanco, .rojo],
                            fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122163245618117228/")),
+        // Candidatos del ultimo Excel, autorizados como colores orientativos.
+        // Los tres operadores mantienen sus propios ID y el modelo de colectivo.
+        "17569670": .init(linea: "CT-01", letra: "A", empresa: "Expreso Buenos Aires S.A.C.",
+                           colores: [.blanco, .verde, .azul],
+                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+        "17581737": .init(linea: "CT-03", letra: "A", empresa: "Victor Larco S.A.",
+                           colores: [.blanco, .verde, .azul],
+                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+        "17581738": .init(linea: "CT-04", letra: "A", empresa: "Reyna Larco S.A.",
+                           colores: [.blanco, .verde, .azul],
+                           fuente: nil, modelo: .colectivo, esOrientativa: true),
         // Primer lote de colores CT verificados en web.
         "17573616": .init(linea: "CT-02", letra: "A", empresa: "Larco Express S.A.",
                            colores: [.verde, .blanco],
@@ -353,9 +363,11 @@ struct IdentificacionRuta3D {
         "17595746": .init(linea: "CT-14", letra: "SL", empresa: "Turismo y serv. Los Pinos S.A.C.",
                            colores: [.blanco, .verdeClaro, .azul],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
+        // Rojo descrito en el ultimo Excel; la fuente academica no verifica la flota.
         "17580756": .init(linea: "CT-15", letra: "A", empresa: "Alfa y Omega S.A.C.",
-                           colores: [.blanco, .celeste, .azul],
-                           fuente: nil, modelo: .colectivo, esOrientativa: true),
+                           colores: [.rojo],
+                           fuente: URL(string: "https://es.scribd.com/document/869305690/Acusacion-Grupo-04"),
+                           modelo: .colectivo, esOrientativa: true),
         "17605269": .init(linea: "CT-16", letra: "F", empresa: "Hermelinda Express S.R.L.",
                            colores: [.blanco, .verdeClaro, .azul],
                            fuente: nil, modelo: .colectivo, esOrientativa: true),
