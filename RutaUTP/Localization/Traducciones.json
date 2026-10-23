@@ -1693,6 +1693,13 @@
     "pt-BR": "Nenhum comentário ainda. Seja o primeiro a comentar.",
     "zh-Hans": "还没有评论。成为第一个发表评论的人。"
   },
+  "Aún no hay posiciones recientes para estas líneas": {
+    "de": "Für diese Linien liegen noch keine aktuellen Fahrzeugpositionen vor",
+    "en": "There are no recent positions for these lines yet",
+    "fr": "Aucune position récente n’est encore disponible pour ces lignes",
+    "pt-BR": "Ainda não há posições recentes para estas linhas",
+    "zh-Hans": "这些线路暂无最新车辆位置信息"
+  },
   "Aún no tenemos tu ubicación. Espera unos segundos.": {
     "de": "Wir haben Ihren Standort noch nicht. Warten Sie ein paar Sekunden.",
     "en": "We don't have your location yet. Wait a few seconds.",
