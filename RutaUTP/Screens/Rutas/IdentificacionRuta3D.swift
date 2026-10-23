@@ -180,6 +180,14 @@ struct IdentificacionRuta3D {
         "17554645": .init(linea: "M-19", letra: "A", empresa: "La Libertad",
                            colores: [.blanco, .turquesa, .verdeOscuro],
                            fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122167443062117228/")),
+        // Fotos locales asignadas por el usuario a las dos variantes de M-23.
+        // Las fotos dicen M-24; la asociacion se usa como referencia orientativa.
+        "17463462": .init(linea: "M-23", letra: "B", empresa: "Virgen de la Puerta",
+                           colores: [.azulRey, .blanco, .celeste],
+                           fuente: nil, modelo: .micro, esOrientativa: true),
+        "17463445": .init(linea: "M-23", letra: "B ♥", empresa: "Virgen de la Puerta",
+                           colores: [.azulRey, .blanco, .celeste],
+                           fuente: nil, modelo: .micro, esOrientativa: true),
         // Sexto lote del Excel, con una referencia propia por ruta.
         "17554649": .init(linea: "M-31", letra: "A", empresa: "Señor de los Milagros",
                            colores: [.fucsia, .blanco, .guinda],
@@ -219,13 +227,19 @@ struct IdentificacionRuta3D {
         "17434307": .init(linea: "C-07", letra: "Z1", empresa: "Titanic Express",
                            colores: [.blanco, .azulRey],
                            fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122142345380117228/")),
-        // Decimo lote del Excel. La D de Nuevo Diamante sigue sin foto verificada.
+        // Decimo lote del Excel, con las identidades del catalogo GTFS.
         "17434313": .init(linea: "C-09", letra: "E", empresa: "Arco Iris Express",
                            colores: [.blanco, .azulOscuro, .rojo],
                            fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122158205408117228/")),
         "17508499": .init(linea: "C-11", letra: "T1", empresa: "San Isidro Labrador",
                            colores: [.rojo, .amarillo, .blanco],
                            fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122164671182117228/")),
+        // El usuario vincula Nuevo Diamante con la operacion de Mochica en su nota.
+        // Se conserva la empresa GTFS y se usa la paleta de Mochica como orientativa.
+        "17508505": .init(linea: "C-13", letra: "D", empresa: "Nuevo Diamante",
+                           colores: [.blanco, .rojo, .verde, .azul],
+                           fuente: URL(string: "https://www.facebook.com/61553516860919/posts/122161248152117228/"),
+                           modelo: .combi, esOrientativa: true),
         // Undecimo lote del Excel. I y P comparten colores segun las notas del usuario.
         // La publicacion dice C-16 P; los codigos y letras se conservan segun GTFS.
         "17463348": .init(linea: "C-14", letra: "S", empresa: "Sol y Luna",
