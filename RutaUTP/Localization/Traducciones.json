@@ -1,4 +1,67 @@
 {
+  "Tomar transbordo": {
+    "en": "Take the transfer",
+    "fr": "Prendre la correspondance",
+    "pt-BR": "Fazer a baldeação",
+    "de": "Umsteigen",
+    "zh-Hans": "换乘"
+  },
+  "Tu recorrido": {
+    "en": "Your journey",
+    "fr": "Votre trajet",
+    "pt-BR": "Seu trajeto",
+    "de": "Deine Fahrt",
+    "zh-Hans": "你的行程"
+  },
+  "Primer micro": {
+    "en": "First bus",
+    "fr": "Premier bus",
+    "pt-BR": "Primeiro ônibus",
+    "de": "Erster Bus",
+    "zh-Hans": "第一趟公交车"
+  },
+  "Segundo micro": {
+    "en": "Second bus",
+    "fr": "Deuxième bus",
+    "pt-BR": "Segundo ônibus",
+    "de": "Zweiter Bus",
+    "zh-Hans": "第二趟公交车"
+  },
+  "El transbordo ya está preparado. Selecciona el micro en el que estás ahora.": {
+    "en": "Your transfer is ready. Select the bus you're on now.",
+    "fr": "Votre correspondance est déjà prévue. Sélectionnez le bus dans lequel vous êtes.",
+    "pt-BR": "A baldeação já está preparada. Selecione o ônibus em que você está agora.",
+    "de": "Dein Umstieg ist bereits vorbereitet. Wähle den Bus aus, in dem du gerade sitzt.",
+    "zh-Hans": "换乘已安排好。请选择你现在乘坐的公交车。"
+  },
+  "Quitar punto": {
+    "en": "Remove point",
+    "fr": "Supprimer le point",
+    "pt-BR": "Remover ponto",
+    "de": "Punkt entfernen",
+    "zh-Hans": "移除地点"
+  },
+  "La referencia de subida es opcional y se guarda solo en tu teléfono.": {
+    "en": "Your boarding reference is optional and saved only on your phone.",
+    "fr": "Le repère de montée est facultatif et enregistré uniquement sur votre téléphone.",
+    "pt-BR": "A referência de embarque é opcional e fica salva apenas no seu telefone.",
+    "de": "Deine Einstiegsangabe ist optional und wird nur auf deinem Telefon gespeichert.",
+    "zh-Hans": "上车地点说明为选填内容，仅保存在你的手机上。"
+  },
+  "Puedes actualizarlo durante el viaje. El reporte vence en 3 minutos y necesita corroboración.": {
+    "en": "You can update it during your trip. The report expires in 3 minutes and needs corroboration.",
+    "fr": "Vous pouvez le modifier pendant le trajet. Le signalement expire au bout de 3 minutes et doit être corroboré.",
+    "pt-BR": "Você pode atualizar durante a viagem. O relato expira em 3 minutos e precisa ser corroborado.",
+    "de": "Du kannst die Angabe während der Fahrt aktualisieren. Die Meldung läuft nach 3 Minuten ab und muss bestätigt werden.",
+    "zh-Hans": "你可以在途中更新。报告在 3 分钟后失效，并需要其他人确认。"
+  },
+  "Activar y continuar": {
+    "en": "Enable and continue",
+    "fr": "Activer et continuer",
+    "pt-BR": "Ativar e continuar",
+    "de": "Aktivieren und fortfahren",
+    "zh-Hans": "启用并继续"
+  },
   "Paradero sin nombre": {
     "en": "Unnamed stop",
     "fr": "Arrêt sans nom",

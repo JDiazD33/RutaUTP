@@ -5,6 +5,7 @@ struct MapaViajeOverlay<ReportButton: View, LocationButton: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var coordinator: PassiveTrackingCoordinator
     let locationService: LocationServiceProtocol
+    let itinerary: TransitItinerary?
     let destino: String?
     @Binding var mostrarAviso: Bool
     @Binding var mostrarDrawer: Bool
@@ -35,6 +36,7 @@ struct MapaViajeOverlay<ReportButton: View, LocationButton: View>: View {
                     } else {
                         TripContributionPanel(coordinator: coordinator,
                                               locationService: locationService,
+                                              itinerary: itinerary,
                                               statusMessage: coordinator.statusMessage,
                                               statusColor: statusColor,
                                               onEndTrip: onEndTrip)

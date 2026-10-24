@@ -204,6 +204,7 @@ private struct MapaScreenContent: View {
             if viajeActivo {
                 MapaViajeOverlay(coordinator: trackingCoordinator,
                                  locationService: vm.sharedLocationService,
+                                 itinerary: vm.itinerario,
                                  destino: vm.busquedaResultado?.titulo,
                                  mostrarAviso: $mostrarAvisoViaje,
                                  mostrarDrawer: $mostrarDrawer,
@@ -357,7 +358,7 @@ private struct MapaScreenContent: View {
         .sheet(isPresented: $showBoardingConfirmation) {
             BoardingConfirmationSheet(coordinator: trackingCoordinator,
                                       locationService: vm.sharedLocationService,
-                                      suggestedRouteID: vm.itinerario?.route.id,
+                                      itinerary: vm.itinerario,
                                       onRemindLater: { programarPreguntaDeViaje(en: 120) })
         }
         .sheet(isPresented: $showRouteAlternatives) {

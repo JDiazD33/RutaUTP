@@ -41,6 +41,7 @@ struct BusOccupancyPanel: View {
 struct TripContributionPanel: View {
     @ObservedObject var coordinator: PassiveTrackingCoordinator
     let locationService: LocationServiceProtocol
+    var itinerary: TransitItinerary? = nil
     var statusMessage: String? = nil
     var statusColor: Color = .secondary
     var onEndTrip: () -> Void = {}
@@ -50,6 +51,11 @@ struct TripContributionPanel: View {
     @State private var confirmarReinicioSubidas = false
     @State private var errorRecuperacionSubidas = false
     @State private var respaldoSubidas: URL?
+
+    private var siguienteTramo: RutaGTFS? {
+        guard let itinerary, coordinator.selectedTripRoute?.id == itinerary.route.id else { return nil }
+        return itinerary.transfer?.route
+    }
 
     var body: some View {
         if let route = coordinator.selectedTripRoute {
@@ -92,7 +98,8 @@ struct TripContributionPanel: View {
                     if choosingLine {
                         TripSelectionSheet(coordinator: coordinator,
                                            locationService: locationService,
-                                           suggestedRouteID: coordinator.selectedTripRoute?.id)
+                                           suggestedRouteID: siguienteTramo?.id,
+                                           itinerary: itinerary)
                     } else {
                         tripDetails
                     }
@@ -169,7 +176,18 @@ struct TripContributionPanel: View {
                         }
                     }
                     Section {
-                        Button(L.t("Cambiar de línea", "Change line")) { choosingLine = true }
+                        if let siguienteTramo {
+                            Button {
+                                choosingLine = true
+                            } label: {
+                                Label(L.t("Tomar transbordo", "Take the transfer") + " · " + siguienteTramo.lineaConLetra,
+                                      systemImage: "arrow.triangle.branch")
+                                    .frame(minHeight: 44)
+                            }
+                        } else if itinerary == nil {
+                            Button(L.t("Cambiar de línea", "Change line")) { choosingLine = true }
+                                .frame(minHeight: 44)
+                        }
                         Button(L.t("Finalizar viaje", "End trip"), role: .destructive) {
                             confirmEndTrip = true
                         }
@@ -248,43 +266,51 @@ private struct TripOccupancyControls: View {
     }
 }
 
-/// Pregunta tras encontrar una ruta; responder no conserva el itinerario.
+/// Conserva las líneas y paraderos del itinerario elegido para confirmar la subida.
 struct BoardingConfirmationSheet: View {
     @ObservedObject var coordinator: PassiveTrackingCoordinator
     let locationService: LocationServiceProtocol
-    let suggestedRouteID: String?
+    let itinerary: TransitItinerary?
     let onRemindLater: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var confirmingLine = false
 
     var body: some View {
         Group {
             if confirmingLine {
                 TripSelectionSheet(coordinator: coordinator, locationService: locationService,
-                                   suggestedRouteID: suggestedRouteID)
+                                   itinerary: itinerary)
             } else {
-                VStack(spacing: 18) {
-                    Image(systemName: "bus.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.35), radius: 1)
-                        .frame(width: 64, height: 64)
-                        .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 22))
-                    Text(L.t("¿Ya te encuentras en el transporte público?",
-                             "Are you already on public transport?"))
-                        .font(.title3.weight(.bold))
-                        .multilineTextAlignment(.center)
+                ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack(alignment: .top, spacing: 16) {
+                        Text(L.t("¿Ya te encuentras en el transporte público?",
+                                 "Are you already on public transport?"))
+                            .font(.title2.weight(.semibold))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityAddTraits(.isHeader)
+                        Image(systemName: "bus")
+                            .font(.title2)
+                            .foregroundStyle(Color.appPrimary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .accessibilityHidden(true)
+                    }
                     Text(L.t("Si ya subiste, confirma la línea que tomaste. Si aún no, puedes seguir viendo tu ruta.",
                              "If you've boarded, confirm your line. Otherwise, keep viewing your route."))
                         .font(.subheadline)
-                        .foregroundStyle(Color.onSurfaceVariant)
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Button { confirmingLine = true } label: {
                         Text(L.t("Sí, ya subí", "Yes, I'm on board"))
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.appPrimary)
+                    .buttonStyle(.plain)
+                    .font(.headline)
+                    .foregroundStyle(Color.onPrimaryFill)
+                    .padding(.vertical, 6)
+                    .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 16))
                     Button {
                         onRemindLater()
                         dismiss()
@@ -294,23 +320,31 @@ struct BoardingConfirmationSheet: View {
                     }
                     .buttonStyle(.bordered)
                     Button(L.t("Todavía no", "Not yet")) { dismiss() }
-                        .frame(minHeight: 44)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .padding(24)
+                .frame(maxWidth: .infinity)
+                }
+                .background(Color.appBackground)
             }
         }
-        .presentationDetents(confirmingLine ? [.large] : [.height(490), .large])
+        .presentationDetents(confirmingLine || textSize.isAccessibilitySize ? [.large] : [.height(490), .large])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(28)
+        .presentationCornerRadius(20)
     }
 }
 
 private struct TripSelectionSheet: View {
     @ObservedObject var coordinator: PassiveTrackingCoordinator
     let locationService: LocationServiceProtocol
-    var suggestedRouteID: String? = nil
-    @State private var showConsent = false
+    let suggestedRouteID: String?
+    let itinerary: TransitItinerary?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
+    @FocusState private var referenciaEnfocada: Bool
+    @State private var showConsent = false
+    @State private var comenzarAlEstarListo = false
     @State private var routes: [RutaGTFS] = []
     @State private var selected: RutaGTFS?
     @State private var search = ""
@@ -321,181 +355,104 @@ private struct TripSelectionSheet: View {
     @State private var loading = true
     @State private var errorCargaRutas: String?
     @State private var revisionCatalogo = 0
-    /// Geocodificación inversa en curso. Se cancela al mover el punto otra vez:
-    /// si no, la respuesta de un punto viejo landingaría después y pondría una
-    /// calle que ya no corresponde al pin.
     @State private var tareaDireccion: Task<Void, Never>?
 
-    /// Escribe la calle del punto marcado, sustituyendo lo que hubiera.
-    ///
-    /// Es un RELLENO, no un cierre: el campo sigue editable porque la calle
-    /// que devuelve el sistema no siempre es la que el usuario reconoce
-    /// ("Av. España" puede salir como "Calle España").
-    private func escribirDireccion(para punto: BoardingPoint) {
-        tareaDireccion?.cancel()
-        tareaDireccion = Task { @MainActor in
-            let nombre = await Geocodificacion.nombreDelLugar(
-                CLLocationCoordinate2D(latitude: punto.latitude,
-                                       longitude: punto.longitude)
-            )
-            guard !Task.isCancelled else { return }
-            boardingPlace = String(nombre.prefix(120))
-        }
+    init(coordinator: PassiveTrackingCoordinator, locationService: LocationServiceProtocol,
+         suggestedRouteID: String? = nil, itinerary: TransitItinerary? = nil) {
+        self.coordinator = coordinator
+        self.locationService = locationService
+        self.suggestedRouteID = suggestedRouteID
+        self.itinerary = itinerary
+        let previstas = itinerary.map { [$0.route] + ($0.transfer.map { [$0.route] } ?? []) } ?? []
+        _selected = State(initialValue: previstas.first { $0.id == suggestedRouteID } ?? previstas.first)
+        _loading = State(initialValue: itinerary == nil)
     }
 
-    private func occupancyOption(_ value: String, title: String, icon: String) -> some View {
-        let selected = occupancy == value
-        return Button {
-            occupancy = value
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .frame(width: 28)
-                    .foregroundStyle(selected ? Color.appPrimary : Color.secondary)
-                Text(title)
-                    .fontWeight(selected ? .semibold : .regular)
-                    .foregroundStyle(Color.primary)
-                Spacer()
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selected ? Color.appPrimary : Color.secondary.opacity(0.4))
-            }
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityValue(selected ? L.t("Seleccionado", "Selected") : L.t("Sin seleccionar", "Not selected"))
-    }
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
 
     private var filtered: [RutaGTFS] {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
         return routes.filter {
-            query.isEmpty || "\($0.linea) \($0.empresa) \($0.variante)"
+            query.isEmpty || "\($0.lineaConLetra) \($0.empresa) \($0.variante)"
                 .localizedCaseInsensitiveContains(query)
         }
+    }
+
+    private func seleccionar(_ route: RutaGTFS) {
+        guard selected?.id != route.id else { return }
+        // Cada micro tiene su propia referencia de subida; no reutilizar la del tramo anterior.
+        tareaDireccion?.cancel()
+        boardingPoint = nil
+        boardingPlace = ""
+        occupancy = ""
+        selected = route
+        AppHaptics.selection()
+    }
+
+    private func escribirDireccion(para punto: BoardingPoint) {
+        tareaDireccion?.cancel()
+        let referenciaAnterior = boardingPlace
+        tareaDireccion = Task { @MainActor in
+            let nombre = await Geocodificacion.nombreDelLugar(punto.coordinate)
+            guard !Task.isCancelled, boardingPoint == punto,
+                  boardingPlace == referenciaAnterior else { return }
+            // La respuesta tardía nunca sustituye una corrección escrita por la persona.
+            boardingPlace = String(nombre.prefix(120))
+        }
+    }
+
+    private func comenzarViaje() {
+        guard let route = selected, coordinator.isPublisherConfigured else { return }
+        guard coordinator.isEnabled else { showConsent = true; return }
+        // Activar pide permisos y carga GTFS de forma asíncrona. No declarar
+        // el viaje antes de que termine: una denegación dejaría una selección huérfana.
+        guard coordinator.isRunning else {
+            comenzarAlEstarListo = true
+            coordinator.setContributionEnabled(true)
+            return
+        }
+        comenzarAlEstarListo = false
+        referenciaEnfocada = false
+        coordinator.beginTrip(route: DetectionRouteGeometry(route: route),
+                              occupancy: BusOccupancyState(rawValue: occupancy),
+                              boardingPlace: boardingPlace, boardingPoint: boardingPoint)
+        // El coordinador puede rechazar el inicio si cambian las preferencias.
+        guard coordinator.selectedTripRoute?.id == route.id else { return }
+        dismiss()
     }
 
     var body: some View {
         NavigationStack {
             Group {
                 if let route = selected {
-                    Form {
-                        if coordinator.isEnabled, !coordinator.isRunning,
-                           let fallo = coordinator.errorCargaRutas {
-                            Section {
-                                Text(fallo.mensajeUsuario).font(.caption).foregroundStyle(.secondary)
-                                Button(L.t("Reintentar detección", "Retry detection")) {
-                                    coordinator.setContributionEnabled(true)
-                                }
-                            }
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            encabezado
+                            recorrido(route)
+                            puntoDeSubida
+                            ocupacion
+                            estadoContribucion
                         }
-                        if !coordinator.isEnabled {
-                            Section {
-                                if coordinator.isPublisherConfigured {
-                                    Button(L.t("Activar Ayudar con ubicaciones", "Turn on Help with locations")) {
-                                        showConsent = true
-                                    }
-                                    .accessibilityHint(TextoConsentimientoContribucion.pistaAccesibilidad)
-                                    Text(L.t("Para contribuir con tu viaje, activa esta opción y concede los permisos de ubicación y movimiento.",
-                                             "To contribute your trip, enable this option and grant location and motion permissions."))
-                                        .font(.caption).foregroundStyle(.secondary)
-                                } else {
-                                    Text(L.t("Esta instalación aún no tiene habilitada la contribución de viajes. Puedes seguir consultando la ruta en el mapa.",
-                                             "Trip contributions aren't configured on this installation yet. You can still view your route on the map."))
-                                }
-                            }
-                        }
-                        Section(L.t("Tu Transporte Público", "Your Public Transport")) {
-                            Text(L.t("Línea ", "Line ") + route.linea).font(.headline)
-                            Text(route.empresa).font(.subheadline)
-                            LabeledContent(L.t("Letra del transporte", "Transport letter"),
-                                           value: route.letraTransporte.isEmpty
-                                            ? L.t("No especificada", "Not specified")
-                                            : route.letraTransporte)
-                                .accessibilityElement(children: .combine)
-                            Button(L.t("Elegir otra línea", "Choose another line")) { selected = nil }
-                        }
-                        Section {
-                            Button { showBoardingMap = true } label: {
-                                Label(boardingPoint == nil
-                                      ? L.t("Marcar en el mapa", "Mark on the map")
-                                      : L.t("Ver o cambiar el punto", "View or change point"),
-                                      systemImage: "map")
-                                    .frame(minHeight: 44)
-                            }
-                            if boardingPoint != nil {
-                                HStack {
-                                    Label(L.t("Punto seleccionado", "Point selected"), systemImage: "checkmark.circle.fill")
-                                        .font(.caption).foregroundStyle(Color.appPrimary)
-                                    Spacer()
-                                    Button(L.t("Quitar", "Remove"), role: .destructive) {
-                                        boardingPoint = nil
-                                        boardingPlace = ""
-                                    }
-                                        .font(.caption)
-                                }
-                            }
-                            TextField(L.t("Calle o referencia", "Street or landmark"),
-                                      text: $boardingPlace, axis: .vertical)
-                                .lineLimit(1...3)
-                                .onChange(of: boardingPlace) { _, value in
-                                    boardingPlace = String(value.prefix(120))
-                                }
-                        } header: {
-                            Text(L.t("¿Dónde subiste? (opcional)", "Where did you board? (optional)"))
-                        } footer: {
-                            Text(L.t("Marca el lugar y la dirección se escribe sola; puedes corregirla. Es opcional y se guarda solo en tu teléfono para futuros paraderos de alumnos.",
-                                     "Mark the spot and the address is written for you; you can edit it. This is optional and stays on your phone for future student stops."))
-                        }
-                        Section {
-                            occupancyOption("", title: L.t("Prefiero no indicar", "Skip for now"),
-                                            icon: "minus.circle")
-                            ForEach(BusOccupancyState.allCases, id: \.rawValue) { state in
-                                occupancyOption(state.rawValue, title: state.title,
-                                    icon: state == .empty ? "person" : state == .space ? "person.2" : "person.3.fill")
-                            }
-                        } header: {
-                            Text(L.t("¿Qué tan lleno va? (opcional)", "How full is it? (optional)"))
-                        } footer: {
-                            Text(L.t("Elige cómo va ahora. Puedes actualizarlo durante el viaje; el reporte vence en 3 minutos y necesita corroboración.",
-                                     "Choose how full it is now. You can update it during the trip; the report expires in 3 minutes and needs corroboration."))
-                        }
-                        Button(L.t("Comenzar a ayudar", "Start helping")) {
-                            coordinator.beginTrip(route: DetectionRouteGeometry(route: route),
-                                                  occupancy: BusOccupancyState(rawValue: occupancy),
-                                                  boardingPlace: boardingPlace,
-                                                  boardingPoint: boardingPoint)
-                            dismiss()
-                        }
-                        .disabled(!coordinator.isEnabled || !coordinator.isPublisherConfigured)
+                        .padding(20)
                     }
+                    .scrollDismissesKeyboard(.interactively)
+                    .safeAreaInset(edge: .bottom, spacing: 0) { accionPrincipal }
                 } else {
-                    List {
-                        if loading {
-                            ProgressView(L.t("Cargando líneas…", "Loading lines…"))
-                        } else if let errorCargaRutas {
-                            Text(L.aviso(errorCargaRutas)).foregroundStyle(.secondary)
-                            Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
-                        } else if filtered.isEmpty {
-                            Text(routes.isEmpty
-                                 ? L.t("El catálogo no contiene líneas.", "The catalog contains no lines.")
-                                 : L.t("No encontramos esa línea.", "No matching line found."))
-                        }
-                        Section(coordinator.latestLocation == nil
-                                ? L.t("Elige la línea que tomaste", "Choose your line")
-                                : L.t("Líneas cercanas primero", "Nearby lines first")) {
-                            ForEach(filtered) { route in
-                                Button { selected = route } label: {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(L.t("Línea ", "Line ") + route.linea).font(.headline)
-                                        Text(route.empresa + " · " + route.variante)
-                                            .font(.caption).foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .searchable(text: $search, prompt: L.t("Línea o empresa", "Line or operator"))
+                    catalogo
+                }
+            }
+            .background(Color.appBackground.ignoresSafeArea())
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
+                        .frame(minHeight: 44)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L.t("Listo", "Done")) { referenciaEnfocada = false }
                 }
             }
             .fullScreenCover(isPresented: $showBoardingMap) {
@@ -504,57 +461,340 @@ private struct TripSelectionSheet: View {
                                      currentLocation: coordinator.latestLocation,
                                      locationService: locationService) { nuevo in
                         boardingPoint = nuevo
-                        // La calle se escribe sola a partir del punto marcado:
-                        // es lo que el usuario acaba de señalar, y preguntárselo
-                        // otra vez es el mismo dato dos veces.
                         escribirDireccion(para: nuevo)
                     }
-                }
-            }
-            .navigationTitle(L.t("Estoy en un micro", "I'm on a bus"))
-            .navigationBarTitleDisplayMode(.inline)
-            .onDisappear { tareaDireccion?.cancel() }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
+                    .seguirTemaForzado()
                 }
             }
             .confirmationDialog(L.t("Ayudar con ubicaciones en tiempo real", "Help with real-time locations"),
                                 isPresented: $showConsent, titleVisibility: .visible) {
                 Button(L.t("Aceptar y activar", "Accept and turn on")) {
+                    comenzarAlEstarListo = true
                     coordinator.setContributionEnabled(true)
+                    if coordinator.isRunning { comenzarViaje() }
                 }
                 Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
             } message: {
                 Text(TextoConsentimientoContribucion.confirmacion)
             }
-            .task(id: revisionCatalogo) {
-                loading = true
-                errorCargaRutas = nil
-                let feed: [RutaGTFS]
-                do {
-                    feed = try await TransporteApp.repositorio.cargarRutas(reintentar: revisionCatalogo > 0)
-                    guard !Task.isCancelled else { return }
-                } catch {
-                    guard !Task.isCancelled else { return }
-                    errorCargaRutas = (error as? FalloCargaGTFS)?.mensajeUsuario
-                        ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
-                    loading = false
-                    return
-                }
-                if let location = coordinator.latestLocation {
-                    let distances = Dictionary(uniqueKeysWithValues: feed.map { route in
-                        (route.id, RouteCandidateMatcher.closestMatch(for: location,
-                            routes: [DetectionRouteGeometry(route: route)])?.distanceToRoute ?? .infinity)
-                    })
-                    routes = feed.sorted { (distances[$0.id] ?? .infinity) < (distances[$1.id] ?? .infinity) }
-                } else {
-                    routes = feed.sorted { $0.linea.localizedStandardCompare($1.linea) == .orderedAscending }
-                }
-                if let suggestedRouteID { selected = routes.first { $0.id == suggestedRouteID } }
-                loading = false
+            .task(id: revisionCatalogo) { await cargarCatalogo() }
+            .onChange(of: coordinator.isRunning) { _, listo in
+                if listo, comenzarAlEstarListo { comenzarViaje() }
+            }
+            .onChange(of: coordinator.isEnabled) { _, activo in
+                if !activo { comenzarAlEstarListo = false }
+            }
+            .onDisappear {
+                tareaDireccion?.cancel()
+                comenzarAlEstarListo = false
             }
         }
+        .tint(acento)
+        .presentationDetents([.large])
+    }
+
+    private var encabezado: some View {
+        HStack(alignment: .top, spacing: 16) {
+            Text(L.t("Estoy en un micro", "I'm on a bus"))
+                .font(.largeTitle.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            Image(systemName: "bus")
+                .font(.title2)
+                .foregroundStyle(acento)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func recorrido(_ route: RutaGTFS) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            tituloSeccion(L.t("Tu recorrido", "Your journey"))
+            VStack(spacing: 0) {
+                if let itinerary, let transfer = itinerary.transfer {
+                    filaTramo(itinerary.route, titulo: L.t("Primer micro", "First bus"),
+                              desde: itinerary.board, hasta: itinerary.firstAlight)
+                    Divider().padding(.leading, 16)
+                    filaTramo(transfer.route, titulo: L.t("Segundo micro", "Second bus"),
+                              desde: transfer.board, hasta: transfer.alight)
+                } else {
+                    identidad(route)
+                        .padding(16)
+                }
+            }
+            .background(superficie, in: RoundedRectangle(cornerRadius: 18))
+            if itinerary?.transfer != nil {
+                Text(L.t("El transbordo ya está preparado. Selecciona el micro en el que estás ahora.",
+                         "Your transfer is ready. Select the bus you're on now."))
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else if itinerary == nil {
+                Button(L.t("Cambiar de línea", "Change line")) { selected = nil }
+                    .frame(minHeight: 44)
+            }
+        }
+    }
+
+    private func identidad(_ route: RutaGTFS) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Circle().fill(route.color).frame(width: 10, height: 10)
+                    .accessibilityHidden(true)
+                Text(L.t("Línea ", "Line ") + route.lineaConLetra)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(route.empresa)
+                .font(.body).fixedSize(horizontal: false, vertical: true)
+            Text(route.recorridoLocalizado)
+                .font(.subheadline).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func filaTramo(_ route: RutaGTFS, titulo: String,
+                           desde: ParaderoGTFS, hasta: ParaderoGTFS) -> some View {
+        let elegido = selected?.id == route.id
+        return Button { seleccionar(route) } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    Text(titulo).font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: elegido ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(elegido ? acento : Color(uiColor: .secondaryLabel))
+                        .accessibilityHidden(true)
+                }
+                identidad(route)
+                Text(desde.nombreVisible + " → " + hasta.nombreVisible)
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.primary)
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(elegido ? L.t("Seleccionado", "Selected") : L.t("Sin seleccionar", "Not selected"))
+        .accessibilityAddTraits(elegido ? [.isSelected] : [])
+    }
+
+    private var puntoDeSubida: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            tituloSeccion(L.t("¿Dónde subiste? (opcional)", "Where did you board? (optional)"))
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    referenciaEnfocada = false
+                    showBoardingMap = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "map").foregroundStyle(acento).frame(width: 24)
+                        Text(boardingPoint == nil
+                             ? L.t("Marcar en el mapa", "Mark on the map")
+                             : L.t("Ver o cambiar el punto", "View or change point"))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
+                    .frame(minHeight: 44).padding(16).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Divider().padding(.leading, 16)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L.t("Calle o referencia", "Street or landmark"))
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    TextField(L.t("Calle o referencia", "Street or landmark"),
+                              text: $boardingPlace, axis: .vertical)
+                        .labelsHidden()
+                        .lineLimit(1...4)
+                        .focused($referenciaEnfocada)
+                        .submitLabel(.done)
+                        .onSubmit { referenciaEnfocada = false }
+                        .onChange(of: boardingPlace) { _, value in
+                            boardingPlace = String(value.prefix(120))
+                        }
+                }
+                .padding(16)
+                if boardingPoint != nil {
+                    Divider().padding(.leading, 16)
+                    Button(role: .destructive) {
+                        tareaDireccion?.cancel()
+                        boardingPoint = nil
+                        boardingPlace = ""
+                    } label: {
+                        Label(L.t("Quitar punto", "Remove point"), systemImage: "mappin.slash")
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .padding(.horizontal, 16).padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .background(superficie, in: RoundedRectangle(cornerRadius: 18))
+            Text(L.t("La referencia de subida es opcional y se guarda solo en tu teléfono.",
+                     "Your boarding reference is optional and saved only on your phone."))
+                .font(.subheadline).foregroundStyle(.secondary)
+        }
+    }
+
+    private var ocupacion: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            tituloSeccion(L.t("¿Qué tan lleno va? (opcional)", "How full is it? (optional)"))
+            VStack(spacing: 0) {
+                occupancyOption("", title: L.t("Prefiero no indicar", "Skip for now"), icon: "minus.circle")
+                ForEach(BusOccupancyState.allCases, id: \.rawValue) { state in
+                    Divider().padding(.leading, 56)
+                    occupancyOption(state.rawValue, title: state.title,
+                                    icon: state == .empty ? "person" : state == .space ? "person.2" : "person.3")
+                }
+            }
+            .background(superficie, in: RoundedRectangle(cornerRadius: 18))
+            Text(L.t("Puedes actualizarlo durante el viaje. El reporte vence en 3 minutos y necesita corroboración.",
+                     "You can update it during your trip. The report expires in 3 minutes and needs corroboration."))
+                .font(.subheadline).foregroundStyle(.secondary)
+        }
+    }
+
+    private func occupancyOption(_ value: String, title: String, icon: String) -> some View {
+        let elegido = occupancy == value
+        return Button { occupancy = value; AppHaptics.selection() } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon).frame(width: 24)
+                    .foregroundStyle(elegido ? acento : Color(uiColor: .secondaryLabel))
+                    .accessibilityHidden(true)
+                Text(title).fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: elegido ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(elegido ? acento : Color(uiColor: .secondaryLabel))
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            .frame(minHeight: 52).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.primary)
+        .accessibilityLabel(title)
+        .accessibilityValue(elegido ? L.t("Seleccionado", "Selected") : L.t("Sin seleccionar", "Not selected"))
+        .accessibilityAddTraits(elegido ? [.isSelected] : [])
+    }
+
+    @ViewBuilder
+    private var estadoContribucion: some View {
+        if !coordinator.isPublisherConfigured {
+            Text(L.t("Esta instalación aún no tiene habilitada la contribución de viajes. Puedes seguir consultando la ruta en el mapa.",
+                     "Trip contributions aren't configured on this installation yet. You can still view your route on the map."))
+                .font(.subheadline).foregroundStyle(.secondary)
+        } else if !coordinator.isEnabled {
+            Text(L.t("Para contribuir con tu viaje, activa esta opción y concede los permisos de ubicación y movimiento.",
+                     "To contribute your trip, enable this option and grant location and motion permissions."))
+                .font(.subheadline).foregroundStyle(.secondary)
+            if locationService.authorizationStatus == .denied {
+                Button(L.t("Abrir Ajustes de ubicación", "Open location settings")) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+                .frame(minHeight: 44)
+            }
+        }
+        if comenzarAlEstarListo, coordinator.isEnabled, !coordinator.isRunning {
+            Text(L.aviso(coordinator.statusMessage))
+                .font(.subheadline).foregroundStyle(.secondary)
+        }
+        if coordinator.isEnabled, !coordinator.isRunning, let fallo = coordinator.errorCargaRutas {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(fallo.mensajeUsuario).font(.subheadline).foregroundStyle(.secondary)
+                Button(L.t("Reintentar detección", "Retry detection")) {
+                    coordinator.setContributionEnabled(true)
+                }
+                .frame(minHeight: 44)
+            }
+        }
+    }
+
+    private var accionPrincipal: some View {
+        Button(action: comenzarViaje) {
+            Text(coordinator.isEnabled
+                 ? L.t("Comenzar a ayudar", "Start helping")
+                 : L.t("Activar y continuar", "Enable and continue"))
+                .font(.headline)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(coordinator.isPublisherConfigured ? Color.onPrimaryFill : Color(uiColor: .secondaryLabel))
+                .padding(.horizontal, 16).padding(.vertical, 14)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(coordinator.isPublisherConfigured ? Color.primaryFill : Color.surfaceContainerHigh,
+                            in: RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .disabled(!coordinator.isPublisherConfigured)
+        .accessibilityHint(coordinator.isEnabled ? "" : TextoConsentimientoContribucion.pistaAccesibilidad)
+        .padding(.horizontal, 20).padding(.vertical, 12)
+        .background(Color.appSurface)
+        .overlay(alignment: .top) { Divider() }
+    }
+
+    private func tituloSeccion(_ titulo: String) -> some View {
+        Text(titulo).font(.headline).accessibilityAddTraits(.isHeader)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var catalogo: some View {
+        List {
+            Section { encabezado.listRowBackground(Color.clear) }
+            if loading {
+                ProgressView(L.t("Cargando líneas…", "Loading lines…"))
+            } else if let errorCargaRutas {
+                Text(L.aviso(errorCargaRutas)).foregroundStyle(.secondary)
+                Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
+                    .frame(minHeight: 44)
+            } else if filtered.isEmpty {
+                Text(routes.isEmpty
+                     ? L.t("El catálogo no contiene líneas.", "The catalog contains no lines.")
+                     : L.t("No encontramos esa línea.", "No matching line found."))
+            }
+            Section(coordinator.latestLocation == nil
+                    ? L.t("Elige la línea que tomaste", "Choose your line")
+                    : L.t("Líneas cercanas primero", "Nearby lines first")) {
+                ForEach(filtered) { route in
+                    Button { seleccionar(route) } label: { identidad(route).frame(minHeight: 44) }
+                        .foregroundStyle(Color.primary)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .searchable(text: $search, prompt: L.t("Línea o empresa", "Line or operator"))
+    }
+
+    @MainActor
+    private func cargarCatalogo() async {
+        // El itinerario ya contiene las rutas reales: no recargar todo el catálogo para confirmarlas.
+        guard itinerary == nil else { return }
+        loading = true
+        errorCargaRutas = nil
+        do {
+            let feed = try await TransporteApp.repositorio.cargarRutas(reintentar: revisionCatalogo > 0)
+            guard !Task.isCancelled else { return }
+            if let location = coordinator.latestLocation {
+                let distances = Dictionary(uniqueKeysWithValues: feed.map { route in
+                    (route.id, RouteCandidateMatcher.closestMatch(for: location,
+                        routes: [DetectionRouteGeometry(route: route)])?.distanceToRoute ?? .infinity)
+                })
+                routes = feed.sorted { (distances[$0.id] ?? .infinity) < (distances[$1.id] ?? .infinity) }
+            } else {
+                routes = feed.sorted { $0.linea.localizedStandardCompare($1.linea) == .orderedAscending }
+            }
+            if let suggestedRouteID { selected = routes.first { $0.id == suggestedRouteID } }
+        } catch {
+            guard !Task.isCancelled else { return }
+            errorCargaRutas = (error as? FalloCargaGTFS)?.mensajeUsuario
+                ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
+        }
+        loading = false
     }
 }
 
