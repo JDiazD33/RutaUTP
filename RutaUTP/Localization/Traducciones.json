@@ -62,6 +62,48 @@
     "de": "Aktivieren und fortfahren",
     "zh-Hans": "启用并继续"
   },
+  "Punto de subida": {
+    "en": "Boarding point",
+    "fr": "Point de montée",
+    "pt-BR": "Ponto de embarque",
+    "de": "Einstiegspunkt",
+    "zh-Hans": "上车地点"
+  },
+  "Toca el mapa donde subiste o marca tu ubicación actual.": {
+    "en": "Tap where you boarded on the map or mark your current location.",
+    "fr": "Touchez le lieu où vous êtes monté sur la carte ou marquez votre position actuelle.",
+    "pt-BR": "Toque no mapa onde você embarcou ou marque sua localização atual.",
+    "de": "Tippe auf der Karte auf deinen Einstiegsort oder markiere deinen aktuellen Standort.",
+    "zh-Hans": "在地图上轻点你的上车地点，或标记你当前的位置。"
+  },
+  "Punto seleccionado. Toca otro lugar del mapa para cambiarlo.": {
+    "en": "Point selected. Tap another place on the map to change it.",
+    "fr": "Point sélectionné. Touchez un autre endroit sur la carte pour le modifier.",
+    "pt-BR": "Ponto selecionado. Toque em outro local do mapa para alterá-lo.",
+    "de": "Punkt ausgewählt. Tippe auf eine andere Stelle der Karte, um ihn zu ändern.",
+    "zh-Hans": "已选择地点。轻点地图上的其他位置即可更改。"
+  },
+  "Reintentar ubicación": {
+    "en": "Retry location",
+    "fr": "Réessayer la localisation",
+    "pt-BR": "Tentar localizar novamente",
+    "de": "Standort erneut ermitteln",
+    "zh-Hans": "重新获取位置"
+  },
+  "Marcar mi ubicación": {
+    "en": "Mark my location",
+    "fr": "Marquer ma position",
+    "pt-BR": "Marcar minha localização",
+    "de": "Meinen Standort markieren",
+    "zh-Hans": "标记我的位置"
+  },
+  "Coloca el punto donde estás. Después puedes confirmarlo.": {
+    "en": "Places the point where you are. You can then confirm it.",
+    "fr": "Place le point à votre position actuelle. Vous pouvez ensuite le confirmer.",
+    "pt-BR": "Coloca o ponto onde você está. Depois, você pode confirmá-lo.",
+    "de": "Setzt den Punkt an deinen aktuellen Standort. Anschließend kannst du ihn bestätigen.",
+    "zh-Hans": "将标记放在你当前所在的位置，之后即可确认。"
+  },
   "Paradero sin nombre": {
     "en": "Unnamed stop",
     "fr": "Arrêt sans nom",
