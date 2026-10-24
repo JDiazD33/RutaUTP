@@ -21,6 +21,11 @@ struct ParaderoGTFS: Identifiable, Equatable {
     let lat: Double
     let lon: Double
 
+    /// Conserva el nombre original del feed para identidad y persistencia.
+    var nombreVisible: String {
+        GTFSNombreParser.nombreRegistrado(nombre) ?? L.t("Paradero sin nombre", "Unnamed stop")
+    }
+
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lon)
     }
@@ -66,6 +71,17 @@ struct RutaGTFS: Identifiable {
 
 // MARK: - Parser de nombres
 enum GTFSNombreParser {
+    /// El feed usa «innominada» para paraderos sin nombre registrado.
+    /// Solo reconoce marcadores completos; no modifica nombres de calles.
+    static func nombreRegistrado(_ nombre: String) -> String? {
+        let limpio = nombre.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizado = limpio.folding(options: [.caseInsensitive, .diacriticInsensitive],
+                                         locale: Locale(identifier: "es_PE"))
+        let sinNombre: Set<String> = ["", "innominada", "innominado", "inominada", "inominado",
+                                      "unnamed", "sin nombre", "s/n"]
+        return sinNombre.contains(normalizado) ? nil : limpio
+    }
+
     /// El sufijo de presentación se traduce sin cambiar los nombres del feed.
     static func recorridoLocalizado(_ recorrido: String) -> String {
         let sufijo = " (ramal circular)"

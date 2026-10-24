@@ -1,4 +1,11 @@
 {
+  "Paradero sin nombre": {
+    "en": "Unnamed stop",
+    "fr": "Arrêt sans nom",
+    "pt-BR": "Parada sem nome",
+    "de": "Haltestelle ohne Namen",
+    "zh-Hans": "未命名站点"
+  },
   "Buscar rutas": {
     "en": "Search routes",
     "fr": "Rechercher des itinéraires",
