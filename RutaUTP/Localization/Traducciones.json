@@ -1,4 +1,25 @@
 {
+  "1 guardado": {
+    "en": "1 saved",
+    "fr": "1 élément enregistré",
+    "pt-BR": "1 item salvo",
+    "de": "1 gespeicherter Eintrag",
+    "zh-Hans": "1 个已收藏项目"
+  },
+  "{0} guardados": {
+    "en": "{0} saved",
+    "fr": "{0} éléments enregistrés",
+    "pt-BR": "{0} itens salvos",
+    "de": "{0} gespeicherte Einträge",
+    "zh-Hans": "{0} 个已收藏项目"
+  },
+  "También los encontrarás en Guardado, dentro de Lugares. Elige uno para buscar cómo llegar desde tu ubicación.": {
+    "en": "You can also find them under Saved, in Places. Choose one to find directions from your location.",
+    "fr": "Vous les trouverez aussi dans Enregistrés, sous Lieux. Choisissez un arrêt pour obtenir un itinéraire depuis votre position.",
+    "pt-BR": "Você também pode encontrá-los em Salvos, na seção Lugares. Escolha um para buscar como chegar a partir da sua localização.",
+    "de": "Du findest sie auch unter Gespeichert im Bereich Orte. Wähle eine Haltestelle, um den Weg von deinem Standort zu finden.",
+    "zh-Hans": "你也可以在“收藏”的“地点”中找到它们。选择一个站点，查找从你的位置出发的路线。"
+  },
   "Tomar transbordo": {
     "en": "Take the transfer",
     "fr": "Prendre la correspondance",

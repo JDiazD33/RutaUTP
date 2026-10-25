@@ -38,6 +38,7 @@ struct GuardadoView: View {
     @State private var showAddLinea = false
     @State private var selectedLinea: RutaOpcion?
     @State private var rutaParaExplorar: RutaOpcion?
+    @State private var showParaderosMap = false
     @State private var confirmarReinicioLineas = false
     @State private var errorReinicioLineas = false
     @State private var respaldoLineas: URL?
@@ -126,6 +127,9 @@ struct GuardadoView: View {
         .fullScreenCover(item: $rutaParaExplorar) { linea in
             ExploradorRutaView(ruta: linea)
         }
+        .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { vm.cargar() }) {
+            ParaderosIluminadosView(paraderos: [], locationService: locationService)
+        }
     }
 
     #if DEBUG
@@ -209,8 +213,8 @@ struct GuardadoView: View {
     private var resumenGuardado: String {
         if selectedTab == .lugares {
             guard !vm.datosLugaresInvalidos else { return L.t("Lugares", "Places") }
-            return vm.lugares.count == 1 ? L.t("1 lugar", "1 place")
-                : L.f("{0} lugares", "{0} places", ["\(vm.lugares.count)"])
+            return vm.lugares.count == 1 ? L.t("1 guardado", "1 saved")
+                : L.f("{0} guardados", "{0} saved", ["\(vm.lugares.count)"])
         }
         guard vm.catalogoCargado, !vm.cargandoCatalogo,
               vm.errorCatalogo == nil, !vm.datosLineasInvalidos else { return L.t("Líneas", "Lines") }
@@ -317,32 +321,117 @@ struct GuardadoView: View {
                 .padding(18)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            } else if vm.lugares.isEmpty {
-                emptyState(icono: "bookmark.slash",
-                           titulo: L.t("Aún no tienes lugares guardados", "No saved places yet"),
-                           subtitulo: L.t("Toca Añadir lugar para guardar tu primer lugar.", "Tap Add place to save your first place."))
             } else {
-                VStack(spacing: 0) {
-                    ForEach(vm.lugares) { lugar in
-                        if lugar.id != vm.lugares.first?.id {
-                            Divider().padding(.leading, 72).padding(.trailing, 16)
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        encabezadoLugares(L.t("Lugares guardados", "Saved places"),
+                                          cantidad: vm.lugaresPersonales.count)
+                        if vm.lugaresPersonales.isEmpty {
+                            emptyState(icono: "bookmark.slash",
+                                       titulo: L.t("Aún no tienes lugares guardados", "No saved places yet"),
+                                       subtitulo: L.t("Toca Añadir lugar para guardar tu primer lugar.", "Tap Add place to save your first place."))
+                        } else {
+                            filasLugares(vm.lugaresPersonales)
+                                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         }
-                        lugarRow(lugar)
                     }
+                    paraderosGuardadosSection
                 }
-                .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
         }
         .padding(.horizontal, 20)
     }
 
-    private func lugarRow(_ lugar: LugarGuardado) -> some View {
+    private func encabezadoLugares(_ titulo: String, cantidad: Int?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(titulo)
+                .font(.headline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            if let cantidad {
+                Text("\(cantidad)")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var paraderosGuardadosSection: some View {
+        let paraderos = vm.paraderosGuardados
+        let catalogoDisponible = vm.catalogoCargado && !vm.cargandoCatalogo && vm.errorCatalogo == nil
+        return VStack(alignment: .leading, spacing: 12) {
+            encabezadoLugares(L.t("Paraderos guardados", "Saved stops"),
+                              cantidad: catalogoDisponible || !paraderos.isEmpty ? paraderos.count : nil)
+            VStack(alignment: .leading, spacing: 0) {
+                if !paraderos.isEmpty {
+                    filasLugares(paraderos, esParadero: true)
+                    Divider().padding(.horizontal, 16)
+                }
+                if !vm.catalogoCargado || vm.cargandoCatalogo {
+                    ProgressView(L.t("Cargando paraderos…", "Loading stops…"))
+                        .font(.subheadline)
+                        .tint(acento)
+                        .padding(16)
+                } else if let error = vm.errorCatalogo {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(error.mensajeUsuario)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button(L.t("Reintentar", "Try again")) {
+                            Task { await vm.cargarCatalogo(reintentar: true) }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(acento)
+                    }
+                    .padding(16)
+                } else if paraderos.isEmpty {
+                    Text(L.t("Guarda un paradero en el mapa y lo encontrarás aquí.",
+                             "Save a stop on the map to find it here."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding([.horizontal, .top], 16)
+                }
+                Button {
+                    AppHaptics.impact(.light)
+                    showParaderosMap = true
+                } label: {
+                    Label(L.t("Explorar paraderos", "Explore stops"), systemImage: "map")
+                        .font(.body.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(acento)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+    }
+
+    private func filasLugares(_ lugares: [LugarGuardado], esParadero: Bool = false) -> some View {
+        VStack(spacing: 0) {
+            ForEach(lugares) { lugar in
+                if lugar.id != lugares.first?.id {
+                    Divider().padding(.leading, 72).padding(.trailing, 16)
+                }
+                lugarRow(lugar, esParadero: esParadero)
+            }
+        }
+    }
+
+    private func lugarRow(_ lugar: LugarGuardado, esParadero: Bool) -> some View {
         Button {
             AppHaptics.selection()
             selectedLugar = lugar
         } label: {
             HStack(spacing: 12) {
-                iconoLugar(lugar)
+                iconoLugar(lugar, esParadero: esParadero)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(lugar.nombre)
                         .font(.body.weight(.medium))
@@ -374,15 +463,15 @@ struct GuardadoView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(lugar.nombre)
         .accessibilityValue(lugar.direccion + (lugar.esFrecuente ? L.t(". Frecuente", ". Frequent") : ""))
-        .accessibilityHint(lugar.esParadero
+        .accessibilityHint(esParadero
                            ? L.t("Muestra las opciones del paradero guardado", "Shows saved stop options")
                            : L.t("Muestra las opciones del lugar guardado", "Shows saved place options"))
     }
 
-    private func iconoLugar(_ lugar: LugarGuardado) -> some View {
-        Image(systemName: lugar.icono)
+    private func iconoLugar(_ lugar: LugarGuardado, esParadero: Bool) -> some View {
+        Image(systemName: esParadero && lugar.iconoPersonalizado == nil ? "bus" : lugar.icono)
             .font(.system(size: min(tamanoIcono, 24), weight: .medium))
-            .foregroundStyle(lugar.esFijo ? acento : Color(uiColor: .secondaryLabel))
+            .foregroundStyle(lugar.esFijo || esParadero ? acento : Color(uiColor: .secondaryLabel))
             .frame(width: 44, height: 44)
             .background(Color(uiColor: .tertiarySystemGroupedBackground),
                         in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -727,7 +816,7 @@ struct LugarDetailSheet: View {
                 HStack(alignment: .top, spacing: 14) {
                     Image(systemName: lugar.icono)
                         .font(.system(size: 25, weight: .semibold))
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .frame(width: 58, height: 58)
                         .background(Color.appPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 18))
                     VStack(alignment: .leading, spacing: 6) {
@@ -736,7 +825,7 @@ struct LugarDetailSheet: View {
                             .foregroundStyle(Color.onSurfaceVariant)
                         if lugar.esFrecuente {
                             Label(L.t("Frecuente", "Frequent"), systemImage: "star.fill")
-                                .font(.caption.weight(.semibold)).foregroundStyle(Color.appPrimary)
+                                .font(.caption.weight(.semibold)).foregroundStyle(Color.appAccent)
                         }
                     }
                 }
@@ -763,7 +852,7 @@ struct LugarDetailSheet: View {
                                 Image(systemName: "mappin.slash.circle").font(.largeTitle)
                                 Text(L.t("No pudimos localizar esta dirección.", "We could not locate this address."))
                                 Button(L.t("Reintentar", "Try again")) { intento += 1 }
-                                    .fontWeight(.bold).foregroundStyle(Color.appPrimary)
+                                    .fontWeight(.bold).foregroundStyle(Color.appAccent)
                             }
                         }
                         .font(.subheadline).multilineTextAlignment(.center)

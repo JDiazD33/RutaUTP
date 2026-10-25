@@ -46,8 +46,8 @@ struct DestinosGuardadosSheet: View {
                     } header: {
                         Text(L.t("Paraderos guardados", "Saved stops"))
                     } footer: {
-                        Text(L.t("Son los mismos que guardas en Seguridad. Elige uno para buscar cómo llegar desde tu ubicación.",
-                                 "These are the stops you save in Safety. Choose one to find directions from your location."))
+                        Text(L.t("También los encontrarás en Guardado, dentro de Lugares. Elige uno para buscar cómo llegar desde tu ubicación.",
+                                 "You can also find them under Saved, in Places. Choose one to find directions from your location."))
                     }
 
                     if !lugares.isEmpty {
@@ -71,7 +71,7 @@ struct DestinosGuardadosSheet: View {
                     }
                 }
             }
-            .tint(Color.appPrimary)
+            .tint(Color.appAccent)
             .scrollContentBackground(.hidden)
             .background(Color.appBackground)
             .navigationTitle(L.t("Destinos guardados", "Saved destinations"))
@@ -130,7 +130,7 @@ struct DestinosGuardadosSheet: View {
             HStack(spacing: 12) {
                 Image(systemName: esParadero && lugar.iconoPersonalizado == nil ? "bus.fill" : lugar.icono)
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(Color.appAccent)
                     .frame(width: 40, height: 40)
                     .background(Color.appPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                 VStack(alignment: .leading, spacing: 4) {

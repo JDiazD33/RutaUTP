@@ -25,127 +25,51 @@ struct LineaDetailSheet: View {
     var onQuitar: () -> Bool
     @State private var errorAlQuitar = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.self) private var entorno
+    @ScaledMetric(relativeTo: .title) private var tamanoInsignia = 76
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                // Header
-                let headerLayout = dynamicTypeSize.isAccessibilitySize
-                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
-                    : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
-                headerLayout {
-                    ZStack {
-                        Circle().fill(linea.colorLinea.opacity(0.15)).frame(width: 64, height: 64)
-                        Text(linea.linea)
-                            .font(.system(size: 18, weight: .heavy))
-                            .minimumScaleFactor(0.6)
-                            .lineLimit(1)
-                            .foregroundStyle(linea.colorLinea)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(linea.empresa)
-                            .font(.headlineSm)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 12))
-                            Text(linea.frecuenciaTexto)
-                                .font(.labelCapsMd)
-                                .appTracking(AppTracking.wideLabel)
-                        }
-                        .foregroundStyle(linea.colorLinea)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(linea.colorLinea.opacity(0.12)))
-                    }
+        NavigationStack {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    resumen
+                    datosDelViaje
+                    paraderos
+                    quitarDeGuardados
                 }
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(L.t("RECORRIDO", "ROUTE"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    Text(linea.recorridoLocalizado)
-                        .font(.bodyMd)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .foregroundStyle(.onSurface)
-                }
-
-                // Datos del feed GTFS
-                ViewThatFits(in: .horizontal) {
-                    if dynamicTypeSize <= .large {
-                        HStack(alignment: .top, spacing: 12) {
-                            datosLinea
-                        }
-                        .fixedSize(horizontal: true, vertical: false)
-                    }
-                    LazyVGrid(columns: columnasDatos, alignment: .center, spacing: 12) {
-                        datosLinea
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L.t("EXTREMOS", "END POINTS"))
-                        .font(.labelCapsMd)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .appTracking(AppTracking.wideLabel)
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "play.fill").font(.system(size: 10)).foregroundStyle(linea.colorLinea)
-                        Text(linea.paradaInicio)
-                            .font(.bodySm)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "flag.fill").font(.system(size: 10)).foregroundStyle(.red)
-                        Text(linea.paradaFin)
-                            .font(.bodySm)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                VStack(spacing: 10) {
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background(Color.appBackground.ignoresSafeArea())
+            .navigationTitle(L.t("Línea guardada", "Saved line"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.appSurface, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        onExplorar()
+                        dismiss()
                     } label: {
-                        HStack {
-                            Image(systemName: "map.fill")
-                            Text(L.t("Ver recorrido en el mapa", "View route on map"))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(8)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primaryFill))
-                        .foregroundStyle(.onPrimaryFill)
-                        .font(.headlineSm)
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .frame(minWidth: 44, minHeight: 44)
                     }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        if onQuitar() { dismiss() } else { errorAlQuitar = true }
-                    } label: {
-                        HStack {
-                            Image(systemName: "trash.fill")
-                            Text(L.t("Quitar de guardados", "Remove from saved"))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(8)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.errorContainer))
-                        .foregroundStyle(.onErrorContainer)
-                        .font(.bodyMdMedium)
-                    }
-                    .buttonStyle(.plain)
+                    .tint(acento)
+                    .accessibilityLabel(L.t("Cerrar", "Close"))
                 }
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                verRecorrido
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.appSurface)
+                    .overlay(alignment: .top) { Divider() }
+            }
         }
         .alert(L.t("No se pudo quitar la línea", "Unable to remove line"), isPresented: $errorAlQuitar) {
             Button(L.t("Aceptar", "OK"), role: .cancel) {}
@@ -155,38 +79,200 @@ struct LineaDetailSheet: View {
         }
     }
 
+    private var resumen: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+                : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+            layout {
+                insignia
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(linea.empresa)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(L.t("Línea ", "Line ") + linea.lineaConLetra)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Text(linea.recorridoLocalizado)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    tituloFrecuencia
+                    Spacer(minLength: 8)
+                    valorFrecuencia
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    tituloFrecuencia
+                    valorFrecuencia
+                }
+            }
+        }
+        .padding(20)
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var insignia: some View {
+        VStack(spacing: 2) {
+            if linea.letraTransporte.isEmpty {
+                Image(systemName: "bus.fill")
+                    .font(.title)
+            } else {
+                Text(L.t("Letra", "Letter"))
+                    .font(.caption2.weight(.medium))
+                Text(linea.letraTransporte)
+                    .font(.system(.largeTitle, design: .rounded).weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
+        }
+        .foregroundStyle(colorTextoLetra)
+        .padding(8)
+        .frame(width: tamanoInsignia, height: tamanoInsignia)
+        .background(linea.colorLinea, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityHidden(true)
+    }
+
+    private var colorTextoLetra: Color {
+        let color = linea.colorLinea.resolve(in: entorno)
+        let luminancia = 0.2126 * color.linearRed + 0.7152 * color.linearGreen + 0.0722 * color.linearBlue
+        let contrasteNegro = (luminancia + 0.05) / 0.05
+        let contrasteBlanco = 1.05 / (luminancia + 0.05)
+        return contrasteNegro >= contrasteBlanco ? .black : .white
+    }
+
+    private var tituloFrecuencia: some View {
+        Label(L.t("Frecuencia", "Frequency"), systemImage: "clock")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var valorFrecuencia: some View {
+        Text(linea.frecuenciaTexto)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Color.onSurface)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var datosDelViaje: some View {
+        LazyVGrid(columns: columnasDatos, alignment: .leading, spacing: 20) {
+            datosLinea
+        }
+        .padding(20)
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
 
     private var columnasDatos: [GridItem] {
         let cantidad = dynamicTypeSize.isAccessibilitySize ? 1 : 2
-        return Array(repeating: GridItem(.flexible(), alignment: .top), count: cantidad)
+        return Array(repeating: GridItem(.flexible(), alignment: .leading), count: cantidad)
     }
 
     @ViewBuilder
     private var datosLinea: some View {
-        dato(icono: "clock.fill", valor: linea.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
-        dato(icono: "creditcard.fill", valor: linea.costo, etiqueta: L.t("Tarifa", "Fare"))
-        dato(icono: "mappin.and.ellipse", valor: "\(linea.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
+        dato(icono: "clock", valor: linea.tiempoTexto, etiqueta: L.t("Tiempo de viaje", "Travel time"))
+        dato(icono: "banknote", valor: linea.costo, etiqueta: L.t("Pasaje", "Fare"))
+        dato(icono: "mappin", valor: "\(linea.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
         dato(icono: "point.topleft.down.curvedto.point.bottomright.up",
-             valor: FormatoNumero.decimal(linea.distanciaKm) + " km", etiqueta: L.t("Longitud", "Length"))
+             valor: FormatoNumero.decimal(linea.distanciaKm) + " km", etiqueta: L.t("Distancia", "Distance"))
     }
 
     private func dato(icono: String, valor: String, etiqueta: String) -> some View {
-        VStack(spacing: 3) {
-            Image(systemName: icono)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.appPrimary)
+        VStack(alignment: .leading, spacing: 8) {
+            Label(etiqueta, systemImage: icono)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Text(valor)
-                .font(.headlineBody)
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
                 .fixedSize(horizontal: false, vertical: true)
-                .foregroundStyle(.onSurface)
-            Text(etiqueta.uppercased())
-                .font(.labelCapsSm)
-                .fixedSize(horizontal: false, vertical: true)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
+                .foregroundStyle(Color.onSurface)
         }
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var paraderos: some View {
+        VStack(spacing: 0) {
+            paradero(icono: "circle.circle", titulo: L.t("Paradero inicial", "First stop"),
+                     nombre: linea.paradaInicioVisible)
+            Divider().padding(.leading, 68)
+            paradero(icono: "flag.checkered", titulo: L.t("Paradero final", "Last stop"),
+                     nombre: linea.paradaFinVisible)
+        }
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func paradero(icono: String, titulo: String, nombre: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icono)
+                .font(.body.weight(.medium))
+                .foregroundStyle(acento)
+                .frame(minWidth: 36, minHeight: 36)
+                .background(Color.surfaceContainerLow, in: Circle())
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(titulo)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(nombre)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.onSurface)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(20)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var quitarDeGuardados: some View {
+        Button(role: .destructive) {
+            if onQuitar() { dismiss() } else { errorAlQuitar = true }
+        } label: {
+            Label(L.t("Quitar de guardados", "Remove from saved"), systemImage: "trash")
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .frame(minHeight: 52)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color(uiColor: .systemRed))
+    }
+
+    private var verRecorrido: some View {
+        Button {
+            onExplorar()
+        } label: {
+            Label(L.t("Ver recorrido en el mapa", "View route on map"), systemImage: "map")
+                .font(.headline)
+                .foregroundStyle(Color.onPrimaryFill)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -255,6 +341,9 @@ private final class UbicacionMapaLugar: ObservableObject {
 private struct BotonUbicacionLugar: View {
     @ObservedObject var ubicacion: UbicacionMapaLugar
     let locationService: LocationServiceProtocol
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     var body: some View {
         Button {
@@ -263,14 +352,14 @@ private struct BotonUbicacionLugar: View {
         } label: {
             Group {
                 if ubicacion.buscando {
-                    ProgressView().tint(Color.onPrimaryFill)
+                    ProgressView().tint(acento)
                 } else {
                     Image(systemName: "location.fill").font(.body.weight(.semibold))
                 }
             }
-            .foregroundStyle(Color.onPrimaryFill)
-            .frame(width: 44, height: 44)
-            .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 14))
+            .foregroundStyle(acento)
+            .frame(minWidth: 44, minHeight: 44)
+            .background(.regularMaterial, in: Circle())
         }
         .buttonStyle(.plain)
         .disabled(ubicacion.buscando)
@@ -286,6 +375,7 @@ struct AddLugarSheet: View {
     let locationService: LocationServiceProtocol
     var onSave: (LugarGuardado) -> Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -298,6 +388,9 @@ struct AddLugarSheet: View {
     @FocusState private var campoActivo: Campo?
 
     private enum Campo { case nombre, direccion }
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
 
     private var iconoElegido: String {
         categoria == .personalizado ? (iconoPersonalizado ?? categoria.icono) : categoria.icono
@@ -325,41 +418,46 @@ struct AddLugarSheet: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
+                    campoNombre
                     VStack(alignment: .leading, spacing: 12) {
                         Text(L.t("Ubicación", "Location"))
-                            .font(.headline)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(Color.onSurface)
                             .accessibilityAddTraits(.isHeader)
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 0) {
                             mapaElegir
-                            campoDireccion
-                            estadoUbicacion
-                            if let aviso = ubicacion.aviso {
-                                Text(aviso).font(.caption).foregroundStyle(Color.onSurfaceVariant)
+
+                            VStack(alignment: .leading, spacing: 12) {
+                                campoDireccion
+                                estadoUbicacion
+                                if let aviso = ubicacion.aviso {
+                                    Text(aviso)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
+                            .padding(20)
                         }
-                        .padding(12)
-                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+                        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
-                    campoNombre
                     selectorCategoria
                     if categoria == .personalizado { selectorIcono }
                 }
                 .padding(20)
             }
             .scrollDismissesKeyboard(.interactively)
-            .background(Color.appBackground)
+            .background(Color.appBackground.ignoresSafeArea())
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 botonGuardar
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
-                    .background(Color.appBackground)
-                    .overlay(alignment: .top) {
-                        Rectangle().fill(Color.outlineVariant.opacity(0.2)).frame(height: 0.5)
-                    }
+                    .background(Color.appSurface)
+                    .overlay(alignment: .top) { Divider() }
             }
             .navigationTitle(L.t("Añadir lugar", "Add place"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.appBackground, for: .navigationBar)
+            .toolbarBackground(Color.appSurface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -374,7 +472,7 @@ struct AddLugarSheet: View {
                 }
             }
         }
-        .tint(.appPrimary)
+        .tint(acento)
         .onAppear { ubicacion.iniciar(desde: locationService) }
         .onDisappear {
             if !mapaExpandido {
@@ -397,52 +495,52 @@ struct AddLugarSheet: View {
 
     // MARK: Campos
     private var campoNombre: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L.t("Tu lugar", "Your place"))
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-            let layout = dynamicTypeSize.isAccessibilitySize
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-                : AnyLayout(HStackLayout(spacing: 14))
-            layout {
-                Image(systemName: iconoElegido)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(Color.onPrimaryFill)
-                    .frame(width: 56, height: 56)
-                    .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 16))
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(L.t("Nombre del lugar", "Place name"))
-                        .font(.caption)
-                        .foregroundStyle(Color.onSurfaceVariant)
-                    TextField(L.t("Ej. Mi casa o mi trabajo", "e.g. My home or workplace"), text: $nombre, axis: .vertical)
-                        .font(.body.weight(.semibold))
-                        .textFieldStyle(.plain)
-                        .textInputAutocapitalization(.words)
-                        .submitLabel(.done)
-                        .focused($campoActivo, equals: .nombre)
-                        .onSubmit { campoActivo = nil }
-                        .accessibilityLabel(L.t("Nombre del lugar", "Place name"))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 14))
+        return layout {
+            Image(systemName: iconoElegido)
+                .font(.title2)
+                .foregroundStyle(acento)
+                .frame(minWidth: 52, minHeight: 52)
+                .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L.t("Nombre del lugar", "Place name"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField(L.t("Ej. Mi casa o mi trabajo", "e.g. My home or workplace"), text: $nombre, axis: .vertical)
+                    .font(.body)
+                    .foregroundStyle(Color.onSurface)
+                    .textFieldStyle(.plain)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.done)
+                    .focused($campoActivo, equals: .nombre)
+                    .onSubmit { campoActivo = nil }
+                    .accessibilityLabel(L.t("Nombre del lugar", "Place name"))
             }
-            .padding(16)
-            .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 20))
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(20)
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private var campoDireccion: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(L.t("Dirección", "Address"))
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.onSurfaceVariant)
-            HStack(spacing: 8) {
-                Image(systemName: "mappin.and.ellipse")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "mappin")
                     .font(.body)
-                    .foregroundStyle(.onSurfaceVariant)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 TextField(L.t("Toca el mapa y la dirección se escribe sola",
                               "Tap the map and the address fills in"), text: $direccion, axis: .vertical)
-                    .font(.bodySm)
+                    .font(.body)
+                    .foregroundStyle(Color.onSurface)
+                    .textFieldStyle(.plain)
                     .autocorrectionDisabled()
                     .focused($campoActivo, equals: .direccion)
                     .submitLabel(.done)
@@ -455,8 +553,6 @@ struct AddLugarSheet: View {
                         .accessibilityLabel(L.t("Buscando dirección", "Looking up address"))
                 }
             }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
         }
     }
 
@@ -465,71 +561,55 @@ struct AddLugarSheet: View {
     private var estadoUbicacion: some View {
         if buscandoUbicacion {
             Label(L.t("Buscando la dirección…", "Looking up the address…"), systemImage: "magnifyingglass")
-                .font(.caption)
-                .foregroundStyle(.onSurfaceVariant)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         } else if direccionNoEncontrada {
             Label(L.t("No encontramos esa dirección — toca el mapa para ubicarla tú", "We could not find that address — tap the map to place it yourself"), systemImage: "exclamationmark.circle.fill")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(Color.appError)
         } else if coordElegida != nil {
             Label(L.t("Ubicación lista", "Location ready"), systemImage: "checkmark.circle.fill")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.appPrimary)
+                .font(.footnote)
+                .foregroundStyle(acento)
         } else {
             Label(L.t("Toca el mapa para ubicar el lugar", "Tap the map to place the place"), systemImage: "info.circle")
-                .font(.caption)
-                .foregroundStyle(.onSurfaceVariant)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
     // MARK: Mapa
     private var mapaElegir: some View {
-        ZStack(alignment: .bottom) {
-            MapaElegirLugar(
-                colorPin: .appPrimary,
-                coordenada: coordElegida,
-                onTocar: { coord in
-                    ubicacion.interactuar()
-                    campoActivo = nil
-                    AppHaptics.impact(.light)
-                    confirmarSeleccionManual()
-                    withAnimation(reduceMotion ? nil : .spring(response: 0.3)) {
-                        coordElegida = coord
-                    }
-                    escribirDireccionDesdeMapa(coord)
-                },
-                recentrarTrigger: recentrarTrigger,
-                spanInicial: spanCercano,
-                spanRecentrado: spanCercano,
-                iconoPin: iconoElegido,
-                centroCamara: ubicacion.centro,
-                recentrarCamaraTrigger: ubicacion.revisionCamara,
-                onInteraccion: { ubicacion.interactuar() }
-            )
-
-            Label(L.t("Toca el mapa para mover el pin", "Tap the map to move the pin"), systemImage: "hand.tap.fill")
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.onSurface)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-            .padding(12)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-        }
+        MapaElegirLugar(
+            colorPin: .appPrimary,
+            coordenada: coordElegida,
+            onTocar: { coord in
+                ubicacion.interactuar()
+                campoActivo = nil
+                AppHaptics.impact(.light)
+                confirmarSeleccionManual()
+                withAnimation(reduceMotion ? nil : .spring(response: 0.3)) {
+                    coordElegida = coord
+                }
+                escribirDireccionDesdeMapa(coord)
+            },
+            recentrarTrigger: recentrarTrigger,
+            spanInicial: spanCercano,
+            spanRecentrado: spanCercano,
+            iconoPin: iconoElegido,
+            centroCamara: ubicacion.centro,
+            recentrarCamaraTrigger: ubicacion.revisionCamara,
+            onInteraccion: { ubicacion.interactuar() }
+        )
         .frame(height: 280)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20, style: .continuous))
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 8) {
                 botonExpandirMapa
                 BotonUbicacionLugar(ubicacion: ubicacion, locationService: locationService)
             }
-            .padding(8)
+            .padding(12)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.outlineVariant.opacity(0.4), lineWidth: 1)
-        )
         .fullScreenCover(isPresented: $mapaExpandido) {
             MapaElegirExpandido(
                 coordenada: $coordElegida,
@@ -556,12 +636,9 @@ struct AddLugarSheet: View {
         } label: {
             Image(systemName: "arrow.up.left.and.arrow.down.right")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(.onSurface)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(.ultraThinMaterial))
-                .overlay(
-                    Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
-                )
+                .foregroundStyle(acento)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(.regularMaterial, in: Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(L.t("Expandir mapa", "Expand map"))
@@ -570,11 +647,12 @@ struct AddLugarSheet: View {
     private var selectorCategoria: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L.t("Categoría", "Category"))
-                .font(.headline)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.onSurface)
                 .accessibilityAddTraits(.isHeader)
-            LazyVGrid(columns: dynamicTypeSize.isAccessibilitySize
-                      ? [GridItem(.flexible())]
-                      : [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading),
+                                     count: dynamicTypeSize.isAccessibilitySize ? 1 : 2),
+                      alignment: .leading, spacing: 8) {
                 ForEach(CategoriaLugar.allCases) { opcion in
                     let seleccionada = categoria == opcion
                     Button {
@@ -582,30 +660,32 @@ struct AddLugarSheet: View {
                         categoria = opcion
                         AppHaptics.selection()
                     } label: {
-                        VStack(spacing: 8) {
+                        HStack(spacing: 8) {
                             Image(systemName: opcion.icono)
-                                .font(.title3.weight(.semibold))
+                                .font(.body)
+                                .foregroundStyle(seleccionada ? acento : Color(uiColor: .secondaryLabel))
+                                .frame(minWidth: 24)
                                 .accessibilityHidden(true)
                             Text(opcion.label)
-                                .font(.caption.weight(.semibold))
-                                .multilineTextAlignment(.center)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.onSurface)
                                 .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                            Image(systemName: "checkmark")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(acento)
+                                .opacity(seleccionada ? 1 : 0)
+                                .accessibilityHidden(true)
                         }
-                        .frame(maxWidth: .infinity, minHeight: 68)
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, 12)
                         .padding(.vertical, 12)
-                        .foregroundStyle(seleccionada ? Color.onPrimaryContainer : Color.onSurface)
-                        .background(seleccionada ? Color.primaryContainer : Color.surfaceContainerLow,
-                                    in: RoundedRectangle(cornerRadius: 16))
-                        .overlay(alignment: .topTrailing) {
-                            if seleccionada {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.onPrimaryContainer)
-                                    .padding(7)
-                                    .accessibilityHidden(true)
-                            }
+                        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                        .background(superficie, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(seleccionada ? acento : .clear, lineWidth: 1.5)
                         }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(opcion.label)
@@ -618,7 +698,8 @@ struct AddLugarSheet: View {
     private var selectorIcono: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L.t("Icono personalizado", "Custom icon"))
-                .font(.headline)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.onSurface)
                 .accessibilityAddTraits(.isHeader)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: dynamicTypeSize.isAccessibilitySize ? 80 : 52), spacing: 10)], spacing: 10) {
                 ForEach(IconoLugar.opciones) { opcion in
@@ -629,25 +710,29 @@ struct AddLugarSheet: View {
                         AppHaptics.selection()
                     } label: {
                         Image(systemName: opcion.id)
-                            .font(.title2.weight(.semibold))
+                            .font(.title3)
                             .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 80 : 56)
                             .foregroundStyle(seleccionado ? Color.onPrimaryFill : Color.onSurface)
-                            .background(seleccionado ? Color.primaryFill : Color.surfaceContainerLow,
-                                        in: RoundedRectangle(cornerRadius: 16))
+                            .background(seleccionado ? Color.primaryFill : .clear,
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .overlay(alignment: .topTrailing) {
                                 if seleccionado {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 10, weight: .heavy))
                                         .foregroundStyle(Color.onPrimaryFill)
                                         .padding(6)
+                                        .accessibilityHidden(true)
                                 }
                             }
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(opcion.nombre)
                     .accessibilityAddTraits(seleccionado ? .isSelected : [])
                 }
             }
+            .padding(12)
+            .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 
@@ -682,21 +767,25 @@ struct AddLugarSheet: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "bookmark.fill")
+                Image(systemName: "bookmark")
                     .font(.body.weight(.semibold))
                 Text(coordElegida == nil
                      ? L.t("Ubica el lugar para guardar", "Pin the place to save")
                      : L.signable("guardado.guardar_lugar", "Guardar lugar", "Save place"))
-                    .font(.headlineSm)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
             }
             .foregroundStyle(puedeGuardar ? Color.onPrimaryFill : Color.onSurfaceVariant)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .frame(maxWidth: .infinity, minHeight: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(puedeGuardar ? Color.primaryFill : Color.surfaceContainerHigh)
             )
         }
-        .buttonStyle(PressableCapsuleStyle())
+        .buttonStyle(.plain)
         .disabled(!puedeGuardar)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: puedeGuardar)
         .seniable(puedeGuardar ? "guardado.guardar_lugar" : nil, conGesto: false)
@@ -862,6 +951,7 @@ private struct MapaElegirExpandido: View {
                         .padding(.horizontal, 20)
                 }
                 pie
+                    .padding(.bottom, 12)
             }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: coordenada == nil)
         }
@@ -872,13 +962,15 @@ private struct MapaElegirExpandido: View {
             HStack(spacing: 6) {
                 Image(systemName: "mappin.circle.fill")
                     .font(.body.weight(.semibold))
+                    .accessibilityHidden(true)
                 Text(L.t("Elige la ubicación", "Pick the location"))
                     .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.onSurface)
             .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(Capsule().fill(Color.black.opacity(0.55)))
+            .padding(.vertical, 12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
 
             Spacer()
 
@@ -887,12 +979,9 @@ private struct MapaElegirExpandido: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(.onSurface)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(.ultraThinMaterial))
-                    .overlay(
-                        Circle().stroke(Color.outlineVariant.opacity(0.4), lineWidth: 0.5)
-                    )
+                    .foregroundStyle(Color.onSurface)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .background(.regularMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Cerrar", "Close"))
@@ -912,29 +1001,32 @@ private struct MapaElegirExpandido: View {
                     Image(systemName: "checkmark")
                         .font(.body.weight(.semibold))
                     Text(L.t("Usar esta ubicación", "Use this location"))
-                        .font(.headlineSm)
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.center)
                 }
-                .foregroundStyle(.onPrimaryFill)
+                .foregroundStyle(Color.onPrimaryFill)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, minHeight: 54)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.primaryFill)
-                        .shadow(color: .appPrimary.opacity(0.35), radius: 12, x: 0, y: 6)
-                )
+                .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .buttonStyle(PressableCapsuleStyle())
+            .buttonStyle(.plain)
             .padding(.horizontal, 20)
         } else {
             HStack(spacing: 6) {
                 Image(systemName: "hand.tap.fill")
-                    .font(.caption.weight(.semibold))
+                    .font(.subheadline)
+                    .accessibilityHidden(true)
                 Text(L.t("Toca el mapa para ubicar el lugar", "Tap the map to pin the location"))
-                    .font(.caption.weight(.semibold))
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.onSurface)
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(Color.black.opacity(0.55)))
+            .padding(.vertical, 12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 20)
         }
     }
 }
@@ -987,7 +1079,7 @@ struct AddLineaSheet: View {
                 }
             }
         }
-        .tint(Color.appPrimary)
+        .tint(Color.appAccent)
         .alert(L.t("No se pudo guardar la línea", "Unable to save line"), isPresented: $errorAlGuardar) {
             Button(L.t("Aceptar", "OK"), role: .cancel) {}
         } message: {

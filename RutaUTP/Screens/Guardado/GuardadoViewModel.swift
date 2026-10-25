@@ -27,6 +27,8 @@ final class GuardadoViewModel: ObservableObject {
     /// `LugaresStore` al cargar y se respeta al insertar.
     @Published private(set) var lugares: [LugarGuardado] = []
     @Published private(set) var datosLugaresInvalidos = false
+    @Published private var idsParaderosGuardados: Set<UUID> = []
+    private var catalogoParaderos: [ParaderoGTFS] = []
 
     private let almacen: AlmacenLugares
     private let repositorioGTFS: RutasGTFSProviding
@@ -54,6 +56,14 @@ final class GuardadoViewModel: ObservableObject {
     private static let lineasKey = "lineas.guardadas.v1"
 
     // MARK: - Derivados
+
+    var lugaresPersonales: [LugarGuardado] {
+        lugares.filter { !idsParaderosGuardados.contains($0.id) }
+    }
+
+    var paraderosGuardados: [LugarGuardado] {
+        lugares.filter { idsParaderosGuardados.contains($0.id) }
+    }
 
     /// Líneas guardadas resueltas contra el catálogo, en el orden en que se
     /// guardaron. Una referencia cuyo `route_id` ya no exista en el feed se
@@ -106,6 +116,9 @@ final class GuardadoViewModel: ObservableObject {
             let feed = try await repositorioGTFS.cargarRutas(reintentar: reintentar)
             guard !Task.isCancelled else { return }
             lineasGTFS = RutasViewModel.convertir(feed)
+            var vistos = Set<String>()
+            catalogoParaderos = feed.flatMap(\.paraderos).filter { vistos.insert($0.id).inserted }
+            actualizarGruposLugares()
             catalogoCargado = true
         } catch {
             guard !Task.isCancelled else { return }
@@ -143,6 +156,15 @@ final class GuardadoViewModel: ObservableObject {
     private func cargarLugares() {
         lugares = almacen.cargar()
         datosLugaresInvalidos = almacen.datosLocalesInvalidos
+        actualizarGruposLugares()
+    }
+
+    private func actualizarGruposLugares() {
+        // Reconoce también paraderos anteriores al ID, sin migrar ni reescribir
+        // los lugares. El cruce con el catálogo se hace al cargar, no al dibujar.
+        idsParaderosGuardados = Set(lugares.filter {
+            $0.esParaderoGuardado(en: catalogoParaderos)
+        }.map(\.id))
     }
 
     /// Solo se llama tras una confirmación explícita en la interfaz.

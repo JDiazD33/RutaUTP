@@ -147,7 +147,7 @@ struct LugarGuardado: Identifiable, Equatable, Codable {
         iconoPersonalizado ?? (esParadero ? CategoriaLugar.paradero.icono : categoria.icono)
     }
 
-    /// Criterio compartido por Seguridad y el selector de destinos del mapa.
+    /// Criterio compartido por Guardado y el selector de destinos del mapa.
     /// El catálogo reconoce los guardados anteriores a la incorporación del ID.
     func esParaderoGuardado(en catalogo: [ParaderoGTFS]) -> Bool {
         !esFijo && (esParadero || catalogo.contains { corresponde(al: $0) })
