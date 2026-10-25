@@ -106,3 +106,62 @@ Métricas originales guardadas por petición del usuario en
 El nuevo ensayo de contención/ocupación registra evidencia separada y no sustituye
 el intervalo original de 15 minutos ni sus métricas. Véase el informe posterior
 en esa misma carpeta `metricas`.
+
+## Medición propia de CPU y diagnóstico sin actores (23/10/2026)
+
+`TrialProcessResources` lee los contadores acumulados de usuario y sistema del
+proceso propio mediante `getrusage(RUSAGE_SELF)`, con resolución de microsegundos.
+Se usa solo cuando están presentes **ambos** indicadores de ensayo:
+`RUTAUTP_S10_TRIAL=1` y `RUTAUTP_S10_RESOURCE_SAMPLING=1`. El proveedor emite una
+muestra por segundo y detiene el timer al detenerse o fallar su arranque. La app
+normal no inicia este muestreo. No publica datos MQTT adicionales ni guarda
+credenciales, posiciones o RSS en estos eventos.
+
+Fuente primaria: [manual de Apple de getrusage](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/getrusage.2.html).
+Se emplean solamente los tiempos de usuario/sistema documentados; no se deduce
+footprint ni energía de los otros campos del sistema.
+
+`simulation.device_resources` valida PID exacto, versión, unidades, contadores
+monotónicos, reloj del dispositivo, aplicación activa, al menos 29 s y ausencia
+de huecos mayores de 5 s. La media usa delta CPU / delta de tiempo, normalizada
+a un núcleo. No promedia porcentajes de intervalos de distinta duración. Un
+resultado vacío, breve o inconsistente queda incompleto, no como 0 %.
+
+`DeviceObserver` activa este muestreo y usa exclusivamente el intervalo de
+consola del iPhone comprendido en la captura. El guardado de una traza de
+Instruments no acredita CPU. El perfilador queda opcional (`--instruments`) y
+crea una sola sesión para todos los procesos; se eliminó el acoplamiento por PID
+que fallaba y competía con capturas complementarias. La CPU propia no incluye
+pilas y su método debe identificarse al comparar con el Time Profiler anterior.
+
+El comando `--control-only` es un diagnóstico explícito del iPhone: inicializa
+control OFF, no crea productor, no ejecuta enable y exige cero runs,
+observaciones, posiciones y micros visibles. Por eso puede ejecutarse fuera del
+horario de servicio sin activar el escenario. Requiere `--device`, interfaz LAN
+privada y una Release compatible instalada. `--check-reconnect` solo se permite
+en este modo y reinicia el broker propio después de cerrar el intervalo de CPU.
+Verifica desconexión, nueva conexión, suscripción y estado OFF recibidos en orden.
+No cambia Wi-Fi, datos móviles ni otros brokers. No acredita la retirada de una
+flota activa durante un corte de red.
+
+Ejemplo, con un directorio de salida nuevo fuera de Git y el iPhone desbloqueado:
+
+```sh
+PYTHONPATH=backend backend/.venv/bin/python -m simulation.local_trial \
+  --profile pasajeros-30 --output /ruta/nueva/diagnostico \
+  --seconds 35 --listen-host IP-PRIVADA-DE-LA-MAC --device UDID \
+  --control-only --check-reconnect run
+```
+
+El resultado distingue `functionalComplete` (circuito funcional) y `complete`
+(incluye CPU válida si hay iPhone). `iPhoneMeasured` ahora exige muestras válidas
+del contador, no la mera salida 0 de Instruments. Un diagnóstico en vacío no
+sustituye la medición con 30 balizas.
+
+Para el tramo sostenido se conserva el perfil de máximo 900 s y la captura de
+870 s con margen de apagado. Antes de arrancar, verificar ventana [07:00,22:30)
+y presupuesto agregado entre todos los controles aislados de la fecha Lima:
+reservar las 6000 llamadas del perfil para el ensayo largo. No resetear ni elevar
+los contadores para encajarlo. La captura con 30 balizas, los cortes con flota
+activa y la suspensión física de iOS siguen pendientes si el horario o el
+presupuesto impiden ejecutarlos. Conservar los estados Vacío/Con espacio/Lleno.

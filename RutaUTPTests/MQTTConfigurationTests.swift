@@ -15,6 +15,34 @@ import Security
 
 final class MQTTConfigurationTests: XCTestCase {
 
+    func testMuestreoCPURequiereDosIndicadoresExplicitos() {
+        for environment in [[:], ["RUTAUTP_S10_TRIAL": "1"],
+                            ["RUTAUTP_S10_RESOURCE_SAMPLING": "1"],
+                            ["RUTAUTP_S10_TRIAL": "1", "RUTAUTP_S10_RESOURCE_SAMPLING": "true"]] {
+            XCTAssertFalse(TrialProcessResources.isEnabled(environment: environment))
+        }
+        XCTAssertTrue(TrialProcessResources.isEnabled(environment:
+            ["RUTAUTP_S10_TRIAL": "1", "RUTAUTP_S10_RESOURCE_SAMPLING": "1"]))
+    }
+
+    func testContadoresCPUConservanMicrosegundosYRechazanDesbordamiento() {
+        XCTAssertEqual(TrialProcessResources.microseconds(seconds: 2, fraction: 125_000), 2_125_000)
+        XCTAssertEqual(TrialProcessResources.microseconds(seconds: 0, fraction: 0), 0)
+        XCTAssertNil(TrialProcessResources.microseconds(seconds: -1, fraction: 0))
+        XCTAssertNil(TrialProcessResources.microseconds(seconds: 1, fraction: 1_000_000))
+        XCTAssertNil(TrialProcessResources.microseconds(seconds: Int.max, fraction: 0))
+    }
+
+    func testLecturaCPUIdentificaProcesoPropioConContadoresMonotonicos() throws {
+        let first = try XCTUnwrap(TrialProcessResources.read())
+        let second = try XCTUnwrap(TrialProcessResources.read())
+        XCTAssertEqual(first.processID, Int(ProcessInfo.processInfo.processIdentifier))
+        XCTAssertEqual(second.processID, first.processID)
+        XCTAssertGreaterThanOrEqual(second.userMicroseconds, first.userMicroseconds)
+        XCTAssertGreaterThanOrEqual(second.systemMicroseconds, first.systemMicroseconds)
+        XCTAssertGreaterThan(first.logicalCPUs, 0)
+    }
+
     // MARK: - Variables obligatorias
 
     func testSinHostNoConstruyeConfiguracion() {

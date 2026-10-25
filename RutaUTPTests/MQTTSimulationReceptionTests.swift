@@ -46,7 +46,8 @@ final class MQTTSimulationReceptionTests: XCTestCase {
             .merging(changes) { _, new in new }, topic: VehicleTrackingWire.controlTopic, retained: true)
     }
 
-    private func position(_ rig: Rig, simulated: Bool = true, legacy: Bool = false) throws -> CocoaMQTTMessage {
+    private func position(_ rig: Rig, simulated: Bool = true, legacy: Bool = false,
+                          occupancy: String? = nil) throws -> CocoaMQTTMessage {
         let id = simulated ? "sim:\(run):bus" : "observed-bus"
         var body: [String: Any] = ["vehicleId": id, "routeId": "route", "linea": "C-01", "lat": -12,
             "lon": -77, "speed": 5, "heading": 90, "timestamp": rig.now.wall]
@@ -54,6 +55,9 @@ final class MQTTSimulationReceptionTests: XCTestCase {
             body.merge(["schemaVersion": 2, "dataOrigin": simulated ? "simulated" : "observed",
                 "simulationRunId": simulated ? run as Any : NSNull(),
                 "controlRevision": simulated ? 3 as Any : NSNull()]) { _, new in new }
+        }
+        if let occupancy {
+            body.merge(["schemaVersion": 3, "scenarioOccupancy": occupancy, "occupancyScriptVersion": 1]) { _, new in new }
         }
         return try message(body, topic: "rutautp/vehiculos/\(id)/posicion")
     }
@@ -100,6 +104,26 @@ final class MQTTSimulationReceptionTests: XCTestCase {
         client.didReceiveMessage(client, try state(), 5)
         client.didReceiveMessage(client, try position(rig), 6)
         XCTAssertEqual(provider.currentPositions.count, 1)
+    }
+
+    func testOcupacionV3NoReviveTrasDesconexionSinControlNiTrasCaducar() throws {
+        let rig = Rig(); let provider = provider(rig); defer { provider.stop() }
+        let client = try connect(provider, rig)
+        client.didReceiveMessage(client, try state(), 1)
+        client.didReceiveMessage(client, try position(rig, occupancy: "full"), 2)
+        XCTAssertEqual(provider.currentPositions.first?.scenarioOccupancy, .full)
+        client.didDisconnect(client, nil)
+        XCTAssertTrue(provider.currentPositions.isEmpty)
+        client.didConnectAck(client, .accept)
+        client.didSubscribeTopics(client, [VehicleTrackingWire.controlTopic: 1] as NSDictionary, [])
+        client.didReceiveMessage(client, try position(rig, occupancy: "full"), 3)
+        XCTAssertTrue(provider.currentPositions.isEmpty)
+        client.didReceiveMessage(client, try state(), 4)
+        client.didReceiveMessage(client, try position(rig, occupancy: "space"), 5)
+        XCTAssertEqual(provider.currentPositions.first?.scenarioOccupancy, .space)
+        rig.now = VehicleReceptionTime(wall: 1016, uptime: 116)
+        client.didReceiveMessage(client, try position(rig, occupancy: "empty"), 6)
+        XCTAssertTrue(provider.currentPositions.isEmpty)
     }
 
     func testControlMalformadoYFalloDeSuscripcionRetiranSinteticos() throws {

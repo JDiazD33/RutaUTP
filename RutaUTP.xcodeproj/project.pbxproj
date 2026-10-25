@@ -208,6 +208,7 @@
 		0791FD2211F64AF99E73E62F /* MQTTSimulationReceptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61387C4B5205495A8913BB87 /* MQTTSimulationReceptionTests.swift */; };
 		E3A915D455274F139F36C39C /* VehiclePresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F5A7A7D389A475BADD8A3E2 /* VehiclePresentationPolicyTests.swift */; };
 		8C399B6ADEA345E6976EE58D /* SimulationPresentationIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1F67DAD2164BC191B584AF /* SimulationPresentationIntegrationTests.swift */; };
+		D3E7F0B5D7424448A1909557 /* TrialProcessResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC4201735634E0F8EB7ECB3 /* TrialProcessResources.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -430,6 +431,7 @@
 		61387C4B5205495A8913BB87 /* MQTTSimulationReceptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTSimulationReceptionTests.swift; sourceTree = "<group>"; };
 		8F5A7A7D389A475BADD8A3E2 /* VehiclePresentationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclePresentationPolicyTests.swift; sourceTree = "<group>"; };
 		1F1F67DAD2164BC191B584AF /* SimulationPresentationIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationPresentationIntegrationTests.swift; sourceTree = "<group>"; };
+		6FC4201735634E0F8EB7ECB3 /* TrialProcessResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrialProcessResources.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -803,6 +805,7 @@
 				0A8004E7300AD9FE004E1676 /* TripSession.swift */,
 				0A8004E8300AD9FE004E1676 /* VehiclePosition.swift */,
 				0D7080ECB0A548F286FA6F83 /* VehicleTrackingReception.swift */,
+				6FC4201735634E0F8EB7ECB3 /* TrialProcessResources.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1204,6 +1207,7 @@
 				0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */,
 				0A800518300AD9FE004E1676 /* VehiclePosition.swift in Sources */,
 				F7671731E24F401E99613B28 /* VehicleTrackingReception.swift in Sources */,
+				D3E7F0B5D7424448A1909557 /* TrialProcessResources.swift in Sources */,
 				0A800515300AD9FE004E1676 /* RouteCalculationService.swift in Sources */,
 				0A800506300AD9FE004E1676 /* GuardadoView.swift in Sources */,
 				AA8800000000000000000B01 /* GuardadoViewModel.swift in Sources */,

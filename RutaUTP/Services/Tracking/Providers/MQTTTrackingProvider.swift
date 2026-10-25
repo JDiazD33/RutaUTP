@@ -42,6 +42,36 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     private static let stalenessSweepInterval: TimeInterval = 10
 
     private var stalenessTimer: Timer?
+    private var trialResourceTimer: Timer?
+
+    private func startTrialResourceSampling() {
+        guard TrialProcessResources.isEnabled(), trialResourceTimer == nil else { return }
+        let token = generation
+        sampleTrialResources()
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.isRunning, self.generation == token else { return }
+                self.sampleTrialResources()
+            }
+        }
+        trialResourceTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func sampleTrialResources() {
+        guard let sample = TrialProcessResources.read() else {
+            MQTTConfiguration.trialLog("processResourceFailure", ["code": 1])
+            return
+        }
+        MQTTConfiguration.trialLog("processResources", sample.counts.merging(
+            ["active": UIApplication.shared.applicationState == .active ? 1 : 0]
+        ) { _, new in new })
+    }
+
+    private func stopTrialResourceSampling() {
+        trialResourceTimer?.invalidate()
+        trialResourceTimer = nil
+    }
 
     /// Indica si el proveedor está en marcha.
     ///
@@ -195,6 +225,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         mqtt = client
         configureCallbacks(for: client)
         isRunning = true
+        startTrialResourceSampling()
         startStalenessSweep()
         observeLifecycle()
 
@@ -212,6 +243,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             client.autoReconnect = false
             client.disconnect()
             stopStalenessSweep()
+            stopTrialResourceSampling()
             stopControlExpiry()
             stopObservingLifecycle()
         }
@@ -226,6 +258,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         previous?.disconnect()
 
         stopStalenessSweep()
+        stopTrialResourceSampling()
         stopControlExpiry()
         stopObservingLifecycle()
         connected = false
@@ -334,6 +367,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         mqtt.didDisconnect = { [weak self] client, _ in
             MainActor.assumeIsolated {
                 guard let self, self.isCurrent(client, token: token) else { return }
+                MQTTConfiguration.trialLog("disconnection", ["accepted": 0])
                 self.connected = false
                 self.controlSubscribed = false
                 self.control.invalidate()

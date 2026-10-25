@@ -28,7 +28,7 @@ from rutautp_backend.health import read_heartbeat
 from rutautp_backend.simulation_admin import status
 from rutautp_backend.simulation_control_store import ControlStore, ControlUnavailable
 from rutautp_backend.simulation_profile import PROFILE_SPECS, SimulationProfile
-from rutautp_backend.simulation_reporting import run_report, export_comparison
+from rutautp_backend.simulation_reporting import run_report, export_comparison, history_reader
 from .measurement import capture
 
 HOST = '127.0.0.1'
@@ -172,7 +172,8 @@ def verify_local_acl(host: str, port: int, accounts: dict[str, str], run_id: str
 
 
 def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DEFAULT_GTFS_DIR),
-              host: str = HOST, observer=None, scenario_occupancy: bool = False) -> dict:
+              host: str = HOST, observer=None, scenario_occupancy: bool = False,
+              control_only: bool = False, check_reconnect: bool = False) -> dict:
     root = Path(__file__).resolve().parents[2]
     output = output.expanduser().absolute()
     host = trial_host(host)
@@ -181,7 +182,11 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
     profile = SimulationProfile.load(name, gtfs_dir)
     if type(seconds) is not int or not 10 <= seconds <= profile.max_run_seconds-30:
         raise ValueError('captura de al menos 10 s y margen de 30 s antes del máximo del perfil')
-    if not profile.window(time.time())[0]:
+    if control_only and observer is None:
+        raise ValueError('el diagnóstico sin actores requiere observador iPhone')
+    if check_reconnect and not control_only:
+        raise ValueError('la comprobación de reconexión aislada requiere control-only')
+    if not control_only and not profile.window(time.time())[0]:
         raise ValueError('ensayo conectado solo dentro del horario del perfil')
     broker_exe, password_exe = shutil.which('mosquitto'), shutil.which('mosquitto_passwd')
     if not broker_exe or not password_exe:
@@ -228,49 +233,79 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
             report['localACLVerified'] = True
             if observer is not None: observer.started(host, port, accounts['reader'], output)
             report['diskBeforeRunBytes'] = trial_disk(output)
-            control.enable(profile.pinned(), time.time())
-            def applied():
-                state = status(control, time.time())
-                return (state['runOwner'] is not None and state['backend']['fresh']
-                    and state['mqtt']['lastAckedRevision'] == state['controlRevision'])
-            wait_until(applied)
-            state = status(control, time.time()); report['runId'] = state['runId']
-            report['controlRevision'] = state['controlRevision']
-            private_json(credentials_file, {'schemaVersion': 1, 'host': host, 'port': port, 'tls': False,
-                'caFile': None, 'accounts': {p: {'username': p, 'password': accounts[p]} for p in profile.principals}})
-            actor = spawn([sys.executable, '-m', 'simulation', '--control-db', str(control.path),
-                '--history-db', str(output/'history.sqlite'), '--credentials-file', str(credentials_file),
-                '--profile', name, '--gtfs-dir', str(gtfs_dir), '--reference-jsonl', str(output/'reference.jsonl'), 'run'], 'producer.log')
-            wait_until(lambda: status(control, time.time())['counts']['mqttConnections'] == len(profile.principals), 45)
-            print(json.dumps({'phase': 'capture', 'profile': name, 'seconds': seconds}), flush=True)
-            if observer is not None: observer.capture_started()
-            report['resources'] = capture({'backend': backend.pid, 'producer': actor.pid,
-                'broker': broker.pid}, output/'resources.jsonl', seconds)
-            report['statusBeforeDisable'] = status(control, time.time())
-            report['heartbeatBeforeDisable'] = read_heartbeat(str(output/'health.json'))
-            report['diskBeforeDisableBytes'] = trial_disk(output)
-            if observer is not None: observer.prepare_disable()
-            requested = time.monotonic(); control.disable(time.time(), 's10_local_trial_finished')
-            report['disableRequestedWall'] = time.time()
-            if observer is not None:
-                report['device'] = observer.finished(requested)
-                report['iPhoneMeasured'] = report['device']['traceCaptured']
-                report['iosCleanupSeconds'] = report['device']['cleanupUpperBoundSeconds']
-            def off():
-                snapshot = probe.snapshot(); body = snapshot['control'] or {}
-                return body.get('enabled') is False and body.get('controlRevision', 0) > report['controlRevision']
-            wait_until(off, 15)
-            report['probeDisableDeliverySeconds'] = probe.snapshot()['controlSeenAtUptime']-requested
-            wait_until(lambda: status(control, time.time())['producer'].get('status') == 'stopped', 15)
-            wait_until(lambda: status(control, time.time())['backend']['appliedRevision'] == control.read()['revision'], 15)
-            report['probe'] = probe.snapshot()
-            report['history'] = run_report(output/'history.sqlite', report['runId'], time.time())
-            with (output/'comparison.csv').open('x') as exported:
-                export_comparison(output/'history.sqlite', report['runId'], exported, format='csv')
-            report['statusAfterDisable'] = status(control, time.time())
-            report['complete'] = (report['resources']['complete'] and report['probe']['receivedPositions'] > 0
-                and report['probe']['invalidPositions'] == 0 and report['history']['historyComplete']
-                and report['history']['stored']['observations']['rows'] > 0)
+            if control_only:
+                # Diagnóstico deliberado fuera de horario: no enable, productor,
+                # actores ni posiciones. La cuenta iOS es solo lectora.
+                report['mode'] = 'disabled_control_no_actors'
+                observer.capture_started(require_positions=False)
+                report['resources'] = capture({'backend': backend.pid, 'broker': broker.pid},
+                    output/'resources.jsonl', seconds)
+                observer.prepare_disable()
+                if check_reconnect:
+                    def disconnect():
+                        broker.terminate(); broker.wait(timeout=7)
+                    def reconnect():
+                        nonlocal broker
+                        broker=spawn([broker_exe, '-c', str(output/'mosquitto.conf')], 'broker-reconnected.log')
+                        wait_until(broker_ready, 10)
+                    report['reconnection']=observer.check_reconnection(disconnect,reconnect)
+                report['device'] = observer.finished(time.monotonic(), require_positions=False)
+                report['iPhoneMeasured'] = report['device']['cpu']['complete']
+                report['statusAfterDisable'] = status(control, time.time())
+                report['probe'] = probe.snapshot()
+                with history_reader(output/'history.sqlite') as db:
+                    report['controlOnlyStorageCounts'] = {table: db.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]
+                        for table in ('simulation_runs', 'observations', 'vehicle_positions')}
+                report['functionalComplete'] = (report['resources']['complete']
+                    and not control.read()['enabled'] and report['probe']['receivedPositions'] == 0
+                    and report['probe']['invalidPositions'] == 0 and report['device']['maxFleet'] == 0
+                    and all(value == 0 for value in report['controlOnlyStorageCounts'].values()))
+                report['complete'] = report['functionalComplete'] and report['iPhoneMeasured']
+            else:
+                control.enable(profile.pinned(), time.time())
+                def applied():
+                    state = status(control, time.time())
+                    return (state['runOwner'] is not None and state['backend']['fresh']
+                        and state['mqtt']['lastAckedRevision'] == state['controlRevision'])
+                wait_until(applied)
+                state = status(control, time.time()); report['runId'] = state['runId']
+                report['controlRevision'] = state['controlRevision']
+                private_json(credentials_file, {'schemaVersion': 1, 'host': host, 'port': port, 'tls': False,
+                    'caFile': None, 'accounts': {p: {'username': p, 'password': accounts[p]} for p in profile.principals}})
+                actor = spawn([sys.executable, '-m', 'simulation', '--control-db', str(control.path),
+                    '--history-db', str(output/'history.sqlite'), '--credentials-file', str(credentials_file),
+                    '--profile', name, '--gtfs-dir', str(gtfs_dir), '--reference-jsonl', str(output/'reference.jsonl'), 'run'], 'producer.log')
+                wait_until(lambda: status(control, time.time())['counts']['mqttConnections'] == len(profile.principals), 45)
+                print(json.dumps({'phase': 'capture', 'profile': name, 'seconds': seconds}), flush=True)
+                if observer is not None: observer.capture_started()
+                report['resources'] = capture({'backend': backend.pid, 'producer': actor.pid,
+                    'broker': broker.pid}, output/'resources.jsonl', seconds)
+                report['statusBeforeDisable'] = status(control, time.time())
+                report['heartbeatBeforeDisable'] = read_heartbeat(str(output/'health.json'))
+                report['diskBeforeDisableBytes'] = trial_disk(output)
+                if observer is not None: observer.prepare_disable()
+                requested = time.monotonic(); control.disable(time.time(), 's10_local_trial_finished')
+                report['disableRequestedWall'] = time.time()
+                if observer is not None:
+                    report['device'] = observer.finished(requested)
+                    report['iPhoneMeasured'] = report['device']['cpu']['complete']
+                    report['iosCleanupSeconds'] = report['device']['cleanupUpperBoundSeconds']
+                def off():
+                    snapshot = probe.snapshot(); body = snapshot['control'] or {}
+                    return body.get('enabled') is False and body.get('controlRevision', 0) > report['controlRevision']
+                wait_until(off, 15)
+                report['probeDisableDeliverySeconds'] = probe.snapshot()['controlSeenAtUptime']-requested
+                wait_until(lambda: status(control, time.time())['producer'].get('status') == 'stopped', 15)
+                wait_until(lambda: status(control, time.time())['backend']['appliedRevision'] == control.read()['revision'], 15)
+                report['probe'] = probe.snapshot()
+                report['history'] = run_report(output/'history.sqlite', report['runId'], time.time())
+                with (output/'comparison.csv').open('x') as exported:
+                    export_comparison(output/'history.sqlite', report['runId'], exported, format='csv')
+                report['statusAfterDisable'] = status(control, time.time())
+                report['functionalComplete'] = (report['resources']['complete'] and report['probe']['receivedPositions'] > 0
+                    and report['probe']['invalidPositions'] == 0 and report['history']['historyComplete']
+                    and report['history']['stored']['observations']['rows'] > 0)
+                report['complete'] = report['functionalComplete'] and (observer is None or report['iPhoneMeasured'])
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, KeyboardInterrupt) as error:
             report['failure'] = type(error).__name__
         finally:
@@ -302,6 +337,9 @@ def main(argv=None) -> int:
     parser.add_argument('--listen-host', default=HOST, type=trial_host,
                         help='interfaz IPv4 privada explícita; loopback por defecto')
     parser.add_argument('--scenario-occupancy', action='store_true', help='guion de ocupación v1, salida sintética v3')
+    parser.add_argument('--control-only', action='store_true', help='diagnóstico iPhone con control OFF; cero actores, permitido fuera de horario')
+    parser.add_argument('--check-reconnect', action='store_true', help='reiniciar solo el broker propio después de la captura de CPU; requiere control-only')
+    parser.add_argument('--instruments', action='store_true', help='una traza adicional opcional; su guardado no valida CPU')
     parser.add_argument('--device', help='UDID del iPhone; requiere Release instalado y una IP LAN')
     parser.add_argument('--bundle-id', default='apolito.RutaUTP.dev-joaquindiaz.RutaUTP')
     parser.add_argument('command', choices=['run'])
@@ -315,8 +353,9 @@ def main(argv=None) -> int:
             if ipaddress.ip_address(args.listen_host).is_loopback:
                 raise ValueError('el iPhone requiere la interfaz LAN privada de la Mac')
             from .device_trial import DeviceObserver
-            observer = DeviceObserver(args.device, args.bundle_id)
-        result = run_trial(args.output, args.profile, args.seconds, host=args.listen_host, observer=observer, scenario_occupancy=args.scenario_occupancy)
+            observer = DeviceObserver(args.device, args.bundle_id, instruments=args.instruments)
+        result = run_trial(args.output, args.profile, args.seconds, host=args.listen_host, observer=observer,
+            scenario_occupancy=args.scenario_occupancy, control_only=args.control_only, check_reconnect=args.check_reconnect)
         print(json.dumps({'phase': 'finished', 'complete': result['complete'],
             'profile': args.profile, 'failure': result['failure']}), flush=True)
         return 130 if result['failure'] == 'KeyboardInterrupt' else (0 if result['complete'] else 2)
