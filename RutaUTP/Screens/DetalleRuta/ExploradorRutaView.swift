@@ -62,7 +62,7 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
         for (i, p) in visibles.enumerated() {
             mapView.addAnnotation(ParaderoExploraAnnotation(
                 coordinate: p.coordinate,
-                nombre: p.nombre,
+                nombre: p.nombreVisible,
                 esInicio: i == 0,
                 esFin: i == visibles.count - 1
             ))
@@ -252,8 +252,8 @@ struct ExploradorRutaView: View {
         .sheet(isPresented: $mostrarListaParaderos) {
             NavigationStack {
                 List(Array(ruta.paraderos.enumerated()), id: \.offset) { indice, paradero in
-                    Text(paradero.nombre)
-                        .accessibilityLabel(L.f("Paradero {0}: ", "Stop {0}: ", ["\(indice + 1)"]) + paradero.nombre)
+                    Text(paradero.nombreVisible)
+                        .accessibilityLabel(L.f("Paradero {0}: ", "Stop {0}: ", ["\(indice + 1)"]) + paradero.nombreVisible)
                 }
                 .navigationTitle(L.t("Paraderos de ", "Stops for ") + ruta.linea)
                 .toolbar {
@@ -326,7 +326,7 @@ struct ExploradorRutaView: View {
         VStack(spacing: 3) {
             Image(systemName: icono)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.appPrimary)
+                .foregroundStyle(.appAccent)
             Text(valor)
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.onSurface)

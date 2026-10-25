@@ -49,10 +49,10 @@ struct TrackingMapCanvas: View {
                         .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
                     MapPolyline(coordinates: transfer.busDibujo)
                         .stroke(transfer.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                    Annotation(plan.firstAlight.nombre, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
+                    Annotation(plan.firstAlight.nombreVisible, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
                         TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .orange)
                     }
-                    Annotation(transfer.board.nombre, coordinate: transfer.board.coordinate, anchor: .bottom) {
+                    Annotation(transfer.board.nombreVisible, coordinate: transfer.board.coordinate, anchor: .bottom) {
                         TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
                     }
                 }
@@ -65,7 +65,7 @@ struct TrackingMapCanvas: View {
                     TransitStopMarker(number: plan.transfer == nil ? "2" : "4", title: L.t("BAJA", "EXIT"), color: .appPrimary)
                 }
             } else if let stop = vm.nearestStop {
-                Annotation(stop.nombre, coordinate: stop.coordinate, anchor: .bottom) {
+                Annotation(stop.nombreVisible, coordinate: stop.coordinate, anchor: .bottom) {
                     TransitStopMarker(number: "", title: L.t("PARADERO", "STOP"), color: .secondary)
                 }
             }
@@ -76,7 +76,7 @@ struct TrackingMapCanvas: View {
             }) {
                 Annotation(destinoActual.label, coordinate: destinoActual.coordinate) {
                     Image(systemName: "flag.checkered.circle.fill")
-                        .font(.system(size: 30)).foregroundStyle(Color.appPrimary)
+                        .font(.system(size: 30)).foregroundStyle(Color.appAccent)
                         .background(Circle().fill(Color.appSurface))
                 }
             }

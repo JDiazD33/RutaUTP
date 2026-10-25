@@ -86,8 +86,8 @@ final class RutasViewModel: ObservableObject {
                 colorLinea: ruta.color,
                 shape: ruta.shape,
                 paraderos: ruta.paraderos,
-                paradaInicio: ruta.paraderos.first?.nombre ?? L.t("Paradero inicial", "First stop"),
-                paradaFin: ruta.paraderos.last?.nombre ?? L.t("Paradero final", "Last stop"),
+                paradaInicio: ruta.paraderos.first?.nombre ?? "",
+                paradaFin: ruta.paraderos.last?.nombre ?? "",
                 variante: ruta.variante
             )
         }

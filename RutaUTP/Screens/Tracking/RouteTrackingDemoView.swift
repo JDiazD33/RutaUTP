@@ -466,7 +466,7 @@ private struct TrackingScreenContent: View {
                 controlesViaje
             } else {
                 if let stop = vm.nearestStop, let meters = vm.nearestStopMeters {
-                    Label(L.t("Paradero cercano: ", "Nearest stop: ") + stop.nombre + " · \(Int(meters)) m",
+                    Label(L.t("Paradero cercano: ", "Nearest stop: ") + stop.nombreVisible + " · \(Int(meters)) m",
                           systemImage: "bus.fill")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.secondary)
@@ -687,7 +687,7 @@ private struct TrackingScreenContent: View {
                     TextField(L.t("Dirección o lugar en Trujillo", "Address or place in Trujillo"), text: $destinoTexto)
                         .font(.body)
                         .foregroundStyle(Color.onSurface)
-                        .tint(Color.appPrimary)
+                        .tint(Color.appAccent)
                         .submitLabel(.search)
                         .focused($destinationFocused)
                         .onSubmit { searchDestination() }
@@ -710,14 +710,15 @@ private struct TrackingScreenContent: View {
 
                 Button(action: searchDestination) {
                     HStack {
-                        if vm.buscandoDestino { ProgressView().tint(.white) }
+                        if vm.buscandoDestino { ProgressView().tint(Color.onPrimaryFill) }
                         Text(vm.buscandoDestino ? L.t("Buscando…", "Searching…") : L.t("Buscar destino", "Search destination"))
                     }
                     .font(.body.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.appPrimary)
+                .tint(Color.primaryFill)
+                .foregroundStyle(Color.onPrimaryFill)
                 .disabled(vm.buscandoDestino || destinoTexto.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 if let error = destinationSearchError {
@@ -773,15 +774,15 @@ private struct TrackingScreenContent: View {
         let plan = installed.plan
         let metrics = installed.metrics
         return VStack(alignment: .leading, spacing: 8) {
-            Label("1 · " + plan.board.nombre + " · \(Int(metrics.walkToBoardMeters)) m " + L.t("a pie", "walk"),
+            Label("1 · " + plan.board.nombreVisible + " · \(Int(metrics.walkToBoardMeters)) m " + L.t("a pie", "walk"),
                   systemImage: "figure.walk")
             Label(L.t("Micro ", "Bus ") + plan.route.lineaConLetra + " · " + plan.route.precioTexto,
                   systemImage: "bus.fill")
                 .fixedSize(horizontal: false, vertical: true)
             if let transfer = plan.transfer {
                 Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
-                Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
-                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.transferWalkMeters))) m · " + transfer.board.nombre,
+                Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombreVisible, systemImage: "mappin.and.ellipse")
+                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.transferWalkMeters))) m · " + transfer.board.nombreVisible,
                       systemImage: "figure.walk")
                 Label(L.t("Luego toma ", "Then take ") + transfer.route.lineaConLetra + " · " + transfer.route.precioTexto,
                       systemImage: "arrow.triangle.swap")
@@ -790,7 +791,7 @@ private struct TrackingScreenContent: View {
                          "Time includes an estimated wait for the second bus."))
                     .foregroundStyle(Color.onSurfaceVariant)
             }
-            Label((plan.transfer == nil ? "2 · " : "4 · ") + plan.alight.nombre + " · \(Int(metrics.walkToDestinationMeters)) m " + L.t("al destino", "to destination"),
+            Label((plan.transfer == nil ? "2 · " : "4 · ") + plan.alight.nombreVisible + " · \(Int(metrics.walkToDestinationMeters)) m " + L.t("al destino", "to destination"),
                   systemImage: "flag.checkered")
             Text(L.t("··· Caminata     ━ Recorrido del micro", "··· Walk     ━ Bus route"))
                 .font(.system(size: 10)).foregroundStyle(Color.onSurfaceVariant)

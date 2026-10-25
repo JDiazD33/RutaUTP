@@ -111,6 +111,20 @@
     "de": "Haltestelle ohne Namen",
     "zh-Hans": "未命名站点"
   },
+  "Paradero inicial sin nombre": {
+    "en": "Unnamed first stop",
+    "fr": "Arrêt de départ sans nom",
+    "pt-BR": "Parada inicial sem nome",
+    "de": "Starthaltestelle ohne Namen",
+    "zh-Hans": "未命名起点站"
+  },
+  "Paradero final sin nombre": {
+    "en": "Unnamed last stop",
+    "fr": "Arrêt d’arrivée sans nom",
+    "pt-BR": "Parada final sem nome",
+    "de": "Endhaltestelle ohne Namen",
+    "zh-Hans": "未命名终点站"
+  },
   "Buscar rutas": {
     "en": "Search routes",
     "fr": "Rechercher des itinéraires",

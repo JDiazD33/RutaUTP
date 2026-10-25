@@ -97,10 +97,10 @@ struct TransitMapCanvas: View {
                         .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
                     MapPolyline(coordinates: transfer.busDibujo)
                         .stroke(transfer.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                    Annotation(plan.firstAlight.nombre, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
+                    Annotation(plan.firstAlight.nombreVisible, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
                         TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .orange)
                     }
-                    Annotation(transfer.board.nombre, coordinate: transfer.board.coordinate, anchor: .bottom) {
+                    Annotation(transfer.board.nombreVisible, coordinate: transfer.board.coordinate, anchor: .bottom) {
                         TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
                     }
                 }

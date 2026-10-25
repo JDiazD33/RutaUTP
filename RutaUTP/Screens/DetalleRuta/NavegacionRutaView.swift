@@ -179,12 +179,13 @@ struct NavegacionRutaView: View {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.appPrimary)
+                .tint(Color.primaryFill)
+                .foregroundStyle(Color.onPrimaryFill)
             }
 
             HStack(spacing: 8) {
                 Image(systemName: "flag.fill").foregroundStyle(ruta.colorLinea)
-                Text(L.t("Hasta ", "To ") + ruta.paradaFin)
+                Text(L.t("Hasta ", "To ") + ruta.paradaFinVisible)
                     .lineLimit(2)
                 Spacer(minLength: 0)
                 Text(ruta.costo).fontWeight(.semibold)
@@ -347,16 +348,16 @@ struct NavegacionRutaView: View {
         case .sinPermiso:
             return L.t("Permite el acceso a tu ubicación en Ajustes.", "Allow location access in Settings.")
         case .enRuta:
-            let nombre = viewModel.paraderoSiguiente?.nombre ?? ruta.paradaFin
+            let nombre = viewModel.paraderoSiguiente?.nombreVisible ?? ruta.paradaFinVisible
             return nombre + (viewModel.distanciaProximoParaderoTexto.map { " · " + $0 } ?? "")
         case .fueraDeRuta:
             guard let paradero = viewModel.paraderoCercano, let metros = viewModel.distanciaParaderoM else {
                 return L.t("Busca un paradero de la línea ", "Look for a stop on line ") + ruta.linea
             }
             let distancia = metros >= 1000 ? FormatoNumero.decimal(metros / 1000) + " km" : "\(Int(metros)) m"
-            return paradero.nombre + " · " + distancia + L.t(" en línea recta", " straight-line distance")
+            return paradero.nombreVisible + " · " + distancia + L.t(" en línea recta", " straight-line distance")
         case .cercaDestino, .finalizado:
-            return ruta.paradaFin
+            return ruta.paradaFinVisible
         }
     }
 
@@ -371,7 +372,7 @@ struct NavegacionRutaView: View {
                 .font(.system(size: 20, weight: .heavy))
                 .foregroundStyle(.white)
                 .accessibilityAddTraits(.isHeader)
-            Text(L.t("Llegaste a ", "You arrived at ") + ruta.paradaFin)
+            Text(L.t("Llegaste a ", "You arrived at ") + ruta.paradaFinVisible)
                 .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)

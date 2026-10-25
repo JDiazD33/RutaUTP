@@ -112,10 +112,10 @@ struct TrackingInstructionPanel: View {
         case .enRuta:
             guard let plan = vm.itinerary else { return "" }
             switch vm.journeyLeg {
-            case .walkingToBoard: return plan.board.nombre
-            case .riding: return L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre
-            case .transferring: return plan.transfer?.board.nombre ?? ""
-            case .ridingSecond: return L.t("Baja en ", "Get off at ") + plan.alight.nombre
+            case .walkingToBoard: return plan.board.nombreVisible
+            case .riding: return L.t("Baja en ", "Get off at ") + plan.firstAlight.nombreVisible
+            case .transferring: return plan.transfer?.board.nombreVisible ?? ""
+            case .ridingSecond: return L.t("Baja en ", "Get off at ") + plan.alight.nombreVisible
             case .walkingToDestination: return vm.destinoSeleccionado?.label ?? ""
             }
         case .fueraDeRuta:

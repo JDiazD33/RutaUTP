@@ -205,8 +205,8 @@ struct RutaMapKitView: View {
                     colorLinea: UIColor(ruta.colorLinea),
                     linea: ruta.linea,
                     idRuta: ruta.id,
-                    tituloOrigen: ruta.paradaInicio,
-                    tituloDestino: ruta.paradaFin
+                    tituloOrigen: ruta.paradaInicioVisible,
+                    tituloDestino: ruta.paradaFinVisible
                 )
             } else {
                 sinTrazado
@@ -214,25 +214,20 @@ struct RutaMapKitView: View {
 
             // Badge "RECORRIDO OFICIAL"
             HStack(spacing: 5) {
-                Image(systemName: "shield.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
+                Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
+                    .accessibilityHidden(true)
                 Text(L.t("RECORRIDO OFICIAL", "OFFICIAL ROUTE"))
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .appTracking(0.5)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(
-                Capsule()
-                    .fill(Color.tertiary)
-                    .shadow(color: .black.opacity(0.20), radius: 6, x: 0, y: 2)
-            )
-            .padding(.top, 14)
-            .padding(.trailing, 14)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(Color.onSurface)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.regularMaterial, in: Capsule())
+            .padding(12)
+            .accessibilityElement(children: .combine)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     /// Estado honesto para una ruta sin geometría en el feed.
@@ -241,8 +236,9 @@ struct RutaMapKitView: View {
             Color.surfaceContainerLow
             VStack(spacing: 8) {
                 Image(systemName: "map")
-                    .font(.system(size: 26))
-                    .foregroundStyle(.onSurfaceVariant.opacity(0.55))
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 Text(L.t("Esta línea no trae trazado en el feed",
                          "This line has no geometry in the feed"))
                     .font(.bodySm)

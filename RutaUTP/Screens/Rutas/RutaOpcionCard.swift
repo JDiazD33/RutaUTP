@@ -46,8 +46,8 @@ struct RutaOpcionCard: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                extremo(ruta.paradaInicio, destino: false)
-                extremo(ruta.paradaFin, destino: true)
+                extremo(ruta.paradaInicioVisible, destino: false)
+                extremo(ruta.paradaFinVisible, destino: true)
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)

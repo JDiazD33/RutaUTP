@@ -19,6 +19,18 @@ struct RutaOpcion: Identifiable, Equatable {
     let paradaFin: String
     var variante: String = ""
 
+    // Se resuelven al presentar para responder también a cambios de idioma.
+    // No se usa otro paradero ni el título del recorrido como terminal supuesto.
+    var paradaInicioVisible: String {
+        GTFSNombreParser.nombreRegistrado(paradaInicio)
+            ?? L.t("Paradero inicial sin nombre", "Unnamed first stop")
+    }
+
+    var paradaFinVisible: String {
+        GTFSNombreParser.nombreRegistrado(paradaFin)
+            ?? L.t("Paradero final sin nombre", "Unnamed last stop")
+    }
+
     /// Misma identificación visible que el mapa, sin modificar línea o variante.
     var letraTransporte: String {
         GTFSNombreParser.identificacionTransporte(linea: linea, variante: variante).letra

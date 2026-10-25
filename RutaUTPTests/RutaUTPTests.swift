@@ -84,6 +84,90 @@ final class GTFSCSVTests: XCTestCase {
     }
 }
 
+final class GTFSStopPresentationTests: XCTestCase {
+    func testMarcadoresDeNombreAusenteNoSePresentanComoNombres() {
+        for nombre in ["innominada", " INNOMINADA\n", "innominado", "inominada", "Unnamed", "sin nombre", "s/n", " \n"] {
+            XCTAssertNil(GTFSNombreParser.nombreRegistrado(nombre), nombre)
+        }
+        for nombre in ["Avenida Innominada", "Calle Sin Nombre", "José de San Martín"] {
+            XCTAssertEqual(GTFSNombreParser.nombreRegistrado(nombre), nombre)
+        }
+        XCTAssertEqual(GTFSNombreParser.nombreRegistrado("  Av. España\n"), "Av. España")
+    }
+
+    @MainActor
+    func testExtremosSinNombreSeDistinguenSinCambiarParaderosNiRecorrido() {
+        let paraderos = [paradero("inicio", "innominada"), paradero("medio", "Av. España"),
+                         paradero("fin", "innominada")]
+        let original = ruta(paraderos)
+        let opcion = RutasViewModel.convertir([original])[0]
+
+        XCTAssertEqual(opcion.paradaInicioVisible, L.t("Paradero inicial sin nombre", "Unnamed first stop"))
+        XCTAssertEqual(opcion.paradaFinVisible, L.t("Paradero final sin nombre", "Unnamed last stop"))
+        XCTAssertNotEqual(opcion.paradaInicioVisible, opcion.paradaFinVisible)
+        XCTAssertEqual(opcion.paradaInicio, "innominada")
+        XCTAssertEqual(opcion.paradaFin, "innominada")
+        XCTAssertEqual(opcion.paraderos, paraderos)
+        XCTAssertEqual(opcion.recorrido, original.recorrido)
+        XCTAssertEqual(opcion.id, original.id)
+        XCTAssertEqual(opcion.paraderos[0].nombreVisible, L.t("Paradero sin nombre", "Unnamed stop"))
+    }
+
+    @MainActor
+    func testNombreRealSeConservaAunqueElOtroExtremoNoTengaNombre() {
+        let opcion = RutasViewModel.convertir([ruta([paradero("inicio", "Panamericana Norte"),
+                                                    paradero("fin", "innominada")])])[0]
+        XCTAssertEqual(opcion.paradaInicioVisible, "Panamericana Norte")
+        XCTAssertEqual(opcion.paradaFinVisible, L.t("Paradero final sin nombre", "Unnamed last stop"))
+    }
+
+    @MainActor
+    func testEtiquetasSeActualizanDeIdiomaSinRecargarElCatalogo() {
+        let manager = IdiomaManager.shared
+        let anterior = manager.codigo
+        let preferencia = UserDefaults.standard.object(forKey: "idioma.app")
+        defer {
+            manager.seleccionar(codigo: anterior)
+            if let preferencia { UserDefaults.standard.set(preferencia, forKey: "idioma.app") }
+            else { UserDefaults.standard.removeObject(forKey: "idioma.app") }
+        }
+        let opcion = RutasViewModel.convertir([ruta([])])[0]
+        manager.seleccionar(codigo: "es")
+        XCTAssertEqual(opcion.paradaInicioVisible, "Paradero inicial sin nombre")
+        for idioma in IdiomaApp.allCases {
+            manager.seleccionar(codigo: idioma.rawValue)
+            XCTAssertEqual(opcion.paradaInicioVisible, CatalogoTraducciones.texto(
+                es: "Paradero inicial sin nombre", en: "Unnamed first stop", idioma: idioma))
+            XCTAssertEqual(opcion.paradaFinVisible, CatalogoTraducciones.texto(
+                es: "Paradero final sin nombre", en: "Unnamed last stop", idioma: idioma))
+        }
+        XCTAssertTrue(opcion.paraderos.isEmpty)
+    }
+
+    @MainActor
+    func testFeedIncluidoNoExponeInnominadaEnLosExtremos() async throws {
+        let feed = try await GTFSRepository().cargarRutas()
+        let opciones = RutasViewModel.convertir(feed)
+        XCTAssertEqual(opciones.count, feed.count)
+        XCTAssertTrue(opciones.contains { $0.paradaInicio == "innominada" && $0.paradaFin == "innominada" })
+        for opcion in opciones {
+            XCTAssertNotNil(GTFSNombreParser.nombreRegistrado(opcion.paradaInicioVisible), opcion.id)
+            XCTAssertNotNil(GTFSNombreParser.nombreRegistrado(opcion.paradaFinVisible), opcion.id)
+        }
+    }
+
+    private func paradero(_ id: String, _ nombre: String) -> ParaderoGTFS {
+        ParaderoGTFS(id: id, nombre: nombre, lat: -8.10, lon: -79.04)
+    }
+
+    private func ruta(_ paraderos: [ParaderoGTFS]) -> RutaGTFS {
+        RutaGTFS(id: "ruta-prueba", linea: "C-20", variante: "UI",
+                 recorrido: "Ca. Del Cacicazgo Mansiche (ramal circular)", empresa: "Empresa",
+                 colorHex: "00CC00", color: .green, shape: [], paraderos: paraderos,
+                 duracionMin: 30, headwayMin: 5, precio: 2, distanciaKm: 4, distanciaUTPMetros: 100)
+    }
+}
+
 final class PolylineMatchingTests: XCTestCase {
 
     /// Línea recta de ~1.1 km sobre el paralelo -8.10.
