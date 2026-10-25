@@ -125,6 +125,41 @@
     "de": "Setzt den Punkt an deinen aktuellen Standort. Anschließend kannst du ihn bestätigen.",
     "zh-Hans": "将标记放在你当前所在的位置，之后即可确认。"
   },
+  "Editar datos": {
+    "en": "Edit details",
+    "fr": "Modifier les informations",
+    "pt-BR": "Editar dados",
+    "de": "Daten bearbeiten",
+    "zh-Hans": "编辑资料"
+  },
+  "Actualiza tu teléfono y correo personal.": {
+    "en": "Update your phone and personal email.",
+    "fr": "Modifiez votre téléphone et votre e-mail personnel.",
+    "pt-BR": "Atualize seu telefone e e-mail pessoal.",
+    "de": "Aktualisiere deine Telefonnummer und persönliche E-Mail-Adresse.",
+    "zh-Hans": "更新你的电话号码和个人邮箱。"
+  },
+  "Estos datos se guardan en este dispositivo.": {
+    "en": "These details are saved on this device.",
+    "fr": "Ces informations sont enregistrées sur cet appareil.",
+    "pt-BR": "Esses dados são salvos neste dispositivo.",
+    "de": "Diese Daten werden auf diesem Gerät gespeichert.",
+    "zh-Hans": "这些资料保存在此设备上。"
+  },
+  "Ingresa un teléfono válido.": {
+    "en": "Enter a valid phone number.",
+    "fr": "Saisissez un numéro de téléphone valide.",
+    "pt-BR": "Digite um número de telefone válido.",
+    "de": "Gib eine gültige Telefonnummer ein.",
+    "zh-Hans": "请输入有效的电话号码。"
+  },
+  "Escribe un correo válido.": {
+    "en": "Enter a valid email address.",
+    "fr": "Saisissez une adresse e-mail valide.",
+    "pt-BR": "Digite um e-mail válido.",
+    "de": "Gib eine gültige E-Mail-Adresse ein.",
+    "zh-Hans": "请输入有效的邮箱地址。"
+  },
   "Paradero sin nombre": {
     "en": "Unnamed stop",
     "fr": "Arrêt sans nom",

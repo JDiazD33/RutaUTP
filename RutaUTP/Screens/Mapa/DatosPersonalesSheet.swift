@@ -12,7 +12,12 @@ import UIKit
 // MARK: - 7. DATOS PERSONALES SHEET
 struct DatosPersonalesSheet: View {
     // Datos institucionales (solo lectura)
-    private let nombresCompletos = "Joaquín Díaz"
+    static let nombrePersona = "Joaquín Díaz"
+    static var inicialesPersona: String {
+        nombrePersona.split(whereSeparator: { $0.isWhitespace }).prefix(2)
+            .map { String($0.prefix(1)) }.joined()
+    }
+    private let nombresCompletos = DatosPersonalesSheet.nombrePersona
     private let carrera = "Ingeniería de Software"
     private let correoInstitucional = "joaquin.diaz@utp.edu.pe"
     private let codigoUTP = "1234567"
@@ -33,7 +38,6 @@ struct DatosPersonalesSheet: View {
     @State private var editandoDatos: Bool = false
     @State private var telefonoInput: String = ""
     @State private var correoPersonalInput: String = ""
-    @State private var showCorreoTooltip: Bool = false
 
     // Foto de perfil
     @State private var perfilImage: UIImage? = nil
@@ -44,6 +48,11 @@ struct DatosPersonalesSheet: View {
 
     @State private var mostrarContacto = false
     @AppStorage(ContactoEmergencia.claveAlternativo) private var emergenciaAlternativo = ""
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
 
     private let boxShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
 
@@ -67,7 +76,7 @@ struct DatosPersonalesSheet: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 20) {
-                SheetHeader(icon: "person.crop.circle.fill", iconColor: .appPrimary, title: L.t("Datos Personales", "Personal details"))
+                SheetHeader(icon: "person.crop.circle.fill", iconColor: .appAccent, title: L.t("Datos Personales", "Personal details"))
 
                 // ── Cabecera: foto + nombres + carrera + correo institucional ──
                 VStack(alignment: .leading, spacing: 12) {
@@ -105,13 +114,13 @@ struct DatosPersonalesSheet: View {
                             } label: {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.white)
+                                        .fill(Color.surfaceContainerLow)
                                         .frame(width: 26, height: 26)
-                                        .overlay(Circle().stroke(Color.appPrimary, lineWidth: 1.5))
+                                        .overlay(Circle().stroke(Color.appAccent, lineWidth: 1.5))
                                         .accessibilityHidden(true)
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(Color.appPrimary)
+                                        .foregroundStyle(Color.appAccent)
                                         .accessibilityHidden(true)
                                 }
                             }
@@ -136,7 +145,7 @@ struct DatosPersonalesSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "envelope.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(.appPrimary)
+                            .foregroundStyle(.appAccent)
                             .accessibilityHidden(true)
                         Text(correoInstitucional)
                             .font(.bodySm)
@@ -179,139 +188,7 @@ struct DatosPersonalesSheet: View {
                 .accessibilityValue(L.t("Código UTP ", "UTP code ") + "\(codigoUTP), DNI \(dni), "
                                       + L.t("modalidad ", "modality ") + "\(modalidad), campus \(campus)")
 
-                // ── Mis datos personales + editar ──
-                HStack {
-                    Text(L.t("Mis datos personales", "My personal details"))
-                        .font(.headlineXs)
-                        .foregroundStyle(.onSurface)
-                    Spacer()
-                    Button {
-                        AppHaptics.impact(.light)
-                        toggleEdicion()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: editandoDatos ? "checkmark" : "pencil")
-                                .font(.system(size: 12, weight: .semibold))
-                                .accessibilityHidden(true)
-                            Text(editandoDatos ? L.t("Listo", "Done") : L.t("editar datos", "edit details"))
-                                .font(.labelCapsSm)
-                                .appTracking(AppTracking.wideLabel)
-                        }
-                        .foregroundStyle(Color.appPrimary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(editandoDatos ? L.t("Listo", "Done") : L.t("Editar datos personales", "Edit personal details"))
-                    .accessibilityHint(editandoDatos
-                               ? L.t("Doble toque para guardar los cambios", "Double tap to save your changes")
-                               : L.t("Doble toque para editar tu teléfono y correo personal", "Double tap to edit your phone and personal email"))
-                }
-
-                // ── Cuadro teléfono ──
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle().fill(Color.appPrimary.opacity(0.12)).frame(width: 36, height: 36)
-                        Image(systemName: "phone.fill")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.appPrimary)
-                    }
-                    .accessibilityHidden(true)
-                    if editandoDatos {
-                        TextField("999 888 777", text: Binding(
-                            get: { telefonoInput },
-                            set: { newValue in
-                                let filtrado = newValue.filter { $0.isNumber }
-                                telefonoInput = String(filtrado.prefix(9))
-                            }
-                        ))
-                        .font(.bodyMd)
-                        .foregroundStyle(.onSurface)
-                        .keyboardType(.numberPad)
-                        .textInputAutocapitalization(.never)
-                        .accessibilityLabel(L.t("Teléfono, 9 dígitos", "Phone, 9 digits"))
-                    } else {
-                        Text(telefono)
-                            .font(.bodyMd)
-                            .foregroundStyle(.onSurface)
-                        Spacer()
-                    }
-                }
-                .padding(14)
-                .background(boxShape.fill(Color.surfaceContainerLow))
-                .overlay(boxShape.stroke(Color.outlineVariant.opacity(editandoDatos ? 0.6 : 0.25), lineWidth: 1))
-                .accessibilityElement(children: editandoDatos ? .contain : .combine)
-                .accessibilityLabel(editandoDatos ? L.t("Teléfono", "Phone") : L.t("Teléfono: ", "Phone: ") + telefono)
-
-                // ── Cuadro correo personal + signo de exclamación ──
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle().fill(Color.appPrimary.opacity(0.12)).frame(width: 36, height: 36)
-                        Image(systemName: "envelope.fill")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.appPrimary)
-                    }
-                    .accessibilityHidden(true)
-                    if editandoDatos {
-                        TextField(L.t("correo@ejemplo.com", "email@example.com"), text: $correoPersonalInput)
-                            .font(.bodyMd)
-                            .foregroundStyle(.onSurface)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .accessibilityLabel(L.t("Correo personal", "Personal email"))
-                    } else {
-                        Text(correoPersonal)
-                            .font(.bodyMd)
-                            .foregroundStyle(.onSurface)
-                    }
-                    Spacer()
-                    Button {
-                        AppHaptics.impact(.light)
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            showCorreoTooltip.toggle()
-                        }
-                    } label: {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Color.appPrimary.opacity(0.85))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(L.t("Información sobre el correo personal", "Information about the personal email"))
-                    .accessibilityHint(L.t("Doble toque para leer para qué se usa este correo", "Double tap to read what this email is used for"))
-                    .accessibilityAddTraits(.isButton)
-                }
-                .padding(14)
-                .background(boxShape.fill(Color.surfaceContainerLow))
-                .overlay(boxShape.stroke(Color.outlineVariant.opacity(editandoDatos ? 0.6 : 0.25), lineWidth: 1))
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(editandoDatos ? L.t("Correo personal", "Personal email") : L.t("Correo personal: ", "Personal email: ") + correoPersonal)
-
-                // Tooltip del correo personal
-                if showCorreoTooltip {
-                    HStack(alignment: .top, spacing: 6) {
-                        Image(systemName: "info.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.appPrimary)
-                            .accessibilityHidden(true)
-                        Text(L.t("Correo personal utilizado para recuperar contraseña del correo institucional",
-                                 "Personal email used to recover your institutional email password"))
-                            .font(.bodyXs)
-                            .foregroundStyle(.onSurfaceVariant)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.appPrimary.opacity(0.08))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.appPrimary.opacity(0.25), lineWidth: 0.5)
-                            )
-                    )
-                    .transition(.opacity)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(L.t("Correo personal utilizado para recuperar contraseña del correo institucional",
-                                            "Personal email used to recover your institutional email password"))
-                }
+                datosPersonales
 
                 // El contacto se edita con el mismo formulario que en Seguridad.
                 HStack {
@@ -345,11 +222,11 @@ struct DatosPersonalesSheet: View {
                         Text(L.t("Cerrar sesión", "Log out"))
                             .font(.bodyMdMedium)
                     }
-                    .foregroundStyle(.appPrimary)
+                    .foregroundStyle(.appAccent)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color.primaryFixed)
+                            .fill(Color.surfaceContainerLow)
                     )
                 }
                 .buttonStyle(.plain)
@@ -385,6 +262,15 @@ struct DatosPersonalesSheet: View {
         .modifier(EditorFotoPerfilModifier(camara: $showCamera, galeria: $showGaleria, ajustar: $ajustarFoto) { img in
             perfilImage = img
         })
+        .sheet(isPresented: $editandoDatos) {
+            EditorDatosPersonales(telefono: $telefonoInput, correo: $correoPersonalInput) { numero, correo in
+                telefono = numero
+                correoPersonal = correo
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .seguirTemaForzado()
+        }
         .sheet(isPresented: $mostrarContacto) {
             ContactoEmergenciaSheet()
                 .presentationDetents([.large])
@@ -393,6 +279,64 @@ struct DatosPersonalesSheet: View {
     }
 
     // MARK: - Subvistas
+    private var datosPersonales: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            let layout = dynamicTypeSize >= .xxxLarge
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+            layout {
+                Text(L.t("Mis datos personales", "My personal details"))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color.onSurface)
+                    .accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button {
+                    AppHaptics.impact(.light)
+                    toggleEdicion()
+                } label: {
+                    Label(L.t("Editar datos", "Edit details"), systemImage: "pencil")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(acento)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Editar datos personales", "Edit personal details"))
+            }
+
+            VStack(spacing: 0) {
+                datoPersonal(icono: "phone", titulo: L.t("Teléfono", "Phone"), valor: telefono)
+                Divider().padding(.leading, 60)
+                datoPersonal(icono: "envelope", titulo: L.t("Correo personal", "Personal email"), valor: correoPersonal)
+            }
+            .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+            Text(L.t("Estos datos se guardan en este dispositivo.", "These details are saved on this device."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func datoPersonal(icono: String, titulo: String, valor: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icono)
+                .font(.body)
+                .foregroundStyle(acento)
+                .frame(minWidth: 24, minHeight: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(titulo).font(.caption).foregroundStyle(.secondary)
+                Text(valor.isEmpty ? "—" : valor)
+                    .font(.body).foregroundStyle(Color.onSurface)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(20)
+        .accessibilityElement(children: .combine)
+    }
+
     private var tarjetaEmergenciaGuardada: some View {
         VStack(spacing: 12) {
             emergenciaFila(icon: "person.fill", titulo: L.t("Nombre", "Name"), valor: emergenciaNombre)
@@ -457,15 +401,9 @@ struct DatosPersonalesSheet: View {
 
     // MARK: - Acciones
     private func toggleEdicion() {
-        if editandoDatos {
-            telefono = telefonoInput
-            correoPersonal = correoPersonalInput
-            editandoDatos = false
-        } else {
-            telefonoInput = telefono
-            correoPersonalInput = correoPersonal
-            editandoDatos = true
-        }
+        telefonoInput = telefono
+        correoPersonalInput = correoPersonal
+        editandoDatos = true
     }
 
     @ViewBuilder
@@ -475,7 +413,7 @@ struct DatosPersonalesSheet: View {
                 Circle().fill(Color.appPrimary.opacity(0.12)).frame(width: 36, height: 36)
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.appPrimary)
+                    .foregroundStyle(.appAccent)
             }
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
@@ -492,4 +430,101 @@ struct DatosPersonalesSheet: View {
         .accessibilityLabel(titulo + ": " + (valor.isEmpty ? L.t("vacío", "empty") : valor))
     }
 
+}
+
+// Borrador separado: cerrar o cancelar nunca escribe en las claves del perfil.
+private struct EditorDatosPersonales: View {
+    @Binding var telefono: String
+    @Binding var correo: String
+    let onGuardar: (String, String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @FocusState private var campo: Campo?
+    private enum Campo { case telefono, correo }
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var numeroValido: String? { ContactoEmergencia.telefonoValido(telefono) }
+    private var telefonoValido: Bool {
+        telefono.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || numeroValido != nil
+    }
+    private var correoLimpio: String { correo.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var correoValido: Bool {
+        correoLimpio.isEmpty || correoLimpio.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#, options: .regularExpression) != nil
+    }
+    private var puedeGuardar: Bool { telefonoValido && correoValido }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(L.t("Actualiza tu teléfono y correo personal.", "Update your phone and personal email."))
+                        .font(.body).foregroundStyle(.secondary)
+                }
+                Section {
+                    TextField(L.t("Teléfono", "Phone"), text: $telefono)
+                        .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .focused($campo, equals: .telefono)
+                        .accessibilityLabel(L.t("Teléfono", "Phone"))
+                } header: {
+                    Label(L.t("Teléfono", "Phone"), systemImage: "phone")
+                } footer: {
+                    if !telefonoValido {
+                        Text(L.t("Ingresa un teléfono válido.", "Enter a valid phone number."))
+                            .foregroundStyle(Color(uiColor: .systemRed))
+                    }
+                }
+                Section {
+                    TextField(L.t("correo@ejemplo.com", "email@example.com"), text: $correo)
+                        .keyboardType(.emailAddress)
+                        .textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .focused($campo, equals: .correo)
+                        .submitLabel(.done)
+                        .onSubmit { campo = nil }
+                        .accessibilityLabel(L.t("Correo personal", "Personal email"))
+                } header: {
+                    Label(L.t("Correo personal", "Personal email"), systemImage: "envelope")
+                } footer: {
+                    if !correoValido {
+                        Text(L.t("Escribe un correo válido.", "Enter a valid email address."))
+                            .foregroundStyle(Color(uiColor: .systemRed))
+                    }
+                }
+                Section {
+                    Text(L.t("Estos datos se guardan en este dispositivo.", "These details are saved on this device."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.appBackground)
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(L.t("Editar datos personales", "Edit personal details"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Guardar", "Save")) {
+                        guard puedeGuardar else { return }
+                        campo = nil
+                        onGuardar(numeroValido ?? "", correoLimpio)
+                        AppHaptics.success()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(!puedeGuardar)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(L.t("Listo", "Done")) { campo = nil }
+                }
+            }
+        }
+        .tint(acento)
+    }
 }

@@ -91,7 +91,7 @@ struct SideDrawer: View {
                 // elegido en Ajustes (no hereda el de la ventana principal).
                 .seguirTemaForzado()
                 .presentationDetents(
-                    [.ciudad, .soporte, .sobreNosotros, .notificaciones].contains(item) ? [.large] : [.medium, .large]
+                    [.idioma, .ciudad, .soporte, .sobreNosotros, .notificaciones, .datosPersonales].contains(item) ? [.large] : [.medium, .large]
                 )
                 .presentationDragIndicator(.visible)
         }
@@ -195,7 +195,7 @@ struct SideDrawer: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 8, for: .scrollContent)
-            .contentMargins(.bottom, 32, for: .scrollContent)
+            .contentMargins(.bottom, 56, for: .scrollContent)
         }
     }
 
@@ -242,7 +242,7 @@ struct SideDrawer: View {
                             .resizable()
                             .scaledToFill()
                     } else {
-                        Text("JD")
+                        Text(DatosPersonalesSheet.inicialesPersona)
                             .font(.headline)
                             .foregroundStyle(Color.onSurface)
                     }
@@ -252,7 +252,7 @@ struct SideDrawer: View {
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Ruta UTP Trujillo")
+                    Text(DatosPersonalesSheet.nombrePersona)
                         .font(.headline)
                         .foregroundStyle(Color.onSurface)
                     Text(L.t("Datos personales", "Personal details"))
@@ -274,6 +274,7 @@ struct SideDrawer: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(L.t("Datos personales", "Personal details"))
+        .accessibilityValue(DatosPersonalesSheet.nombrePersona)
         .accessibilityHint(L.t("Doble toque para ver y editar tus datos personales", "Double tap to view and edit your personal details"))
     }
 }
