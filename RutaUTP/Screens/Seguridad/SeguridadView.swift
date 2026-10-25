@@ -36,16 +36,27 @@ struct SeguridadView: View {
     // Paraderos iluminados (reales del feed GTFS) + mapa fullscreen
     @State private var paraderosIluminados: [ParaderoGTFS] = []
     @State private var showParaderosMap = false
-    @State private var catalogoParaderos: [ParaderoGTFS] = []
     @State private var catalogoLineas: [RutaGTFS] = []
     @State private var errorCargaParaderos: String?
     @State private var revisionCatalogo = 0
     @State private var cargandoParaderos = false
+    @State private var ultimaCargaIntentada: ClaveCargaParaderos?
 
-    /// Se conservan los paraderos guardados y sus datos; los tiles de lugares
-    /// personales se consultan desde Guardado.
-    @StateObject private var lugaresVM = SeguridadLugaresModel()
-    @State private var selectedLugar: LugarGuardado?
+    private struct ClaveCargaParaderos: Equatable {
+        let latitude: Double
+        let longitude: Double
+        let busesUTP: Bool
+        let revision: Int
+    }
+
+    private var claveCargaParaderos: ClaveCargaParaderos {
+        let referencia = TransporteApp.referenciaInicio
+        return ClaveCargaParaderos(latitude: referencia.latitude,
+                                   longitude: referencia.longitude,
+                                   busesUTP: TransporteApp.busesUTPActivos,
+                                   revision: revisionCatalogo)
+    }
+
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
@@ -84,7 +95,8 @@ struct SeguridadView: View {
     private static let reportes = ReporteComunidad.publicacionesDemo
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        let claveCarga = claveCargaParaderos
+        return ZStack(alignment: .bottom) {
             Color.appBackground.ignoresSafeArea()
 
             // Contenido scrollable
@@ -106,7 +118,6 @@ struct SeguridadView: View {
                             cercaDeTi
                             paraderosSection
                             AvisosLineasSeguridad(rutas: catalogoLineas)
-                            paraderosGuardadosSection
                         } else {
                             comunidadSection
                         }
@@ -123,7 +134,6 @@ struct SeguridadView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear {
-            lugaresVM.cargar()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--paraderos") {
                 showParaderosMap = true
@@ -138,26 +148,34 @@ struct SeguridadView: View {
             }
             #endif
         }
-        .task(id: revisionCatalogo) {
+        .task(id: claveCarga) {
+            guard !Task.isCancelled else { return }
+            if ultimaCargaIntentada == claveCarga {
+                cargandoParaderos = false
+                return
+            }
             // El fallo se muestra y solo el botón solicita una carga nueva.
             cargandoParaderos = true
             errorCargaParaderos = nil
             do {
-                let feed = try await TransporteApp.repositorio.cargarRutas(reintentar: revisionCatalogo > 0)
+                let referencia = CLLocationCoordinate2D(latitude: claveCarga.latitude,
+                                                       longitude: claveCarga.longitude)
+                let catalogo = try await TransporteApp.repositorio.cargarCatalogo(reintentar: claveCarga.revision > 0)
                 guard !Task.isCancelled else { return }
-                catalogoLineas = feed
-                paraderosIluminados = ParaderosIluminados.seleccionar(feed,
-                    cercaDe: TransporteApp.referenciaInicio)
-                catalogoParaderos = feed.flatMap(\.paraderos)
+                let preparados = await CatalogoParaderosSeguridad.shared.preparar(catalogo, cercaDe: referencia)
+                guard !Task.isCancelled else { return }
+                catalogoLineas = catalogo.routes
+                paraderosIluminados = preparados.muestra
             } catch {
                 guard !Task.isCancelled else { return }
                 errorCargaParaderos = (error as? FalloCargaGTFS)?.mensajeUsuario
                     ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
             }
+            ultimaCargaIntentada = claveCarga
             cargandoParaderos = false
         }
         // Mapa fullscreen de paraderos iluminados (desde el banner)
-        .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { lugaresVM.cargar() }) {
+        .fullScreenCover(isPresented: $showParaderosMap) {
             ParaderosIluminadosView(paraderos: paraderosIluminados, locationService: locationService)
         }
         .sheet(isPresented: $showReportarSheet) {
@@ -211,15 +229,6 @@ struct SeguridadView: View {
             Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
         } message: {
             Text(L.t("Se abrirá la aplicación de teléfono para llamar a la central de emergencias.", "The Phone app will open to call emergency services."))
-        }
-        // Detalle del lugar (mismo sheet que Guardado: info + acciones reales)
-        .sheet(item: $selectedLugar) { lugar in
-            LugarDetailSheet(lugar: lugar) {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    lugaresVM.eliminar(lugar)
-                }
-            }
-            .presentationDetents([.medium, .large])
         }
     }
 
@@ -431,7 +440,7 @@ struct SeguridadView: View {
 
     private func accesoLabel(_ titulo: String, icono: String) -> some View {
         VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: icono).font(.title3).foregroundStyle(Color.appPrimary)
+            Image(systemName: icono).font(.title3).foregroundStyle(Color.appAccent)
             Text(titulo).font(.bodyMdMedium).foregroundStyle(Color.onSurface)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -494,63 +503,10 @@ struct SeguridadView: View {
                 AppHaptics.impact(.light)
                 showParaderosMap = true
             } label: {
-                BannerParaderosPreview(cantidad: paraderosIluminados.count,
-                                       paraderos: paraderosIluminados)
+                AccesoParaderos()
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Explorar el mapa de paraderos", "Explore the bus stop map"))
-        }
-    }
-
-    private var paraderosGuardados: [LugarGuardado] {
-        lugaresVM.lugares.filter { $0.esParaderoGuardado(en: catalogoParaderos) }
-    }
-
-    private var paraderosGuardadosSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "bookmark.fill").foregroundStyle(Color.appPrimary)
-                Text(L.t("Paraderos guardados", "Saved stops")).font(.headlineSm)
-                Spacer()
-                Text("\(paraderosGuardados.count)")
-                    .font(.caption.weight(.semibold)).foregroundStyle(Color.onSurfaceVariant)
-            }
-            if paraderosGuardados.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(L.t("Guarda un paradero en el mapa y lo encontrarás aquí.",
-                             "Save a stop on the map to find it here."))
-                        .font(.subheadline).foregroundStyle(Color.onSurfaceVariant)
-                    Button { showParaderosMap = true } label: {
-                        Label(L.t("Explorar paraderos", "Explore stops"), systemImage: "map")
-                    }
-                    .buttonStyle(.bordered)
-                }
-                .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 18))
-            } else {
-                ForEach(paraderosGuardados) { lugar in
-                    Button { selectedLugar = lugar } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "bus.fill")
-                                .foregroundStyle(Color.appPrimary)
-                                .frame(width: 44, height: 44)
-                                .background(Color.appPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(lugar.nombre).font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Color.onSurface).multilineTextAlignment(.leading)
-                                Text(L.t("Ver ubicación y opciones", "View location and options"))
-                                    .font(.caption).foregroundStyle(Color.onSurfaceVariant)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").foregroundStyle(Color.onSurfaceVariant)
-                        }
-                        .padding(14)
-                        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 18))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(L.t("Abrir paradero guardado: ", "Open saved stop: ") + lugar.nombre)
-                }
-            }
         }
     }
 
@@ -560,7 +516,7 @@ struct SeguridadView: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "person.3.fill")
-                        .foregroundStyle(.appPrimary)
+                        .foregroundStyle(.appAccent)
                     VStack(alignment: .leading, spacing: 0) {
                         Text(L.signable("seguridad.comunidad", "Comunidad", "Community"))
                             .font(.headlineSm)
@@ -576,7 +532,7 @@ struct SeguridadView: View {
                 } label: {
                     Text(L.t("AÑADIR", "ADD"))
                         .font(.labelCapsSm)
-                        .foregroundStyle(.appPrimary)
+                        .foregroundStyle(.appAccent)
                         .appTracking(AppTracking.wideLabel)
                 }
                 .buttonStyle(.plain)

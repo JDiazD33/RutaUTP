@@ -13,10 +13,19 @@ enum ParaderosIluminados {
             return seen.insert(key).inserted
         }
         guard !stops.isEmpty else { return [] }
-        let cercanos = stops.sorted {
-            PolylineMatching.distanceMeters($0.coordinate, referencia) <
-            PolylineMatching.distanceMeters($1.coordinate, referencia)
+        // La distancia se mide una sola vez por paradero, no por cada
+        // comparación del ordenamiento de los miles de puntos del feed.
+        var distancias: [(paradero: ParaderoGTFS, distancia: Double)] = stops.map { stop in
+            let distancia = PolylineMatching.distanceMeters(stop.coordinate, referencia)
+            return (paradero: stop, distancia: distancia)
         }
+        distancias.sort { izquierda, derecha in
+            if izquierda.distancia == derecha.distancia {
+                return izquierda.paradero.id < derecha.paradero.id
+            }
+            return izquierda.distancia < derecha.distancia
+        }
+        let cercanos: [ParaderoGTFS] = distancias.map { $0.paradero }
         // Incluye opciones próximas a la referencia y una muestra repartida por la red.
         var result = Array(cercanos.prefix(min(8, cantidad)))
         let remaining = stops.filter { stop in !result.contains { $0.id == stop.id } }
@@ -25,6 +34,39 @@ enum ParaderosIluminados {
             for i in 0..<slots { result.append(remaining[i * remaining.count / slots]) }
         }
         return result
+    }
+}
+
+/// Prepara la sección de Seguridad fuera del actor principal y reutiliza el
+/// resultado mientras sigan vigentes el catálogo y la referencia de cercanía.
+/// Al cambiar de modo, sede o catálogo nunca devuelve los paraderos anteriores.
+actor CatalogoParaderosSeguridad {
+    static let shared = CatalogoParaderosSeguridad()
+
+    struct Resultado {
+        let muestra: [ParaderoGTFS]
+        let paraderos: [ParaderoGTFS]
+    }
+
+    private var catalogoAnterior: GTFSRouteCatalog?
+    private var referenciaAnterior: CLLocationCoordinate2D?
+    private var resultadoAnterior: Resultado?
+
+    func preparar(_ catalogo: GTFSRouteCatalog,
+                  cercaDe referencia: CLLocationCoordinate2D) -> Resultado {
+        if let catalogoAnterior, catalogoAnterior.sharesRevision(with: catalogo),
+           let referenciaAnterior,
+           referenciaAnterior.latitude == referencia.latitude,
+           referenciaAnterior.longitude == referencia.longitude,
+           let resultadoAnterior { return resultadoAnterior }
+
+        let resultado = Resultado(
+            muestra: ParaderosIluminados.seleccionar(catalogo.routes, cercaDe: referencia),
+            paraderos: catalogo.routes.flatMap(\.paraderos))
+        catalogoAnterior = catalogo
+        referenciaAnterior = referencia
+        resultadoAnterior = resultado
+        return resultado
     }
 }
 
@@ -66,7 +108,7 @@ struct ParaderosIluminadosView: View {
     @State private var satellite = false
     @FocusState private var searchFocused: Bool
 
-    private var accent: Color { .appPrimary }
+    private var accent: Color { .appAccent }
     private var anchor: CLLocationCoordinate2D {
         location ?? TransporteApp.referenciaInicio
     }
@@ -106,12 +148,12 @@ struct ParaderosIluminadosView: View {
                     .stroke(accent, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
             }
             ForEach(visible) { stop in
-                Annotation(stop.nombre, coordinate: stop.coordinate, anchor: .bottom) {
+                Annotation(stop.nombreVisible, coordinate: stop.coordinate, anchor: .bottom) {
                     Button { select(stop) } label: {
                         SafetyStopPin(selected: selectedID == stop.id, saved: savedIDs.contains(stop.id))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(stop.nombre)
+                    .accessibilityLabel(stop.nombreVisible)
                     .accessibilityHint(L.t("Ver detalles del paradero", "View stop details"))
                     .accessibilityAddTraits(selectedID == stop.id ? .isSelected : [])
                 }
@@ -173,7 +215,7 @@ struct ParaderosIluminadosView: View {
                         .frame(width: 44, height: 44)
                         .background(Circle().fill(Color.surfaceContainerLowest))
                 }
-                .accessibilityLabel(L.t("Volver a Seguridad", "Back to Safety"))
+                .accessibilityLabel(L.t("Volver", "Back"))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(L.t("Explora paraderos", "Explore bus stops"))
                         .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -318,14 +360,14 @@ struct ParaderosIluminadosView: View {
                 Image(systemName: "bus.fill").font(.system(size: 20)).foregroundStyle(accent)
                     .frame(width: 44, height: 44).background(RoundedRectangle(cornerRadius: 14).fill(accent.opacity(0.1)))
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(stop.nombre).font(.system(size: 15, weight: .bold)).lineLimit(2)
+                    Text(stop.nombreVisible).font(.system(size: 15, weight: .bold)).lineLimit(2)
                     Text(L.f("{0} m en línea recta", "{0} m straight-line distance", ["\(Int(distance(stop)))"]))
                         .font(.system(size: 11)).foregroundStyle(Color.onSurfaceVariant)
                 }
                 Spacer(minLength: 0)
                 Button { toggleSaved(stop) } label: {
                     Image(systemName: savedIDs.contains(stop.id) ? "bookmark.fill" : "bookmark")
-                        .foregroundStyle(accent).frame(width: 36, height: 44)
+                        .foregroundStyle(accent).frame(width: 44, height: 44)
                 }.accessibilityLabel(savedIDs.contains(stop.id) ? L.t("Quitar de guardados", "Remove from saved") : L.t("Guardar paradero", "Save stop"))
             }
             HStack(spacing: 5) {
@@ -367,7 +409,7 @@ struct ParaderosIluminadosView: View {
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(selectedID == stop.id ? accent.opacity(0.45) : Color.outlineVariant.opacity(0.3), lineWidth: 1))
         .onTapGesture { select(stop) }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(stop.nombre)
+        .accessibilityLabel(stop.nombreVisible)
         .accessibilityAction(named: Text(L.t("Seleccionar paradero", "Select stop"))) { select(stop) }
     }
 

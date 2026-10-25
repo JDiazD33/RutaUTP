@@ -1067,6 +1067,34 @@ final class ParaderosIluminadosTests: XCTestCase {
         let stops = [ParaderoGTFS(id: "s1", nombre: "A", lat: -8.10, lon: -79.04)]
         XCTAssertTrue(ParaderosIluminados.seleccionar([ruta("R1", stops: stops)], cantidad: 0).isEmpty)
     }
+
+    func testCatalogoSeguridadActualizaLaMuestraAlCambiarLaReferencia() async {
+        let stops = (0..<30).map {
+            ParaderoGTFS(id: "s\($0)", nombre: "P\($0)",
+                         lat: -8.10 - Double($0) * 0.001, lon: -79.04)
+        }
+        let catalogo = GTFSRouteCatalog(routes: [ruta("R1", stops: stops)])
+        let preparador = CatalogoParaderosSeguridad()
+        let cercaDelInicio = await preparador.preparar(catalogo, cercaDe: stops[0].coordinate)
+        let cercaDelFinal = await preparador.preparar(catalogo, cercaDe: stops[29].coordinate)
+
+        XCTAssertEqual(cercaDelInicio.muestra.first?.id, stops[0].id)
+        XCTAssertEqual(cercaDelFinal.muestra.first?.id, stops[29].id)
+        XCTAssertEqual(cercaDelInicio.paraderos, cercaDelFinal.paraderos)
+    }
+
+    func testCatalogoSeguridadNoReutilizaParaderosDeOtraRevision() async {
+        let primero = ParaderoGTFS(id: "s1", nombre: "A", lat: -8.10, lon: -79.04)
+        let nuevo = ParaderoGTFS(id: "s2", nombre: "B", lat: -8.11, lon: -79.04)
+        let preparador = CatalogoParaderosSeguridad()
+        _ = await preparador.preparar(GTFSRouteCatalog(routes: [ruta("R1", stops: [primero])]),
+                                      cercaDe: primero.coordinate)
+        let actualizado = await preparador.preparar(
+            GTFSRouteCatalog(routes: [ruta("R1", stops: [nuevo])]), cercaDe: primero.coordinate)
+
+        XCTAssertEqual(actualizado.paraderos, [nuevo])
+        XCTAssertEqual(actualizado.muestra, [nuevo])
+    }
 }
 
 /// Regla de orden de los tiles de Seguridad.
