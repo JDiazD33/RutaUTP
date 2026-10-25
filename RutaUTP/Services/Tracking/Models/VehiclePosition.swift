@@ -35,6 +35,7 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
     let dataOrigin: VehicleDataOrigin
     let simulationRunId: String?
     let controlRevision: UInt64?
+    let scenarioOccupancy: VehicleScenarioOccupancy?
 
     init(id: String,
          linea: String,
@@ -46,7 +47,8 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
          timestamp: TimeInterval = Date().timeIntervalSince1970,
          dataOrigin: VehicleDataOrigin = .unknown,
          simulationRunId: String? = nil,
-         controlRevision: UInt64? = nil) {
+         controlRevision: UInt64? = nil,
+         scenarioOccupancy: VehicleScenarioOccupancy? = nil) {
         self.id = id
         self.linea = linea
         self.routeId = routeId
@@ -58,11 +60,13 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
         self.dataOrigin = dataOrigin
         self.simulationRunId = simulationRunId
         self.controlRevision = controlRevision
+        self.scenarioOccupancy = dataOrigin == .simulated ? scenarioOccupancy : nil
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, linea, routeId, lat, lon, heading, speed, timestamp
         case dataOrigin, simulationRunId, controlRevision
+        case scenarioOccupancy
     }
 
     init(from decoder: Decoder) throws {
@@ -78,6 +82,8 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
         dataOrigin = try values.decodeIfPresent(VehicleDataOrigin.self, forKey: .dataOrigin) ?? .legacyUnknown
         simulationRunId = try values.decodeIfPresent(String.self, forKey: .simulationRunId)
         controlRevision = try values.decodeIfPresent(UInt64.self, forKey: .controlRevision)
+        let occupancy = try values.decodeIfPresent(VehicleScenarioOccupancy.self, forKey: .scenarioOccupancy)
+        scenarioOccupancy = dataOrigin == .simulated ? occupancy : nil
     }
 
     var coordinate: CLLocationCoordinate2D {
@@ -96,6 +102,11 @@ enum VehicleDataOrigin: String, Codable, Equatable, Hashable {
     case simulated
     case legacyUnknown = "legacy_unknown"
     case unknown
+}
+
+/// Guion de ocupación del backend. No abre el servicio de votos comunitarios.
+enum VehicleScenarioOccupancy: String, Codable, Equatable {
+    case empty, space, full
 }
 
 /// Identidad de presentación: reutilizar un ID no conserva selección ni velocidad

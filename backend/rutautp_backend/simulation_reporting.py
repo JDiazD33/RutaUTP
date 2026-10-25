@@ -13,7 +13,7 @@ from pathlib import Path
 import sqlite3
 from typing import TextIO
 
-from .persistence_migrations import STORE_SCHEMA_VERSION, MIGRATION_NAME
+from .persistence_migrations import STORE_SCHEMA_VERSION, verify_migration_records
 from .simulation_models import canonical_uuid, finite_time
 
 
@@ -25,12 +25,13 @@ def history_reader(path: str | Path):
     try:
         db.execute('PRAGMA query_only=ON')
         db.execute('BEGIN')
-        if db.execute('PRAGMA user_version').fetchone()[0] != STORE_SCHEMA_VERSION:
+        version = db.execute('PRAGMA user_version').fetchone()[0]
+        if version not in (1, STORE_SCHEMA_VERSION):
             raise ValueError('versión de histórico incompatible; no se migra al consultar')
-        row = db.execute('SELECT migration_name FROM store_schema_migrations WHERE version=?',
-                         (STORE_SCHEMA_VERSION,)).fetchone()
-        if row is None or row[0] != MIGRATION_NAME:
-            raise ValueError('histórico sin migración consistente')
+        try:
+            verify_migration_records(db, version)
+        except RuntimeError as error:
+            raise ValueError('histórico sin migración consistente') from error
         yield db
     finally:
         db.close()
@@ -94,7 +95,13 @@ def _summary(db: sqlite3.Connection, run_id: str, now: float) -> dict:
         AND (a.left_at IS NULL OR o.observed_at<=a.left_at))''', (run_id,)).fetchone()[0]
     reasons = dict(db.execute("SELECT reason, COUNT(*) FROM rejections WHERE data_origin='simulated' "
         'AND simulation_run_id=? GROUP BY reason ORDER BY reason', (run_id,)).fetchall())
+    occupancy = None
+    if db.execute('PRAGMA user_version').fetchone()[0] >= 2:
+        occupancy = dict(db.execute("SELECT scenario_occupancy, COUNT(*) FROM vehicle_positions "
+            "WHERE data_origin='simulated' AND simulation_run_id=? AND scenario_occupancy IS NOT NULL "
+            "GROUP BY scenario_occupancy", (run_id,)).fetchall())
     return {'schemaVersion': 1, 'generatedAt': now, 'run': run, 'stored': counts,
+        'scenarioOccupancyStoredAttempts': occupancy,
         'actors': dict(actors), 'estimatedIdsSeen': estimates,
         'comparison': {'nominalWithMultipleEstimatedIds': split, 'estimatedIdsWithMultipleNominals': merge,
             'unmappedObservations': unmapped, 'meaning': 'historical_associations_not_simultaneous_accuracy',

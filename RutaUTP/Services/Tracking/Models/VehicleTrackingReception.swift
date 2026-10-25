@@ -71,6 +71,7 @@ private struct VehiclePositionWire: Decodable {
     private enum Keys: String, CodingKey {
         case vehicleId, routeId, linea, lat, lon, speed, heading, timestamp
         case schemaVersion, dataOrigin, simulationRunId, controlRevision
+        case scenarioOccupancy, occupancyScriptVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -78,7 +79,11 @@ private struct VehiclePositionWire: Decodable {
         let legacyKeys: Set<String> = ["vehicleId", "routeId", "linea", "lat", "lon", "speed", "heading", "timestamp"]
         let values = try decoder.container(keyedBy: Keys.self)
         let isLegacy = !keys.contains("schemaVersion")
-        guard keys == (isLegacy ? legacyKeys : legacyKeys.union(["schemaVersion", "dataOrigin", "simulationRunId", "controlRevision"]))
+        let version = isLegacy ? 1 : try values.decode(Int.self, forKey: .schemaVersion)
+        let metadataKeys: Set<String> = ["schemaVersion", "dataOrigin", "simulationRunId", "controlRevision"]
+        let occupancyKeys: Set<String> = ["scenarioOccupancy", "occupancyScriptVersion"]
+        guard (1...3).contains(version), (isLegacy || version != 1),
+              keys == (isLegacy ? legacyKeys : legacyKeys.union(metadataKeys).union(version == 3 ? occupancyKeys : []))
         else { throw VehicleTrackingWire.invalid(decoder) }
         let id = try values.decode(String.self, forKey: .vehicleId)
         let route = try values.decode(String.self, forKey: .routeId)
@@ -97,9 +102,14 @@ private struct VehiclePositionWire: Decodable {
         var origin: VehicleDataOrigin = .legacyUnknown
         var run: String?
         var revision: UInt64?
+        var occupancy: VehicleScenarioOccupancy?
         if !isLegacy {
-            guard try values.decode(Int.self, forKey: .schemaVersion) == 2 else { throw VehicleTrackingWire.invalid(decoder) }
             origin = try values.decode(VehicleDataOrigin.self, forKey: .dataOrigin)
+            if version == 3 {
+                guard origin == .simulated, try values.decode(Int.self, forKey: .occupancyScriptVersion) == 1
+                else { throw VehicleTrackingWire.invalid(decoder) }
+                occupancy = try values.decode(VehicleScenarioOccupancy.self, forKey: .scenarioOccupancy)
+            }
             guard speed == -1 || (0...30).contains(speed), heading == -1 || (0..<360).contains(heading)
             else { throw VehicleTrackingWire.invalid(decoder) }
             switch origin {
@@ -120,7 +130,7 @@ private struct VehiclePositionWire: Decodable {
         if origin != .simulated && id.lowercased().hasPrefix("sim:") { throw VehicleTrackingWire.invalid(decoder) }
         position = VehiclePosition(id: id, linea: line, routeId: route, lat: lat, lon: lon,
             heading: heading, speed: speed, timestamp: timestamp, dataOrigin: origin,
-            simulationRunId: run, controlRevision: revision)
+            simulationRunId: run, controlRevision: revision, scenarioOccupancy: occupancy)
     }
 }
 

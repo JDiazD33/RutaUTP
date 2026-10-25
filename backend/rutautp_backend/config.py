@@ -143,6 +143,7 @@ class Config:
     # proveedor de autorización interno; esta bandera por sí sola no la abre.
     vehicle_position_schema_version: int = 1
     simulation_ingress_enabled: bool = False
+    simulation_occupancy_enabled: bool = False
     # Estado privado separado del histórico. Vacío: no abrir controlador.
     simulation_control_path: str = ""
 
@@ -241,6 +242,10 @@ class Config:
             raise ConfigError("BACKEND_VEHICLE_POSITION_SCHEMA_VERSION debe ser 1 o 2")
         if type(self.simulation_ingress_enabled) is not bool:
             raise ConfigError("BACKEND_SIMULATION_INGRESS_ENABLED debe ser booleano")
+        if type(self.simulation_occupancy_enabled) is not bool or (
+            self.simulation_occupancy_enabled and not self.simulation_ingress_enabled
+        ):
+            raise ConfigError("BACKEND_SIMULATION_OCCUPANCY_ENABLED requiere ingreso sintético habilitado")
         integer_fields = {
             "port": "MQTT_PORT",
             "max_message_bytes": "BACKEND_MAX_MESSAGE_BYTES",
@@ -396,6 +401,7 @@ class Config:
                 env, "BACKEND_VEHICLE_POSITION_SCHEMA_VERSION", 1, minimum=1, maximum=2
             ),
             simulation_ingress_enabled=_flag(env, "BACKEND_SIMULATION_INGRESS_ENABLED"),
+            simulation_occupancy_enabled=_flag(env, "BACKEND_SIMULATION_OCCUPANCY_ENABLED"),
             simulation_control_path=env.get("BACKEND_SIMULATION_CONTROL_PATH", "").strip(),
             gtfs_dir=Path(gtfs_dir) if gtfs_dir else DEFAULT_GTFS_DIR,
             database_path=env.get(

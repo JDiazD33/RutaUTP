@@ -97,3 +97,12 @@ procesos propios. Se eliminan las contraseñas temporales y se conserva la
 evidencia histórica. Confirmar `ownedProcessesStopped` y control OFF al cerrar.
 EMQX, disponibilidad diaria, 50/100 actores y pruebas de jornada requieren otro
 ensayo; no quedan desplegados por ejecutar esta herramienta.
+
+
+## Seguimiento posterior a S10
+
+Métricas originales guardadas por petición del usuario en
+`/Users/joaquindiaz05/Documents/RU-IOQT/metricas/INFORME-S10-SIMULACION-BALIZAS.md`.
+El nuevo ensayo de contención/ocupación registra evidencia separada y no sustituye
+el intervalo original de 15 minutos ni sus métricas. Véase el informe posterior
+en esa misma carpeta `metricas`.

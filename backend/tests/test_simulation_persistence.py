@@ -100,7 +100,7 @@ def test_migration_preserves_every_legacy_value_and_wal_backup(legacy):
     migrated = ObservationStore(path)
     try:
         assert migrated.enabled
-        assert migrated.query("PRAGMA user_version") == [(1,)]
+        assert migrated.query("PRAGMA user_version") == [(2,)]
         assert migrated.migration_backup is not None
         with sqlite3.connect(migrated.migration_backup) as backup:
             assert backup.execute("PRAGMA user_version").fetchone() == (0,)
@@ -108,8 +108,9 @@ def test_migration_preserves_every_legacy_value_and_wal_backup(legacy):
                 assert backup.execute(f"SELECT * FROM {table}").fetchall() == rows
         for table, rows in original.items():
             result = migrated.query(f"SELECT * FROM {table}")
-            assert [row[:-2] for row in result] == rows
-            assert all(row[-2:] == ("legacy_unknown", None) for row in result)
+            added = 4 if table == "vehicle_positions" else 2
+            assert [row[:-added] for row in result] == rows
+            assert all(row[len(row)-added:len(row)-added+2] == ("legacy_unknown", None) for row in result)
     finally:
         migrated.close()
 
@@ -123,7 +124,7 @@ def test_reopen_is_idempotent_and_preserves_foreign_keys(legacy):
     try:
         assert second.enabled and second.migration_backup is None
         assert second.query("PRAGMA foreign_keys") == [(1,)]
-        assert second.query("SELECT COUNT(*) FROM store_schema_migrations") == [(1,)]
+        assert second.query("SELECT COUNT(*) FROM store_schema_migrations") == [(2,)]
         assert len(list((path.parent / "backups").glob("*.sqlite"))) == 1
         assert backup.is_file()
     finally:

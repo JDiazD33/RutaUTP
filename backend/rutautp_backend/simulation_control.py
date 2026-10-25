@@ -251,6 +251,7 @@ class SimulationController:
         if self._closed or self.error is not None or self._lease is None:
             return None
         state = None
+        started = self.monotonic()
         try:
             state = self._read()
             if not self._clock_ok(now):
@@ -258,9 +259,14 @@ class SimulationController:
                 return None
             body = self._lease
             profile = self._load_profile(state) if state["enabled"] else None
-            if (profile is None or not profile.window(now)[0] or state["owner"] != self.instance_id
+            # La espera de un escritor y la lectura no amplían el lease.
+            elapsed = self.monotonic() - started
+            if elapsed < 0:
+                return None
+            evaluated_at = now + elapsed
+            if (profile is None or not profile.window(evaluated_at)[0] or state["owner"] != self.instance_id
                     or state["runId"] != body["runId"] or state["revision"] != body["controlRevision"]
-                    or not body["issuedAt"] <= now < body["validUntil"]):
+                    or not body["issuedAt"] <= evaluated_at < body["validUntil"]):
                 return None
             return SimulationAdmission(body["runId"], body["controlRevision"], profile.principals,
                                        body["issuedAt"], body["validUntil"], body["serviceEndsAt"])

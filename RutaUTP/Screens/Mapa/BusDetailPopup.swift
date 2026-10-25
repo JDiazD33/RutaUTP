@@ -60,7 +60,13 @@ struct BusDetailPopup: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            if let vehicleID = bus.occupancyVehicleID {
+            if let occupancy = bus.displayedScenarioOccupancy {
+                Label(occupancy.title, systemImage: "person.2.fill")
+                    .font(.bodySm)
+                    .foregroundStyle(occupancy == .full ? Color.red : Color.onSurfaceVariant)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel(L.t("Ocupación", "Occupancy") + ": " + occupancy.title)
+            } else if let vehicleID = bus.occupancyVehicleID {
                 BusOccupancyPanel(vehicleID: vehicleID)
                     .id(bus.presentationIdentity)
             } else {

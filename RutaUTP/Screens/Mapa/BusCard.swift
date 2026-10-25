@@ -8,13 +8,23 @@ struct BusCard: View {
     let tipo: String
     let placa: String
     let colorLinea: Color
+    var occupancy: BusOccupancyState? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(linea)
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
+            HStack(spacing: 6) {
+                Text(linea)
+                    .font(.labelCapsMd)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .appTracking(AppTracking.wideLabel)
+                Spacer(minLength: 0)
+                if let occupancy {
+                    Label(occupancy.title, systemImage: "person.2.fill")
+                        .font(.caption)
+                        .foregroundStyle(occupancy == .full ? Color.red : Color.onSurfaceVariant)
+                        .lineLimit(1)
+                }
+            }
             Text(empresa)
                 .font(.headlineSm)
                 .foregroundStyle(.onSurface)
@@ -57,6 +67,6 @@ struct BusCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(linea + ", " + empresa)
-        .accessibilityValue([minutos, L.tipoVehiculo(tipo), placa].filter { !$0.isEmpty }.joined(separator: ". "))
+        .accessibilityValue([minutos, L.tipoVehiculo(tipo), placa, occupancy?.title ?? ""].filter { !$0.isEmpty }.joined(separator: ". "))
     }
 }

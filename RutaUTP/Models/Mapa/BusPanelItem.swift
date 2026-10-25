@@ -15,6 +15,7 @@ struct BusPanelItem: Identifiable, Equatable {
     let dataOrigin: VehicleDataOrigin
     let simulationRunId: String?
     let controlRevision: UInt64?
+    let displayedScenarioOccupancy: BusOccupancyState?
 
     init(_ bus: BusAnimado) {
         id = bus.id
@@ -29,6 +30,7 @@ struct BusPanelItem: Identifiable, Equatable {
         dataOrigin = bus.dataOrigin
         simulationRunId = bus.simulationRunId
         controlRevision = bus.controlRevision
+        displayedScenarioOccupancy = bus.displayedScenarioOccupancy
     }
 
     var ramalTexto: String {

@@ -87,7 +87,7 @@ def swift_vehicle_wire_fields() -> tuple[set[str], set[str]]:
     assert keys is not None and legacy is not None, 'el contrato de red dejó de declarar sus claves'
     v2 = {key.strip() for line in keys[1].splitlines() if 'case ' in line
           for key in line.split('case ', 1)[1].split(',')}
-    return set(re.findall(r'"([^"]+)"', legacy[1])), v2
+    return set(re.findall(r'"([^"]+)"', legacy[1])), v2 - {"scenarioOccupancy", "occupancyScriptVersion"}
 
 
 class TestSalidaVehicular:

@@ -8,6 +8,39 @@ final class SimulationControlReceptionTests: XCTestCase {
     private let other = "d32f104c-e9db-4e3e-ae3f-93f7956fcfc2"
     private let now = VehicleReceptionTime(wall: 1_000, uptime: 100)
 
+    func testOcupacionV3ConservaLosTresEstadosYControlDeCaducidad() throws {
+        for state in ["empty", "space", "full"] {
+            let body = positionBody(changes: ["schemaVersion": 3, "scenarioOccupancy": state, "occupancyScriptVersion": 1])
+            let value = try XCTUnwrap(decodeOccupancy(body))
+            XCTAssertEqual(value.scenarioOccupancy?.rawValue, state)
+            XCTAssertNil(value.communityVehicleID)
+            var gate = SimulationControlGate()
+            gate.receive(try control(), at: now)
+            XCTAssertTrue(gate.permits(value, at: now, legacy: .disabled))
+            XCTAssertFalse(gate.permits(value, at: VehicleReceptionTime(wall: 1_016, uptime: 116), legacy: .disabled))
+        }
+    }
+
+    func testOcupacionV3RechazaContratoIncompletoOrigenAjenoYVersionDesconocida() throws {
+        let valid: [String: Any] = ["schemaVersion": 3, "scenarioOccupancy": "full", "occupancyScriptVersion": 1]
+        for change: [String: Any] in [
+            ["scenarioOccupancy": "overfull"], ["scenarioOccupancy": NSNull()],
+            ["occupancyScriptVersion": 2], ["occupancyScriptVersion": "1"],
+            ["schemaVersion": 2], ["dataOrigin": "observed", "simulationRunId": NSNull(),
+                "controlRevision": NSNull(), "vehicleId": "observed"]
+        ] {
+            XCTAssertNil(try decodeOccupancy(positionBody(changes: valid.merging(change) { _, b in b })))
+        }
+        var missing = positionBody(changes: valid)
+        missing.removeValue(forKey: "occupancyScriptVersion")
+        XCTAssertNil(try decodeOccupancy(missing))
+        XCTAssertNil(try XCTUnwrap(decodeOccupancy(positionBody())).scenarioOccupancy)
+    }
+
+    private func decodeOccupancy(_ body: [String: Any]) throws -> VehiclePosition? {
+        VehicleTrackingWire.position(data: try data(body), topic: "rutautp/vehiculos/\(body["vehicleId"]!)/posicion")
+    }
+
     func testCheckpointInexistenteConDirectorioPadreAusenteEsPrimerArranque() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("s10-\(UUID().uuidString)")
         let file = SimulationCheckpointFile(url: root.appendingPathComponent("nested/control.json"))

@@ -87,7 +87,8 @@ struct NearbyTransportPanel<MapControls: View>: View {
                             minutos: bus.etiquetaLlegada,
                             tipo: bus.tipo,
                             placa: bus.ramalTexto,
-                            colorLinea: bus.color
+                            colorLinea: bus.color,
+                            occupancy: bus.displayedScenarioOccupancy
                         )
                         .frame(height: 100)
                         .contentShape(Rectangle())

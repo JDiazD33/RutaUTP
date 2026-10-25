@@ -195,6 +195,7 @@ class Bridge:
 
     def _current_admission(self, now: float) -> SimulationAdmission | None:
         admission = None
+        self._admission_was_busy = False
         if self.config.simulation_ingress_enabled and self.admission_provider is not None:
             try:
                 candidate = self.admission_provider(now)
@@ -215,6 +216,7 @@ class Bridge:
                 # Sin lectura actual no se autoriza nada. Conservar únicamente
                 # la caché: al volver se revalidan lease, run, revisión y quorum.
                 # Disable, caducidad y errores persistentes siguen vaciándola.
+                self._admission_was_busy = True
                 return None
             except Exception:  # un controlador/almacén fallido cierra solo esta rama
                 logger.error("autorización sintética no disponible; entrada cerrada")
@@ -260,6 +262,9 @@ class Bridge:
         if identity.origin is DataOrigin.SIMULATED:
             if (admission is None or identity.run_id != admission.run_id
                     or identity.principal not in admission.principals):
+                if admission is None and self._admission_was_busy:
+                    self.metrics.simulation_control_busy_rejections += 1
+                    return self._reject(RejectReason.SOURCE_NOT_AUTHORIZED, "simulation_control_busy", now)
                 return self._reject(RejectReason.SOURCE_NOT_AUTHORIZED, "run/principal sintético no autorizado", now)
             source = SourceContext(DataOrigin.SIMULATED, identity.run_id, identity.principal)
             if self._simulation_aggregator is None:
@@ -331,14 +336,21 @@ class Bridge:
         if source.origin is DataOrigin.SIMULATED:
             # Antes de entregar al transporte, ambos registros deben ser
             # durables. Una fila es un intento de entrega, no un PUBACK.
-            self.store.record_vehicle(vehicle, wall_clock, source=source)
+            occupancy = {}
+            if self.config.simulation_occupancy_enabled:
+                from .simulation_occupancy import SCRIPT_VERSION, scenario_occupancy
+                occupancy = {"scenario_occupancy": scenario_occupancy(source, vehicle.vehicle_id, vehicle.timestamp),
+                             "occupancy_script_version": SCRIPT_VERSION}
+            self.store.record_vehicle(vehicle, wall_clock, source=source, **occupancy)
             if not self.store.flush():
                 raise SimulationPersistenceUnavailable("falló el commit sintético")
             current = self._current_admission(now + elapsed + time.monotonic() - publishing_started)
             if (current is None or admission is None or current.run_id != source.run_id
                     or current.principals != admission.principals):
                 return False
-            body = vehicle.to_vehicle_position_v2(source, current.control_revision)
+            body = (vehicle.to_vehicle_position_v3(source, current.control_revision)
+                    if self.config.simulation_occupancy_enabled
+                    else vehicle.to_vehicle_position_v2(source, current.control_revision))
         elif self.config.vehicle_position_schema_version == 2:
             body = vehicle.to_vehicle_position_v2(source)
         else:
@@ -493,6 +505,7 @@ class Bridge:
             "published": snapshot["published"],
             "publishFailures": snapshot["publishFailures"],
             "internalErrors": snapshot["internalErrors"],
+            "simulationControlBusyRejections": snapshot["simulationControlBusyRejections"],
             **self._vehicle_counts(),
             "lastPublishAt": self._last_publish_at or None,
             **self.metrics.provenance_snapshot(),
@@ -503,6 +516,7 @@ class Bridge:
         }
         if self.simulation_control is not None:
             payload["simulationControlError"] = self.simulation_control.error
+            payload["simulationControlLock"] = self.simulation_control.control.lock_statistics()
             from .simulation_admin import status
             try:
                 payload['simulation'] = status(self.simulation_control.control, now)

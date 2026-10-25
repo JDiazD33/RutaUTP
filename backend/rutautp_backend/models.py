@@ -174,6 +174,14 @@ class EstimatedVehicle:
             "controlRevision": control_revision,
         }
 
+    def to_vehicle_position_v3(
+        self, source: SourceContext, control_revision: int,
+    ) -> dict[str, Any]:
+        from .simulation_occupancy import SCRIPT_VERSION, scenario_occupancy
+        state = scenario_occupancy(source, self.vehicle_id, self.timestamp)
+        return {**self.to_vehicle_position_v2(source, control_revision), "schemaVersion": 3,
+                "scenarioOccupancy": state, "occupancyScriptVersion": SCRIPT_VERSION}
+
     def to_vehicle_position(self) -> dict[str, Any]:
         """Carga útil que consume la app.
 

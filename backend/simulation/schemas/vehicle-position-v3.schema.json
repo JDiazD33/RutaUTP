@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rutautp:simulation:vehicle-position:v3",
+  "title": "Posición sintética v3 con ocupación de escenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "vehicleId",
+    "routeId",
+    "linea",
+    "lat",
+    "lon",
+    "speed",
+    "heading",
+    "timestamp",
+    "schemaVersion",
+    "dataOrigin",
+    "simulationRunId",
+    "controlRevision",
+    "scenarioOccupancy",
+    "occupancyScriptVersion"
+  ],
+  "properties": {
+    "vehicleId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+    },
+    "routeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+    },
+    "linea": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "lat": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "lon": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "speed": {
+      "anyOf": [
+        {
+          "const": -1
+        },
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        }
+      ]
+    },
+    "heading": {
+      "anyOf": [
+        {
+          "const": -1
+        },
+        {
+          "type": "number",
+          "exclusiveMaximum": 360,
+          "minimum": 0
+        }
+      ]
+    },
+    "timestamp": {
+      "type": "number",
+      "minimum": 0
+    },
+    "schemaVersion": {
+      "const": 3
+    },
+    "dataOrigin": {
+      "const": "simulated"
+    },
+    "simulationRunId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "controlRevision": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scenarioOccupancy": {
+      "enum": [
+        "empty",
+        "space",
+        "full"
+      ]
+    },
+    "occupancyScriptVersion": {
+      "const": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "dataOrigin": {
+            "const": "simulated"
+          }
+        },
+        "required": [
+          "dataOrigin"
+        ]
+      },
+      "then": {
+        "properties": {
+          "simulationRunId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "controlRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "simulationRunId": {
+            "type": "null"
+          },
+          "controlRevision": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

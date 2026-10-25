@@ -96,6 +96,7 @@ class Probe:
         self.lock = threading.Lock()
         self.connected = False; self.control = None; self.control_seen = None
         self.positions = {}; self.received = 0; self.invalid = 0
+        self.occupancy_counts = {}
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                                   client_id='s10-reader-'+uuid.uuid4().hex)
         self.client.username_pw_set('reader', password)
@@ -112,12 +113,20 @@ class Probe:
                     else:
                         expected = {'vehicleId', 'routeId', 'linea', 'lat', 'lon', 'heading', 'speed',
                             'timestamp', 'schemaVersion', 'dataOrigin', 'simulationRunId', 'controlRevision'}
-                        if (set(body) != expected or body['schemaVersion'] != 2
+                        version = body.get('schemaVersion')
+                        if version == 3:
+                            expected |= {'scenarioOccupancy', 'occupancyScriptVersion'}
+                        occupancy_ok = version != 3 or (body.get('scenarioOccupancy') in ('empty', 'space', 'full')
+                            and type(body.get('occupancyScriptVersion')) is int and body['occupancyScriptVersion'] == 1)
+                        if (set(body) != expected or version not in (2, 3) or not occupancy_ok
                                 or body['dataOrigin'] != 'simulated' or value.retain):
                             self.invalid += 1
                         else:
                             self.received += 1
                             self.positions[body['vehicleId']] = body
+                            if version == 3:
+                                state = body['scenarioOccupancy']
+                                self.occupancy_counts[state] = self.occupancy_counts.get(state, 0) + 1
             except (ValueError, TypeError, KeyError):
                 with self.lock: self.invalid += 1
         self.client.on_connect = connected; self.client.on_message = message
@@ -127,7 +136,7 @@ class Probe:
         with self.lock:
             return {'connected': self.connected, 'control': self.control, 'controlSeenAtUptime': self.control_seen,
                 'receivedPositions': self.received, 'estimatedIdsSeen': len(self.positions),
-                'invalidPositions': self.invalid, 'readerKind': 'python_probe_not_iOS'}
+                'invalidPositions': self.invalid, 'scenarioOccupancyMessages': dict(self.occupancy_counts), 'readerKind': 'python_probe_not_iOS'}
 
     def close(self):
         self.client.disconnect(); self.client.loop_stop()
@@ -163,7 +172,7 @@ def verify_local_acl(host: str, port: int, accounts: dict[str, str], run_id: str
 
 
 def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DEFAULT_GTFS_DIR),
-              host: str = HOST, observer=None) -> dict:
+              host: str = HOST, observer=None, scenario_occupancy: bool = False) -> dict:
     root = Path(__file__).resolve().parents[2]
     output = output.expanduser().absolute()
     host = trial_host(host)
@@ -198,6 +207,8 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                 f'password_file {password_file}\nacl_file {output/"acl"}\npersistence false\nlog_type all\n')
             env = isolated_environment(root, output, port, accounts['backend'], host)
             env['GTFS_DIR'] = str(gtfs_dir)
+            env['BACKEND_SIMULATION_OCCUPANCY_ENABLED'] = '1' if scenario_occupancy else '0'
+            report['scenarioOccupancyEnabled'] = scenario_occupancy
             def spawn(command, filename):
                 log = stack.enter_context((output/filename).open('w'))
                 child = subprocess.Popen(command, cwd=root/'backend', env=env, stdout=log, stderr=subprocess.STDOUT)
@@ -290,6 +301,7 @@ def main(argv=None) -> int:
     parser.add_argument('--seconds', required=True, type=int)
     parser.add_argument('--listen-host', default=HOST, type=trial_host,
                         help='interfaz IPv4 privada explícita; loopback por defecto')
+    parser.add_argument('--scenario-occupancy', action='store_true', help='guion de ocupación v1, salida sintética v3')
     parser.add_argument('--device', help='UDID del iPhone; requiere Release instalado y una IP LAN')
     parser.add_argument('--bundle-id', default='apolito.RutaUTP.dev-joaquindiaz.RutaUTP')
     parser.add_argument('command', choices=['run'])
@@ -304,7 +316,7 @@ def main(argv=None) -> int:
                 raise ValueError('el iPhone requiere la interfaz LAN privada de la Mac')
             from .device_trial import DeviceObserver
             observer = DeviceObserver(args.device, args.bundle_id)
-        result = run_trial(args.output, args.profile, args.seconds, host=args.listen_host, observer=observer)
+        result = run_trial(args.output, args.profile, args.seconds, host=args.listen_host, observer=observer, scenario_occupancy=args.scenario_occupancy)
         print(json.dumps({'phase': 'finished', 'complete': result['complete'],
             'profile': args.profile, 'failure': result['failure']}), flush=True)
         return 130 if result['failure'] == 'KeyboardInterrupt' else (0 if result['complete'] else 2)

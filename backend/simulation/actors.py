@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import time
 from typing import TextIO
 import uuid
 
@@ -55,29 +56,35 @@ class ProducerLock:
 
 class LocalAuthority:
     def __init__(self, control: ControlStore, profile: SimulationProfile, run_id: str,
-                 revision: int, owner: str, gtfs_dir: Path):
+                 revision: int, owner: str, gtfs_dir: Path, *, monotonic_clock=time.monotonic):
         self.control, self.profile = control, profile
         self.run_id, self.revision, self.owner, self.gtfs_dir = run_id, revision, owner, gtfs_dir
+        self.monotonic = monotonic_clock
 
     def current(self, sample: ClockSample) -> dict:
+        started = self.monotonic()
         state = self.control.read()
         if (not state["enabled"] or state["runId"] != self.run_id or state["revision"] != self.revision
                 or state["owner"] != self.owner or state["profile"] != self.profile.pinned()):
             raise ProducerStopped("control_revoked_or_changed")
-        inside, day, closes = self.profile.window(sample.unix)
-        if (not inside or state["serviceDate"] != day or state["serviceEndsAt"] != closes
-                or state["runStartedAt"] is None or not state["runStartedAt"] <= sample.unix
-                < state["runStartedAt"] + self.profile.max_run_seconds):
-            raise ProducerStopped("outside_service_or_run_duration")
         if self.profile.signatures(self.gtfs_dir) != self.profile.verified_signatures:
             raise ProducerStopped("profile_or_feed_changed")
         runtime = self.control.runtime()
+        elapsed = self.monotonic() - started
+        if elapsed < 0:
+            raise ProducerStopped("monotonic_clock_regressed")
+        evaluated_at = sample.unix + elapsed
+        inside, day, closes = self.profile.window(evaluated_at)
+        if (not inside or state["serviceDate"] != day or state["serviceEndsAt"] != closes
+                or state["runStartedAt"] is None or not state["runStartedAt"] <= evaluated_at
+                < state["runStartedAt"] + self.profile.max_run_seconds):
+            raise ProducerStopped("outside_service_or_run_duration")
         if (runtime.get("backendInstance") != self.owner or runtime.get("appliedRevision") != self.revision
                 or runtime.get("lastAckedRevision") != self.revision):
             raise ProducerStopped("backend_or_control_not_applied")
         for field in ("backendSeenAt", "lastAckedAt"):
             stamp = runtime.get(field)
-            if type(stamp) not in (int, float) or not 0 <= sample.unix - stamp < 15:
+            if type(stamp) not in (int, float) or not 0 <= evaluated_at - stamp < 15:
                 raise ProducerStopped("backend_or_puback_expired")
         return state
 

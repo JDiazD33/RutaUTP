@@ -10,11 +10,13 @@ from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import sqlite3
 import stat
 import tempfile
+import time
 from typing import Callable
 import uuid
 
@@ -96,11 +98,39 @@ def _audit_snapshot(state: dict) -> dict:
 
 
 class ControlStore:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, lock_timeout: float = .05,
+                 lock_clock: Callable[[], float] = time.monotonic,
+                 lock_sleep: Callable[[float], None] = time.sleep) -> None:
+        if type(lock_timeout) not in (int, float) or not math.isfinite(lock_timeout) or not 0 <= lock_timeout <= .1:
+            raise ValueError("espera de control entre 0 y 100 ms")
         self.path = Path(path).absolute()
         self.anchor = self.path.with_suffix(self.path.suffix + ".revision")
         self.lock = self.path.with_suffix(self.path.suffix + ".lock")
         self.owner_lock = self.path.with_suffix(self.path.suffix + ".backend-lock")
+        self.lock_timeout = lock_timeout
+        self._lock_clock, self._lock_sleep = lock_clock, lock_sleep
+        self._lock_retries = self._lock_timeouts = 0
+
+    def lock_statistics(self) -> dict:
+        return {"retryAttempts": self._lock_retries, "timeouts": self._lock_timeouts,
+                "waitBudgetSeconds": self.lock_timeout, "readersUseSharedLock": True}
+
+    def _acquire(self, descriptor: int, write: bool) -> None:
+        # Lectores compatibles; el escritor sigue excluyendo lectura y escritura
+        # hasta confirmar SQLite y la referencia externa de revisión.
+        operation = fcntl.LOCK_EX if write else fcntl.LOCK_SH
+        deadline = self._lock_clock() + self.lock_timeout
+        while True:
+            try:
+                fcntl.flock(descriptor, operation | fcntl.LOCK_NB)
+                return
+            except BlockingIOError:
+                remaining = deadline - self._lock_clock()
+                if remaining <= 0:
+                    self._lock_timeouts += 1
+                    raise
+                self._lock_retries += 1
+                self._lock_sleep(min(.001, remaining))
 
     @classmethod
     def initialize(cls, path: str | Path, now: float) -> "ControlStore":
@@ -152,7 +182,7 @@ class ControlStore:
             for path in (self.path, self.anchor, self.lock, self.owner_lock):
                 _private(path)
             descriptor = os.open(self.lock, os.O_RDWR | getattr(os, "O_NOFOLLOW", 0))
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self._acquire(descriptor, write)
             mode = "rw" if write else "ro"
             db = sqlite3.connect(self.path.as_uri() + f"?mode={mode}", uri=True, timeout=1)
             db.row_factory = sqlite3.Row

@@ -48,6 +48,12 @@ struct BusAnimado: Identifiable, Equatable {
     var simulationRunId: String? = nil
     var controlRevision: UInt64? = nil
     var backendVehicleID: String? = nil
+    var scenarioOccupancy: VehicleScenarioOccupancy? = nil
+
+    var displayedScenarioOccupancy: BusOccupancyState? {
+        guard fuente == .real, dataOrigin == .simulated, let scenarioOccupancy else { return nil }
+        return BusOccupancyState(rawValue: scenarioOccupancy.rawValue)
+    }
 
     var presentationIdentity: VehiclePresentationIdentity {
         VehiclePresentationIdentity(id: id, routeId: rutaId, dataOrigin: dataOrigin,
@@ -115,6 +121,6 @@ struct BusAnimado: Identifiable, Equatable {
         lhs.minutosLlegada == rhs.minutosLlegada && lhs.colorDeRuta == rhs.colorDeRuta &&
         lhs.fuente == rhs.fuente && lhs.dataOrigin == rhs.dataOrigin &&
         lhs.simulationRunId == rhs.simulationRunId && lhs.controlRevision == rhs.controlRevision &&
-        lhs.backendVehicleID == rhs.backendVehicleID
+        lhs.backendVehicleID == rhs.backendVehicleID && lhs.scenarioOccupancy == rhs.scenarioOccupancy
     }
 }

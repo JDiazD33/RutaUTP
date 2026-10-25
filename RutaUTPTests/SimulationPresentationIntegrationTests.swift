@@ -51,6 +51,27 @@ final class SimulationPresentationIntegrationTests: XCTestCase {
         XCTFail("No se completó: \(description)")
     }
 
+    func testOcupacionSePropagaActualizaFichaYNoAbreVotos() async throws {
+        let base = position()
+        func occupied(_ state: VehicleScenarioOccupancy) -> VehiclePosition {
+            VehiclePosition(id: base.id, linea: base.linea, routeId: base.routeId,
+                lat: base.lat, lon: base.lon, timestamp: base.timestamp, dataOrigin: .simulated,
+                simulationRunId: run, controlRevision: 3, scenarioOccupancy: state)
+        }
+        let provider = PresentationProvider([occupied(.full)])
+        let vm = map(provider); defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await wait("ocupación inicial") { vm.tarjetasDelPanel.first?.displayedScenarioOccupancy == .full }
+        vm.busSeleccionado = vm.busesAnimados.first
+        XCTAssertNil(vm.busSeleccionado?.occupancyVehicleID)
+        provider.emit([occupied(.space)])
+        await wait("ocupación actualizada") { vm.busSeleccionado?.displayedScenarioOccupancy == .space }
+        XCTAssertEqual(vm.tarjetasDelPanel.first?.displayedScenarioOccupancy, .space)
+        provider.emit([])
+        await wait("retirada con ocupación") { vm.busesAnimados.isEmpty }
+        XCTAssertNil(vm.busSeleccionado)
+    }
+
     func testMapaPropagaMetadatosHastaPanelYNoAbreOcupacionSintetica() async throws {
         let value = position(heading: -1)
         let provider = PresentationProvider([value])

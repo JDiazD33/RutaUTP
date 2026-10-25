@@ -285,14 +285,22 @@ class ObservationStore:
         now: float,
         *,
         source: SourceContext = OBSERVED_SOURCE,
+        scenario_occupancy: str | None = None,
+        occupancy_script_version: int | None = None,
     ) -> None:
         self._check_accepted_source(source)
+        if scenario_occupancy is not None or occupancy_script_version is not None:
+            if (source.origin is not DataOrigin.SIMULATED
+                    or scenario_occupancy not in ("empty", "space", "full")
+                    or type(occupancy_script_version) is not int or occupancy_script_version != 1):
+                raise ValueError("ocupación de escenario inconsistente")
         self._execute(
             """
             INSERT INTO vehicle_positions (
                 at, observed_at, vehicle_id, route_id, linea, lat, lon,
-                speed, heading, sessions, samples, data_origin, simulation_run_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                speed, heading, sessions, samples, data_origin, simulation_run_id,
+                scenario_occupancy, occupancy_script_version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 now,
@@ -308,6 +316,8 @@ class ObservationStore:
                 vehicle.sample_count,
                 source.origin.value,
                 source.run_id,
+                scenario_occupancy,
+                occupancy_script_version,
             ),
             kind="vehicle_positions",
             simulation_run_id=source.run_id,

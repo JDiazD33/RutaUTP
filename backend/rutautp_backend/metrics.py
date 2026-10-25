@@ -30,6 +30,7 @@ class Metrics:
     publish_attempts: int = 0
     publish_failures: int = 0
     internal_errors: int = 0
+    simulation_control_busy_rejections: int = 0
     vehicles_created: int = 0
     vehicles_expired: int = 0
     rejected: Counter[str] = field(default_factory=Counter)
@@ -110,6 +111,7 @@ class Metrics:
             "published": self.published,
             "publishFailures": self.publish_failures,
             "internalErrors": self.internal_errors,
+            "simulationControlBusyRejections": self.simulation_control_busy_rejections,
             "vehiclesCreated": self.vehicles_created,
             "vehiclesExpired": self.vehicles_expired,
             "reasons": dict(self.rejected.most_common()),

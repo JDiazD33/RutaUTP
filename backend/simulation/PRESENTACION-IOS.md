@@ -80,3 +80,34 @@ informe S08 de `mds`. El ensayo visual conectado, los objetivos de retirada
 La factoría conserva la compatibilidad explícita v1 de S07 mientras simulación
 está deshabilitada. Antes de producir tráfico: verificar migración/ACL efectivas,
 coordinar salida v2, instalar S07/S08 y aplicar los procedimientos S09/S10.
+
+
+## Ocupación del escenario (23/10/2026)
+
+Por petición del usuario, el backend puede añadir un guion de ocupación a cada
+micro sintético: `empty` (Vacío), `space` (Con espacio), `full` (Lleno).
+No se deduce de la cantidad de balizas ni de votos. La política v1 es determinista
+por identificador de vehículo y timestamp de la posición, con ciclos de cinco
+minutos y mezcla por franja horaria de Lima. Un cambio puede saltar entre estados;
+no representa un conteo de pasajeros ni capacidad física medida.
+
+`BACKEND_SIMULATION_OCCUPANCY_ENABLED=1` requiere ingreso sintético habilitado.
+Por defecto está apagado. Con el flag, solamente las posiciones sintéticas usan
+schemaVersion 3, con las doce claves v2 más `scenarioOccupancy` y
+`occupancyScriptVersion=1`, ambas obligatorias y no nulas. El timestamp conserva
+la edad de la observación. Origen, run, revisión, quorum y lease siguen vigentes.
+Los observados conservan su contrato anterior. Instalar el lector iOS v3 antes de
+habilitar esta salida: los lectores v2 rechazan versiones desconocidas.
+
+La app muestra el estado en la tarjeta y el detalle, también por accesibilidad.
+El detalle sintético es de lectura; no abre el servicio comunitario ni permite
+que los actores publiquen votos. Al caducar o deshabilitar el run se retiran tanto
+la posición como su ocupación. No hay un control público nuevo en la app.
+
+El histórico pasa de esquema 1 a 2 mediante migración aditiva, con backup SQLite
+consistente de bases existentes y dos columnas nulas para posiciones antiguas.
+Cada intento de posición v3 guarda exactamente estado y versión antes de publicar;
+una fila no prueba entrega MQTT/iOS. Los informes de esquema 1 siguen siendo de
+solo lectura y no disparan migraciones. Se añade el conteo de estados almacenados.
+El ensayo aislado admite `--scenario-occupancy`; conserva las cuentas, ACL,
+presupuestos y apagado de S10. No se modificó una base activa para desplegar esto.

@@ -776,7 +776,8 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 dataOrigin: posicion.dataOrigin,
                 simulationRunId: posicion.simulationRunId,
                 controlRevision: posicion.controlRevision,
-                backendVehicleID: posicion.id
+                backendVehicleID: posicion.id,
+                scenarioOccupancy: posicion.scenarioOccupancy
             )
         }
 
@@ -787,7 +788,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
             busSeleccionado = flotaBuses.first { $0.presentationIdentity == seleccionado.presentationIdentity }
         }
         MQTTConfiguration.trialLog("map", ["received": posiciones.count,
-            "fleet": flotaBuses.count, "selected": busSeleccionado == nil ? 0 : 1])
+            "fleet": flotaBuses.count, "selected": busSeleccionado == nil ? 0 : 1,
+            "occupancyEmpty": flotaBuses.filter { $0.displayedScenarioOccupancy == .empty }.count,
+            "occupancySpace": flotaBuses.filter { $0.displayedScenarioOccupancy == .space }.count,
+            "occupancyFull": flotaBuses.filter { $0.displayedScenarioOccupancy == .full }.count])
     }
 
     private func actualizarPosicionBuses() {
