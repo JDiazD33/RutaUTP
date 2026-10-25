@@ -15,7 +15,7 @@ import Foundation
 
 @MainActor
 protocol VehicleTrackingProviding: AnyObject {
-    /// Marca la fuente de los datos. Útil para badges en UI ("En vivo" real vs "Demo").
+    /// Transporte; la procedencia de cada dato pertenece a `VehiclePosition.dataOrigin`.
     var source: VehicleTrackingSource { get }
 
     /// Inicia la emisión de posiciones. Idempotente: llamar dos veces no duplica.
@@ -32,4 +32,12 @@ protocol VehicleTrackingProviding: AnyObject {
     /// Snapshot síncrono de la última posición conocida de cada vehículo.
     /// Útil para acceso puntual sin colgarse a un stream.
     var currentPositions: [VehiclePosition] { get }
+
+    /// Revalidar autoridad justo antes de presentar. Evita aplicar el valor ya
+    /// entregado por AsyncStream si entretanto llegó una revocación o caducidad.
+    func positionsForPresentation() -> [VehiclePosition]
+}
+
+extension VehicleTrackingProviding {
+    func positionsForPresentation() -> [VehiclePosition] { currentPositions }
 }

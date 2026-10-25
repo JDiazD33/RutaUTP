@@ -39,6 +39,11 @@ final class AppRouter: ObservableObject {
     #endif
 
     @Published var currentScreen: AppScreen = {
+        // El lector efímero de S10 arranca directamente en el flujo medido.
+        // Exigir configuración completa evita abrir una demo por un ensayo mal configurado.
+        if MQTTConfiguration.isReadOnlyTrial, MQTTConfiguration.fromEnvironment() != nil {
+            return .mapaPrincipal
+        }
         #if DEBUG
         return AppRouter.pantallaInicial
         #else

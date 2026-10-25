@@ -40,7 +40,7 @@ struct MapHeaderView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityLabel(hayDatosRecientes
                             ? L.t("Posiciones recientes de vehículos", "Recent vehicle positions")
-                            : L.t("Esperando posiciones de vehículos confirmados", "Waiting for confirmed vehicle positions"))
+                            : L.t("Esperando posiciones de vehículos", "Waiting for vehicle positions"))
                 }
             }
 

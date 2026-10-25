@@ -254,7 +254,8 @@ private let isForcedOnboardForMQTTTest =
         observationPublisher: ObservationPublishing? = nil,
         tripOccupancy: OccupancyService? = nil,
         detectionClock: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 },
-        configurationProvider: () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment
+        configurationProvider: () -> MQTTConfiguration? = MQTTConfiguration.contributionFromEnvironment,
+        preserveStoredConsentWhenUnconfigured: Bool = MQTTConfiguration.isReadOnlyTrial
     ) {
         self.locationService = locationService
         self.motionService = motionService ?? CoreMotionActivityService()
@@ -287,7 +288,9 @@ private let isForcedOnboardForMQTTTest =
         isEnabled = storedConsent && self.observationPublisher != nil
 
         if storedConsent && self.observationPublisher == nil {
-            UserDefaults.standard.set(false, forKey: consentStorageKey)
+            if !preserveStoredConsentWhenUnconfigured {
+                UserDefaults.standard.set(false, forKey: consentStorageKey)
+            }
             contributionStatus = .mqttNotConfigured
         }
 

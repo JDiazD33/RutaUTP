@@ -52,10 +52,6 @@ private struct TrackingScreenContent: View {
     // Los negocios en ruta viven en el ViewModel: son datos y una consulta,
     // no presentación.
 
-    // ── Interacción con vehículos ──
-    /// ID del bus tocado en el mapa (la card se alimenta del stream en vivo).
-    @State private var vehiculoSeleccionadoID: String?
-
     /// Confirmación antes de cortar un viaje en curso.
     @State private var confirmarDetener: Bool = false
     @State private var destinoTexto = ""
@@ -74,18 +70,12 @@ private struct TrackingScreenContent: View {
         vm.rutaGTFS?.color ?? Color.primaryContainer
     }
 
-    /// Datos del vehículo tocado, siempre frescos (el stream actualiza 4 Hz).
-    private var vehiculoSeleccionado: VehiclePosition? {
-        guard let id = vehiculoSeleccionadoID else { return nil }
-        return vm.vehiculos.first { $0.id == id }
-    }
-
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
 
             TrackingMapCanvas(vm: vm, cameraPosition: $cameraPosition,
-                              vehiculoSeleccionadoID: $vehiculoSeleccionadoID,
+                              vehiculoSeleccionadoID: $vm.vehiculoSeleccionadoID,
                               destinoActual: destinoActual)
 
             VStack(spacing: 0) {
@@ -123,7 +113,7 @@ private struct TrackingScreenContent: View {
                     .scrollBounceBehavior(.basedOnSize)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if let vehiculo = vehiculoSeleccionado {
+                } else if let vehiculo = vm.vehiculoSeleccionado {
                     ViewThatFits(in: .vertical) {
                         fichaVehiculo(vehiculo).fixedSize(horizontal: false, vertical: true)
                         ScrollView {
@@ -236,7 +226,7 @@ private struct TrackingScreenContent: View {
             },
             enVivo: vm.fuenteVehiculos == .real,
             onClose: {
-                withAnimation(.easeInOut(duration: 0.2)) { vehiculoSeleccionadoID = nil }
+                withAnimation(.easeInOut(duration: 0.2)) { vm.vehiculoSeleccionadoID = nil }
             }
         )
         .padding(.horizontal, 14)
@@ -344,10 +334,12 @@ private struct TrackingScreenContent: View {
                     .foregroundStyle(Color.onSurface.opacity(0.85))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Cerrar demo", "Close demo"))
+            .accessibilityLabel(L.t("Cerrar seguimiento", "Close tracking"))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(L.t("DEMO DE SEGUIMIENTO", "TRACKING DEMO"))
+                Text(vm.fuenteVehiculos == .real
+                     ? L.t("SEGUIMIENTO", "TRACKING")
+                     : L.t("DEMO DE SEGUIMIENTO", "TRACKING DEMO"))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.onSurface.opacity(0.6))
                     .appTracking(AppTracking.wideLabel)
@@ -384,7 +376,10 @@ private struct TrackingScreenContent: View {
     /// Fuente de los vehículos del mapa (VehicleTrackingProviding.source).
     private var badgeFuente: some View {
         let enVivo = vm.fuenteVehiculos == .real
-        return Text(enVivo ? L.t("EN VIVO", "LIVE") : L.t("DEMO", "DEMO"))
+        let estado = vm.vehiculos.isEmpty
+            ? L.t("ESPERANDO DATOS", "WAITING FOR DATA")
+            : L.t("DATOS RECIENTES", "RECENT DATA")
+        return Text(enVivo ? estado : L.t("DEMO", "DEMO"))
             .font(.system(size: 9, weight: .bold))
             .foregroundStyle(enVivo ? (isDarkMode ? Color.black : Color.white) : Color.onSurface)
             .appTracking(AppTracking.wideLabel)

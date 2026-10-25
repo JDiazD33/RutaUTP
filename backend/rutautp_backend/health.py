@@ -34,6 +34,30 @@ logger = logging.getLogger(__name__)
 HEALTH_CLOCK_SKEW_TOLERANCE_S = 5.0
 
 
+def fresh_timestamp(value: Any, now: float, max_age_s: float = 15) -> bool:
+    """Autoridad local: sin booleanos, NaN, infinito ni fechas futuras."""
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value) and 0 <= now - value < max_age_s
+    except OverflowError:
+        return False
+
+
+def simulation_health(payload: dict | None, now: float, max_age_s: float = 15) -> dict:
+    """Salud sintética separada: un fallo no declara caído el flujo observado."""
+    if not isinstance(payload, dict) or not fresh_timestamp(payload.get('at'), now, max_age_s):
+        return {'healthy': False, 'reason': 'backend_heartbeat_missing_or_stale'}
+    if payload.get('connected') is not True:
+        return {'healthy': False, 'reason': 'backend_connection_unconfirmed'}
+    storage = payload.get('simulationStorage')
+    if not isinstance(storage, dict) or storage.get('available') is not True:
+        return {'healthy': False, 'reason': 'simulation_history_unavailable'}
+    if payload.get('simulationControlError'):
+        return {'healthy': False, 'reason': 'simulation_control_error'}
+    return {'healthy': True, 'reason': 'backend_and_history_recent'}
+
+
 def write_heartbeat(path: str, payload: dict[str, Any]) -> None:
     """Escribe el latido. Un fallo de disco no interrumpe el puente."""
     if not path.strip():

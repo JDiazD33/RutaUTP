@@ -740,7 +740,9 @@ final class MQTTTrackingCicloTests: XCTestCase {
         let datos = try JSONSerialization.data(withJSONObject: [
             "vehicleId": id, "routeId": "ruta-prueba", "linea": "10",
             "lat": -8.1, "lon": -79.03, "heading": 90, "speed": 4,
-            "timestamp": Date().timeIntervalSince1970
+            "timestamp": Date().timeIntervalSince1970,
+            "schemaVersion": 2, "dataOrigin": "observed",
+            "simulationRunId": NSNull(), "controlRevision": NSNull()
         ])
         return CocoaMQTTMessage(topic: "rutautp/vehiculos/\(id)/posicion",
             string: try XCTUnwrap(String(data: datos, encoding: .utf8)))
@@ -766,7 +768,7 @@ final class MQTTTrackingCicloTests: XCTestCase {
 
     func testStartPuedeReintentarSiElSocketNoAceptoElIntento() {
         var clientes: [CocoaMQTT] = []
-        let provider = MQTTTrackingProvider(configuration: configuracion) { client in
+        let provider = MQTTTrackingProvider(configuration: configuracion, loadCheckpoint: { nil }, saveCheckpoint: { _ in }) { client in
             clientes.append(client)
             return clientes.count > 1
         }
@@ -782,7 +784,7 @@ final class MQTTTrackingCicloTests: XCTestCase {
 
     func testMensajeDeClienteAnteriorNoEntraEnLaNuevaSesion() async throws {
         var clientes: [CocoaMQTT] = []
-        let provider = MQTTTrackingProvider(configuration: configuracion) { client in
+        let provider = MQTTTrackingProvider(configuration: configuracion, loadCheckpoint: { nil }, saveCheckpoint: { _ in }) { client in
             clientes.append(client)
             return true
         }
@@ -811,7 +813,7 @@ final class MQTTTrackingCicloTests: XCTestCase {
 
     func testMensajeEncoladoAntesDeStopNoRepueblaSnapshot() async throws {
         var clientes: [CocoaMQTT] = []
-        let provider = MQTTTrackingProvider(configuration: configuracion) { client in
+        let provider = MQTTTrackingProvider(configuration: configuracion, loadCheckpoint: { nil }, saveCheckpoint: { _ in }) { client in
             clientes.append(client)
             return true
         }

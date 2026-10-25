@@ -12,6 +12,9 @@ struct BusPanelItem: Identifiable, Equatable {
     let colorDeRuta: Color?
     var color: Color { colorDeRuta ?? .appPrimary }
     let fuente: VehicleTrackingSource
+    let dataOrigin: VehicleDataOrigin
+    let simulationRunId: String?
+    let controlRevision: UInt64?
 
     init(_ bus: BusAnimado) {
         id = bus.id
@@ -23,6 +26,9 @@ struct BusPanelItem: Identifiable, Equatable {
         minutosLlegada = bus.minutosLlegada
         colorDeRuta = bus.colorDeRuta
         fuente = bus.fuente
+        dataOrigin = bus.dataOrigin
+        simulationRunId = bus.simulationRunId
+        controlRevision = bus.controlRevision
     }
 
     var ramalTexto: String {

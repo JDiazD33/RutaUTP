@@ -16,12 +16,14 @@ from pathlib import Path
 import pytest
 
 from rutautp_backend.models import OBSERVATION_FIELDS, EstimatedVehicle
+from rutautp_backend.simulation_models import DataOrigin, SourceContext
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 MQTT_TRACKING_PROVIDER = (
     REPO_ROOT / "RutaUTP/Services/Tracking/Providers/MQTTTrackingProvider.swift"
 )
+VEHICLE_TRACKING_RECEPTION = REPO_ROOT / 'RutaUTP/Services/Tracking/Models/VehicleTrackingReception.swift'
 MQTT_OBSERVATION_PUBLISHER = (
     REPO_ROOT / "RutaUTP/Services/Tracking/Publishers/MQTTObservationPublisher.swift"
 )
@@ -73,13 +75,26 @@ def swift_struct_fields(path: Path, struct_name: str) -> set[str]:
     return set(re.findall(r"\blet\s+(\w+)\s*:", body))
 
 
+def swift_vehicle_wire_fields() -> tuple[set[str], set[str]]:
+    """S07 reemplazó el DTO plano por claves explícitas de red v1/v2."""
+    assert VEHICLE_TRACKING_RECEPTION.is_file(), 'falta el decodificador Swift de red'
+    assert 'VehicleTrackingWire.position' in MQTT_TRACKING_PROVIDER.read_text(encoding='utf-8')
+    source = re.sub(r'//[^\n]*', '', VEHICLE_TRACKING_RECEPTION.read_text(encoding='utf-8'))
+    assert 'struct VehiclePositionWire: Decodable' in source
+    body = source.split('struct VehiclePositionWire: Decodable', 1)[1]
+    keys = re.search(r'enum Keys: String, CodingKey\s*\{([^}]+)\}', body)
+    legacy = re.search(r'let legacyKeys: Set<String>\s*=\s*\[([^]]+)\]', body)
+    assert keys is not None and legacy is not None, 'el contrato de red dejó de declarar sus claves'
+    v2 = {key.strip() for line in keys[1].splitlines() if 'case ' in line
+          for key in line.split('case ', 1)[1].split(',')}
+    return set(re.findall(r'"([^"]+)"', legacy[1])), v2
+
+
 class TestSalidaVehicular:
-    """Lo que el backend publica debe encajar con `VehiclePositionMessage`."""
+    """Lo que publica el backend debe encajar con el decoder de red actual."""
 
     def test_las_claves_coinciden_con_el_cliente(self):
-        esperadas = swift_struct_fields(
-            MQTT_TRACKING_PROVIDER, "VehiclePositionMessage"
-        )
+        esperadas, _ = swift_vehicle_wire_fields()
 
         vehicle = EstimatedVehicle(
             vehicle_id="17350695-01",
@@ -100,12 +115,7 @@ class TestSalidaVehicular:
             f"sobran {publicadas - esperadas}, faltan {esperadas - publicadas}"
         )
 
-    def test_el_cliente_no_tiene_campos_opcionales(self):
-        """Un campo ausente haría fallar el `Decodable` entero.
-
-        En Swift, `let speed: Double` (sin `?`) obliga a que la clave exista
-        siempre. Si el backend omitiera una, el mensaje se descartaría.
-        """
+    def test_el_cliente_exige_las_claves_incluso_si_admiten_null(self):
         vehicle = EstimatedVehicle(
             vehicle_id="x",
             route_id="x",
@@ -118,10 +128,23 @@ class TestSalidaVehicular:
             last_seen=0.0,
         )
 
-        payload = vehicle.to_vehicle_position()
+        payload = vehicle.to_vehicle_position_v2(SourceContext(DataOrigin.OBSERVED))
+        _, required = swift_vehicle_wire_fields()
+        assert set(payload) == required
+        assert payload['simulationRunId'] is None and payload['controlRevision'] is None
 
-        for key in swift_struct_fields(MQTT_TRACKING_PROVIDER, "VehiclePositionMessage"):
-            assert key in payload
+    @pytest.mark.parametrize('origin', [DataOrigin.OBSERVED, DataOrigin.SIMULATED])
+    def test_salida_v2_coincide_con_claves_swift(self, origin):
+        run = '5bdb08e8-e971-4a9e-a18e-47f359841321'
+        source = SourceContext(origin, run if origin is DataOrigin.SIMULATED else None)
+        vehicle = EstimatedVehicle(vehicle_id=f'sim:{run}:bus' if source.run_id else 'observed-bus',
+            route_id='route', linea='T', lat=-8.1, lon=-79.03, speed=0, heading=-1,
+            timestamp=1700000000, last_seen=1700000000)
+        payload = vehicle.to_vehicle_position_v2(source, 3 if source.run_id else None)
+        _, required = swift_vehicle_wire_fields()
+        assert set(payload) == required
+        assert payload['schemaVersion'] == 2 and payload['dataOrigin'] == origin.value
+        assert payload['simulationRunId'] == source.run_id
 
     def test_los_tipos_son_numericos_donde_el_cliente_espera_dobles(self):
         vehicle = EstimatedVehicle(

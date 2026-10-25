@@ -143,7 +143,7 @@ struct TransitMapCanvas: View {
             // línea encima. El ancla no es el centro de la vista: con la
             // etiqueta arriba, centrarla dejaría el vehículo dibujado por
             // debajo del punto real.
-            ForEach(vm.busesAnimados.prefix(rutaViaje == nil ? 8 : 0)) { bus in
+            ForEach(vm.busesAnimados.prefix(rutaViaje == nil ? VehiclePresentationLimits.maximumMapMarkers : 0)) { bus in
                 Annotation(L.t("Línea", "Line") + " \(bus.linea)",
                            coordinate: bus.coordinate,
                            anchor: BusMarker3D.ancla) {
@@ -156,7 +156,7 @@ struct TransitMapCanvas: View {
                         BusMarker3D(
                             linea: bus.linea,
                             color: bus.color,
-                            heading: bus.heading,
+                            heading: bus.heading >= 0 ? bus.heading : 0,
                             seleccionado: vm.busSeleccionado?.id == bus.id
                         )
                     }

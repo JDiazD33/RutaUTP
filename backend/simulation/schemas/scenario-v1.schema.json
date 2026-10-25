@@ -1,0 +1,529 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rutautp:simulation:scenario:v1",
+  "title": "Manifiesto de escenario conectado; primer perfil 30/10",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "scenarioId",
+    "scenarioVersion",
+    "dataOrigin",
+    "enabledByDefault",
+    "seed",
+    "clock",
+    "service",
+    "feed",
+    "contracts",
+    "limits",
+    "publication",
+    "control",
+    "movement",
+    "gps",
+    "operationalPolicy",
+    "vehicles"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../schemas/scenario-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "scenarioId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "scenarioVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "dataOrigin": {
+      "const": "simulated"
+    },
+    "enabledByDefault": {
+      "const": false
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "clock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "rate"
+      ],
+      "properties": {
+        "mode": {
+          "const": "realtime"
+        },
+        "rate": {
+          "const": 1
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeZone",
+        "startsAtLocal",
+        "endsAtLocal",
+        "closePolicy"
+      ],
+      "properties": {
+        "timeZone": {
+          "const": "America/Lima"
+        },
+        "startsAtLocal": {
+          "const": "07:00"
+        },
+        "endsAtLocal": {
+          "enum": [
+            "22:00",
+            "22:30"
+          ]
+        },
+        "closePolicy": {
+          "const": "stop_at_boundary"
+        }
+      }
+    },
+    "feed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pathFromRepositoryRoot",
+        "tripSelector",
+        "sha256"
+      ],
+      "properties": {
+        "pathFromRepositoryRoot": {
+          "const": "gtfs"
+        },
+        "tripSelector": {
+          "const": "lexicographic_min_trip_per_route"
+        },
+        "sha256": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "routes.txt",
+            "trips.txt",
+            "shapes.txt",
+            "stops.txt",
+            "stop_times.txt"
+          ],
+          "properties": {
+            "routes.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "trips.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "shapes.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "stops.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "stop_times.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "passengerObservation",
+        "vehiclePosition",
+        "simulationControl"
+      ],
+      "properties": {
+        "passengerObservation": {
+          "const": 1
+        },
+        "vehiclePosition": {
+          "const": 2
+        },
+        "simulationControl": {
+          "const": 1
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxConcurrentActors",
+        "nominalVehicleCount",
+        "maxRunDurationSeconds",
+        "maxObservationPublishCallsPerRun",
+        "maxObservationPublishCallsPerDay"
+      ],
+      "properties": {
+        "maxConcurrentActors": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100
+        },
+        "nominalVehicleCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "maxRunDurationSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 55800
+        },
+        "maxObservationPublishCallsPerRun": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000000
+        },
+        "maxObservationPublishCallsPerDay": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000000
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qos",
+        "retained",
+        "minimumIntervalSeconds",
+        "positiveJitterMaxSeconds",
+        "phaseWindowSeconds",
+        "maxQueuedMessagesPerActor",
+        "maxInflightMessagesPerActor",
+        "maxMessageAgeSeconds",
+        "reconnectBackoffSeconds"
+      ],
+      "properties": {
+        "qos": {
+          "const": 1
+        },
+        "retained": {
+          "const": false
+        },
+        "minimumIntervalSeconds": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 60
+        },
+        "positiveJitterMaxSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "phaseWindowSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "maxQueuedMessagesPerActor": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "maxInflightMessagesPerActor": {
+          "const": 1
+        },
+        "maxMessageAgeSeconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 45
+        },
+        "reconnectBackoffSeconds": {
+          "$ref": "#/$defs/backoffRange"
+        }
+      }
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "heartbeatIntervalSeconds",
+        "leaseSeconds",
+        "healthyShutdownTargetSeconds",
+        "expiryRemovalTargetSeconds"
+      ],
+      "properties": {
+        "heartbeatIntervalSeconds": {
+          "const": 5
+        },
+        "leaseSeconds": {
+          "const": 15
+        },
+        "healthyShutdownTargetSeconds": {
+          "const": 5
+        },
+        "expiryRemovalTargetSeconds": {
+          "const": 20
+        }
+      }
+    },
+    "movement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cruiseSpeedMetersPerSecond",
+        "accelerationMetersPerSecondSquared",
+        "decelerationMetersPerSecondSquared",
+        "stopDwellSeconds",
+        "terminalPauseSeconds",
+        "maxStopProjectionDistanceMeters",
+        "unknownHeadingWhenStopped",
+        "routeEndPolicy"
+      ],
+      "properties": {
+        "cruiseSpeedMetersPerSecond": {
+          "$ref": "#/$defs/speedRange"
+        },
+        "accelerationMetersPerSecondSquared": {
+          "type": "number",
+          "maximum": 3,
+          "exclusiveMinimum": 0
+        },
+        "decelerationMetersPerSecondSquared": {
+          "type": "number",
+          "maximum": 3,
+          "exclusiveMinimum": 0
+        },
+        "stopDwellSeconds": {
+          "$ref": "#/$defs/durationRange"
+        },
+        "terminalPauseSeconds": {
+          "$ref": "#/$defs/durationRange"
+        },
+        "maxStopProjectionDistanceMeters": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "unknownHeadingWhenStopped": {
+          "const": -1
+        },
+        "routeEndPolicy": {
+          "const": "finish_without_wrapping"
+        }
+      }
+    },
+    "gps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declaredAccuracyMeters",
+        "maxNoiseOffsetMeters",
+        "noiseSmoothingSeconds"
+      ],
+      "properties": {
+        "declaredAccuracyMeters": {
+          "$ref": "#/$defs/accuracyRange"
+        },
+        "maxNoiseOffsetMeters": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "noiseSmoothingSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        }
+      }
+    },
+    "operationalPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pauseOnPersistenceFailure",
+        "onLongSuspension",
+        "onCivilClockJump",
+        "onMissingOrExpiredControl"
+      ],
+      "properties": {
+        "pauseOnPersistenceFailure": {
+          "const": true
+        },
+        "onLongSuspension": {
+          "const": "discard_backlog_and_new_sessions"
+        },
+        "onCivilClockJump": {
+          "const": "pause"
+        },
+        "onMissingOrExpiredControl": {
+          "const": "stop_publishing"
+        }
+      }
+    },
+    "vehicles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/vehicle"
+      },
+      "minItems": 1,
+      "maxItems": 50
+    }
+  },
+  "$defs": {
+    "principal": {
+      "type": "string",
+      "pattern": "^sim-[0-9]{3}$"
+    },
+    "vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenarioVehicleId",
+        "routeId",
+        "linea",
+        "tripId",
+        "shapeId",
+        "initialProgress",
+        "principals"
+      ],
+      "properties": {
+        "scenarioVehicleId": {
+          "type": "string",
+          "pattern": "^scenario-bus-[0-9]{2}$"
+        },
+        "routeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+        },
+        "linea": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^\\S(?:.*\\S)?$"
+        },
+        "tripId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+        },
+        "shapeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+        },
+        "initialProgress": {
+          "type": "number",
+          "exclusiveMaximum": 1,
+          "minimum": 0
+        },
+        "principals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/principal"
+          },
+          "minItems": 2,
+          "maxItems": 4,
+          "uniqueItems": true
+        }
+      }
+    },
+    "speedRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        }
+      }
+    },
+    "durationRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      }
+    },
+    "accuracyRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        }
+      }
+    },
+    "backoffRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 60
+        },
+        "max": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 60
+        }
+      }
+    }
+  }
+}

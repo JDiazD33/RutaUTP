@@ -182,8 +182,8 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                        "No lines were found near this point")
         }
         return fuenteFlota == .real
-            ? L.t("Aún no hay buses confirmados para estas líneas",
-                  "There are no confirmed buses for these lines yet")
+            ? L.t("Aún no hay posiciones recientes para estas líneas",
+                  "There are no recent positions for these lines yet")
             : L.t("No hay buses de demostración disponibles", "No demo buses are available")
     }
 
@@ -422,6 +422,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// Pausa solo la simulación; no toca GPS, consultas ni el canal real.
     func actualizarActividadVisual(_ activa: Bool) {
         actividadVisual = activa
+        if fuenteFlota == .real, vehicleProvider != nil { aplicarFlotaReal() }
         if activa {
             reanudarSimulacionBuses()
         } else {
@@ -468,8 +469,8 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         // Un snapshot recibido durante esta espera solo actualiza la flota.
         rutasCercanas = []
         if fuenteFlota == .real {
-            if let posiciones = ultimasPosicionesReales {
-                aplicarFlotaReal(posiciones)
+            if ultimasPosicionesReales != nil {
+                aplicarFlotaReal()
             }
         }
 
@@ -515,7 +516,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
             if let catalogo = catalogoRecuperado {
                 self.rutasPorId = Dictionary(catalogo.map { ($0.id, $0) },
                                             uniquingKeysWith: { primera, _ in primera })
-                if let posiciones = self.ultimasPosicionesReales { self.aplicarFlotaReal(posiciones) }
+                if self.ultimasPosicionesReales != nil { self.aplicarFlotaReal() }
             }
             if fuenteConsulta == .simulated {
                 self.flotaBuses = Self.busesDesde(self.rutasCercanas, ancla: punto)
@@ -655,6 +656,11 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         vehicleProvider?.stop()
         vehicleProvider = nil
         ultimasPosicionesReales = nil
+        if fuenteFlota == .real {
+            flotaBuses = []
+            busesAnimados = []
+            busSeleccionado = nil
+        }
     }
 
     // MARK: - Flota real (canal MQTT)
@@ -714,10 +720,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
             provider.start()
 
-            for await posiciones in provider.positions() {
+            for await _ in provider.positions() {
                 guard !Task.isCancelled, self.flotaRevision == revision,
                       self.fuenteFlota == .real else { break }
-                self.aplicarFlotaReal(posiciones)
+                self.aplicarFlotaReal()
             }
         }
 
@@ -726,13 +732,14 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
     /// Sustituye la flota del mapa por las posiciones que llegan del broker.
     ///
-    /// Solo cambia `lat`, `lon` y `heading` respecto a la flota simulada: el
-    /// resto de campos se rellenan para que la tarjeta del mapa se dibuje
-    /// igual, y `fuente` distingue el origen. La geometría va vacía a propósito
-    /// —un vehículo observado no trae shape— y por eso `actualizarPosicion()`
-    /// no lo mueve: su posición la fija cada mensaje.
-    private func aplicarFlotaReal(_ posiciones: [VehiclePosition]) {
+    /// Conserva procedencia, run y revisión además de los datos de presentación.
+    /// La geometría va vacía: la posición MQTT la fija cada mensaje, sin avanzar
+    /// mediante la animación local.
+    private func aplicarFlotaReal() {
         guard fuenteFlota == .real else { return }
+        // El stream puede haber entregado un valor que una revocación posterior
+        // ya retiró. Lo mismo ocurre con la caché al cambiar destino/catálogo.
+        let posiciones = vehicleProvider?.positionsForPresentation() ?? []
         ultimasPosicionesReales = posiciones
         let anclaETA: CLLocationCoordinate2D = {
             if let anclaLineas {
@@ -761,11 +768,15 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 colorDeRuta: ruta?.color,
                 lat: posicion.lat,
                 lon: posicion.lon,
-                heading: posicion.heading >= 0 ? posicion.heading : 0,
+                heading: posicion.heading,
                 rutaCoordenadas: [],
                 acumulados: [],
                 velocidadMS: posicion.speed >= 0 ? posicion.speed : 0,
-                fuente: .real
+                fuente: .real,
+                dataOrigin: posicion.dataOrigin,
+                simulationRunId: posicion.simulationRunId,
+                controlRevision: posicion.controlRevision,
+                backendVehicleID: posicion.id
             )
         }
 
@@ -773,8 +784,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
         // Si el vehículo abierto en el popup sigue existiendo, refrescarlo.
         if let seleccionado = busSeleccionado {
-            busSeleccionado = flotaBuses.first { $0.id == seleccionado.id }
+            busSeleccionado = flotaBuses.first { $0.presentationIdentity == seleccionado.presentationIdentity }
         }
+        MQTTConfiguration.trialLog("map", ["received": posiciones.count,
+            "fleet": flotaBuses.count, "selected": busSeleccionado == nil ? 0 : 1])
     }
 
     private func actualizarPosicionBuses() {

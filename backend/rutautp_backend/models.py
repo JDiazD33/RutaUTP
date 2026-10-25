@@ -6,9 +6,9 @@ correspondencia es la parte más importante de este archivo:
 - Entrada: `PassengerObservationPayload` (MQTTObservationPublisher.swift)
 - Salida:  `VehiclePositionMessage` (MQTTTrackingProvider.swift)
 
-Si el servidor publicara un campo de más, un campo de menos o con otro nombre,
-la app descartaría el mensaje en el `JSONDecoder` sin decir por qué. Por eso
-hay pruebas que fijan las claves exactas en ambos sentidos.
+Una clave obligatoria ausente o con otro nombre impide decodificar. La salida
+legada conserva sus ocho claves; la salida v2 añade procedencia que S07 deberá
+validar explícitamente (el lector anterior ignora las claves adicionales).
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ import json
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+from .simulation_models import DataOrigin, SourceContext
 
 SCHEMA_VERSION = 1
 
@@ -51,6 +53,8 @@ class RejectReason(str, Enum):
     RATE_LIMITED = "rate_limited"
     DUPLICATE = "duplicate"
     SESSION_MISMATCH = "session_mismatch"
+    SOURCE_NOT_AUTHORIZED = "source_not_authorized"
+    SIMULATION_UNAVAILABLE = "simulation_unavailable"
 
     #: El servicio, en conjunto, supera su techo de mensajes por minuto. Es
     #: distinto de `RATE_LIMITED`: aquel aísla un principal MQTT autenticado;
@@ -152,6 +156,23 @@ class EstimatedVehicle:
     principals: dict[str, float] = field(default_factory=dict)
     sample_count: int = 0
     last_published_at: float = 0.0
+
+    def to_vehicle_position_v2(
+        self, source: SourceContext, control_revision: int | None = None,
+    ) -> dict[str, Any]:
+        """Procedencia derivada por el backend, sin renovar el timestamp."""
+        if source.origin is DataOrigin.SIMULATED:
+            if type(control_revision) is not int or not 1 <= control_revision <= 2**53 - 1:
+                raise ValueError("una posición sintética requiere controlRevision vigente")
+            if not self.vehicle_id.startswith(f"sim:{source.run_id}:"):
+                raise ValueError("vehicleId sintético fuera de su run")
+        elif source.origin is not DataOrigin.OBSERVED or control_revision is not None:
+            raise ValueError("procedencia v2 inconsistente")
+        return {
+            **self.to_vehicle_position(), "schemaVersion": 2,
+            "dataOrigin": source.origin.value, "simulationRunId": source.run_id,
+            "controlRevision": control_revision,
+        }
 
     def to_vehicle_position(self) -> dict[str, Any]:
         """Carga útil que consume la app.

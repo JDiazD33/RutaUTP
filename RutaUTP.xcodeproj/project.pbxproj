@@ -203,6 +203,11 @@
 		32D6FD0A1037475D93EA92B7 /* SelectorIdioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7CF8EC6FD44D9D8BAE522B /* SelectorIdioma.swift */; };
 		011AA33A80B14650A13C1445 /* Traducciones.json in Resources */ = {isa = PBXBuildFile; fileRef = A1F8BF18949842559B4A8E8B /* Traducciones.json */; };
 		E60A8B46C22E426A9D19981D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6520C31517244C6592B6433F /* InfoPlist.strings */; };
+		F7671731E24F401E99613B28 /* VehicleTrackingReception.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7080ECB0A548F286FA6F83 /* VehicleTrackingReception.swift */; };
+		94AE53547EF44D7BA89CC533 /* SimulationControlReceptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36F0E1F8EEA4BFEBA26A956 /* SimulationControlReceptionTests.swift */; };
+		0791FD2211F64AF99E73E62F /* MQTTSimulationReceptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61387C4B5205495A8913BB87 /* MQTTSimulationReceptionTests.swift */; };
+		E3A915D455274F139F36C39C /* VehiclePresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F5A7A7D389A475BADD8A3E2 /* VehiclePresentationPolicyTests.swift */; };
+		8C399B6ADEA345E6976EE58D /* SimulationPresentationIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1F67DAD2164BC191B584AF /* SimulationPresentationIntegrationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -420,6 +425,11 @@
 		27F0702B5F114D50BE7B5476 /* pt-BR */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-BR"; path = "pt-BR.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		0B7DCBD5D6944741A7DD7112 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "de"; path = "de.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		A00D7225DE064607AB5DD784 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		0D7080ECB0A548F286FA6F83 /* VehicleTrackingReception.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleTrackingReception.swift; sourceTree = "<group>"; };
+		C36F0E1F8EEA4BFEBA26A956 /* SimulationControlReceptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationControlReceptionTests.swift; sourceTree = "<group>"; };
+		61387C4B5205495A8913BB87 /* MQTTSimulationReceptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MQTTSimulationReceptionTests.swift; sourceTree = "<group>"; };
+		8F5A7A7D389A475BADD8A3E2 /* VehiclePresentationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclePresentationPolicyTests.swift; sourceTree = "<group>"; };
+		1F1F67DAD2164BC191B584AF /* SimulationPresentationIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationPresentationIntegrationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -517,6 +527,10 @@
 				0A800407300AD9FE004E1676 /* RouteCandidateMatcherTests.swift */,
 				0A800408300AD9FE004E1676 /* StartGuardTests.swift */,
 				0A800409300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift */,
+				61387C4B5205495A8913BB87 /* MQTTSimulationReceptionTests.swift */,
+				C36F0E1F8EEA4BFEBA26A956 /* SimulationControlReceptionTests.swift */,
+				1F1F67DAD2164BC191B584AF /* SimulationPresentationIntegrationTests.swift */,
+				8F5A7A7D389A475BADD8A3E2 /* VehiclePresentationPolicyTests.swift */,
 				BB9900000000000000000021 /* OccupancyTests.swift */,
 			);
 			path = RutaUTPTests;
@@ -788,6 +802,7 @@
 				0A8004E6300AD9FE004E1676 /* TrackingPoint.swift */,
 				0A8004E7300AD9FE004E1676 /* TripSession.swift */,
 				0A8004E8300AD9FE004E1676 /* VehiclePosition.swift */,
+				0D7080ECB0A548F286FA6F83 /* VehicleTrackingReception.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1188,6 +1203,7 @@
 				0A800505300AD9FE004E1676 /* RutaMapKitView.swift in Sources */,
 				0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */,
 				0A800518300AD9FE004E1676 /* VehiclePosition.swift in Sources */,
+				F7671731E24F401E99613B28 /* VehicleTrackingReception.swift in Sources */,
 				0A800515300AD9FE004E1676 /* RouteCalculationService.swift in Sources */,
 				0A800506300AD9FE004E1676 /* GuardadoView.swift in Sources */,
 				AA8800000000000000000B01 /* GuardadoViewModel.swift in Sources */,
@@ -1267,6 +1283,10 @@
 				0A800522300AD9FE004E1676 /* RouteCandidateMatcherTests.swift in Sources */,
 				0A800523300AD9FE004E1676 /* StartGuardTests.swift in Sources */,
 				0A800524300AD9FE004E1676 /* VehiclePositionSanitizerTests.swift in Sources */,
+				0791FD2211F64AF99E73E62F /* MQTTSimulationReceptionTests.swift in Sources */,
+				94AE53547EF44D7BA89CC533 /* SimulationControlReceptionTests.swift in Sources */,
+				8C399B6ADEA345E6976EE58D /* SimulationPresentationIntegrationTests.swift in Sources */,
+				E3A915D455274F139F36C39C /* VehiclePresentationPolicyTests.swift in Sources */,
 				BB9900000000000000000022 /* OccupancyTests.swift in Sources */,
 				0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */,
 			);

@@ -86,9 +86,16 @@ final class RouteTrackingViewModel {
         didSet { modoDemo ? iniciarDemoSimulado() : detenerDemoSimulado() }
     }
 
-    // Vehículos en el mapa vía provider (badge DEMO / EN VIVO en la UI).
+    // Vehículos del proveedor; transporte y procedencia se conservan separados.
     private(set) var vehiculos: [VehiclePosition] = []
     private(set) var fuenteVehiculos: VehicleTrackingSource = .simulated
+    var vehiculoSeleccionadoID: String?
+    var vehiculoSeleccionado: VehiclePosition? {
+        vehiculos.first { $0.id == vehiculoSeleccionadoID }
+    }
+    var vehiculosEnMapa: [VehiclePosition] {
+        Array(vehiculos.prefix(VehiclePresentationLimits.maximumMapMarkers))
+    }
 
     /// Color de cada línea según el `route_color` del feed GTFS, en hex.
     ///
@@ -287,7 +294,9 @@ final class RouteTrackingViewModel {
     @ObservationIgnored private var ultimoFraccionPolyline: Double = 0
     /// Ritmo real de simulación en m/s (de la línea GTFS o del ETA de MapKit).
     private var velocidadSimMs: Double = 6.0
-    @ObservationIgnored private var snapshotVehiculosAnterior: [String: (coord: CLLocationCoordinate2D, t: TimeInterval)] = [:]
+    @ObservationIgnored private var snapshotVehiculosAnterior:
+        [String: (coord: CLLocationCoordinate2D, t: TimeInterval, identity: VehiclePresentationIdentity)] = [:]
+    @ObservationIgnored private var vehiclePresentationGate = VehiclePresentationUpdateGate()
 
     @ObservationIgnored private var authCancellable: AnyCancellable?
     /// Cerrar o volver a entrar invalida permisos y catálogos todavía pendientes.
@@ -393,6 +402,7 @@ final class RouteTrackingViewModel {
                 if mapa[ruta.linea] == nil { mapa[ruta.linea] = ruta.colorHex }
             }
         if let posicion { refreshNearestStop(at: posicion) }
+        if fuenteVehiculos == .real { aplicarSnapshotVehiculos(force: true) }
     }
 
     private func startObservingLocation(token: Int) {
@@ -700,6 +710,7 @@ final class RouteTrackingViewModel {
     /// La pausa visual conserva sesión, progreso y modo demo.
     func actualizarActividadVisual(_ activa: Bool) {
         actividadVisual = activa
+        if fuenteVehiculos == .real { aplicarSnapshotVehiculos(force: true) }
         (vehicleProvider as? SimulatedTrackingProvider)?.actualizarActividadVisual(activa)
         if activa { reanudarDemoSimulado() } else { detenerDemoSimulado() }
     }
@@ -767,38 +778,49 @@ final class RouteTrackingViewModel {
         vehiculoTask?.cancel()
         let stream = vehicleProvider.positions()
         vehiculoTask = Task { @MainActor [weak self] in
-            var ultimaActualizacion = 0.0
-            for await positions in stream {
+            for await _ in stream {
                 guard !Task.isCancelled, let self, self.startGuard.isCurrent(token) else { break }
-                // El provider ticka a 20 Hz: la UI se refresca a 4 Hz, de sobra
-                // para que los buses se muevan fluidos sin re-renderizar el
-                // mapa a cada instante.
-                let ahora = Date().timeIntervalSince1970
-                guard ahora - ultimaActualizacion >= 0.25 else { continue }
-                ultimaActualizacion = ahora
-
-                let visibles = TransporteApp.busesUTPActivos
-                    ? positions.filter { self.idsRutasDisponibles.contains($0.routeId) } : positions
-
-                // El snapshot del proveedor es completo: retirar también su historial.
-                let idsVisibles = Set(visibles.map(\.id))
-                var velocidades = self.velocidadesVehiculos.filter { idsVisibles.contains($0.key) }
-                self.snapshotVehiculosAnterior = self.snapshotVehiculosAnterior.filter { idsVisibles.contains($0.key) }
-                for vehiculo in visibles {
-                    if let previa = self.snapshotVehiculosAnterior[vehiculo.id] {
-                        let dt = vehiculo.timestamp - previa.t
-                        if dt > 0.2 {
-                            velocidades[vehiculo.id] = max(0,
-                                PolylineMatching.distanceMeters(previa.coord, vehiculo.coordinate) / dt)
-                        }
-                    }
-                    self.snapshotVehiculosAnterior[vehiculo.id] = (vehiculo.coordinate, vehiculo.timestamp)
-                }
-                self.velocidadesVehiculos = velocidades
-                self.vehiculos = visibles
+                self.aplicarSnapshotVehiculos()
             }
         }
         vehicleProvider.start()
+    }
+
+    private func aplicarSnapshotVehiculos(force: Bool = false) {
+        // Consumir el estado autorizado actual, no el valor que AsyncStream
+        // pudo entregar antes de una revocación o de volver a primer plano.
+        let current = vehicleProvider.positionsForPresentation()
+        let visibles = TransporteApp.busesUTPActivos
+            ? current.filter { idsRutasDisponibles.contains($0.routeId) } : current
+        let publish = vehiclePresentationGate.shouldPublish(visibles, at: ProcessInfo.processInfo.systemUptime)
+        guard force || publish else { return }
+        if let selected = vehiculoSeleccionado,
+           !visibles.contains(where: { $0.presentationIdentity == selected.presentationIdentity }) {
+            vehiculoSeleccionadoID = nil
+        } else if vehiculoSeleccionadoID != nil && vehiculoSeleccionado == nil {
+            vehiculoSeleccionadoID = nil
+        }
+        let ids = Set(visibles.map(\.id))
+        var speeds = velocidadesVehiculos.filter { ids.contains($0.key) }
+        snapshotVehiculosAnterior = snapshotVehiculosAnterior.filter { ids.contains($0.key) }
+        for vehicle in visibles {
+            if fuenteVehiculos == .real {
+                // Ruido GPS no significa movimiento ni velocidad desconocida.
+                // En MQTT usar el valor recibido; nil conserva su ausencia.
+                speeds[vehicle.id] = vehicle.reportedSpeedForPresentation
+            } else if let previous = snapshotVehiculosAnterior[vehicle.id],
+                      previous.identity == vehicle.presentationIdentity {
+                let delta = vehicle.timestamp - previous.t
+                if delta > 0.2 {
+                    speeds[vehicle.id] = max(0, PolylineMatching.distanceMeters(previous.coord, vehicle.coordinate) / delta)
+                }
+            } else {
+                speeds[vehicle.id] = nil
+            }
+            snapshotVehiculosAnterior[vehicle.id] = (vehicle.coordinate, vehicle.timestamp, vehicle.presentationIdentity)
+        }
+        velocidadesVehiculos = speeds
+        vehiculos = visibles
     }
 
     // MARK: - Negocios en ruta
@@ -927,5 +949,10 @@ final class RouteTrackingViewModel {
         vehiculoTask?.cancel()
         vehiculoTask = nil
         vehicleProvider.stop()
+        vehiculos = []
+        velocidadesVehiculos = [:]
+        snapshotVehiculosAnterior = [:]
+        vehiculoSeleccionadoID = nil
+        vehiclePresentationGate = VehiclePresentationUpdateGate()
     }
 }

@@ -14,7 +14,8 @@ import json
 import logging
 import signal
 import time
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, replace
 from typing import Any, Callable
 
 from .aggregation import VehicleAggregator
@@ -23,7 +24,14 @@ from .gtfs import GtfsFeed
 from .health import remove_heartbeat, write_heartbeat
 from .metrics import Metrics
 from .models import RejectReason
-from .persistence import ObservationStore, open_store
+from .persistence import ObservationStore, SimulationPersistenceUnavailable, open_store
+from .simulation_models import DataOrigin, OBSERVED_SOURCE, UNKNOWN_SOURCE, SourceContext
+from .simulation_ingress import (
+    AdmissionProvider, SimulationAdmission, SIMULATION_OBSERVATIONS_TOPIC,
+    SIMULATION_CONTROL_TOPIC, is_reserved_principal, parse_observation_topic,
+)
+from .simulation_control import ControlPublisher, SimulationController
+from .simulation_control_store import ControlBusy, ControlStore, ControlUnavailable
 from .validation import ObservationValidator
 from .route_changes import RouteChanges, REPORT_TOPIC
 from .occupancy import Occupancy, REPORT_TOPIC as OCCUPANCY_REPORT_TOPIC
@@ -90,6 +98,8 @@ class Bridge:
         aggregator: VehicleAggregator | None = None,
         metrics: Metrics | None = None,
         store: ObservationStore | None = None,
+        admission_provider: AdmissionProvider | None = None,
+        simulation_control: SimulationController | None = None,
     ) -> None:
         self.config = config
         self.feed = feed
@@ -106,6 +116,30 @@ class Bridge:
             config.database_path, config.retention_days
         )
 
+        # El controlador S04 inyectará permisos verificados. Por defecto la
+        # simulación permanece cerrada, incluso si se activa su suscripción.
+        self.admission_provider = admission_provider
+        self.simulation_control = simulation_control
+        self.control_publisher: ControlPublisher | None = None
+        if (self.simulation_control is None and admission_provider is None
+                and config.simulation_ingress_enabled and config.simulation_control_path):
+            try:
+                self.simulation_control = SimulationController(
+                    ControlStore(config.simulation_control_path), self.store, config.gtfs_dir,
+                )
+            except (ControlUnavailable, OSError, ValueError):
+                logger.error("control sintético ausente/no disponible; rama cerrada")
+        if self.simulation_control is not None:
+            if admission_provider is not None:
+                raise ValueError("no combinar controlador y proveedor de admisión independientes")
+            self.admission_provider = self.simulation_control.admission
+        self._simulation_validator: ObservationValidator | None = None
+        self._simulation_aggregator: VehicleAggregator | None = None
+        self._simulation_policy: tuple[str, frozenset[str]] | None = None
+        self._simulation_revision = 0
+        self._simulation_revision_run: str | None = None
+        self._simulation_revision_principals: frozenset[str] | None = None
+
         self._last_summary_at = 0.0
 
         #: Momento de la última publicación aceptada por el broker. Es lo que
@@ -120,6 +154,7 @@ class Bridge:
         topic: str,
         payload: bytes | str,
         now: float | None = None,
+        *, retained: bool = False,
     ) -> HandleOutcome:
         """Procesa un mensaje entrante del broker.
 
@@ -134,8 +169,10 @@ class Bridge:
         self.metrics.record_received()
 
         try:
-            return self._handle(topic, payload, now)
+            return self._handle(topic, payload, now, retained=retained)
         except Exception:  # noqa: BLE001 - barrera deliberada de último recurso
+            if topic.startswith("rutautp/simulacion/"):
+                self._clear_simulation()
             self.metrics.record_rejected(RejectReason.INTERNAL_ERROR)
             self.metrics.record_internal_error()
 
@@ -151,172 +188,187 @@ class Bridge:
                 detail="error interno",
             )
 
-    def _handle(
-        self,
-        topic: str,
-        payload: bytes | str,
-        now: float,
+    def _clear_simulation(self) -> None:
+        self._simulation_validator = None
+        self._simulation_aggregator = None
+        self._simulation_policy = None
+
+    def _current_admission(self, now: float) -> SimulationAdmission | None:
+        admission = None
+        if self.config.simulation_ingress_enabled and self.admission_provider is not None:
+            try:
+                candidate = self.admission_provider(now)
+                if isinstance(candidate, SimulationAdmission) and candidate.is_current(now):
+                    # Defensa adicional contra revisiones regresivas o la
+                    # reutilización de una revisión con otro run.
+                    if candidate.control_revision > self._simulation_revision or (
+                        candidate.control_revision == self._simulation_revision
+                        and candidate.run_id == self._simulation_revision_run
+                        and candidate.principals == self._simulation_revision_principals
+                    ):
+                        self.store.require_simulation_run(candidate.run_id)
+                        admission = candidate
+                        self._simulation_revision = candidate.control_revision
+                        self._simulation_revision_run = candidate.run_id
+                        self._simulation_revision_principals = candidate.principals
+            except ControlBusy:
+                # Sin lectura actual no se autoriza nada. Conservar únicamente
+                # la caché: al volver se revalidan lease, run, revisión y quorum.
+                # Disable, caducidad y errores persistentes siguen vaciándola.
+                return None
+            except Exception:  # un controlador/almacén fallido cierra solo esta rama
+                logger.error("autorización sintética no disponible; entrada cerrada")
+        if admission is None or (
+            self._simulation_policy is not None
+            and self._simulation_policy != (admission.run_id, admission.principals)
+        ):
+            self._clear_simulation()
+        return admission
+
+    def _reject(
+        self, reason: RejectReason, detail: str, now: float,
+        source: SourceContext = UNKNOWN_SOURCE,
     ) -> HandleOutcome:
-        # Esta barrera debe estar antes de `_session_mismatch`: ese método
-        # decodifica el JSON para comparar la sesión del cuerpo con la del
-        # tópico. Si se confiara únicamente en el límite del validador, un
-        # mensaje enorme ya se habría parseado una vez antes de ser rechazado,
-        # anulando la protección de memoria y CPU.
+        self.metrics.record_rejected(reason, source)
+        try:
+            self.store.record_rejection(reason, detail, now, source=source)
+        except (SimulationPersistenceUnavailable, ValueError):
+            # El rechazo sigue contado aunque ya no pueda escribirse en disco.
+            self._clear_simulation()
+            logger.error("no se pudo guardar un rechazo sintético")
+        return HandleOutcome(accepted=False, reason=reason, detail=detail)
+
+    def _handle(
+        self, topic: str, payload: bytes | str, now: float, *, retained: bool = False,
+    ) -> HandleOutcome:
+        started = time.monotonic()
+        # Límite antes de cualquier decodificación JSON, también de la sesión.
         if len(payload) > self.config.max_message_bytes:
-            detail = (
-                f"{len(payload)} bytes > "
-                f"{self.config.max_message_bytes}"
-            )
-
-            self.metrics.record_rejected(RejectReason.MESSAGE_TOO_LARGE)
-            self.store.record_rejection(
+            return self._reject(
                 RejectReason.MESSAGE_TOO_LARGE,
-                detail,
-                now,
+                f"{len(payload)} bytes > {self.config.max_message_bytes}", now,
             )
+        identity = parse_observation_topic(topic)
+        if identity is None:
+            return self._reject(RejectReason.SESSION_MISMATCH, "tópico de observación no canónico", now)
+        if retained:
+            return self._reject(RejectReason.SOURCE_NOT_AUTHORIZED, "las observaciones no admiten retained", now)
 
-            return HandleOutcome(
-                accepted=False,
-                reason=RejectReason.MESSAGE_TOO_LARGE,
-                detail=detail,
-            )
+        admission = self._current_admission(now)
+        source = SourceContext(DataOrigin.OBSERVED, principal=identity.principal)
+        validator, aggregator = self.validator, self.aggregator
+        if identity.origin is DataOrigin.SIMULATED:
+            if (admission is None or identity.run_id != admission.run_id
+                    or identity.principal not in admission.principals):
+                return self._reject(RejectReason.SOURCE_NOT_AUTHORIZED, "run/principal sintético no autorizado", now)
+            source = SourceContext(DataOrigin.SIMULATED, identity.run_id, identity.principal)
+            if self._simulation_aggregator is None:
+                self._simulation_policy = (admission.run_id, admission.principals)
+                self._simulation_validator = self.validator.isolated_partition()
+                # Una nueva instancia, incluso tras una pausa, no reutiliza IDs
+                # que aún podrían estar visibles en un consumidor.
+                partition_config = replace(self.config, vehicle_namespace=uuid.uuid4().hex)
+                self._simulation_aggregator = VehicleAggregator(
+                    partition_config, self.feed,
+                    source=SourceContext(DataOrigin.SIMULATED, admission.run_id),
+                )
+            validator = self._simulation_validator
+            aggregator = self._simulation_aggregator
+            assert validator is not None and aggregator is not None
+        elif is_reserved_principal(identity.principal):
+            return self._reject(RejectReason.SOURCE_NOT_AUTHORIZED, "principal sintético en rama habitual", now)
 
-        topic_identity = self._topic_identity(topic)
-
-        if topic_identity is None:
-            mismatch = (
-                "el tópico debe tener la forma "
-                "rutautp/observaciones/{principal}/{sessionId}/posicion"
-            )
-        else:
-            _, topic_session = topic_identity
-            mismatch = self._session_mismatch(topic_session, payload)
-
+        mismatch = self._session_mismatch(identity.session_id, payload)
         if mismatch is not None:
-            self.metrics.record_rejected(RejectReason.SESSION_MISMATCH)
-            self.store.record_rejection(
-                RejectReason.SESSION_MISMATCH, mismatch, now
+            # Un run todavía no registrado no debe introducir una FK inválida.
+            return self._reject(RejectReason.SESSION_MISMATCH, mismatch, now)
+
+        try:
+            guard = None
+            if source.origin is DataOrigin.SIMULATED:
+                guard = lambda observation: self.store.require_simulation_observation(source, observation)
+            if guard is None:
+                result = validator.validate(payload, now, principal=identity.principal)
+            else:
+                result = validator.validate(payload, now, principal=identity.principal, guard=guard)
+            if not result.ok:
+                return self._reject(result.reason or RejectReason.MALFORMED_JSON, result.detail, now, source)
+            observation = result.observation
+            assert observation is not None
+            vehicle, created = aggregator.ingest(observation, now, principal=identity.principal)
+            self.store.record_observation(observation, vehicle.vehicle_id, now, source=source)
+            if created:
+                self.metrics.record_created(source)
+            published = self._publish_if_due(
+                vehicle, now, now, aggregator=aggregator, source=source,
+                admission=admission, elapsed=time.monotonic() - started,
             )
+        except SimulationPersistenceUnavailable:
+            self._clear_simulation()
+            return self._reject(RejectReason.SIMULATION_UNAVAILABLE, "histórico sintético no disponible", now)
+        except ValueError:
+            if source.origin is not DataOrigin.SIMULATED:
+                raise
+            return self._reject(RejectReason.SOURCE_NOT_AUTHORIZED, "abordaje/run no registrado o no vigente", now)
 
-            logger.warning("descartada (session_mismatch): %s", mismatch)
-
-            return HandleOutcome(
-                accepted=False,
-                reason=RejectReason.SESSION_MISMATCH,
-                detail=mismatch,
-            )
-
-        assert topic_identity is not None
-        principal, _ = topic_identity
-        result = self.validator.validate(payload, now, principal=principal)
-
-        if not result.ok:
-            reason = result.reason or RejectReason.MALFORMED_JSON
-
-            self.metrics.record_rejected(reason)
-            self.store.record_rejection(reason, result.detail, now)
-
-            logger.debug(
-                "descartada (%s): %s", reason.value, result.detail or "sin detalle"
-            )
-
-            return HandleOutcome(
-                accepted=False, reason=reason, detail=result.detail
-            )
-
-        observation = result.observation
-        assert observation is not None
-
-        self.metrics.record_accepted()
-
-        vehicle, created = self.aggregator.ingest(
-            observation, now, principal=principal
-        )
-
-        if created:
-            self.metrics.record_created()
-
-            logger.info(
-                "vehículo %s creado (línea %s, ruta %s)",
-                vehicle.vehicle_id,
-                vehicle.linea,
-                vehicle.route_id,
-            )
-
-        self.store.record_observation(observation, vehicle.vehicle_id, now)
-
-        published = self._publish_if_due(vehicle, now, now)
-
+        self.metrics.record_accepted(source, at=now)
         return HandleOutcome(
-            accepted=True,
-            vehicle_id=vehicle.vehicle_id,
-            created_vehicle=created,
-            published=published,
+            accepted=True, vehicle_id=vehicle.vehicle_id,
+            created_vehicle=created, published=published,
         )
 
     def _publish_if_due(
-        self, vehicle: Any, now: float, wall_clock: float
+        self, vehicle: Any, now: float, wall_clock: float, *,
+        aggregator: VehicleAggregator | None = None,
+        source: SourceContext = OBSERVED_SOURCE,
+        admission: SimulationAdmission | None = None,
+        elapsed: float = 0.0,
     ) -> bool:
-        """Publica el vehículo si le toca por ritmo.
-
-        Solo se marca como publicado cuando el broker acepta el mensaje. Si no,
-        no se actualiza `last_published_at`, así que la siguiente observación
-        vuelve a intentarlo sin esperar al intervalo completo. El reintento está
-        limitado por la llegada de observaciones, no por un bucle propio.
-        """
-        if self.publisher is None:
+        publishing_started = time.monotonic()
+        aggregator = aggregator or self.aggregator
+        if self.publisher is None or not aggregator.should_publish(vehicle, now):
             return False
+        if source.origin is DataOrigin.SIMULATED:
+            # Antes de entregar al transporte, ambos registros deben ser
+            # durables. Una fila es un intento de entrega, no un PUBACK.
+            self.store.record_vehicle(vehicle, wall_clock, source=source)
+            if not self.store.flush():
+                raise SimulationPersistenceUnavailable("falló el commit sintético")
+            current = self._current_admission(now + elapsed + time.monotonic() - publishing_started)
+            if (current is None or admission is None or current.run_id != source.run_id
+                    or current.principals != admission.principals):
+                return False
+            body = vehicle.to_vehicle_position_v2(source, current.control_revision)
+        elif self.config.vehicle_position_schema_version == 2:
+            body = vehicle.to_vehicle_position_v2(source)
+        else:
+            body = vehicle.to_vehicle_position()
 
-        if not self.aggregator.should_publish(vehicle, now):
-            return False
-
-        self.metrics.record_publish_attempt()
-
+        self.metrics.record_publish_attempt(source)
         topic = self.config.vehicle_topic(vehicle.vehicle_id)
-
         try:
-            accepted = self.publisher(topic, vehicle.encode())
-        except Exception:  # noqa: BLE001 - un publicador roto no debe tumbar el puente
-            self.metrics.record_publish_failed()
+            accepted = self.publisher(topic, json.dumps(body, allow_nan=False))
+        except Exception:  # un transporte roto no debe tumbar el puente
+            self.metrics.record_publish_failed(source)
             logger.exception("el publicador lanzó una excepción para %s", topic)
             return False
-
         if not accepted:
-            self.metrics.record_publish_failed()
-            logger.warning(
-                "el broker no aceptó la posición de %s; se reintentará con la "
-                "próxima observación",
-                vehicle.vehicle_id,
-            )
+            self.metrics.record_publish_failed(source)
             return False
-
-        self.aggregator.mark_published(vehicle, now)
-        self.metrics.record_published()
-        self.store.record_vehicle(vehicle, wall_clock)
-
+        aggregator.mark_published(vehicle, now)
+        self.metrics.record_published(source)
+        if source.origin is DataOrigin.OBSERVED:
+            self.store.record_vehicle(vehicle, wall_clock, source=source)
         self._last_publish_at = wall_clock
-
-        logger.debug(
-            "publicado %s: %s", vehicle.vehicle_id, vehicle.to_vehicle_position()
-        )
-
         return True
 
     @staticmethod
     def _topic_identity(topic: str) -> tuple[str, str] | None:
-        """Extrae el principal autenticado y la sesión del tópico canónico."""
-        parts = topic.split("/")
-
-        if len(parts) != 5:
+        """Extrae solo la identidad habitual; el parser completo admite ambas."""
+        identity = parse_observation_topic(topic)
+        if identity is None or identity.origin is not DataOrigin.OBSERVED:
             return None
-
-        if parts[0:2] != ["rutautp", "observaciones"]:
-            return None
-
-        if parts[4] != "posicion" or not parts[2] or not parts[3]:
-            return None
-
-        return parts[2], parts[3]
+        return identity.principal, identity.session_id
 
     def _session_mismatch(
         self, topic_session: str, payload: bytes | str
@@ -361,6 +413,15 @@ class Bridge:
 
     # ── Mantenimiento periódico ───────────────────────────────────────────
 
+    def _vehicle_counts(self) -> dict[str, int]:
+        simulated = self._simulation_aggregator
+        return {
+            "vehicles": self.aggregator.vehicle_count + (simulated.vehicle_count if simulated else 0),
+            "routes": self.aggregator.route_count + (simulated.route_count if simulated else 0),
+            "observedVehicles": self.aggregator.vehicle_count,
+            "simulationVehicles": simulated.vehicle_count if simulated else 0,
+        }
+
     def tick(self, now: float | None = None, connected: bool | None = None) -> int:
         """Caduca vehículos, libera estado, late y vuelca el resumen si toca.
 
@@ -370,20 +431,33 @@ class Bridge:
         """
         now = time.time() if now is None else now
 
+        if self.simulation_control is not None:
+            self.simulation_control.tick(now, None if connected is False else self.control_publisher)
+        self._current_admission(now)
         expired = self.aggregator.expire(now)
+        self.metrics.record_expired(len(expired), OBSERVED_SOURCE)
+        if self._simulation_aggregator is not None:
+            synthetic_expired = self._simulation_aggregator.expire(now)
+            self.metrics.record_expired(len(synthetic_expired),
+                SourceContext(DataOrigin.SIMULATED, self._simulation_policy[0]))
+            expired += synthetic_expired
+        if self._simulation_validator is not None:
+            self._simulation_validator.prune(now)
 
         if expired:
-            self.metrics.record_expired(len(expired))
-
             logger.info(
                 "caducados %d vehículo(s): %s", len(expired), ", ".join(expired)
             )
 
         self.validator.prune(now)
 
-        # Una transacción por segundo en lugar de una por mensaje: cada `commit`
-        # fuerza un `fsync` y hacerlo por mensaje limitaría el caudal.
+        # Observados conservan el commit periódico. Sintéticos confirman además
+        # antes de entregar cada posición, para cerrar ante fallos del histórico.
         self.store.flush()
+        if not self.store.simulation_storage_status()["available"]:
+            self._clear_simulation()
+            if self.simulation_control is not None:
+                self.simulation_control.tick(now, None if connected is False else self.control_publisher)
         self.store.prune(now)
 
         self._write_heartbeat(now, connected)
@@ -393,9 +467,10 @@ class Bridge:
 
             self.metrics.log_summary(
                 {
-                    "vehicles": self.aggregator.vehicle_count,
-                    "routes": self.aggregator.route_count,
+                    **self._vehicle_counts(),
                     **self.store.counts.as_dict(),
+                    **self.metrics.provenance_snapshot(),
+                    'simulationStorage': self.store.simulation_storage_status(),
                 }
             )
 
@@ -418,10 +493,21 @@ class Bridge:
             "published": snapshot["published"],
             "publishFailures": snapshot["publishFailures"],
             "internalErrors": snapshot["internalErrors"],
-            "vehicles": self.aggregator.vehicle_count,
-            "routes": self.aggregator.route_count,
+            **self._vehicle_counts(),
             "lastPublishAt": self._last_publish_at or None,
+            **self.metrics.provenance_snapshot(),
+            'persistence': self.store.counts.as_dict(),
+            'simulationStorage': self.store.simulation_storage_status(),
+            'positionPublicationMeaning': 'accepted_by_publisher_not_client_receipt',
+            'app': {'positionsReceived': None, 'markersRendered': None, 'markerLimit': 8},
         }
+        if self.simulation_control is not None:
+            payload["simulationControlError"] = self.simulation_control.error
+            from .simulation_admin import status
+            try:
+                payload['simulation'] = status(self.simulation_control.control, now)
+            except (ControlUnavailable, ValueError, OSError, TypeError, KeyError):
+                payload['simulation'] = {'controlAvailable': False}
 
         if connected is not None:
             payload["connected"] = connected
@@ -465,9 +551,16 @@ class Bridge:
 
         if not publish:
             self.publisher = None
+            self.control_publisher = None
+            if self.simulation_control is not None:
+                self.simulation_control.close(time.time())
+                self.simulation_control = None
+                self.admission_provider = None
             logger.info("publicación desactivada: nada saldrá hacia vehiculos/")
         elif self.publisher is None:
             self.publisher = self._client_publisher(client)
+        if publish and self.simulation_control is not None and self.control_publisher is None:
+            self.control_publisher = self._client_control_publisher(client)
 
         logger.info(
             "conectando a %s:%d (tls=%s, cliente=%s)",
@@ -548,6 +641,8 @@ class Bridge:
                 next_attempt_at = now + delay
                 delay = min(delay * 2, RECONNECT_MAX_S)
         finally:
+            if self.simulation_control is not None:
+                self.simulation_control.close(time.time(), self.control_publisher)
             if self.push:
                 self.push.close()
             for signum, handler in previous_handlers.items():
@@ -569,6 +664,15 @@ class Bridge:
                     **self.store.counts.as_dict(),
                 }
             )
+
+    def _client_control_publisher(self, client: Any) -> ControlPublisher:
+        """Única excepción retained: control. El retorno es MID, no PUBACK."""
+        def publish(topic: str, payload: str) -> int | None:
+            if topic != SIMULATION_CONTROL_TOPIC or not client.is_connected():
+                return None
+            info = client.publish(topic, payload, qos=1, retain=True)
+            return info.mid if info.rc == 0 else None
+        return publish
 
     def _client_publisher(self, client: Any) -> Publisher:
         """Publicador que entrega al broker con QoS 1 y sin retención.
@@ -611,6 +715,12 @@ class Bridge:
 
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect
+        def on_publish(_client: Any, _userdata: Any, mid: int,
+                       reason_code: Any = None, _properties: Any = None) -> None:
+            code = getattr(reason_code, "value", reason_code)
+            if self.simulation_control is not None and (code is None or int(code) < 128):
+                self.simulation_control.acknowledge(mid, time.time())
+        client.on_publish = on_publish
 
         def on_message(_client: Any, _userdata: Any, message: Any) -> None:
             if message.topic.startswith("rutautp/notificaciones/"):
@@ -636,7 +746,7 @@ class Bridge:
                     principal, body = receipt
                     self.publisher(f"rutautp/cambios/{principal}/recibo", json.dumps(body))
                 return
-            self.handle_message(message.topic, message.payload)
+            self.handle_message(message.topic, message.payload, retained=bool(message.retain))
 
         client.on_message = on_message
 
@@ -657,6 +767,10 @@ class Bridge:
         logger.info("conectado; suscribiendo a %s", self.config.observations_topic)
 
         client.subscribe(self.config.observations_topic, qos=1)
+        if self.simulation_control is not None:
+            self.simulation_control.disconnected()  # reconectar exige otro PUBACK
+        if self.config.simulation_ingress_enabled:
+            client.subscribe(SIMULATION_OBSERVATIONS_TOPIC, qos=1)
         client.subscribe(REPORT_TOPIC, qos=1)
         if self.push:
             from .push_service import REGISTER_TOPIC
@@ -673,6 +787,8 @@ class Bridge:
         reason_code: Any = None,
         _properties: Any = None,
     ) -> None:
+        if self.simulation_control is not None:
+            self.simulation_control.disconnected()
         if int(getattr(reason_code, "value", reason_code) or 0) != 0:
             logger.warning("desconectado del broker: %s", reason_code)
         else:

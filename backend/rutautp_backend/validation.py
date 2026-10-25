@@ -27,7 +27,7 @@ import logging
 import math
 from collections import deque
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 from .config import Config
 from .geo import (
@@ -179,15 +179,19 @@ class Deduplicator:
 class ObservationValidator:
     """Convierte un mensaje crudo del broker en una `Observation` o en un motivo."""
 
-    def __init__(self, feed: GtfsFeed, config: Config) -> None:
+    def __init__(
+        self, feed: GtfsFeed, config: Config, *,
+        rate_limiter: RateLimiter | None = None,
+        global_limiter: RateLimiter | None = None,
+    ) -> None:
         self.feed = feed
         self.config = config
-        self.rate_limiter = RateLimiter(config.max_messages_per_minute)
+        self.rate_limiter = rate_limiter or RateLimiter(config.max_messages_per_minute)
 
         # Techo de emergencia del servicio entero. El límite primario usa la
         # identidad MQTT autenticada; este segundo techo acota una saturación
         # agregada de muchas identidades.
-        self.global_limiter = RateLimiter(config.max_messages_per_minute_global)
+        self.global_limiter = global_limiter or RateLimiter(config.max_messages_per_minute_global)
 
         self.deduplicator = Deduplicator(config.dedupe_window_s)
 
@@ -195,11 +199,23 @@ class ObservationValidator:
         #: comprobar que la siguiente es compatible con la trayectoria.
         self._last_seen: dict[str, tuple[float, float, float]] = {}
 
+    def isolated_partition(self) -> "ObservationValidator":
+        """Comparte capacidad, pero no dedupe ni continuidad, con otro origen/run.
+
+        Los contadores por principal tampoco se reinician al cambiar de run.
+        El puente y tick trabajan en el mismo hilo.
+        """
+        return ObservationValidator(
+            self.feed, self.config, rate_limiter=self.rate_limiter,
+            global_limiter=self.global_limiter,
+        )
+
     def validate(
         self,
         raw: bytes | str,
         now: float,
         principal: str | None = None,
+        *, guard: Callable[[Observation], None] | None = None,
     ) -> ValidationResult:
         """Valida un mensaje. `now` se inyecta para poder probar sin reloj real."""
         payload = self._decode(raw)
@@ -248,6 +264,12 @@ class ObservationValidator:
         if isinstance(continuity, ValidationResult):
             return continuity
 
+        observation = Observation.from_payload(payload)
+        if guard is not None:
+            # Autorización del abordaje antes de consumir cupo global o mutar
+            # dedupe/continuidad. El guard no procede del payload MQTT.
+            guard(observation)
+
         # El techo global es la última barrera de capacidad: los mensajes
         # inválidos no consumen el cupo de las observaciones legítimas y el
         # límite por principal ya aisló antes a un publicador abusivo.
@@ -261,7 +283,7 @@ class ObservationValidator:
         self.deduplicator.remember(dedupe_key, now)
         self._remember(session_id, payload)
 
-        return ValidationResult.accept(Observation.from_payload(payload))
+        return ValidationResult.accept(observation)
 
     # ── Etapas ────────────────────────────────────────────────────────────
 

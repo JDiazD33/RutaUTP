@@ -82,7 +82,7 @@ struct TrackingMapCanvas: View {
             }
 
             // Vehículos en tiempo real vía provider: tap → popup en vivo.
-            ForEach(vm.vehiculos) { vehiculo in
+            ForEach(vm.vehiculosEnMapa) { vehiculo in
                 Annotation(L.t("Línea", "Line") + " \(vehiculo.linea)", coordinate: vehiculo.coordinate) {
                     Button {
                         AppHaptics.impact(.light)

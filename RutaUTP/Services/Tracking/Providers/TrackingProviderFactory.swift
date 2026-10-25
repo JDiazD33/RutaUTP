@@ -26,7 +26,10 @@ enum TrackingProviderFactory {
         #endif
 
         return MQTTTrackingProvider(
-            configuration: configuration
+            configuration: configuration,
+            // Transición del backend v1 actual, con productores apagados.
+            // Al recibir enable se purga el legado y se exige v2.
+            legacyCompatibility: .whileSimulationDisabled
         )
     }
 }

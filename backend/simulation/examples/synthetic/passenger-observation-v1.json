@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "c58e47f5-7a2b-44d3-b657-e794b54c19ae",
+  "routeId": "17350695",
+  "linea": "C-01",
+  "lat": -8.0477341,
+  "lon": -79.0570924,
+  "speed": 0,
+  "heading": -1,
+  "accuracy": 8,
+  "motionActivity": "stationary",
+  "timestamp": 1792591200.0
+}

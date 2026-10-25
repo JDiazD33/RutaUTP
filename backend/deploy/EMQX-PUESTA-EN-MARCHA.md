@@ -121,3 +121,51 @@ envía a Apple. Las reglas `rutautp/notificaciones/…` todavía deben añadirse
 Authorization real por cuenta. Ver [PUSH-NOTIFICACIONES.md](../PUSH-NOTIFICACIONES.md)
 para requisitos, permisos exactos, firma de iOS y configuración del proveedor.
 No se han aplicado esas reglas ni probado entregas APNs en esta tarea.
+
+## Preparación de la rama sintética (S03, sin activar)
+
+La plantilla de Mosquitto no se carga en EMQX. Antes de aprovisionar los actores,
+revisar la versión real, la cadena de Authorization, las reglas heredadas y el
+resultado de denegación por defecto. Preparar estos permisos por identidad/rol:
+
+| Rol | Publicar | Recibir |
+| --- | --- | --- |
+| Teléfono existente | Solo sus observaciones/reportes/registros ya autorizados | Posiciones, sus recibos, estados existentes y `rutautp/simulacion/estado` |
+| `sim-001` (repetir para cada actor del perfil) | Solo `rutautp/simulacion/+/observaciones/sim-001/+/posicion` | Solo `rutautp/simulacion/estado` |
+| `backend` | Posiciones/recibos/estados existentes y `rutautp/simulacion/estado` | Observaciones/reportes/registros existentes y `rutautp/simulacion/+/observaciones/+/+/posicion` |
+
+Las cuentas `sim-*` deben quedar fuera de los permisos generales de instalaciones.
+Su rama habitual de observaciones, posiciones, ocupación, cambios y notificaciones
+queda denegada en ambas direcciones. No otorgar `rutautp/#`, ni usar una regla
+general que conceda a todo usuario escribir la rama sintética bajo su nombre.
+Usar permisos literales por actor o un rol que solo tengan esas cuentas. Conservar
+las identidades y credenciales actuales de los teléfonos.
+
+Verificar contra el broker elegido: sim→normal denegado, app→sim denegado,
+sim→otro actor denegado, sim→vehículos/control denegado, sim→reportes denegado,
+backend→control permitido y actores/app→lectura de control permitida. No basta con
+inspeccionar reglas: hay que comprobar entregas efectivas y las reglas heredadas.
+El backend valida además el run activo, whitelist y abordaje persistido; la ACL
+vincula la cuenta al principal del tópico, algo que el payload no demuestra.
+
+S03 solo prepara código, documentación y plantillas. Las nuevas variables quedan
+en `BACKEND_SIMULATION_INGRESS_ENABLED=0` y salida legada `=1`. No hay control
+administrativo conectado ni productores. Mantener apagado hasta completar S04,
+S07/S08, migración/restauración y permisos efectivos. Los límites/cuotas, host
+continuo y comportamiento de QoS pendientes se revisarán antes de activar.
+Detalles y límites de la entrega: [INGRESS.md](../simulation/INGRESS.md).
+
+## Operación preparada S09 (sin despliegue)
+
+La [guía de operación](../simulation/OPERACION.md) recoge status por origen/run,
+reporte JSON y comparación JSONL/CSV, supervisor de solo lectura o revocación
+explícita, presupuestos y plan de retención. Distingue conexiones, pasajeros,
+vehículos nominales/estimados y marcadores; recepción/limpieza iOS siguen sin
+telemetría de confirmación. Expone fallos de persistencia sin declarar caído el
+circuito observado.
+
+Se conservan las plantillas en simulación apagada y salida v1 hasta coordinar el
+despliegue v2 y clientes compatibles. No se han provisionado cuentas, aplicado
+ACL/migraciones activas, instalado un supervisor ni arrancado productores en S09.
+Los ensayos conectados y la instalación en el dispositivo requieren el alcance
+concreto de S10. La retención 7/30 días es propuesta: no hay borrado automático.

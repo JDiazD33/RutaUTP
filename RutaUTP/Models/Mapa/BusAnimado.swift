@@ -40,21 +40,29 @@ struct BusAnimado: Identifiable, Equatable {
     /// Tramo [i, i+1] donde cayó la última interpolación (cache).
     var tramoActual: Int = 0
 
-    /// De dónde procede la posición de este vehículo.
-    ///
-    /// `.simulated` es la flota que el mapa anima sobre los shapes del feed,
-    /// que es lo que se ve cuando no hay broker configurado. `.real` es una
-    /// posición publicada por el backend por el canal MQTT a partir de las
-    /// observaciones de los pasajeros a bordo.
-    ///
-    /// Un vehículo real no trae geometría propia: `rutaCoordenadas` y
-    /// `acumulados` van vacíos, así que `actualizarPosicion()` no hace nada y
-    /// la posición la fija cada mensaje del broker, no la animación local.
+    /// Transporte: animación local o MQTT. El origen viaja en `dataOrigin`;
+    /// recibir por MQTT no demuestra que una posición sea observada.
+    /// MQTT no trae geometría propia: la posición la fija cada mensaje.
     var fuente: VehicleTrackingSource = .simulated
+    var dataOrigin: VehicleDataOrigin = .simulated
+    var simulationRunId: String? = nil
+    var controlRevision: UInt64? = nil
+    var backendVehicleID: String? = nil
+
+    var presentationIdentity: VehiclePresentationIdentity {
+        VehiclePresentationIdentity(id: id, routeId: rutaId, dataOrigin: dataOrigin,
+            simulationRunId: simulationRunId, controlRevision: controlRevision)
+    }
+
+    var occupancyVehicleID: String? {
+        guard fuente == .real, dataOrigin == .observed, let backendVehicleID,
+              !backendVehicleID.lowercased().hasPrefix("sim:") else { return nil }
+        return backendVehicleID
+    }
 
     /// Texto de la llegada para la interfaz.
     ///
-    /// Las posiciones reales muestran `~` porque su llegada se estima con la
+    /// Las posiciones MQTT muestran `~` porque su llegada se estima con la
     /// posición, rumbo y velocidad disponibles sobre el recorrido GTFS. Si el
     /// vehículo se aleja del punto consultado o faltan datos fiables, se evita
     /// inventar un valor y se muestra "SIN ETA".
@@ -101,6 +109,12 @@ struct BusAnimado: Identifiable, Equatable {
         lhs.id == rhs.id &&
         lhs.lat == rhs.lat &&
         lhs.lon == rhs.lon &&
-        lhs.heading == rhs.heading
+        lhs.heading == rhs.heading &&
+        lhs.linea == rhs.linea && lhs.rutaId == rhs.rutaId &&
+        lhs.empresa == rhs.empresa && lhs.tipo == rhs.tipo && lhs.variante == rhs.variante &&
+        lhs.minutosLlegada == rhs.minutosLlegada && lhs.colorDeRuta == rhs.colorDeRuta &&
+        lhs.fuente == rhs.fuente && lhs.dataOrigin == rhs.dataOrigin &&
+        lhs.simulationRunId == rhs.simulationRunId && lhs.controlRevision == rhs.controlRevision &&
+        lhs.backendVehicleID == rhs.backendVehicleID
     }
 }

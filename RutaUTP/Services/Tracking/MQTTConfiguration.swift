@@ -66,6 +66,25 @@ struct MQTTConfiguration {
         )
     }
 
+    /// Ensayo deliberado desde devicectl: cuenta lectora efímera, sin persistir
+    /// servidor/secretos ni recuperar la configuración habitual si falta algo.
+    static var isReadOnlyTrial: Bool {
+        ProcessInfo.processInfo.environment["RUTAUTP_S10_TRIAL"] != nil
+    }
+
+    static func contributionFromEnvironment() -> MQTTConfiguration? {
+        isReadOnlyTrial ? nil : fromEnvironment()
+    }
+
+    /// Solo cantidades y tiempos del ensayo; nunca payloads o credenciales.
+    static func trialLog(_ event: String, _ counts: [String: Int]) {
+        guard ProcessInfo.processInfo.environment["RUTAUTP_S10_TRIAL"] == "1" else { return }
+        let body: [String: Any] = ["event": event, "counts": counts,
+            "wall": Date().timeIntervalSince1970, "uptime": ProcessInfo.processInfo.systemUptime]
+        if let data = try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys]),
+           let line = String(data: data, encoding: .utf8) { print("[S10] " + line) }
+    }
+
     /// Variante que recibe el entorno ya resuelto.
     ///
     /// Permite probar el análisis de variables, el orden de precedencia y el
@@ -77,6 +96,15 @@ struct MQTTConfiguration {
         bundle: Bundle? = nil,
         credentialStore: MQTTCredentialStoring? = nil
     ) -> MQTTConfiguration? {
+        if let trial = environment["RUTAUTP_S10_TRIAL"] {
+            guard trial == "1",
+                  ["MQTT_HOST", "MQTT_PORT", "MQTT_TLS", "MQTT_USERNAME", "MQTT_PASSWORD"]
+                    .allSatisfy({ !(environment[$0] ?? "").isEmpty }),
+                  ["0", "1"].contains(environment["MQTT_TLS"] ?? "") else { return nil }
+            var ephemeral = environment
+            ephemeral.removeValue(forKey: "RUTAUTP_S10_TRIAL")
+            return from(environment: ephemeral)
+        }
         func valor(_ clave: String) -> String? {
             let candidatos: [String?] = [
                 environment[clave],

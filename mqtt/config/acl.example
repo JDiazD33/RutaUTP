@@ -28,6 +28,7 @@
 # la identidad de otra ni eludir su límite rotando únicamente `sessionId`.
 pattern write rutautp/observaciones/%u/+/posicion
 pattern read rutautp/vehiculos/+/posicion
+pattern read rutautp/simulacion/estado
 
 # Cambios de ruta: identidad del reportante ligada a la cuenta MQTT.
 pattern write rutautp/cambios/%u/reporte
@@ -62,6 +63,8 @@ topic deny rutautp/#
 # autoriza exactamente los cinco niveles que el backend consume.
 user backend
 topic read rutautp/observaciones/+/+/posicion
+topic read rutautp/simulacion/+/observaciones/+/+/posicion
+topic write rutautp/simulacion/estado
 topic write rutautp/vehiculos/+/posicion
 topic read rutautp/cambios/+/reporte
 topic write rutautp/cambios/+/recibo
@@ -86,3 +89,249 @@ topic write rutautp/notificaciones/+/recibo
 # No debe volver a crearse una cuenta `observer` compartida. Cada instalación
 # necesita un usuario propio, provisionado fuera del repositorio. La sesión del
 # viaje sigue siendo un UUID independiente en el siguiente nivel del tópico.
+
+# ── Actores sintéticos propuestos, perfil de 30 (S03) ────────────────────
+# Son permisos de plantilla; NO crean cuentas ni activan un generador.
+# Denegaciones explícitas neutralizan los patterns generales de la app.
+# No añadir un pattern write sintético global: concedería acceso a teléfonos.
+# El run se acota además por whitelist/control en el backend. Solo leen estado.
+
+user sim-001
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-001/+/posicion
+
+user sim-002
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-002/+/posicion
+
+user sim-003
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-003/+/posicion
+
+user sim-004
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-004/+/posicion
+
+user sim-005
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-005/+/posicion
+
+user sim-006
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-006/+/posicion
+
+user sim-007
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-007/+/posicion
+
+user sim-008
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-008/+/posicion
+
+user sim-009
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-009/+/posicion
+
+user sim-010
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-010/+/posicion
+
+user sim-011
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-011/+/posicion
+
+user sim-012
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-012/+/posicion
+
+user sim-013
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-013/+/posicion
+
+user sim-014
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-014/+/posicion
+
+user sim-015
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-015/+/posicion
+
+user sim-016
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-016/+/posicion
+
+user sim-017
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-017/+/posicion
+
+user sim-018
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-018/+/posicion
+
+user sim-019
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-019/+/posicion
+
+user sim-020
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-020/+/posicion
+
+user sim-021
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-021/+/posicion
+
+user sim-022
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-022/+/posicion
+
+user sim-023
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-023/+/posicion
+
+user sim-024
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-024/+/posicion
+
+user sim-025
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-025/+/posicion
+
+user sim-026
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-026/+/posicion
+
+user sim-027
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-027/+/posicion
+
+user sim-028
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-028/+/posicion
+
+user sim-029
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-029/+/posicion
+
+user sim-030
+topic deny rutautp/observaciones/#
+topic deny rutautp/vehiculos/#
+topic deny rutautp/cambios/#
+topic deny rutautp/ocupacion/#
+topic deny rutautp/notificaciones/#
+topic write rutautp/simulacion/+/observaciones/sim-030/+/posicion

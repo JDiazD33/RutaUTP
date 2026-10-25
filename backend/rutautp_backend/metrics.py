@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .models import RejectReason
+from .simulation_models import DataOrigin, SourceContext, UNKNOWN_SOURCE
 
 logger = logging.getLogger(__name__)
 
@@ -32,34 +33,68 @@ class Metrics:
     vehicles_created: int = 0
     vehicles_expired: int = 0
     rejected: Counter[str] = field(default_factory=Counter)
+    by_origin: dict[str, dict] = field(default_factory=dict)
+    by_run: dict[str, dict] = field(default_factory=dict)
+    evicted_run_scopes: int = 0
+
+    def _record(self, name: str, source: SourceContext, count: int = 1,
+                *, at: float | None = None, reason: str | None = None) -> None:
+        buckets = [self.by_origin.setdefault(source.origin.value, {})]
+        if source.origin is DataOrigin.SIMULATED:
+            if source.run_id not in self.by_run and len(self.by_run) >= 32:
+                del self.by_run[next(iter(self.by_run))]
+                self.evicted_run_scopes += 1
+            buckets.append(self.by_run.setdefault(source.run_id, {}))
+        for bucket in buckets:
+            bucket[name] = bucket.get(name, 0) + count
+            if at is not None:
+                bucket['lastAcceptedAt'] = max(bucket.get('lastAcceptedAt', at), at)
+            if reason is not None:
+                reasons = bucket.setdefault('reasons', {})
+                reasons[reason] = reasons.get(reason, 0) + count
+
+    def provenance_snapshot(self) -> dict[str, Any]:
+        # Copia aislada: health/status no puede modificar los contadores vivos.
+        return json.loads(json.dumps({'byOrigin': self.by_origin, 'byRun': self.by_run,
+            'retainedRunScopes': 32, 'evictedRunScopes': self.evicted_run_scopes}))
 
     def record_received(self) -> None:
         self.received += 1
 
-    def record_accepted(self) -> None:
+    def record_accepted(self, source: SourceContext = UNKNOWN_SOURCE, *, at: float | None = None) -> None:
         self.accepted += 1
+        self._record('received', source)
+        self._record('accepted', source, at=at)
 
-    def record_rejected(self, reason: RejectReason) -> None:
+    def record_rejected(self, reason: RejectReason, source: SourceContext = UNKNOWN_SOURCE) -> None:
         self.rejected[reason.value] += 1
+        self._record('received', source)
+        self._record('rejected', source, reason=reason.value)
 
-    def record_publish_attempt(self) -> None:
+    def record_publish_attempt(self, source: SourceContext = UNKNOWN_SOURCE) -> None:
         self.publish_attempts += 1
+        self._record('publishAttempts', source)
 
-    def record_publish_failed(self) -> None:
+    def record_publish_failed(self, source: SourceContext = UNKNOWN_SOURCE) -> None:
         self.publish_failures += 1
+        self._record('publishFailures', source)
 
-    def record_published(self) -> None:
+    def record_published(self, source: SourceContext = UNKNOWN_SOURCE) -> None:
         self.published += 1
+        self._record('enqueuedPositions', source)
 
     def record_internal_error(self) -> None:
         """Fallo inesperado del propio servicio, no del mensaje."""
         self.internal_errors += 1
 
-    def record_created(self) -> None:
+    def record_created(self, source: SourceContext = UNKNOWN_SOURCE) -> None:
         self.vehicles_created += 1
+        self._record('vehiclesCreated', source)
 
-    def record_expired(self, count: int) -> None:
+    def record_expired(self, count: int, source: SourceContext = UNKNOWN_SOURCE) -> None:
         self.vehicles_expired += count
+        if count:
+            self._record('vehiclesExpired', source, count)
 
     @property
     def rejections(self) -> int:

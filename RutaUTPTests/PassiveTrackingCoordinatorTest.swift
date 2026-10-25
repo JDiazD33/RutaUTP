@@ -26,6 +26,16 @@ final class PassiveTrackingCoordinatorTests:
 
     private let reloj = RelojDeteccionPrueba()
 
+    func testEnsayoLectorConservaConsentimientoSinArrancarPublicacion() async {
+        withStoredConsent(true) {
+            let coordinator = PassiveTrackingCoordinator(locationService: MockLocationService(),
+                configurationProvider: { nil }, preserveStoredConsentWhenUnconfigured: true)
+            XCTAssertFalse(coordinator.isEnabled)
+            XCTAssertFalse(coordinator.isPublisherConfigured)
+            XCTAssertTrue(UserDefaults.standard.bool(forKey: "rutautp.passive-tracking-consent"))
+        }
+    }
+
     func testRestauraConsentimientoConPublicadorCreadoDesdeConfiguracion() {
         withStoredConsent(true) {
             let coordinator = PassiveTrackingCoordinator(

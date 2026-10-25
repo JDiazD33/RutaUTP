@@ -458,6 +458,39 @@ final class MQTTConfigurationTests: XCTestCase {
 
     // MARK: - Apoyo
 
+    func testEnsayoEfimeroNoGuardaCredencialesNiReemplazaServidor() throws {
+        let defaults = UserDefaults(suiteName: "s10-\(UUID().uuidString)")!
+        defer { defaults.removeObject(forKey: "MQTT_HOST") }
+        defaults.set("servidor-habitual", forKey: "MQTT_HOST")
+        let store = MemoryCredentials()
+        var environment = baseEnvironment()
+        environment.merge(["RUTAUTP_S10_TRIAL": "1", "MQTT_PORT": "23456", "MQTT_TLS": "0"])
+            { _, new in new }
+        let config = try XCTUnwrap(MQTTConfiguration.from(environment: environment,
+            defaults: defaults, credentialStore: store))
+        XCTAssertEqual(config.port, 23456)
+        XCTAssertEqual(defaults.string(forKey: "MQTT_HOST"), "servidor-habitual")
+        XCTAssertTrue(store.entries.isEmpty)
+    }
+
+    func testEnsayoIncompletoNoRecuperaConfiguracionGuardada() {
+        let defaults = UserDefaults(suiteName: "s10-\(UUID().uuidString)")!
+        defaults.set("servidor-habitual", forKey: "MQTT_HOST")
+        defer { defaults.removeObject(forKey: "MQTT_HOST") }
+        let full = ["RUTAUTP_S10_TRIAL": "1", "MQTT_HOST": "127.0.0.1", "MQTT_PORT": "23456",
+            "MQTT_TLS": "0", "MQTT_USERNAME": "reader", "MQTT_PASSWORD": "temporary"]
+        for key in full.keys {
+            var missing = full; missing.removeValue(forKey: key)
+            if key == "RUTAUTP_S10_TRIAL" { continue }
+            XCTAssertNil(MQTTConfiguration.from(environment: missing, defaults: defaults,
+                credentialStore: MemoryCredentials()), key)
+        }
+        for flag in ["", "0", "true"] {
+            var invalid = full; invalid["RUTAUTP_S10_TRIAL"] = flag
+            XCTAssertNil(MQTTConfiguration.from(environment: invalid, defaults: defaults))
+        }
+    }
+
     private func baseEnvironment() -> [String: String] {
         [
             "MQTT_HOST": "mqtt.ejemplo.com",

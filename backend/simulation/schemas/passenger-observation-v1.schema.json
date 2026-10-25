@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rutautp:simulation:passenger-observation:v1",
+  "title": "Emisión canónica v1 del generador sintético; claves Swift existentes",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sessionId",
+    "routeId",
+    "linea",
+    "lat",
+    "lon",
+    "speed",
+    "heading",
+    "accuracy",
+    "motionActivity",
+    "timestamp"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "routeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:._-]{0,127}$"
+    },
+    "linea": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "lat": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "lon": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "speed": {
+      "anyOf": [
+        {
+          "const": -1
+        },
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        }
+      ]
+    },
+    "heading": {
+      "anyOf": [
+        {
+          "const": -1
+        },
+        {
+          "type": "number",
+          "exclusiveMaximum": 360,
+          "minimum": 0
+        }
+      ]
+    },
+    "accuracy": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 50
+    },
+    "motionActivity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "timestamp": {
+      "type": "number",
+      "minimum": 0
+    }
+  }
+}

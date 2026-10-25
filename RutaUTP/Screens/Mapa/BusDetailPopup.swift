@@ -60,9 +60,15 @@ struct BusDetailPopup: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            BusOccupancyPanel(vehicleID: bus.fuente == .real && bus.id.hasPrefix("real-")
-                              ? String(bus.id.dropFirst(5)) : nil)
-                .id(bus.id)
+            if let vehicleID = bus.occupancyVehicleID {
+                BusOccupancyPanel(vehicleID: vehicleID)
+                    .id(bus.presentationIdentity)
+            } else {
+                Label(L.t("Ocupación no disponible", "Occupancy unavailable"), systemImage: "person.2.fill")
+                    .font(.bodySm)
+                    .foregroundStyle(.onSurfaceVariant)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             Button(action: onVerRuta) {
                 HStack(spacing: 8) {

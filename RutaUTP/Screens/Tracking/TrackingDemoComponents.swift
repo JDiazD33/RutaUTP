@@ -122,7 +122,7 @@ struct BotonFlotanteMapa: View {
 /// mientras el bus se mueve.
 struct VehiclePopupCard: View {
     let vehiculo: VehiclePosition
-    /// Velocidad estimada en m/s (nil = aún sin muestras suficientes).
+    /// Velocidad recibida o estimada en m/s; nil cuando se desconoce.
     let velocidadMs: Double?
     /// Distancia desde la posición del usuario (nil = sin GPS).
     let distanciaM: Double?
@@ -206,11 +206,11 @@ struct VehiclePopupCard: View {
     }
 
     @ViewBuilder private var tituloYEstado: some View {
-        Text(L.f("Unidad {0}", "Unit {0}", ["\(vehiculo.id)"]))
+        Text(L.t("Ubicación del vehículo", "Vehicle location"))
             .font(.subheadline.bold())
             .foregroundStyle(Color.onSurface)
             .fixedSize(horizontal: false, vertical: true)
-        Text(enVivo ? L.t("EN VIVO", "LIVE") : L.t("DEMO", "DEMO"))
+        Text(enVivo ? L.t("POSICIÓN RECIBIDA", "RECEIVED POSITION") : L.t("DEMO", "DEMO"))
             .font(.caption2.bold())
             .foregroundStyle(enVivo ? .black : Color.onSurface)
             .appTracking(AppTracking.wideLabel)
@@ -249,7 +249,7 @@ struct VehiclePopupCard: View {
     }
 
     private var velocidadKmh: Int? {
-        guard let ms = velocidadMs, ms >= 0 else { return nil }
+        guard let ms = velocidadMs, ms.isFinite, (0...100).contains(ms) else { return nil }
         return Int((ms * 3.6).rounded())
     }
 

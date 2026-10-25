@@ -1,0 +1,14 @@
+{
+  "vehicleId": "sim:5bdb08e8-e971-4a9e-a18e-47f359841321:0001",
+  "routeId": "17350695",
+  "linea": "C-01",
+  "lat": -8.0477341,
+  "lon": -79.0570924,
+  "speed": 0,
+  "heading": -1,
+  "timestamp": 1792591200.0,
+  "schemaVersion": 2,
+  "dataOrigin": "simulated",
+  "simulationRunId": "5bdb08e8-e971-4a9e-a18e-47f359841321",
+  "controlRevision": 1
+}

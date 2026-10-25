@@ -253,7 +253,7 @@ final class SimulatedTrackingProvider: VehicleTrackingProviding {
                 // La velocidad es la crucero del vehículo. Antes se ponía a 0
                 // al alcanzar el final y el vehículo no volvía a moverse: con
                 // los minutos la flota entera se quedaba congelada.
-                speed: motion.speed))
+                speed: motion.speed, dataOrigin: .simulated))
             fleet[i] = motion
         }
         currentPositions = positions

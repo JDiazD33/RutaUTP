@@ -39,6 +39,7 @@ from .config import Config
 from .geo import haversine_m, heading_difference_deg
 from .gtfs import GtfsFeed
 from .models import EstimatedVehicle, Observation
+from .simulation_models import DataOrigin, OBSERVED_SOURCE, SourceContext
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +52,14 @@ UNKNOWN_PRINCIPAL = "<principal-desconocido>"
 class VehicleAggregator:
     """Mantiene el estado de los vehículos estimados."""
 
-    def __init__(self, config: Config, feed: GtfsFeed | None = None) -> None:
+    def __init__(
+        self, config: Config, feed: GtfsFeed | None = None, *,
+        source: SourceContext = OBSERVED_SOURCE,
+    ) -> None:
         self.config = config
+        if source.origin not in (DataOrigin.OBSERVED, DataOrigin.SIMULATED) or source.principal is not None:
+            raise ValueError("el agrupador requiere origen/run de vehículo, sin principal")
+        self.source = source
 
         #: Feed GTFS, solo para conocer la longitud de cada recorrido. Es
         #: opcional: sin él, la comprobación de avance se omite y quedan las
@@ -287,6 +294,8 @@ class VehicleAggregator:
 
         return EstimatedVehicle(
             vehicle_id=(
+                (f"sim:{self.source.run_id}:" if self.source.origin is DataOrigin.SIMULATED else "")
+                +
                 f"{observation.route_id}-{self.namespace}-{ordinal:02d}"
             ),
             route_id=observation.route_id,

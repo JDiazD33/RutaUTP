@@ -139,6 +139,12 @@ class Config:
     # casa exactamente un nivel y no cruza separadores.
     observations_topic: str = "rutautp/observaciones/+/+/posicion"
     vehicles_topic_prefix: str = "rutautp/vehiculos"
+    # Compatibilidad hasta instalar S07/S08. La rama sintética exige v2 y un
+    # proveedor de autorización interno; esta bandera por sí sola no la abre.
+    vehicle_position_schema_version: int = 1
+    simulation_ingress_enabled: bool = False
+    # Estado privado separado del histórico. Vacío: no abrir controlador.
+    simulation_control_path: str = ""
 
     # ── Feed ──────────────────────────────────────────────────────────────
     gtfs_dir: Path = DEFAULT_GTFS_DIR
@@ -231,6 +237,10 @@ class Config:
 
     def __post_init__(self) -> None:
         """Comprueba los invariantes, también para una construcción directa."""
+        if type(self.vehicle_position_schema_version) is not int or self.vehicle_position_schema_version not in (1, 2):
+            raise ConfigError("BACKEND_VEHICLE_POSITION_SCHEMA_VERSION debe ser 1 o 2")
+        if type(self.simulation_ingress_enabled) is not bool:
+            raise ConfigError("BACKEND_SIMULATION_INGRESS_ENABLED debe ser booleano")
         integer_fields = {
             "port": "MQTT_PORT",
             "max_message_bytes": "BACKEND_MAX_MESSAGE_BYTES",
@@ -287,6 +297,10 @@ class Config:
                 "BACKEND_MIN_PUBLISH_PRINCIPALS="
                 f"{self.min_publish_principals} debe ser un entero mayor o igual a 1"
             )
+        if self.simulation_ingress_enabled and (
+            self.vehicle_position_schema_version != 2 or self.min_publish_principals < 2
+        ):
+            raise ConfigError("la entrada sintética exige salida v2 y quorum mínimo de 2")
 
         for name in (
             "max_message_bytes",
@@ -378,6 +392,11 @@ class Config:
             vehicles_topic_prefix=env.get(
                 "BACKEND_VEHICLES_TOPIC_PREFIX", "rutautp/vehiculos"
             ).strip(),
+            vehicle_position_schema_version=_integer(
+                env, "BACKEND_VEHICLE_POSITION_SCHEMA_VERSION", 1, minimum=1, maximum=2
+            ),
+            simulation_ingress_enabled=_flag(env, "BACKEND_SIMULATION_INGRESS_ENABLED"),
+            simulation_control_path=env.get("BACKEND_SIMULATION_CONTROL_PATH", "").strip(),
             gtfs_dir=Path(gtfs_dir) if gtfs_dir else DEFAULT_GTFS_DIR,
             database_path=env.get(
                 "BACKEND_DB_PATH", str(DEFAULT_DATABASE_PATH)

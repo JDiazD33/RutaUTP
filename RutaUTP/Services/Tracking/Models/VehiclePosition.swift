@@ -31,6 +31,11 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
     var speed: Double        // m/s, -1 si desconocido
     var timestamp: TimeInterval
 
+    /// Procedencia del dato, independiente del transporte/localización de UI.
+    let dataOrigin: VehicleDataOrigin
+    let simulationRunId: String?
+    let controlRevision: UInt64?
+
     init(id: String,
          linea: String,
          routeId: String = "",
@@ -38,7 +43,10 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
          lon: Double,
          heading: Double = -1,
          speed: Double = -1,
-         timestamp: TimeInterval = Date().timeIntervalSince1970) {
+         timestamp: TimeInterval = Date().timeIntervalSince1970,
+         dataOrigin: VehicleDataOrigin = .unknown,
+         simulationRunId: String? = nil,
+         controlRevision: UInt64? = nil) {
         self.id = id
         self.linea = linea
         self.routeId = routeId
@@ -47,6 +55,29 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
         self.heading = heading
         self.speed = speed
         self.timestamp = timestamp
+        self.dataOrigin = dataOrigin
+        self.simulationRunId = simulationRunId
+        self.controlRevision = controlRevision
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, linea, routeId, lat, lon, heading, speed, timestamp
+        case dataOrigin, simulationRunId, controlRevision
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        linea = try values.decode(String.self, forKey: .linea)
+        routeId = try values.decodeIfPresent(String.self, forKey: .routeId) ?? ""
+        lat = try values.decode(Double.self, forKey: .lat)
+        lon = try values.decode(Double.self, forKey: .lon)
+        heading = try values.decode(Double.self, forKey: .heading)
+        speed = try values.decode(Double.self, forKey: .speed)
+        timestamp = try values.decode(Double.self, forKey: .timestamp)
+        dataOrigin = try values.decodeIfPresent(VehicleDataOrigin.self, forKey: .dataOrigin) ?? .legacyUnknown
+        simulationRunId = try values.decodeIfPresent(String.self, forKey: .simulationRunId)
+        controlRevision = try values.decodeIfPresent(UInt64.self, forKey: .controlRevision)
     }
 
     var coordinate: CLLocationCoordinate2D {
@@ -54,11 +85,66 @@ struct VehiclePosition: Codable, Equatable, Identifiable {
     }
 }
 
-/// Cómo obtuvimos la posición de un vehículo. Sirve para distinguir
-/// la fuente en logs y en la UI (badge "En vivo" real vs "Demo").
+/// Transporte del proveedor. MQTT sigue siendo `.real` aunque un dato sea sintético.
 enum VehicleTrackingSource: String, Codable, Equatable {
     case simulated   // SimulatedTrackingProvider (Timer local)
     case real        // MQTTTrackingProvider (posiciones del backend por el broker)
+}
+
+enum VehicleDataOrigin: String, Codable, Equatable, Hashable {
+    case observed
+    case simulated
+    case legacyUnknown = "legacy_unknown"
+    case unknown
+}
+
+/// Identidad de presentación: reutilizar un ID no conserva selección ni velocidad
+/// entre rutas, orígenes o generaciones de control diferentes.
+struct VehiclePresentationIdentity: Equatable, Hashable {
+    let id: String
+    let routeId: String
+    let dataOrigin: VehicleDataOrigin
+    let simulationRunId: String?
+    let controlRevision: UInt64?
+}
+
+extension VehiclePosition {
+    var presentationIdentity: VehiclePresentationIdentity {
+        VehiclePresentationIdentity(id: id, routeId: routeId, dataOrigin: dataOrigin,
+            simulationRunId: simulationRunId, controlRevision: controlRevision)
+    }
+
+    /// Un transporte MQTT no demuestra procedencia observada. El legado y los
+    /// datos sintéticos nunca abren el canal comunitario desde su detalle.
+    var communityVehicleID: String? {
+        dataOrigin == .observed && !id.lowercased().hasPrefix("sim:") ? id : nil
+    }
+
+    var reportedSpeedForPresentation: Double? {
+        speed.isFinite && (0...100).contains(speed) ? speed : nil
+    }
+}
+
+enum VehiclePresentationLimits {
+    static let maximumMapMarkers = 8
+}
+
+/// Limita movimiento visual a 4 Hz; las retiradas y cambios de procedencia,
+/// ruta o revisión se publican inmediatamente aunque lleguen en el mismo tick.
+struct VehiclePresentationUpdateGate {
+    private var identities: [String: VehiclePresentationIdentity] = [:]
+    private var lastUpdate: TimeInterval?
+
+    mutating func shouldPublish(_ positions: [VehiclePosition], at uptime: TimeInterval) -> Bool {
+        let next = Dictionary(positions.map { ($0.id, $0.presentationIdentity) },
+                              uniquingKeysWith: { _, last in last })
+        if next == identities, let lastUpdate, uptime >= lastUpdate, uptime - lastUpdate < 0.25 {
+            return false
+        }
+        identities = next
+        lastUpdate = uptime
+        return true
+    }
 }
 
 /// Filtro de entrada para posiciones que llegan por el canal MQTT.

@@ -1,5 +1,6 @@
 import Foundation
 import CocoaMQTT
+import UIKit
 
 @MainActor
 final class MQTTTrackingProvider: VehicleTrackingProviding {
@@ -11,6 +12,19 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     private let conectar: @MainActor (CocoaMQTT) -> Bool
     private var generation = UUID()
     private let topic = "rutautp/vehiculos/+/posicion"
+    private let legacyCompatibility: LegacyVehicleCompatibility
+    private let clock: @MainActor () -> VehicleReceptionTime
+    private let loadCheckpoint: @MainActor () throws -> SimulationControlCheckpoint?
+    private let saveCheckpoint: @MainActor (SimulationControlCheckpoint) throws -> Void
+    private var control = SimulationControlGate()
+    private var checkpointAvailable = true
+    private var checkpointLoaded = false
+    private var connected = false
+    private var controlSubscribed = false
+    private var isForeground = true
+    private var controlExpiryTimer: Timer?
+    private var expiryGeneration = UUID()
+    private var lifecycleObservers: [NSObjectProtocol] = []
 
     private var continuation:
         AsyncStream<[VehiclePosition]>.Continuation?
@@ -44,11 +58,14 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     /// arranque: en una conexión larga, los identificadores caducados se
     /// acumulaban sin límite, y bastaba con que un mensaje cualquiera llegara
     /// para que la reconstrucción los volviera a considerar.
-    private func refreshCurrentPositions(now: TimeInterval) {
+    private func refreshCurrentPositions(now: VehicleReceptionTime) {
+        control.checkTime(now)
         let limite = VehiclePositionSanitizer.stalenessLimit
 
         positionsByID = positionsByID.filter {
-            now - $0.value.timestamp <= limite
+            now.wall - $0.value.timestamp <= limite
+                && ($0.value.dataOrigin == .observed || (checkpointAvailable &&
+                    control.permits($0.value, at: now, legacy: legacyCompatibility)))
         }
 
         currentPositions = positionsByID
@@ -92,7 +109,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     private func sweepStalePositions() {
         let previous = currentPositions
 
-        refreshCurrentPositions(now: Date().timeIntervalSince1970)
+        refreshCurrentPositions(now: clock())
 
         guard currentPositions != previous else {
             return
@@ -109,8 +126,18 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     }
 
     init(configuration: MQTTConfiguration,
+         legacyCompatibility: LegacyVehicleCompatibility = .disabled,
+         clock: @escaping @MainActor () -> VehicleReceptionTime = { .now },
+         loadCheckpoint: (@MainActor () throws -> SimulationControlCheckpoint?)? = nil,
+         saveCheckpoint: (@MainActor (SimulationControlCheckpoint) throws -> Void)? = nil,
          conectar: @escaping @MainActor (CocoaMQTT) -> Bool = { $0.connect() }) {
         self.configuration = configuration
+        self.legacyCompatibility = legacyCompatibility
+        self.clock = clock
+        let file = SimulationCheckpointFile(endpointIdentity:
+            "v1|\(configuration.host.lowercased())|\(configuration.port)|\(configuration.useTLS)")
+        self.loadCheckpoint = loadCheckpoint ?? { try file.read() }
+        self.saveCheckpoint = saveCheckpoint ?? { try file.write($0) }
         self.conectar = conectar
     }
 
@@ -128,6 +155,9 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         mqtt.keepAlive = 30
         mqtt.cleanSession = true
         mqtt.autoReconnect = true
+        // Entrega serial y síncrona al MainActor: no crear Tasks que permitan
+        // reordenar posición/control/desconexión al salir de la cola MQTT.
+        mqtt.delegateQueue = .main
         mqtt.enableSSL = configuration.useTLS
 
         // Con una CA propia (Mosquitto con certificado autofirmado) el
@@ -144,6 +174,21 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     func start() {
         guard !isRunning else { return }
 
+        if !checkpointLoaded {
+            checkpointLoaded = true
+            do {
+                control = SimulationControlGate(checkpoint: try loadCheckpoint()?.validated())
+            } catch {
+                checkpointAvailable = false
+                control.invalidate(blockLegacy: true)
+                MQTTConfiguration.trialLog("checkpointFailure", ["code": (error as NSError).code])
+            }
+        }
+        control.invalidate()
+        connected = false
+        controlSubscribed = false
+        isForeground = UIApplication.shared.applicationState != .background
+
         prepareStreamIfNeeded()
         generation = UUID()
         let client = makeClient()
@@ -151,6 +196,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         configureCallbacks(for: client)
         isRunning = true
         startStalenessSweep()
+        observeLifecycle()
 
         #if DEBUG
         print("[MQTT] Intentando conectar con el broker...")
@@ -166,6 +212,8 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             client.autoReconnect = false
             client.disconnect()
             stopStalenessSweep()
+            stopControlExpiry()
+            stopObservingLifecycle()
         }
     }
 
@@ -178,7 +226,13 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         previous?.disconnect()
 
         stopStalenessSweep()
+        stopControlExpiry()
+        stopObservingLifecycle()
+        connected = false
+        controlSubscribed = false
+        control.invalidate()
 
+        continuation?.yield([])
         continuation?.finish()
         continuation = nil
         stream = nil
@@ -197,6 +251,12 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         }
 
         return stream
+    }
+
+    func positionsForPresentation() -> [VehiclePosition] {
+        guard isRunning else { return [] }
+        publishIfChanged(now: clock())
+        return currentPositions
     }
 
     private func prepareStreamIfNeeded() {
@@ -218,159 +278,175 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     }
 
     private func configureCallbacks(for mqtt: CocoaMQTT) {
-        mqtt.didConnectAck = { [weak self] mqtt, acknowledgment in
-            Task { @MainActor [weak self] in
-                guard let self, self.isRunning, self.mqtt === mqtt else { return }
-
-                guard acknowledgment == .accept else {
-                    #if DEBUG
-                    print(
-                        "[MQTT] Conexión rechazada: \(acknowledgment)"
-                    )
-                    #endif
+        let token = generation
+        mqtt.didConnectAck = { [weak self] client, acknowledgment in
+            MainActor.assumeIsolated {
+                guard let self, self.isCurrent(client, token: token) else { return }
+                self.connected = acknowledgment == .accept
+                MQTTConfiguration.trialLog("connection", ["accepted": self.connected ? 1 : 0])
+                self.controlSubscribed = false
+                self.control.invalidate()
+                self.stopControlExpiry()
+                self.publishIfChanged(now: self.clock())
+                guard self.connected else { return }
+                client.subscribe(VehicleTrackingWire.controlTopic, qos: .qos1)
+                client.subscribe(self.topic, qos: .qos1)
+            }
+        }
+        mqtt.didSubscribeTopics = { [weak self] client, success, failed in
+            MainActor.assumeIsolated {
+                guard let self, self.isCurrent(client, token: token) else { return }
+                let topic = VehicleTrackingWire.controlTopic
+                if failed.contains(topic) || success[topic] != nil {
+                    self.controlSubscribed = !failed.contains(topic)
+                        && (success[topic] as? NSNumber)?.intValue == 1
+                    MQTTConfiguration.trialLog("subscription", ["control": self.controlSubscribed ? 1 : 0])
+                    if !self.controlSubscribed {
+                        self.control.invalidate(blockLegacy: true)
+                        self.stopControlExpiry()
+                        self.publishIfChanged(now: self.clock())
+                    }
+                }
+            }
+        }
+        mqtt.didReceiveMessage = { [weak self] client, message, _ in
+            // CocoaMQTT entrega en delegateQueue=.main; procesar aquí conserva
+            // el orden y evita una Task vieja que reaparezca tras disable/stop.
+            MainActor.assumeIsolated {
+                guard let self, self.isCurrent(client, token: token) else { return }
+                guard message.payload.count <= VehicleTrackingWire.maximumBytes, message.qos == .qos1 else {
+                    if message.topic == VehicleTrackingWire.controlTopic {
+                        self.control.invalidate(blockLegacy: true)
+                        self.stopControlExpiry()
+                        self.publishIfChanged(now: self.clock())
+                    }
                     return
                 }
-
-                #if DEBUG
-                print("[MQTT] Conexión aceptada")
-                print("[MQTT] Suscribiendo a \(self.topic)")
-                #endif
-
-                mqtt.subscribe(
-                    self.topic,
-                    qos: .qos1
-                )
+                let data = Data(message.payload)
+                if message.topic == VehicleTrackingWire.controlTopic {
+                    self.receiveControl(data, now: self.clock())
+                } else if let position = VehicleTrackingWire.position(data: data, topic: message.topic,
+                                                                      retained: message.retained) {
+                    self.process(position: position, now: self.clock())
+                }
             }
         }
-
-        mqtt.didSubscribeTopics = { _, success, failed in
-            #if DEBUG
-            print("[MQTT] Suscripciones aceptadas: \(success)")
-
-            if !failed.isEmpty {
-                print("[MQTT] Suscripciones rechazadas: \(failed)")
+        mqtt.didDisconnect = { [weak self] client, _ in
+            MainActor.assumeIsolated {
+                guard let self, self.isCurrent(client, token: token) else { return }
+                self.connected = false
+                self.controlSubscribed = false
+                self.control.invalidate()
+                self.stopControlExpiry()
+                self.publishIfChanged(now: self.clock())
             }
-            #endif
-        }
-
-        mqtt.didReceiveMessage = { [weak self] client, message, _ in
-            guard let json = message.string else { return }
-            let topic = message.topic
-            // La decodificación usa solo valores locales en la cola de CocoaMQTT.
-            guard let position = Self.decodePosition(json: json, topic: topic) else { return }
-            Task { @MainActor [weak self] in
-                guard let self, self.isRunning, self.mqtt === client else { return }
-                self.process(position: position, topic: topic)
-            }
-        }
-
-        mqtt.didDisconnect = { _, error in
-            #if DEBUG
-            if let error {
-                print(
-                    "[MQTT] Desconectado con error: " +
-                    error.localizedDescription
-                )
-            } else {
-                print("[MQTT] Desconectado")
-            }
-            #endif
         }
     }
 
-    nonisolated private static func decodePosition(
-        json: String,
-        topic: String
-    ) -> VehiclePosition? {
-        guard let data = json.data(using: .utf8) else {
-            return nil
-        }
+    private func isCurrent(_ client: CocoaMQTT, token: UUID) -> Bool {
+        isRunning && generation == token && mqtt === client
+    }
 
+    private func receiveControl(_ data: Data, now: VehicleReceptionTime) {
+        guard connected, controlSubscribed, checkpointAvailable else { return }
+        guard let state = VehicleTrackingWire.control(data: data) else {
+            control.invalidate(blockLegacy: true)
+            stopControlExpiry()
+            publishIfChanged(now: now)
+            return
+        }
+        let previous = control.checkpoint
+        control.receive(state, at: now)
+        MQTTConfiguration.trialLog("control", ["enabled": state.enabled ? 1 : 0,
+            "revision": Int(state.controlRevision)])
         do {
-            let dto = try JSONDecoder().decode(
-                VehiclePositionMessage.self,
-                from: data
-            )
-
-            return VehiclePosition(
-                id: dto.vehicleId,
-                linea: dto.linea,
-                routeId: dto.routeId,
-                lat: dto.lat,
-                lon: dto.lon,
-                heading: dto.heading,
-                speed: dto.speed,
-                timestamp: dto.timestamp
-            )
-
+            if previous != control.checkpoint { try saveCheckpoint(control.checkpoint) }
         } catch {
-            #if DEBUG
-            print("[MQTT] JSON inválido en \(topic): " + error.localizedDescription)
-            #endif
-            return nil
+            checkpointAvailable = false
+            control.invalidate(blockLegacy: true)
+        }
+        if !isForeground { control.invalidate() }
+        publishIfChanged(now: now)
+        scheduleControlExpiry(now: now)
+    }
+
+    private func process(position: VehiclePosition, now: VehicleReceptionTime) {
+        // Evaluar caducidad incluso si esta posición se descarta.
+        publishIfChanged(now: now)
+        guard let position = VehiclePositionSanitizer.sanitize(position, now: now.wall),
+              position.dataOrigin == .observed || (checkpointAvailable &&
+                control.permits(position, at: now, legacy: legacyCompatibility)) else { return }
+        if position.dataOrigin == .simulated && (!isForeground || !connected || !controlSubscribed) { return }
+        if let known = positionsByID[position.id], position.timestamp <= known.timestamp { return }
+        positionsByID[position.id] = position
+        publishIfChanged(now: now)
+    }
+
+    private func publishIfChanged(now: VehicleReceptionTime) {
+        let previous = currentPositions
+        refreshCurrentPositions(now: now)
+        if currentPositions != previous {
+            MQTTConfiguration.trialLog("reception", ["total": currentPositions.count,
+                "synthetic": currentPositions.filter { $0.dataOrigin == .simulated }.count])
+            continuation?.yield(currentPositions)
         }
     }
 
-    private func process(position: VehiclePosition, topic: String) {
-        // El broker es un canal compartido: nada garantiza que
-        // el mensaje entrante sea razonable, así que se filtra
-        // antes de tocar el estado que alimenta el mapa.
-        guard let position = VehiclePositionSanitizer.sanitize(
-            position
-        ) else {
-            #if DEBUG
-            print(
-                "[MQTT] Posición inválida u obsoleta en \(topic): " +
-                "\(position.id)"
-            )
-            #endif
-
-            return
-        }
-
-        // Un mensaje atrasado no debe retroceder un vehículo ya
-        // actualizado. El broker no garantiza el orden entre
-        // publicaciones distintas, así que la comprobación es por
-        // marca de tiempo y no por orden de llegada.
-        if let conocida = self.positionsByID[position.id],
-           position.timestamp <= conocida.timestamp {
-            #if DEBUG
-            print(
-                "[MQTT] Posición atrasada ignorada: " +
-                "\(position.id)"
-            )
-            #endif
-
-            return
-        }
-
-        self.positionsByID[position.id] = position
-
-        self.refreshCurrentPositions(
-            now: Date().timeIntervalSince1970
-        )
-
-        self.continuation?.yield(
-            self.currentPositions
-        )
-
-        #if DEBUG
-        print(
-            "[MQTT] Posición recibida: " +
-            "\(position.id), línea \(position.linea), " +
-            "\(position.lat), \(position.lon)"
-        )
-        #endif
+    private func stopControlExpiry() {
+        expiryGeneration = UUID()
+        controlExpiryTimer?.invalidate()
+        controlExpiryTimer = nil
     }
-}
 
-private struct VehiclePositionMessage: Decodable {
-    let vehicleId: String
-    let routeId: String
-    let linea: String
-    let lat: Double
-    let lon: Double
-    let speed: Double
-    let heading: Double
-    let timestamp: TimeInterval
+    private func scheduleControlExpiry(now: VehicleReceptionTime) {
+        stopControlExpiry()
+        guard isForeground, checkpointAvailable, let remaining = control.remainingAuthorization(at: now) else { return }
+        guard remaining > 0 else {
+            control.invalidate()
+            publishIfChanged(now: now)
+            return
+        }
+        let token = generation
+        let expiryToken = expiryGeneration
+        let timer = Timer(timeInterval: remaining, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.isRunning, self.generation == token,
+                      self.expiryGeneration == expiryToken else { return }
+                self.controlExpiryTimer = nil
+                let now = self.clock()
+                self.publishIfChanged(now: now)
+                // Si el timer despertó apenas antes del plazo, rearmarlo;
+                // nunca renovar la fecha de una autorización recibida.
+                if let remaining = self.control.remainingAuthorization(at: now), remaining > 0 {
+                    self.scheduleControlExpiry(now: now)
+                } else {
+                    self.control.invalidate()
+                }
+            }
+        }
+        controlExpiryTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func observeLifecycle() {
+        guard lifecycleObservers.isEmpty else { return }
+        let token = generation
+        for name in [UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification] {
+            lifecycleObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) {
+                [weak self] notification in
+                MainActor.assumeIsolated {
+                    guard let self, self.isRunning, self.generation == token else { return }
+                    self.isForeground = notification.name == UIApplication.willEnterForegroundNotification
+                    self.control.invalidate() // esperar otro control recibido, no restaurar el guardado
+                    self.stopControlExpiry()
+                    self.publishIfChanged(now: self.clock())
+                }
+            })
+        }
+    }
+
+    private func stopObservingLifecycle() {
+        lifecycleObservers.forEach(NotificationCenter.default.removeObserver)
+        lifecycleObservers.removeAll()
+    }
 }
