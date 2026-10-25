@@ -24,7 +24,11 @@ struct NotificacionesSheet: View {
 // Las demás se muestran bloqueadas ("Próximamente") para comunicar la visión
 // del producto sin prometer algo que aún no existe.
 struct CiudadSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("ciudadSeleccionada") private var ciudadSeleccionada: String = "Trujillo"
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     private struct Ciudad: Identifiable {
         let nombre: String
@@ -42,105 +46,84 @@ struct CiudadSheet: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                SheetHeader(icon: "building.2.fill", iconColor: .secondary,
-                            title: L.t("Ciudad", "City"))
-
-                Text(L.t("RutaUTP opera con datos de transporte de Trujillo. Estamos trabajando para llegar a más ciudades.",
-                         "RutaUTP runs on Trujillo transit data. We're working on more cities."))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-
-                VStack(spacing: 8) {
-                    ForEach(ciudades) { ciudad in
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach(ciudades.filter { $0.disponible }) { ciudad in
                         ciudadRow(ciudad)
                     }
-                }
-
-                HStack {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(.onSurfaceVariant)
-                    Text(L.t("Trujillo es nuestra primera ciudad. ¿Quieres la tuya? Escríbenos desde Soporte.",
-                             "Trujillo is our first city. Want yours? Reach us via Support."))
+                } footer: {
+                    Text(L.t("RutaUTP opera con datos de transporte de Trujillo. Estamos trabajando para llegar a más ciudades.",
+                             "RutaUTP runs on Trujillo transit data. We're working on more cities."))
                         .fixedSize(horizontal: false, vertical: true)
-                        .font(.bodyXs)
-                        .foregroundStyle(.onSurfaceVariant)
-                    Spacer()
                 }
-                .padding(.top, 8)
 
+                Section {
+                    ForEach(ciudades.filter { !$0.disponible }) { ciudad in
+                        ciudadRow(ciudad)
+                    }
+                } header: {
+                    Text(L.t("Próximamente", "Coming soon"))
+                }
+                .textCase(nil)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .scrollContentBackground(.hidden)
+            .background(Color.appBackground)
+            .navigationTitle(L.t("Ciudad", "City"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Cerrar", "Close")) { dismiss() }
+                }
+            }
         }
-        .background(Color.appSurface)
+        .tint(acento)
     }
 
     @ViewBuilder
     private func ciudadRow(_ ciudad: Ciudad) -> some View {
         if ciudad.disponible {
-            // Trujillo: seleccionada y fija (no tiene sentido deseleccionarla)
-            HStack {
-                Image(systemName: "building.2.fill")
-                    .foregroundStyle(.appPrimary)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 12) {
+                Image(systemName: "building.2")
+                    .font(.title2)
+                    .foregroundStyle(acento)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
                     Text(ciudad.nombre)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurface)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
                     Text(L.t("Rutas y paraderos activos", "Routes and stops active"))
-                        .font(.bodyXs)
-                        .foregroundStyle(.onSurfaceVariant)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                Spacer()
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.appPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(acento)
+                    .accessibilityHidden(true)
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.primaryContainer.opacity(0.20))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.appPrimary.opacity(0.35), lineWidth: 1)
-                    )
-            )
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(ciudad.nombre + L.t(", ciudad actual", ", current city"))
+            .accessibilityValue(L.t("Rutas y paraderos activos", "Routes and stops active"))
             .accessibilityAddTraits(.isSelected)
             .onAppear { ciudadSeleccionada = "Trujillo" }
         } else {
-            // Bloqueada: próximamente
-            Button {
-                AppHaptics.warning()
-            } label: {
-                HStack {
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(.onSurfaceVariant.opacity(0.6))
-                        .frame(width: 24)
-                    Text(ciudad.nombre)
-                        .font(.bodyMdMedium)
-                        .foregroundStyle(.onSurfaceVariant.opacity(0.7))
-                    Spacer()
-                    Text(L.t("PRÓXIMAMENTE", "COMING SOON"))
-                        .font(.system(size: 10, weight: .bold))
-                        .appTracking(AppTracking.wideLabel)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule().fill(Color.surfaceContainerHigh)
-                        )
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.surfaceContainerLow.opacity(0.6))
-                )
+            HStack(spacing: 12) {
+                Text(ciudad.nombre)
+                    .font(.body)
+                    .foregroundStyle(Color.onSurface)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Image(systemName: "lock")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                    .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .accessibilityElement(children: .combine)
             .accessibilityLabel(ciudad.nombre + L.t(", próximamente", ", coming soon"))
             .accessibilityHint(L.t("Esta ciudad aún no está disponible", "This city is not available yet"))
         }
@@ -665,7 +648,7 @@ struct CerrarSesionSheet: View {
                     .frame(width: 140, height: 140)
                 Image(systemName: "face.dashed")
                     .font(.system(size: 80))
-                    .foregroundStyle(.appPrimary)
+                    .foregroundStyle(.appAccent)
                     .scaleEffect(lloraScale)
             }
 
