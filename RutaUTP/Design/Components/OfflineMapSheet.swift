@@ -25,7 +25,7 @@ struct OfflineMapSheet: View {
                 VStack(alignment: .leading, spacing: 22) {
                     Image(systemName: comprobando ? "internaldrive" : (numeroRutas > 0 ? "checkmark.circle.fill" : "exclamationmark.triangle"))
                         .font(.system(size: 48))
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .frame(maxWidth: .infinity)
                     Text(comprobando
                          ? L.t("Comprobando datos locales…", "Checking local data…")

@@ -38,7 +38,7 @@ struct NegocioBubbleMarker: View {
                 if negocio.cupon?.vigente == true {
                     Image(systemName: "ticket.fill")
                         .font(.system(size: 9, weight: .heavy))
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .padding(4)
                         .background(Circle().fill(Color.appSurface))
                         .offset(x: 3, y: 3)
@@ -226,7 +226,7 @@ struct NegocioDetailCard: View {
         if negocio.patrocinado {
             Text(L.t("Promocionado", "Sponsored"))
                 .font(.labelCapsSm)
-                .foregroundStyle(Color.appPrimary)
+                .foregroundStyle(Color.appAccent)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
@@ -255,7 +255,7 @@ struct NegocioDetailCard: View {
                 if let distancia = distanciaTexto {
                     Text(distancia)
                         .font(.labelCapsMd)
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
@@ -308,7 +308,7 @@ struct NegocioDetailCard: View {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "ticket.fill")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                     Text(cupon.detalle.texto)
                         .font(.headlineBody)
                         .foregroundStyle(.onSurface)
@@ -410,14 +410,14 @@ struct NegocioDetailCard: View {
                     .font(.headlineBody)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(cuponGuardado ? Color.onSurface : Color.onPrimaryFill)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(minHeight: 44)
             .background {
                 let color = cuponGuardado
-                    ? Color.secondaryContainer.opacity(0.7)
-                    : Color.appPrimary
+                    ? Color.surfaceContainerHigh
+                    : Color.primaryFill
                 if dynamicTypeSize.isAccessibilitySize {
                     RoundedRectangle(cornerRadius: 12, style: .continuous).fill(color)
                 } else {

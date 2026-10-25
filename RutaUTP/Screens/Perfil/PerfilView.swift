@@ -327,7 +327,7 @@ struct PerfilView: View {
 
             grupoFilas {
                 if mostrarCarnetFoto {
-                    chevronRow(icon: CarnetPerfil.foto.icono, iconColor: .appPrimary,
+                    chevronRow(icon: CarnetPerfil.foto.icono, iconColor: .appAccent,
                                label: CarnetPerfil.foto.tituloBreve(para: empresa),
                                detalle: hayCarnetGuardado
                                    ? L.t("Ver foto", "View photo")
@@ -339,7 +339,7 @@ struct PerfilView: View {
                     separadorFila
                 }
                 if mostrarCarnetDigital {
-                    chevronRow(icon: CarnetPerfil.digital.icono, iconColor: .appPrimary,
+                    chevronRow(icon: CarnetPerfil.digital.icono, iconColor: .appAccent,
                                label: CarnetPerfil.digital.tituloBreve(para: empresa),
                                detalle: L.t("Muestra · sin validez", "Sample · not valid")) {
                         AppHaptics.impact(.light)
@@ -348,7 +348,7 @@ struct PerfilView: View {
                     }
                     separadorFila
                 }
-                chevronRow(icon: "creditcard.fill", iconColor: .appPrimary,
+                chevronRow(icon: "creditcard.fill", iconColor: .appAccent,
                            label: L.t("Mis tarjetas", "My cards"),
                            detalle: L.t("Referencias locales · sin pagos", "Local references · no payments")) {
                     AppHaptics.impact(.light)
@@ -368,14 +368,14 @@ struct PerfilView: View {
             VStack(alignment: .leading, spacing: 12) {
                 tituloSeccion(L.t("Preferencias", "Preferences"))
                 grupoFilas {
-                    chevronRow(icon: "globe", iconColor: .appPrimary,
+                    chevronRow(icon: "globe", iconColor: .appAccent,
                                label: L.t("Idioma", "Language"),
                                detalle: IdiomaManager.shared.idioma.nombreNativo) {
                         mostrarIdiomas = true
                     }
                     separadorFila
                     TimelineView(.periodic(from: .now, by: 60)) { contexto in
-                        chevronRow(icon: "bell.fill", iconColor: .appPrimary,
+                        chevronRow(icon: "bell.fill", iconColor: .appAccent,
                                    label: L.t("Notificaciones", "Notifications"),
                                    detalle: NotificacionesService.shared.resumen(ahora: contexto.date)) {
                             mostrarNotificaciones = true
@@ -401,13 +401,13 @@ struct PerfilView: View {
             VStack(alignment: .leading, spacing: 12) {
                 tituloSeccion(L.t("Privacidad y datos", "Privacy and data"))
                 grupoFilas {
-                    chevronRow(icon: "person.crop.circle", iconColor: .appPrimary,
+                    chevronRow(icon: "person.crop.circle", iconColor: .appAccent,
                                label: L.t("Datos personales", "Personal details")) {
                         AppHaptics.impact(.light)
                         showDatosPersonales = true
                     }
                     separadorFila
-                    chevronRow(icon: "archivebox", iconColor: .appPrimary,
+                    chevronRow(icon: "archivebox", iconColor: .appAccent,
                                label: L.t("Respaldos guardados", "Saved backups")) {
                         AppHaptics.impact(.light)
                         showRespaldos = true
@@ -424,7 +424,7 @@ struct PerfilView: View {
                 }
                 .font(.footnote)
                 .foregroundStyle(Color.onSurfaceVariant)
-                .tint(.appPrimary)
+                .tint(.appAccent)
                 .padding(.horizontal, 16)
             }
         }
@@ -432,7 +432,7 @@ struct PerfilView: View {
 
     private func accesibilidadRow() -> some View {
         chevronRow(icon: voiceOverOn ? "speaker.wave.3.fill" : "speaker.slash.fill",
-                   iconColor: .appPrimary, label: L.t("VoiceOver", "VoiceOver"),
+                   iconColor: .appAccent, label: L.t("VoiceOver", "VoiceOver"),
                    detalle: voiceOverOn ? L.t("Activado", "On") : L.t("Desactivado", "Off")) {
             AppHaptics.impact(.light)
             showVoiceOverHelp = true
@@ -485,7 +485,7 @@ struct PerfilView: View {
                     .foregroundStyle(Color.onSurface)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .tint(.appPrimary)
+            .tint(.appAccent)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

@@ -136,7 +136,7 @@ struct SedeTrabajoSheet: View {
                 }
             }
         }
-        .tint(.appPrimary)
+        .tint(.appAccent)
     }
 
     private func botonEmpresa(_ marca: TematicaEmpresa) -> some View {
@@ -160,7 +160,7 @@ struct SedeTrabajoSheet: View {
                         .font(.caption).foregroundStyle(.onSurfaceVariant)
                 }
                 Image(systemName: empresa == marca ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(empresa == marca ? Color.appPrimary : Color.outline)
+                    .foregroundStyle(empresa == marca ? Color.appAccent : Color.outline)
                     .accessibilityHidden(true)
             }
             .padding(14)
@@ -191,7 +191,7 @@ struct SedeTrabajoSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     Image(systemName: TransporteApp.sedeSeleccionada?.id == sede.id ? "checkmark.circle.fill" : "mappin.circle")
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .accessibilityHidden(true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

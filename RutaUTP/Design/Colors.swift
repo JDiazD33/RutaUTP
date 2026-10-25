@@ -13,6 +13,35 @@ extension Color {
 
     // MARK: - Primarios (temática elegida)
     static var appPrimary: Color { PaletasEmpresa.actual.appPrimary }
+    /// Tinta de la temática sobre superficies neutras. El relleno y su texto
+    /// conservan primaryFill/onPrimaryFill para no aclarar también los botones.
+    static var appAccent: Color {
+        let paleta = PaletasEmpresa.actual
+        let tinta = UIColor(paleta.appPrimary)
+        let alternativa = UIColor(paleta.primaryFixed)
+        let superficie = UIColor(surfaceContainerHighest)
+        return Color(UIColor { traits in
+            let actual = tinta.resolvedColor(with: traits)
+            guard traits.userInterfaceStyle == .dark else { return actual }
+            let fondo = superficie.resolvedColor(with: traits)
+            let tintaLuminancia = luminancia(actual)
+            let fondoLuminancia = luminancia(fondo)
+            let claro = max(tintaLuminancia, fondoLuminancia)
+            let oscuro = min(tintaLuminancia, fondoLuminancia)
+            return (claro + 0.05) / (oscuro + 0.05) >= 4.5
+                ? actual : alternativa.resolvedColor(with: traits)
+        })
+    }
+
+    private static func luminancia(_ color: UIColor) -> Double {
+        var rojo: CGFloat = 0, verde: CGFloat = 0, azul: CGFloat = 0, alfa: CGFloat = 0
+        guard color.getRed(&rojo, green: &verde, blue: &azul, alpha: &alfa) else { return 0 }
+        func lineal(_ componente: CGFloat) -> Double {
+            let valor = Double(componente)
+            return valor <= 0.04045 ? valor / 12.92 : pow((valor + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * lineal(rojo) + 0.7152 * lineal(verde) + 0.0722 * lineal(azul)
+    }
     /// Superficies de acción y su tinta: permite amarillo con texto oscuro.
     static var primaryFill: Color { PaletasEmpresa.actual.primaryFill }
     static var onPrimaryFill: Color { PaletasEmpresa.actual.onPrimaryFill }
@@ -112,6 +141,7 @@ extension ShapeStyle where Self == Color {
 
     // Primarios
     static var appPrimary:           Color { .appPrimary }
+    static var appAccent:            Color { .appAccent }
     static var primaryFill:          Color { .primaryFill }
     static var onPrimaryFill:        Color { .onPrimaryFill }
     static var primaryGradientEnd:   Color { .primaryGradientEnd }

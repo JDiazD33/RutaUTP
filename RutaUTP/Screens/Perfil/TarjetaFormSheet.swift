@@ -170,7 +170,7 @@ struct MetodosPagoSheet: View {
                                     .font(.headline)
                                 Text(tarjeta.nombre).foregroundStyle(.secondary)
                                 if store.principal?.id == tarjeta.id {
-                                    Text(L.t("Principal", "Default")).font(.caption.bold()).foregroundStyle(Color.appPrimary)
+                                    Text(L.t("Principal", "Default")).font(.caption.bold()).foregroundStyle(Color.appAccent)
                                 }
                             }
                             .padding(.vertical, 6)

@@ -80,12 +80,12 @@ struct NavTabItem: View {
             Image(systemName: isActive ? tab.iconFill : tab.icon)
                 .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(
-                    isActive ? Color.appPrimary : Color.onSurfaceVariant.opacity(0.65)
+                    isActive ? Color.appAccent : Color.onSurfaceVariant.opacity(0.65)
                 )
             Text(tab.label)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(
-                    isActive ? Color.appPrimary : Color.onSurfaceVariant.opacity(0.65)
+                    isActive ? Color.appAccent : Color.onSurfaceVariant.opacity(0.65)
                 )
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

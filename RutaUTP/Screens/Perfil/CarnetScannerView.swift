@@ -36,12 +36,12 @@ struct CarnetScannerView: View {
                         .accessibilityLabel(L.t("Ver la foto del carné completa", "View the whole card photo"))
                         Label(L.t("Foto guardada en este dispositivo", "Photo saved on this device"), systemImage: "checkmark.circle.fill")
                             .font(.subheadline)
-                            .foregroundStyle(Color.appPrimary)
+                            .foregroundStyle(Color.appAccent)
                     } else {
                         VStack(spacing: 16) {
                             Image(systemName: "person.text.rectangle")
                                 .font(.system(size: 64, weight: .light))
-                                .foregroundStyle(Color.appPrimary)
+                                .foregroundStyle(Color.appAccent)
                             Text(L.t("Tu carné, siempre a mano", "Your card, always handy"))
                                 .font(.title3.bold())
                             Text(L.t("Añade una foto donde se vea completo y el texto sea legible.", "Add a photo showing the entire card with readable text."))
@@ -63,6 +63,8 @@ struct CarnetScannerView: View {
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(Color.primaryFill)
+                        .foregroundStyle(Color.onPrimaryFill)
                         .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
                         Button { selectorCerrado = false; picker = .galeria } label: {
                             Label(L.t("Elegir de la galería", "Choose from photo library"), systemImage: "photo.on.rectangle")
@@ -79,7 +81,7 @@ struct CarnetScannerView: View {
                             .buttonStyle(.bordered)
                         }
                     }
-                    .tint(Color.appPrimary)
+                    .tint(Color.appAccent)
                     .disabled(guardando)
                     Text(empresa == .utp
                         ? L.t("Puedes cambiar la foto cuando quieras. Se conserva al cerrar la app. Guardarla no verifica tu identidad universitaria.", "You can replace the photo anytime. It stays saved after closing the app. Saving it does not verify your university identity.")
@@ -497,6 +499,8 @@ struct EncuadreFotoView: View {
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(Color.primaryFill)
+                        .foregroundStyle(Color.onPrimaryFill)
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity)
@@ -510,7 +514,7 @@ struct EncuadreFotoView: View {
                 }
             }
         }
-        .tint(Color.appPrimary)
+        .tint(Color.appAccent)
     }
 
     private func escalaBase(_ marco: CGSize) -> CGFloat {

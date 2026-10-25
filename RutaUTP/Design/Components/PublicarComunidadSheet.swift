@@ -289,7 +289,7 @@ struct PublicarComunidadSheet: View {
                                 .frame(width: 40, height: 40)
                             Image(systemName: "mappin.and.ellipse")
                                 .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(.appPrimary)
+                                .foregroundStyle(.appAccent)
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(L.t("Marcar en el mapa", "Mark on the map"))

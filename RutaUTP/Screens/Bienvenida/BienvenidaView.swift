@@ -110,14 +110,14 @@ struct BienvenidaView: View {
         HStack(alignment: .center) {
             Text(L.t("Ruta UTP Trujillo", "Ruta UTP Trujillo"))
                 .font(.headlineLgMobile)
-                .foregroundStyle(.appPrimary)
+                .foregroundStyle(.appAccent)
             Spacer()
             Button {
                 mostrarIdiomas = true
             } label: {
                 Image(systemName: "globe")
                     .font(.bodyMdMedium)
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(Color.appAccent)
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
@@ -158,7 +158,7 @@ struct BienvenidaView: View {
                     .appTracking(AppTracking.wideLabelCaps)
                 Text(L.t("3 min", "3 min"))
                     .font(.displayNumberLg)
-                    .foregroundStyle(.appPrimary)
+                    .foregroundStyle(.appAccent)
                     .lineSpacing(-2)
             }
             Spacer()
@@ -248,14 +248,14 @@ struct BienvenidaView: View {
                         .frame(width: 128, height: 128)
                     Image(systemName: icon)
                         .font(.system(size: 58, weight: .semibold))
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                 }
                 .frame(height: 210)
                 .accessibilityHidden(true)
 
                 VStack(spacing: 12) {
                     Text(badge).font(.caption.weight(.bold))
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .padding(.horizontal, 12).padding(.vertical, 7)
                         .background(Color.appPrimary.opacity(0.08), in: Capsule())
                     Text(title).font(.displayLg)
@@ -269,7 +269,7 @@ struct BienvenidaView: View {
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: highlights[index].0)
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(Color.appPrimary).frame(width: 26)
+                                .foregroundStyle(Color.appAccent).frame(width: 26)
                                 .accessibilityHidden(true)
                             Text(highlights[index].1).font(.bodyMd).foregroundStyle(Color.onSurface)
                         }
@@ -288,7 +288,7 @@ struct BienvenidaView: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
             FeatureCard(
                 icon: "shield.fill",
-                iconColor: .appPrimary,
+                iconColor: .appAccent,
                 label: L.t("SEGURIDAD", "SAFETY"),
                 title: L.t("Rutas nocturnas monitoreadas.", "Monitored night routes.")
             )
@@ -353,7 +353,7 @@ struct BienvenidaView: View {
 
         var enlace = AttributedString(L.t("Términos de Servicio", "Terms of Service"))
         enlace.link = URL(string: "rutautp://terminos")
-        enlace.foregroundColor = .appPrimary
+        enlace.foregroundColor = .appAccent
         enlace.underlineStyle = .single
 
         return intro + enlace

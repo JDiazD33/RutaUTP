@@ -155,7 +155,7 @@ struct ReporteCard: View {
         let esUtil = tipo == .util
         let activo = reacciones.voto(para: reporte) == tipo
         let cantidad = esUtil ? reacciones.utiles(reporte) : reacciones.noUtiles(reporte)
-        let color: Color = esUtil ? .appPrimary : .appError
+        let color: Color = esUtil ? .appAccent : .appError
 
         Button {
             reacciones.votar(reporte, a: tipo)
@@ -390,7 +390,7 @@ struct ReporteDetailSheet: View {
         let esUtil = tipo == .util
         let activo = reacciones.voto(para: reporte) == tipo
         let cantidad = esUtil ? reacciones.utiles(reporte) : reacciones.noUtiles(reporte)
-        let color: Color = esUtil ? .appPrimary : .appError
+        let color: Color = esUtil ? .appAccent : .appError
 
         Button {
             reacciones.votar(reporte, a: tipo)

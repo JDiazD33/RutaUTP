@@ -78,7 +78,7 @@ struct CarneDigitalView: View {
                     .frame(width: 40, height: 40)
                 Image(systemName: "person.crop.rectangle.fill")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.appPrimary)
+                    .foregroundStyle(.appAccent)
             }
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
@@ -230,13 +230,13 @@ struct CarneDigitalView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color.white)
+                        .fill(Color.surfaceContainerLow)
                         .frame(width: 28, height: 28)
-                        .overlay(Circle().stroke(Color.appPrimary, lineWidth: 1.5))
+                        .overlay(Circle().stroke(Color.appAccent, lineWidth: 1.5))
                         .accessibilityHidden(true)
                     Image(systemName: "camera.fill")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .accessibilityHidden(true)
                 }
             }

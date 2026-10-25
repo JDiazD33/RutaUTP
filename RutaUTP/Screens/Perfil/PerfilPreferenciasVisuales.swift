@@ -84,7 +84,7 @@ struct PerfilPreferenciasVisuales: View {
                             Label(carnet.tituloBreve(para: empresa), systemImage: carnet.icono)
                                 .foregroundStyle(Color.onSurface)
                         }
-                        .tint(.appPrimary)
+                        .tint(.appAccent)
                         .accessibilityHint(L.t("Muestra u oculta esta credencial sin borrar sus datos", "Show or hide this credential without deleting its data"))
                     }
                 } header: {
@@ -104,7 +104,7 @@ struct PerfilPreferenciasVisuales: View {
             }
             .navigationTitle(L.t("Credenciales", "Credentials"))
             .navigationBarTitleDisplayMode(.inline)
-            .tint(.appPrimary)
+            .tint(.appAccent)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L.t("Listo", "Done")) { dismiss() }

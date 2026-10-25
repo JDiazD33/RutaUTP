@@ -198,7 +198,7 @@ struct RecargarSaldoSheet: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.appPrimary)
+                .foregroundStyle(Color.appAccent)
             Text(L.t("Recarga de demostración: no se procesa ningún pago real ni se abre ninguna app de pagos. El saldo se guarda solo en este dispositivo.",
                      "Demo top-up: no real payment is processed and no payment app is opened. The balance is stored only on this device."))
                 .font(.bodySm)
@@ -338,7 +338,7 @@ struct RecargarSaldoSheet: View {
                                       : AnyLayout(HStackLayout(spacing: 10))) {
                         Image(systemName: movimiento.esRecarga ? "arrow.down.circle.fill" : "bus.fill")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(movimiento.esRecarga ? Color.appPrimary : Color.onSurfaceVariant)
+                            .foregroundStyle(movimiento.esRecarga ? Color.appAccent : Color.onSurfaceVariant)
                             .frame(width: 22)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(movimiento.descripcion)
@@ -355,7 +355,7 @@ struct RecargarSaldoSheet: View {
                         Text((movimiento.importe > 0 ? "+" : "−") + FormatoNumero.soles(abs(movimiento.importe)))
                             .font(.bodySmMedium)
                             .monospacedDigit()
-                            .foregroundStyle(movimiento.esRecarga ? Color.appPrimary : Color.onSurface)
+                            .foregroundStyle(movimiento.esRecarga ? Color.appAccent : Color.onSurface)
                     }
                     .padding(.vertical, 9)
                     if movimiento.id != store.movimientos.prefix(5).last?.id {
@@ -609,7 +609,7 @@ struct QRPasajeSheet: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.appPrimary)
+                .foregroundStyle(Color.appAccent)
             Text(L.t("Es una demostración: el código lleva los datos de una cuenta inventada y ninguna app de pagos lo leerá como un cobro. No se mueve dinero real.",
                      "This is a demo: the code carries the details of a made-up account and no payment app will read it as a charge. No real money moves."))
                 .font(.bodySm)

@@ -21,7 +21,7 @@ struct ModoBusesUTPSection: View {
                     HStack(spacing: 12) {
                         Image(systemName: "bus.fill")
                             .font(.body.weight(.regular))
-                            .foregroundStyle(colorScheme == .dark ? Color.primaryFixed : Color.appPrimary)
+                            .foregroundStyle(colorScheme == .dark ? Color.primaryFixed : Color.appAccent)
                             .frame(width: 28, height: 28)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 3) {
@@ -39,7 +39,7 @@ struct ModoBusesUTPSection: View {
                         .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .tint(.appPrimary)
+                .tint(.appAccent)
                 .accessibilityLabel(L.t("Buses de la UTP", "UTP buses"))
                 .accessibilityHint(activado
                     ? L.t("Vuelve al transporte urbano y termina el viaje en curso", "Returns to city transport and ends the current trip")
@@ -61,7 +61,7 @@ struct ModoBusesUTPSection: View {
                 }
                 .font(.footnote)
                 .foregroundStyle(Color.onSurfaceVariant)
-                .tint(.appPrimary)
+                .tint(.appAccent)
             }
             .padding(16)
             .background(Color(uiColor: .secondarySystemGroupedBackground),

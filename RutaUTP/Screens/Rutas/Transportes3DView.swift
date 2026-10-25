@@ -76,7 +76,7 @@ struct Transportes3DView: View {
                             }
                         }
                         .pickerStyle(.menu)
-                        .tint(Color.appPrimary)
+                        .tint(Color.appAccent)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("transportes3d.tipo")
                     }
@@ -96,7 +96,7 @@ struct Transportes3DView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(L.t("Cerrar", "Close")) { dismiss() }
-                        .tint(Color.appPrimary)
+                        .tint(Color.appAccent)
                 }
             }
         }
@@ -227,7 +227,7 @@ struct PanelTransporte3D: View {
                 .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.appPrimary)
+        .foregroundStyle(Color.appAccent)
         .accessibilityLabel(etiqueta)
     }
 }

@@ -248,7 +248,7 @@ struct SeniasOverlay: View {
         HStack(alignment: .top, spacing: 5) {
             Image(systemName: "hand.raised.fill")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.appPrimary)
+                .foregroundStyle(.appAccent)
                 .accessibilityHidden(true)
 
             Text(servicio.texto(clave: clave))
@@ -475,7 +475,7 @@ private struct DistintivoSenia: View {
     var body: some View {
         Image(systemName: "hand.raised.fill")
             .font(.system(size: 7, weight: .bold))
-            .foregroundStyle(Color.appPrimary)
+            .foregroundStyle(Color.appAccent)
             .padding(3)
             .background(
                 Circle()

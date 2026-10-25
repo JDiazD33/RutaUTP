@@ -94,7 +94,7 @@ struct ElegirLugaresSheet: View {
                     Circle().fill(Color.primaryContainer.opacity(0.12)).frame(width: 40, height: 40)
                     Image(systemName: lugar.icono)
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.appPrimary)
+                        .foregroundStyle(.appAccent)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(lugar.nombre)
@@ -110,7 +110,7 @@ struct ElegirLugaresSheet: View {
                       ? "checkmark.circle.fill"
                       : "circle")
                     .font(.system(size: 22))
-                    .foregroundStyle(elegidos.contains(lugar.id) ? Color.appPrimary : Color.outlineVariant)
+                    .foregroundStyle(elegidos.contains(lugar.id) ? Color.appAccent : Color.outlineVariant)
             }
             .padding(10)
             .background(

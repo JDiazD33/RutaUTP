@@ -296,7 +296,7 @@ struct ResumenLlegadaCard: View {
                     .font(.subheadline.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(Color.appAccent)
             }
 
             (apilarContenido ? AnyLayout(VStackLayout(spacing: 8))

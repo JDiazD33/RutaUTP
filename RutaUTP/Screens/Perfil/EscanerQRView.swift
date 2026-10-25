@@ -156,7 +156,7 @@ struct EscanerQRView: View {
         } label: {
             Image(systemName: icono)
                 .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(encendido ? Color.appPrimary : Color.white)
+                .foregroundStyle(encendido ? Color.appAccent : Color.white)
                 .frame(width: 40, height: 40)
                 .background(.ultraThinMaterial, in: Circle())
         }
@@ -240,7 +240,7 @@ struct EscanerQRView: View {
             HStack(spacing: 10) {
                 Image(systemName: icono)
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(Color.appAccent)
                 Text(titulo)
                     .font(.headlineSm)
                     .foregroundStyle(.onSurface)
@@ -284,7 +284,7 @@ struct EscanerQRView: View {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(Color.appAccent)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {

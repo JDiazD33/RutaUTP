@@ -37,7 +37,7 @@ struct VoiceOverHelpSheet: View {
                 }
             }
         }
-        .tint(Color.appPrimary)
+        .tint(Color.appAccent)
         .accessibilityAction(.escape) { dismiss() }
     }
 
@@ -46,7 +46,7 @@ struct VoiceOverHelpSheet: View {
                          : L.t("VoiceOver está desactivado", "VoiceOver is off"),
               systemImage: voiceOverOn ? "speaker.wave.3.fill" : "speaker.slash.fill")
             .font(.headline)
-            .foregroundStyle(Color.appPrimary)
+            .foregroundStyle(Color.appAccent)
             .accessibilityAddTraits(.isHeader)
     }
 

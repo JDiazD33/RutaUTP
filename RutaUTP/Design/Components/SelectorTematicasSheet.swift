@@ -82,7 +82,7 @@ struct SelectorTematicasSheet: View {
                 }
             }
         }
-        .tint(.appPrimary)
+        .tint(.appAccent)
     }
 
     private func boton(_ opcion: TematicaEmpresa) -> some View {
