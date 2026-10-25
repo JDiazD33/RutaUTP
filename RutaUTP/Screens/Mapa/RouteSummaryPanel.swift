@@ -6,6 +6,7 @@ struct RouteSummaryPanel: View {
     let maximumPanelHeight: CGFloat
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var textSize
     let onConfirmBoarding: () -> Void
     let onShowAlternatives: () -> Void
     let onDetailsPresentationChange: (Bool) -> Void
@@ -20,7 +21,7 @@ struct RouteSummaryPanel: View {
 
     var body: some View {
         ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 header
                 if !pages.isEmpty {
                     carousel
@@ -32,7 +33,7 @@ struct RouteSummaryPanel: View {
                             Label(L.t("Ver otras rutas", "See other routes"), systemImage: "list.bullet")
                                 .frame(minHeight: 44)
                         }
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                     }
                 }
                 if let mensaje = vm.mensajeAlternativa {
@@ -41,7 +42,7 @@ struct RouteSummaryPanel: View {
                         .foregroundStyle(Color.onSurfaceVariant)
                 }
             }
-            .padding(10)
+            .padding(14)
             .background {
                 GeometryReader { geometry in
                     Color.clear.preference(key: RoutePanelHeightKey.self, value: geometry.size.height)
@@ -59,7 +60,12 @@ struct RouteSummaryPanel: View {
         .font(.footnote)
         .foregroundStyle(Color.onSurface)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .background(Color.appSurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color(uiColor: .separator).opacity(0.35), lineWidth: 0.5)
+                .allowsHitTesting(false)
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L.t("Guía de la ruta", "Route guide"))
         .sheet(isPresented: $showDetails, onDismiss: finishDetails) { detailsSheet }
@@ -89,15 +95,15 @@ struct RouteSummaryPanel: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(alignment: .center, spacing: 12) {
             Text(vm.busquedaResultado.map { L.t("Hacia ", "To ") + $0.titulo } ?? "")
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-            Spacer(minLength: 4)
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Button { vm.limpiar() } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(Color.onSurfaceVariant)
+                Image(systemName: "xmark")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
@@ -122,31 +128,36 @@ struct RouteSummaryPanel: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .frame(height: min(124, max(88, maximumPanelHeight - 108)))
+        .frame(height: min(136, max(88, maximumPanelHeight - 132)))
     }
 
     private func compactSummary(_ plan: TransitItinerary) -> some View {
         let current = vm.itinerarioInstalado
         let metrics = (current?.plan.optionID == plan.optionID ? current?.metrics : nil)
             ?? ItineraryMetrics(plan: plan)
-        let lines = plan.route.lineaConLetra
-            + (plan.transfer.map { " → " + $0.route.lineaConLetra } ?? "")
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 8) {
             RouteCategoryBadges(categories: vm.categorias(de: plan))
-            Text(lines)
-                .font(.subheadline.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-            Text("~" + L.f("{0} min en total", "{0} min total",
-                           ["\(max(1, Int(ceil((metrics.totalSeconds + plan.boardingWaitSeconds) / 60))))"]))
-                .font(.subheadline.weight(.semibold))
+            RouteJourneyLines(plan: plan)
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("~" + L.f("{0} min", "{0} min",
+                               ["\(max(1, Int(ceil((metrics.totalSeconds + plan.boardingWaitSeconds) / 60))))"]))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color.onSurface)
+                Text(plan.transfer == nil ? L.t("Sin transbordos", "No transfers") : L.t("1 transbordo", "1 transfer"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Label(L.f("{0} min a pie para subir · {1} m", "{0} min walk to board · {1} m",
                       ["\(Int(ceil(metrics.walkToBoardMeters / 1.4 / 60)))", "\(Int(ceil(metrics.walkToBoardMeters)))"]),
                   systemImage: "figure.walk")
-            Text(plan.transfer == nil ? L.t("Sin transbordos", "No transfers") : L.t("1 transbordo", "1 transfer"))
-                .foregroundStyle(Color.onSurfaceVariant)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             if vm.seleccionandoAlternativa == plan.optionID {
                 Label(L.t("Comprobando caminatas…", "Checking walks…"), systemImage: "ellipsis")
-                    .font(.caption)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -157,7 +168,7 @@ struct RouteSummaryPanel: View {
                 if let plan = pages.first(where: { $0.optionID == visibleOptionID }) {
                     guide(plan)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
+                        .padding(20)
                 }
             }
             .background(Color.appBackground)
@@ -169,9 +180,10 @@ struct RouteSummaryPanel: View {
                 }
             }
         }
-        .tint(Color.appPrimary)
-        .presentationDetents([.medium, .large])
+        .tint(Color.appAccent)
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .seguirTemaForzado()
     }
 
     private func finishDetails() {
@@ -187,50 +199,64 @@ struct RouteSummaryPanel: View {
         let installed = vm.itinerarioInstalado
         let current = installed?.plan.optionID == plan.optionID
         let metrics = (current ? installed?.metrics : nil) ?? ItineraryMetrics(plan: plan)
-        return VStack(alignment: .leading, spacing: 8) {
-            RouteCategoryBadges(categories: vm.categorias(de: plan))
-            Label(L.t("Toma la línea ", "Take line ") + plan.route.lineaConLetra + " · " + plan.route.precioTexto,
-                  systemImage: "bus.fill")
-                .font(.subheadline.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-            Text(L.f("{0} min a pie para subir · {1} m", "{0} min walk to board · {1} m",
-                     ["\(Int(ceil(metrics.walkToBoardMeters / 1.4 / 60)))", "\(Int(ceil(metrics.walkToBoardMeters)))"]))
-                .font(.subheadline.weight(.semibold))
-            Text("~" + L.f("{0} min en total", "{0} min total",
-                           ["\(max(1, Int(ceil((metrics.totalSeconds + plan.boardingWaitSeconds) / 60))))"]))
-                .font(.subheadline.weight(.semibold))
-            Label(plan.board.nombre, systemImage: "figure.walk")
-            if let transfer = plan.transfer {
-                Text(L.t("1 transbordo", "1 transfer")).fontWeight(.bold)
-                Label(L.t("Baja en ", "Get off at ") + plan.firstAlight.nombre, systemImage: "mappin.and.ellipse")
-                Label(L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.transferWalkMeters))) m · " + transfer.board.nombre,
-                      systemImage: "figure.walk")
-                Label(L.t("Luego toma ", "Then take ") + transfer.route.lineaConLetra + " · " + transfer.route.precioTexto,
-                      systemImage: "arrow.triangle.swap")
+        return VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 12) {
+                RouteCategoryBadges(categories: vm.categorias(de: plan))
+                Text("~" + L.f("{0} min en total", "{0} min total",
+                               ["\(max(1, Int(ceil((metrics.totalSeconds + plan.boardingWaitSeconds) / 60))))"]))
+                    .font(.title2.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
-                Text(L.t("El tiempo incluye una espera estimada para el segundo micro.",
-                         "Time includes an estimated wait for the second bus."))
-                    .foregroundStyle(Color.onSurfaceVariant)
+                Text(plan.transfer == nil ? L.t("Sin transbordos", "No transfers") : L.t("1 transbordo", "1 transfer"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Label(L.f("{0} min a pie para subir · {1} m", "{0} min walk to board · {1} m",
+                          ["\(Int(ceil(metrics.walkToBoardMeters / 1.4 / 60)))", "\(Int(ceil(metrics.walkToBoardMeters)))"]),
+                      systemImage: "figure.walk")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
-            Label(L.t("Baja en ", "Get off at ") + plan.alight.nombre, systemImage: "mappin.and.ellipse")
-            Text(L.f("Luego camina {0} m hasta tu destino.", "Then walk {0} m to your destination.",
-                     ["\(Int(ceil(metrics.walkToDestinationMeters)))"]))
-                .foregroundStyle(Color.onSurfaceVariant)
-            if plan.route.headwayMin > 0 {
-                Text(L.f("Incluye ~{0} min de espera del primer micro.", "Includes ~{0} min waiting for the first bus.",
-                         ["\(Int(ceil(plan.boardingWaitSeconds / 60)))"]))
-                    .foregroundStyle(Color.onSurfaceVariant)
-            } else {
-                Text(L.t("Espera del primer micro no disponible.", "First bus waiting time unavailable."))
-                    .foregroundStyle(Color.onSurfaceVariant)
+            VStack(spacing: 0) {
+                guideStep(icon: "figure.walk", title: plan.board.nombreVisible)
+                guideDivider
+                guideStep(icon: "bus", title: L.t("Toma la línea ", "Take line ") + plan.route.lineaConLetra,
+                          detail: plan.route.empresa + " · " + plan.route.precioTexto, color: plan.route.color)
+                if let transfer = plan.transfer {
+                    guideDivider
+                    guideStep(icon: "mappin.and.ellipse", title: L.t("Baja en ", "Get off at ") + plan.firstAlight.nombreVisible)
+                    guideDivider
+                    guideStep(icon: "figure.walk", title: L.t("Camina ", "Walk ") + "\(Int(ceil(metrics.transferWalkMeters))) m",
+                              detail: transfer.board.nombreVisible)
+                    guideDivider
+                    guideStep(icon: "bus", title: L.t("Luego toma ", "Then take ") + transfer.route.lineaConLetra,
+                              detail: transfer.route.empresa + " · " + transfer.route.precioTexto, color: transfer.route.color)
+                }
+                guideDivider
+                guideStep(icon: "mappin.and.ellipse", title: L.t("Baja en ", "Get off at ") + plan.alight.nombreVisible)
+                guideDivider
+                guideStep(icon: "flag", title: L.f("Luego camina {0} m hasta tu destino.", "Then walk {0} m to your destination.",
+                                                  ["\(Int(ceil(metrics.walkToDestinationMeters)))"]))
             }
-            if current {
-                if plan.walkingApproximate { AvisoRutaAproximada() }
-            } else {
-                Text(L.t("Vista previa con caminatas aproximadas.", "Preview with approximate walks."))
-                    .font(.caption)
-                    .foregroundStyle(Color.onSurfaceVariant)
+            .background(Color(uiColor: .secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            VStack(alignment: .leading, spacing: 10) {
+                if plan.transfer != nil {
+                    Text(L.t("El tiempo incluye una espera estimada para el segundo micro.",
+                             "Time includes an estimated wait for the second bus."))
+                }
+                if plan.route.headwayMin > 0 {
+                    Text(L.f("Incluye ~{0} min de espera del primer micro.", "Includes ~{0} min waiting for the first bus.",
+                             ["\(Int(ceil(plan.boardingWaitSeconds / 60)))"]))
+                } else {
+                    Text(L.t("Espera del primer micro no disponible.", "First bus waiting time unavailable."))
+                }
+                if current {
+                    if plan.walkingApproximate { AvisoRutaAproximada() }
+                } else {
+                    Text(L.t("Vista previa con caminatas aproximadas.", "Preview with approximate walks."))
+                }
             }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 0) {
                 if vm.seleccionandoAlternativa == plan.optionID {
                     HStack(spacing: 8) {
@@ -247,48 +273,93 @@ struct RouteSummaryPanel: View {
             .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: vm.seleccionandoAlternativa)
         }
+        .foregroundStyle(Color.onSurface)
+    }
+
+    private var guideDivider: some View { Divider().padding(.leading, 56) }
+
+    private func guideStep(icon: String, title: String, detail: String? = nil,
+                           color: Color = .appAccent) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundStyle(color)
+                .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.body.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+                if let detail {
+                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .accessibilityElement(children: .combine)
     }
 
     private var pageNavigation: some View {
-        HStack(spacing: 4) {
+        let layout = textSize >= .xxxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
             if pages.count > 1 {
-                navigationButton(previous: true)
-                Text(L.f("Ruta {0} de {1}", "Route {0} of {1}", ["\(pageIndex + 1)", "\(pages.count)"]))
-                    .font(.caption2.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .accessibilityAdjustableAction { direction in
-                        if direction == .increment { movePage(by: 1) }
-                        if direction == .decrement { movePage(by: -1) }
-                    }
-                navigationButton(previous: false)
+                HStack(spacing: 0) {
+                    navigationButton(previous: true)
+                    Text(L.f("Ruta {0} de {1}", "Route {0} of {1}", ["\(pageIndex + 1)", "\(pages.count)"]))
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAdjustableAction { direction in
+                            if direction == .increment { movePage(by: 1) }
+                            if direction == .decrement { movePage(by: -1) }
+                        }
+                    navigationButton(previous: false)
+                }
             }
-            Button { showDetails = true } label: {
-                Text(L.t("Ver detalles", "View details"))
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            if vm.alternativasItinerario.count > 1 {
-                Button(action: onShowAlternatives) {
-                    Image(systemName: "list.bullet")
-                        .frame(width: 44, height: 44)
+            HStack(spacing: 8) {
+                Button { showDetails = true } label: {
+                    Text(L.t("Ver detalles", "View details"))
+                        .font(.subheadline.weight(.semibold))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(Color.appAccent)
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Ver otras rutas", "See other routes"))
+                if vm.alternativasItinerario.count > 1 {
+                    Button(action: onShowAlternatives) {
+                        Image(systemName: "list.bullet")
+                            .font(.body)
+                            .foregroundStyle(Color.appAccent)
+                            .frame(width: 44, height: 44)
+                            .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L.t("Ver otras rutas", "See other routes"))
+                }
             }
         }
-        .foregroundStyle(Color.appPrimary)
     }
 
     private func navigationButton(previous: Bool) -> some View {
-        Button { movePage(by: previous ? -1 : 1) } label: {
+        let disabled = previous ? pageIndex == 0 : pageIndex + 1 >= pages.count
+        return Button { movePage(by: previous ? -1 : 1) } label: {
             Image(systemName: previous ? "chevron.left" : "chevron.right")
+                .font(.body.weight(.medium))
+                .foregroundStyle(disabled ? Color(uiColor: .tertiaryLabel) : Color.appAccent)
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(previous ? pageIndex == 0 : pageIndex + 1 >= pages.count)
+        .disabled(disabled)
         .accessibilityLabel(previous ? L.t("Ruta anterior", "Previous route") : L.t("Ruta siguiente", "Next route"))
     }
 
@@ -319,7 +390,7 @@ struct RouteSummaryPanel: View {
             HStack(spacing: 10) {
                 Image(systemName: "bus.fill")
                     .font(.system(size: 18))
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(Color.appAccent)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L.t("¿Ya subiste?", "Already on board?"))
                         .font(.subheadline.weight(.semibold))
@@ -367,11 +438,56 @@ struct RouteCategoryBadges: View {
 
     var body: some View {
         Text(categories.isEmpty ? L.t("Tu elección", "Your choice") : categories.map(\.title).joined(separator: " · "))
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(Color.appPrimary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color.appPrimary.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Color.onSurfaceVariant)
             .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// La identidad de la línea siempre se lee en tinta neutra; su color GTFS
+/// queda en el indicador para no perder legibilidad con líneas muy oscuras.
+struct RouteLineIdentity: View {
+    let route: RutaGTFS
+    var showsOperator = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Capsule().fill(route.color).frame(width: 4, height: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(route.lineaConLetra)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.onSurface)
+                    .fixedSize(horizontal: false, vertical: true)
+                if showsOperator {
+                    Text(route.empresa).font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct RouteJourneyLines: View {
+    let plan: TransitItinerary
+    @Environment(\.dynamicTypeSize) private var textSize
+
+    var body: some View {
+        let layout = textSize >= .xxxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 8))
+        return layout {
+            RouteLineIdentity(route: plan.route)
+            if let transfer = plan.transfer {
+                Image(systemName: textSize >= .xxxLarge ? "arrow.down" : "arrow.right")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(L.t("1 transbordo", "1 transfer"))
+                RouteLineIdentity(route: transfer.route)
+            }
+        }
     }
 }

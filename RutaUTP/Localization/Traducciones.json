@@ -20,6 +20,13 @@
     "de": "Du findest sie auch unter Gespeichert im Bereich Orte. Wähle eine Haltestelle, um den Weg von deinem Standort zu finden.",
     "zh-Hans": "你也可以在“收藏”的“地点”中找到它们。选择一个站点，查找从你的位置出发的路线。"
   },
+  "En 2 minutos": {
+    "en": "In 2 minutes",
+    "fr": "Dans 2 minutes",
+    "pt-BR": "Em 2 minutos",
+    "de": "In 2 Minuten",
+    "zh-Hans": "2 分钟后"
+  },
   "Tomar transbordo": {
     "en": "Take the transfer",
     "fr": "Prendre la correspondance",
