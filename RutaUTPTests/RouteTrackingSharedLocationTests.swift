@@ -3,6 +3,8 @@ import CoreLocation
 import Combine
 import Observation
 import SwiftUI
+import UIKit
+import MapKit
 import CocoaMQTT
 @testable import RutaUTP
 
@@ -471,6 +473,164 @@ private final class ExpectativaObservada {
             self.expectativa = nil
             expectativa.fulfill()
         }
+    }
+}
+
+/// Aloja las pestañas productivas: verifica la retención del mapa y la
+/// liberación del GPS con los mismos eventos de aparición que usa la app.
+@MainActor
+final class MainTabNavigationTests: XCTestCase {
+    func testRecorrerLasCincoPestanasConservaMapaYLiberaGPSEnLasOcultas() async throws {
+        let sesion = try MainTabsTestWindow()
+        defer { sesion.cerrar() }
+        try await esperarEstado { sesion.indiceVisible == 0 && sesion.gps.lectoresActivos == 1 && sesion.mapaVisible != nil && !sesion.barraNativaVisible }
+        XCTAssertFalse(sesion.barraNativaVisible, "La barra nativa no debe superponerse a la navegación de RutaUTP")
+        let mapaInicial = try XCTUnwrap(sesion.mapaVisible)
+        await adjuntarCaptura(sesion, nombre: "MainTabs-Mapa")
+
+        let recorrido: [(AppScreen, Int, String)] = [
+            (.rutas, 1, "Rutas"), (.guardado, 2, "Guardado"),
+            (.seguridad, 3, "Seguridad"), (.perfil, 4, "Perfil")
+        ]
+        for vuelta in 0..<2 {
+            for (pantalla, indice, nombre) in recorrido {
+                sesion.router.navigate(to: pantalla)
+                try await esperarEstado { sesion.indiceVisible == indice && sesion.gps.lectoresActivos == 0 && !sesion.barraNativaVisible }
+                XCTAssertFalse(sesion.barraNativaVisible, nombre)
+                XCTAssertFalse(sesion.gps.actualizando, nombre)
+                if vuelta == 0 { await adjuntarCaptura(sesion, nombre: "MainTabs-\(nombre)") }
+            }
+            sesion.router.navigate(to: .mapaPrincipal)
+            try await esperarEstado { sesion.indiceVisible == 0 && sesion.gps.lectoresActivos == 1 && sesion.mapaVisible != nil && !sesion.barraNativaVisible }
+            XCTAssertFalse(sesion.barraNativaVisible, "Volver al mapa conserva una sola barra de navegación")
+            XCTAssertTrue(sesion.mapaVisible === mapaInicial, "Volver al mapa debe reutilizar el mismo MKMapView")
+        }
+        XCTAssertEqual(sesion.gps.paradasGlobales, 0, "Salir de una pestaña cancela su lector, sin apagar otros consumidores")
+    }
+
+    func testLosDestinosPendientesSeConsumenSoloAlAbrirSuPestana() async throws {
+        let sesion = try MainTabsTestWindow()
+        defer { sesion.cerrar() }
+        try await esperarEstado { sesion.indiceVisible == 0 && sesion.gps.lectoresActivos == 1 }
+        sesion.router.navigate(to: .guardado)
+        try await esperarEstado { sesion.indiceVisible == 2 && sesion.gps.lectoresActivos == 0 }
+
+        let destino = DestinoPendiente(titulo: "Destino de integración", lat: -8.10, lon: -79.04)
+        sesion.router.destinoPendiente = destino
+        sesion.router.lugarCercanoPendiente = destino
+        // Dejar que SwiftUI entregue onChange a las vistas conservadas antes
+        // de comprobar que ninguna pestaña oculta consumió la petición.
+        await siguienteActualizacionUI()
+        await siguienteActualizacionUI()
+        XCTAssertEqual(sesion.router.destinoPendiente, destino)
+        XCTAssertEqual(sesion.router.lugarCercanoPendiente, destino)
+
+        sesion.router.navigate(to: .rutas)
+        try await esperarEstado { sesion.indiceVisible == 1 && sesion.router.lugarCercanoPendiente == nil }
+        XCTAssertEqual(sesion.router.destinoPendiente, destino)
+        XCTAssertEqual(sesion.gps.lectoresActivos, 0)
+
+        sesion.router.navigate(to: .mapaPrincipal)
+        try await esperarEstado { sesion.indiceVisible == 0 && sesion.router.destinoPendiente == nil && sesion.gps.lectoresActivos == 1 }
+    }
+
+    private func esperarEstado(archivo: StaticString = #filePath, linea: UInt = #line,
+                               _ condicion: () -> Bool) async throws {
+        let limite = ContinuousClock.now.advanced(by: .seconds(3))
+        while !condicion() {
+            guard ContinuousClock.now < limite else {
+                XCTFail("La interfaz no alcanzó el estado esperado", file: archivo, line: linea)
+                throw ErrorNavegacion.agotado
+            }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    private func siguienteActualizacionUI() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 60.0) { continuation.resume() }
+        }
+    }
+
+    private func adjuntarCaptura(_ sesion: MainTabsTestWindow, nombre: String) async {
+        await siguienteActualizacionUI()
+        sesion.ventana.layoutIfNeeded()
+        let imagen = UIGraphicsImageRenderer(bounds: sesion.ventana.bounds).image { _ in
+            sesion.ventana.drawHierarchy(in: sesion.ventana.bounds, afterScreenUpdates: true)
+        }
+        let adjunto = XCTAttachment(image: imagen)
+        adjunto.name = nombre
+        adjunto.lifetime = .keepAlways
+        add(adjunto)
+    }
+
+    private enum ErrorNavegacion: Error { case agotado }
+}
+
+@MainActor
+private final class MainTabsTestWindow {
+    let gps = TrackingGPSMock()
+    let router = AppRouter()
+    let ventana: UIWindow
+    private let coordinador: PassiveTrackingCoordinator
+    private let ventanaAnterior: UIWindow?
+
+    init() throws {
+        let escena = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        ventanaAnterior = escena.windows.first(where: \.isKeyWindow)
+        ventana = UIWindow(windowScene: escena)
+        ventana.frame = escena.coordinateSpace.bounds
+        coordinador = PassiveTrackingCoordinator(locationService: gps, configurationProvider: { nil },
+                                                preserveStoredConsentWhenUnconfigured: true)
+        router.currentScreen = .mapaPrincipal
+        let contenido = MainTabsView(locationService: gps, busesUTPActivos: TransporteApp.busesUTPActivos)
+            .environmentObject(router)
+            .environmentObject(coordinador)
+            .environment(\.scenePhase, .active)
+        ventana.rootViewController = UIHostingController(rootView: contenido)
+        ventana.makeKeyAndVisible()
+        ventana.layoutIfNeeded()
+    }
+
+    var indiceVisible: Int? { controladorPestanas(ventana.rootViewController)?.selectedIndex }
+
+    var barraNativaVisible: Bool {
+        guard let barra = controladorPestanas(ventana.rootViewController)?.tabBar,
+              barra.window === ventana, !barra.bounds.isEmpty else { return false }
+        var actual: UIView? = barra
+        while let vista = actual {
+            if vista.isHidden || vista.alpha <= 0.01 { return false }
+            actual = vista.superview
+        }
+        return barra.convert(barra.bounds, to: ventana).intersects(ventana.bounds)
+    }
+
+    var mapaVisible: MKMapView? { buscarMapa(en: ventana) }
+
+    func cerrar() {
+        ventana.isHidden = true
+        ventana.rootViewController = nil
+        coordinador.stop()
+        gps.finalizarLectores()
+        ventanaAnterior?.makeKey()
+    }
+
+    private func controladorPestanas(_ controlador: UIViewController?) -> UITabBarController? {
+        guard let controlador else { return nil }
+        if let pestanas = controlador as? UITabBarController { return pestanas }
+        for hijo in controlador.children {
+            if let pestanas = controladorPestanas(hijo) { return pestanas }
+        }
+        return nil
+    }
+
+    private func buscarMapa(en vista: UIView) -> MKMapView? {
+        guard !vista.isHidden, vista.alpha > 0 else { return nil }
+        if let mapa = vista as? MKMapView { return mapa }
+        for hija in vista.subviews {
+            if let mapa = buscarMapa(en: hija) { return mapa }
+        }
+        return nil
     }
 }
 

@@ -8,7 +8,7 @@
 import SwiftUI
 import CoreLocation
 
-enum AppScreen: Equatable {
+enum AppScreen: Hashable {
     case bienvenida
     case mapaPrincipal
     case rutas
@@ -64,18 +64,18 @@ final class AppRouter: ObservableObject {
     func navigate(to screen: AppScreen, claveSenia: String? = nil) {
         // La clave explícita coordina la seña antes de cambiar de pantalla.
         SeniasPresenter.shared.ejecutarTrasVerSenia(clave: claveSenia) {
-            withAnimation(.easeInOut(duration: 0.25)) {
+            // La selección de pestaña es inmediata. Una disolución del árbol
+            // completo retira los paneles y deja ver el mapa de la vista saliente.
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
                 self.currentScreen = screen
             }
         }
     }
 
     func reset() {
-        SeniasPresenter.shared.ejecutarTrasVerSenia {
-            withAnimation(.easeInOut(duration: 0.25)) {
-                self.currentScreen = .mapaPrincipal
-            }
-        }
+        navigate(to: .mapaPrincipal)
     }
 }
 

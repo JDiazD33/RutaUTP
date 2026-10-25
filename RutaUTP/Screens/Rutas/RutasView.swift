@@ -50,10 +50,16 @@ struct RutasView: View {
         .animation(.spring(response: 0.3), value: rutaSeleccionada == nil)
         .task {
             await viewModel.cargar()
+            guard !Task.isCancelled else { return }
             procesarHookDebug()
             consumirLugarCercano()
             consumirRutaPendiente()
         }
+        .onAppear {
+            consumirLugarCercano()
+            consumirRutaPendiente()
+        }
+        .onDisappear { busquedaEnfocada = false }
         .onChange(of: router.lugarCercanoPendiente) { _, _ in
             consumirLugarCercano()
         }
@@ -78,7 +84,8 @@ struct RutasView: View {
 
     /// Recibe el "Buscar transporte cercano" de Guardado y filtra el GTFS.
     private func consumirLugarCercano() {
-        guard let lugar = router.lugarCercanoPendiente else { return }
+        guard router.currentScreen == .rutas,
+              let lugar = router.lugarCercanoPendiente else { return }
         router.lugarCercanoPendiente = nil
         viewModel.limpiarFiltroCerca()
         viewModel.textoBusqueda = ""
@@ -88,10 +95,12 @@ struct RutasView: View {
     /// Recibe el "Ver Ruta Completa" del popup de bus del Mapa y abre el
     /// detalle de esa línea exacta (route_id; por defecto, por línea).
     private func consumirRutaPendiente() {
-        guard let id = router.rutaPendiente else { return }
-        router.rutaPendiente = nil
+        guard router.currentScreen == .rutas,
+              !viewModel.cargando,
+              let id = router.rutaPendiente else { return }
         guard let ruta = viewModel.rutas.first(where: { $0.id == id })
                 ?? viewModel.rutas.first(where: { $0.linea == id }) else { return }
+        router.rutaPendiente = nil
         withAnimation(.spring(response: 0.3)) {
             rutaSeleccionada = ruta
         }

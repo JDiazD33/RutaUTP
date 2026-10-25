@@ -228,6 +228,7 @@ private struct MapaScreenContent: View {
                 SideDrawer(isOpen: $mostrarDrawer)
                     .environmentObject(router)
                     .transition(.move(edge: .leading))
+                    .zIndex(30)
             }
 
             // ── OVERLAY DE COLOCACIÓN DEL MARCADOR ──
@@ -263,6 +264,7 @@ private struct MapaScreenContent: View {
         }
         .onDisappear {
             pantallaVisible = false
+            campoEnfocado = false
             vm.actualizarActividadVisual(false)
             cancelarPreguntaDeViaje()
             confirmacionMarcador?.cancel()
@@ -295,9 +297,11 @@ private struct MapaScreenContent: View {
             if !active { mostrarAvisoViaje = false }
         }
         .onChange(of: SedeTrabajoStore.shared.sede?.id) { _, _ in
+            guard pantallaVisible else { return }
             vm.actualizarSedeTrabajo()
         }
         .onChange(of: SedeTrabajoStore.shared.utpComoReferencia) { _, _ in
+            guard pantallaVisible else { return }
             vm.actualizarSedeTrabajo()
         }
         .onChange(of: vm.itinerarioFocusTick) { _, _ in
@@ -478,7 +482,8 @@ private struct MapaScreenContent: View {
 
     // MARK: - Destino pendiente (desde Guardado u otras pantallas)
     private func consumirDestinoPendiente() {
-        guard let destino = router.destinoPendiente else { return }
+        guard router.currentScreen == .mapaPrincipal,
+              let destino = router.destinoPendiente else { return }
         router.destinoPendiente = nil
         #if DEBUG
         print("[Mapa] consumiendo destino pendiente: \(destino.titulo)")

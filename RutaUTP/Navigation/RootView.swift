@@ -2,8 +2,8 @@
 //  RootView.swift
 //  RutaUTP
 //
-//  Switch central de pantallas. La transición entre pantallas
-//  se anima con un ease-in-out 0.25s.
+//  Navegación central. Las cinco pestañas conservan su contenido y
+//  cambian de forma inmediata, sin disolver paneles sobre el mapa.
 //
 
 import SwiftUI
@@ -16,12 +16,11 @@ struct RootView: View {
     private var busesUTPActivos: Bool {
         preferenciaBusesUTP && TransporteApp.busesUTPDisponibles
     }
-    /// El router recrea la vista al cambiar de pantalla; el viaje conserva su modelo.
+    /// El flujo de seguimiento conserva su modelo al salir de su pantalla.
     @StateObject private var trackingStore: ScreenModelStore<RouteTrackingViewModel>
     @AppStorage(SeniasService.llaveModo) private var modoSenias = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
     @State private var bottomNavBarHeight: CGFloat = 64
     private let notificaciones = NotificacionesService.shared
     @State private var avisoRecordatorio: String?
@@ -84,13 +83,9 @@ struct RootView: View {
         ZStack {
             switch router.currentScreen {
             case .bienvenida:    BienvenidaView()
-            case .mapaPrincipal: MapaView(locationService: locationService).id(busesUTPActivos)
-            case .rutas:         RutasView(locationService: locationService).id(busesUTPActivos)
-            case .guardado:      GuardadoView(locationService: locationService).id(busesUTPActivos)
-            case .seguridad:     SeguridadView(locationService: locationService).id(busesUTPActivos)
-            case .perfil:        PerfilView()
             case .trackingDemo:  RouteTrackingDemoView(model: trackingStore.model)
                     .id(ObjectIdentifier(trackingStore.model))
+            default:            MainTabsView(locationService: locationService, busesUTPActivos: busesUTPActivos)
             }
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
@@ -121,8 +116,7 @@ struct RootView: View {
         } message: {
             Text(L.aviso(avisoRecordatorio ?? ""))
         }
-        .tint(.appPrimary)
-        .animation(reduceMotion || voiceOverOn ? nil : .easeInOut(duration: 0.25), value: router.currentScreen)
+        .tint(.appAccent)
         .onAppear { aplicarTemaEnVentanas(isDarkMode) }
         .onChange(of: TransporteApp.busesUTPDisponibles, initial: true) { _, disponibles in
             // Descarta también una activación antigua guardada fuera de UTP;
@@ -292,6 +286,44 @@ struct RootView: View {
 
 }
 
+/// Contenedor nativo de las cinco pestañas; conserva contenido y ciclo de visibilidad.
+struct MainTabsView: View {
+    let locationService: LocationServiceProtocol
+    let busesUTPActivos: Bool
+    @EnvironmentObject private var router: AppRouter
+
+    var body: some View {
+        // TabView conserva la identidad de cada pestaña y entrega onAppear /
+        // onDisappear solo al contenido visible. Así el mapa conserva su cámara
+        // y los catálogos cargados se reutilizan sin dejar GPS o timers ocultos.
+        TabView(selection: $router.currentScreen) {
+            MapaView(locationService: locationService)
+                .id(busesUTPActivos)
+                .toolbar(.hidden, for: .tabBar)
+                .tag(AppScreen.mapaPrincipal)
+            RutasView(locationService: locationService)
+                .id(busesUTPActivos)
+                .toolbar(.hidden, for: .tabBar)
+                .tag(AppScreen.rutas)
+            GuardadoView(locationService: locationService)
+                .id(busesUTPActivos)
+                .toolbar(.hidden, for: .tabBar)
+                .tag(AppScreen.guardado)
+            SeguridadView(locationService: locationService)
+                .id(busesUTPActivos)
+                .toolbar(.hidden, for: .tabBar)
+                .tag(AppScreen.seguridad)
+            PerfilView()
+                .toolbar(.hidden, for: .tabBar)
+                .tag(AppScreen.perfil)
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .background(Color.appBackground.ignoresSafeArea())
+        .transition(.identity)
+    }
+
+}
+
 private struct CambioRutaNotificadoView: View {
     let cambio: ToqueCambioRuta
     let locationService: LocationServiceProtocol
@@ -352,7 +384,7 @@ private struct AvisoDiarioDetalleView: View {
                     .onDisappear { cambios.stop() }
             }
         }
-        .tint(.appPrimary)
+        .tint(.appAccent)
     }
 
     private func irA(_ pantalla: AppScreen) {
