@@ -45,7 +45,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
     private var recurso: String?
     private var ultimaOrden: UUID?
     private var colorContorno = UIColor.red
-    private var yaw: Float = .pi / 4
+    private var yaw: Float = -.pi / 6
     private var pitch: Float = .pi / 8
     private var distancia: Float = 6
     private var distanciaInicial: Float = 6
@@ -157,19 +157,25 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
             cambioEstado?(.fallo)
             return
         }
-        // Un mismo encuadre para las tres formas, manteniendo sus proporciones.
-        let escala: Float = 2.6 / extensionMayor
-        entidad.scale *= escala
-        entidad.position -= caja.center * escala
         registrarContornos(entidad)
         guard !contornos.isEmpty else {
             cambioEstado?(.fallo)
             return
         }
         if let identificacion, identificacion.tipoModelo == tipo {
-            aplicarPinturaReferencia(a: entidad, colores: identificacion.colores?.colores ?? [], tipo: tipo)
-            agregarCarteles(a: entidad, identificacion: identificacion, caja: caja, tipo: tipo)
+            // Los dos juegos de USDZ declaran unidades distintas. Los adornos se
+            // anclan al mesh autorado en metros y heredan sus transformaciones.
+            guard let carroceria = carrocerias.first?.0 else {
+                cambioEstado?(.fallo)
+                return
+            }
+            aplicarPinturaReferencia(a: carroceria, colores: identificacion.colores?.colores ?? [], tipo: tipo, variante: variante)
+            agregarCartel(a: carroceria, identificacion: identificacion, tipo: tipo, variante: variante)
         }
+        // Un mismo encuadre para las seis formas, manteniendo sus proporciones.
+        let escala: Float = 2.6 / extensionMayor
+        entidad.scale *= escala
+        entidad.position -= caja.center * escala
         modelo = entidad
         ancla.addChild(entidad)
         radio = simd_length(caja.extents * escala) / 2
@@ -206,7 +212,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         }
     }
 
-    private func aplicarPinturaReferencia(a entidad: Entity, colores: [ColorTransporteReferencia], tipo: TipoTransporte3D) {
+    private func aplicarPinturaReferencia(a entidad: Entity, colores: [ColorTransporteReferencia], tipo: TipoTransporte3D, variante: VarianteTransporte3D) {
         guard let principal = colores.first else { return }
         for (parte, indices) in carrocerias {
             guard var componente = parte.components[ModelComponent.self] else { continue }
@@ -215,109 +221,104 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
             }
             parte.components.set(componente)
         }
-        // Franjas esquematicas sobre la carroceria, sin tapar las ruedas o ventanas.
-        // No se reproducen graficos, marcas ni una pintura exacta de una unidad.
+        // Bandas dentro de la zona recta de cada carroceria, sobre los arcos de
+        // rueda y bajo el cristal. El sedan detallado se estrecha hacia el capo:
+        // su franja termina antes para seguir apoyada en el costado.
+        let mitadAncho: Float
+        let largo: Float
+        let z: Float
+        let banda: ClosedRange<Float>
+        switch (variante, tipo) {
+        case (.original, .micro):
+            mitadAncho = 1.17; largo = 6.5; z = -0.45; banda = 1.20...1.48
+        case (.detallado, .micro):
+            mitadAncho = 1.17; largo = 6.4; z = -0.50; banda = 1.20...1.48
+        case (.original, .combi):
+            mitadAncho = 0.98; largo = 3.9; z = -0.45; banda = 0.93...1.19
+        case (.detallado, .combi):
+            mitadAncho = 0.97; largo = 3.3; z = -0.45; banda = 0.90...1.06
+        case (.original, .colectivo):
+            mitadAncho = 0.91; largo = 4.0; z = 0; banda = 0.79...0.95
+        case (.detallado, .colectivo):
+            mitadAncho = 0.90; largo = 2.15; z = -0.425; banda = 0.79...0.88
+        }
+        let paso = (banda.upperBound - banda.lowerBound) / Float(max(colores.count - 1, 1))
         for (indice, color) in colores.dropFirst().enumerated() {
-            let alto: Float
-            let y: Float
-            let mitadAncho: Float
-            let largo: Float
-            let z: Float
-            switch tipo {
-            case .micro:
-                alto = indice == 0 ? 0.16 : 0.07
-                y = indice == 0 ? 1.28 : 1.44
-                mitadAncho = 1.18
-                largo = 6.5
-                z = -0.45
-            case .combi:
-                let paso = Float(0.26) / Float(max(colores.count - 1, 1))
-                alto = paso * 0.72
-                y = 1.0 + Float(indice) * paso
-                mitadAncho = 0.99
-                largo = 3.9
-                z = -0.45
-            case .colectivo:
-                let paso = Float(0.20) / Float(max(colores.count - 1, 1))
-                alto = paso * 0.70
-                y = 0.78 + Float(indice) * paso
-                mitadAncho = 0.911
-                largo = 4.0
-                z = 0
-            }
             for lado in [Float(-1), Float(1)] {
-                let franja = ModelEntity(mesh: .generateBox(size: [0.025, alto, largo]),
+                let franja = ModelEntity(mesh: .generateBox(size: [0.012, paso * 0.80, largo]),
                                          materials: [SimpleMaterial(color: UIColor(color.color), roughness: 0.6, isMetallic: false)])
-                franja.position = [lado * mitadAncho, y, z]
+                franja.name = "FranjaReferencia" + String(indice)
+                franja.position = [lado * mitadAncho, banda.lowerBound + (Float(indice) + 0.5) * paso, z]
                 entidad.addChild(franja)
             }
         }
     }
 
-    private func agregarCarteles(a entidad: Entity, identificacion: IdentificacionRuta3D, caja: BoundingBox, tipo: TipoTransporte3D) {
+    private func agregarCartel(a entidad: Entity, identificacion: IdentificacionRuta3D, tipo: TipoTransporte3D, variante: VarianteTransporte3D) {
         guard !identificacion.letra.isEmpty else { return }
-        let factor: Float
-        let posiciones: [(SIMD3<Float>, simd_quatf)]
-        switch tipo {
-        case .micro:
-            factor = 1
-            posiciones = [
-                ([-0.36, 2.12, caja.max.z - 0.08], simd_quatf(angle: 0, axis: [0, 1, 0])),
-                ([0, 2.12, caja.min.z - 0.04], simd_quatf(angle: .pi, axis: [0, 1, 0])),
-                ([1.20, 2.12, 1.80], simd_quatf(angle: .pi / 2, axis: [0, 1, 0])),
-                ([-1.20, 2.12, 1.80], simd_quatf(angle: -.pi / 2, axis: [0, 1, 0]))
-            ]
-        case .combi:
-            factor = 0.74
-            // La inclinacion sigue el parabrisas del recurso combi.usdz.
-            posiciones = [
-                ([-0.30, 1.82, 2.39], simd_quatf(angle: -atan(Float(0.97 / 0.91)), axis: [1, 0, 0])),
-                ([0, 1.75, caja.min.z - 0.025], simd_quatf(angle: .pi, axis: [0, 1, 0])),
-                ([1.0, 1.75, -0.85], simd_quatf(angle: .pi / 2, axis: [0, 1, 0])),
-                ([-1.0, 1.75, -0.85], simd_quatf(angle: -.pi / 2, axis: [0, 1, 0]))
-            ]
-        case .colectivo:
-            factor = 0.43
-            // Carteles pequenos sobre ambos cristales, siguiendo el sedan del USDZ.
-            posiciones = [
-                ([-0.27, 1.29, 0.79], simd_quatf(angle: -atan(Float(0.673 / 0.481)), axis: [1, 0, 0])),
-                ([0, 1.34, -1.13], simd_quatf(angle: .pi, axis: [0, 1, 0])
-                    * simd_quatf(angle: -atan(Float(0.740 / 0.495)), axis: [1, 0, 0]))
-            ]
+        let posicion: SIMD3<Float>
+        let tamano: SIMD2<Float>
+        let inclinacion: Float
+        // Coordenadas del cristal de cada recurso, en el espacio local de Carroceria.
+        // -X es el acompanante: todo el cartel queda bajo y dentro de esa mitad
+        // del parabrisas. No hay copias sobre carroceria, conductor o ventanas laterales.
+        switch (variante, tipo) {
+        case (.original, .micro):
+            posicion = [-0.60, 1.801, 4.331]
+            tamano = [0.56, 0.34]
+            inclinacion = -atan(0.14 / 1.5)
+        case (.original, .combi):
+            posicion = [-0.48, 1.612, 2.583]
+            tamano = [0.44, 0.30]
+            inclinacion = -atan(0.97 / 0.91)
+        case (.original, .colectivo):
+            posicion = [-0.42, 1.200, 0.891]
+            tamano = [0.34, 0.24]
+            inclinacion = -atan(0.673 / 0.481)
+        case (.detallado, .micro):
+            posicion = [-0.60, 1.7983, 4.2398]
+            tamano = [0.56, 0.34]
+            inclinacion = -0.152454
+        case (.detallado, .combi):
+            posicion = [-0.48, 1.39379, 1.94615]
+            tamano = [0.44, 0.30]
+            inclinacion = -0.631219
+        case (.detallado, .colectivo):
+            posicion = [-0.42, 1.09999, 0.77982]
+            tamano = [0.34, 0.24]
+            inclinacion = -1.057528
         }
-        let plantilla = Entity()
-        plantilla.name = "CartelDeRuta"
-        plantilla.addChild(ModelEntity(mesh: .generateBox(size: [1.32 * factor, 0.91 * factor, 0.025], cornerRadius: 0.008),
-                                        materials: [UnlitMaterial(color: .white)]))
-        plantilla.addChild(textoCartel(identificacion.codigo, ancho: 1.10 * factor, alto: 0.18 * factor, y: 0.26 * factor))
+        let cartel = Entity()
+        cartel.name = "CartelDeRuta"
+        cartel.addChild(ModelEntity(mesh: .generateBox(size: [tamano.x, tamano.y, 0.006], cornerRadius: 0.003),
+                                    materials: [UnlitMaterial(color: .white)]))
+        cartel.addChild(textoCartel(identificacion.codigo, ancho: tamano.x * 0.84,
+                                   alto: tamano.y * 0.16, y: tamano.y * 0.31))
         let letra = textoCartel(identificacion.letraPrincipal,
-                               ancho: (identificacion.distintivoLetra == nil ? 1.15 : 0.75) * factor,
-                               alto: 0.47 * factor, y: -0.09 * factor)
+                               ancho: tamano.x * (identificacion.distintivoLetra == nil ? 0.86 : 0.56),
+                               alto: tamano.y * 0.54, y: -tamano.y * 0.12)
         if let distintivo = identificacion.distintivoLetra {
-            letra.position.x -= 0.18 * factor
-            let marca = textoCartel(distintivo, ancho: 0.32 * factor, alto: 0.18 * factor, y: -0.22 * factor)
-            marca.position.x += 0.44 * factor
-            plantilla.addChild(marca)
+            letra.position.x -= tamano.x * 0.15
+            let marca = textoCartel(distintivo, ancho: tamano.x * 0.24,
+                                    alto: tamano.y * 0.20, y: -tamano.y * 0.29)
+            marca.position.x += tamano.x * 0.32
+            cartel.addChild(marca)
         }
-        plantilla.addChild(letra)
-        // +Z es el frente del recurso. Las letras forman parte de la escena 3D.
-        for (posicion, orientacion) in posiciones {
-            let cartel = plantilla.clone(recursive: true)
-            cartel.position = posicion
-            cartel.orientation = orientacion
-            entidad.addChild(cartel)
-        }
+        cartel.addChild(letra)
+        cartel.position = posicion
+        cartel.orientation = simd_quatf(angle: inclinacion, axis: [1, 0, 0])
+        entidad.addChild(cartel)
     }
 
     private func textoCartel(_ texto: String, ancho: Float, alto: Float, y: Float) -> Entity {
-        let malla = MeshResource.generateText(texto, extrusionDepth: 0.008,
+        let malla = MeshResource.generateText(texto, extrusionDepth: 0.001,
                                              font: .systemFont(ofSize: 1, weight: .heavy),
                                              containerFrame: .zero, alignment: .center, lineBreakMode: .byClipping)
         let letras = ModelEntity(mesh: malla, materials: [UnlitMaterial(color: .black)])
         let caja = letras.visualBounds(relativeTo: nil)
         let escala = min(ancho / max(caja.extents.x, 0.001), alto / max(caja.extents.y, 0.001))
         letras.scale = SIMD3(repeating: escala)
-        letras.position = [-caja.center.x * escala, y - caja.center.y * escala, 0.025]
+        letras.position = [-caja.center.x * escala, y - caja.center.y * escala, 0.004]
         return letras
     }
 
@@ -331,7 +332,8 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
     }
 
     private func restablecer() {
-        yaw = .pi / 4
+        // Mostrar de entrada el parabrisas y la esquina del acompanante (-X).
+        yaw = -.pi / 6
         pitch = .pi / 8
         objetivo = .zero
         encuadrar()
