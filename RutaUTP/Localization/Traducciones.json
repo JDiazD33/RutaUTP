@@ -13397,6 +13397,27 @@
     "de": "Nur bei geöffneter App",
     "zh-Hans": "仅在应用打开时"
   },
+  "Original": {
+    "en": "Original",
+    "fr": "Original",
+    "pt-BR": "Original",
+    "de": "Original",
+    "zh-Hans": "原版"
+  },
+  "Detallado": {
+    "en": "Detailed",
+    "fr": "Détaillé",
+    "pt-BR": "Detalhado",
+    "de": "Detailliert",
+    "zh-Hans": "精细版"
+  },
+  "Modelo del vehículo": {
+    "en": "Vehicle model",
+    "fr": "Modèle du véhicule",
+    "pt-BR": "Modelo do veículo",
+    "de": "Fahrzeugmodell",
+    "zh-Hans": "车辆模型"
+  },
   "Servicio no configurado": {
     "en": "Service not configured",
     "fr": "Service non configuré",

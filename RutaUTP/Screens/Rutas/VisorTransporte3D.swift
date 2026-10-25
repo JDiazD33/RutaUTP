@@ -5,6 +5,7 @@ import simd
 
 struct VisorTransporte3D: UIViewRepresentable {
     let tipo: TipoTransporte3D
+    let variante: VarianteTransporte3D
     let color: UIColor
     let intento: Int
     let orden: OrdenTransporte3D?
@@ -20,7 +21,7 @@ struct VisorTransporte3D: UIViewRepresentable {
     }
 
     func updateUIView(_ view: VistaTransporte3D, context: Context) {
-        view.actualizar(tipo: tipo, color: color, intento: intento, orden: orden, identificacion: identificacion)
+        view.actualizar(tipo: tipo, variante: variante, color: color, intento: intento, orden: orden, identificacion: identificacion)
     }
 
     static func dismantleUIView(_ view: VistaTransporte3D, coordinator: ()) {
@@ -92,16 +93,17 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         }
     }
 
-    func actualizar(tipo: TipoTransporte3D, color: UIColor, intento: Int, orden: OrdenTransporte3D?, identificacion: IdentificacionRuta3D?) {
+    func actualizar(tipo: TipoTransporte3D, variante: VarianteTransporte3D, color: UIColor, intento: Int, orden: OrdenTransporte3D?, identificacion: IdentificacionRuta3D?) {
         self.identificacion = identificacion
         if !colorContorno.isEqual(color) {
             colorContorno = color
             colorear()
         }
-        let clave = "\(tipo.rawValue)-\(intento)-\(identificacion?.claveModelo ?? "galeria")"
+        let clave = "\(tipo.rawValue)-\(variante.rawValue)-\(intento)-\(identificacion?.claveModelo ?? "galeria")"
         if recurso != clave {
             recurso = clave
-            cargar(tipo)
+            ultimaOrden = orden?.id
+            cargar(tipo, variante: variante)
         }
         if let orden, orden.id != ultimaOrden {
             ultimaOrden = orden.id
@@ -109,7 +111,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         }
     }
 
-    private func cargar(_ tipo: TipoTransporte3D) {
+    private func cargar(_ tipo: TipoTransporte3D, variante: VarianteTransporte3D) {
         carga?.cancel()
         cargaAnterior?.cancel()
         modelo?.removeFromParent()
@@ -119,7 +121,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         generacion = UUID()
         let solicitud = generacion
         cambioEstado?(.cargando)
-        guard let url = Bundle.main.url(forResource: tipo.rawValue, withExtension: "usdz", subdirectory: "Transportes3D") else {
+        guard let url = Bundle.main.url(forResource: tipo.rawValue, withExtension: "usdz", subdirectory: variante.subdirectorioRecurso) else {
             cambioEstado?(.fallo)
             return
         }
@@ -128,7 +130,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                 do {
                     let entidad = try await Entity(contentsOf: url)
                     guard !Task.isCancelled, let self, self.generacion == solicitud else { return }
-                    self.presentar(entidad, tipo: tipo)
+                    self.presentar(entidad, tipo: tipo, variante: variante)
                 } catch {
                     guard !Task.isCancelled, let self, self.generacion == solicitud else { return }
                     self.cambioEstado?(.fallo)
@@ -143,12 +145,12 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                     if case .failure = resultado { self.cambioEstado?(.fallo) }
                 } receiveValue: { [weak self] entidad in
                     guard let self, self.generacion == solicitud else { return }
-                    self.presentar(entidad, tipo: tipo)
+                    self.presentar(entidad, tipo: tipo, variante: variante)
                 }
         }
     }
 
-    private func presentar(_ entidad: Entity, tipo: TipoTransporte3D) {
+    private func presentar(_ entidad: Entity, tipo: TipoTransporte3D, variante: VarianteTransporte3D) {
         let caja = entidad.visualBounds(relativeTo: nil)
         let extensionMayor = max(caja.extents.x, caja.extents.y, caja.extents.z)
         guard extensionMayor.isFinite, extensionMayor > 0 else {

@@ -14,6 +14,26 @@ enum TipoTransporte3D: String, CaseIterable, Identifiable {
     }
 }
 
+/// Cada categoria conserva el modelo original y ofrece una segunda carroceria.
+enum VarianteTransporte3D: String, CaseIterable, Identifiable {
+    case original, detallado
+    var id: String { rawValue }
+
+    var nombre: String {
+        switch self {
+        case .original: return L.t("Original", "Original")
+        case .detallado: return L.t("Detallado", "Detailed")
+        }
+    }
+
+    var subdirectorioRecurso: String {
+        switch self {
+        case .original: return "Transportes3D"
+        case .detallado: return "Transportes3D/Detallado"
+        }
+    }
+}
+
 enum AccionTransporte3D {
     case izquierda, derecha, acercar, alejar, restablecer
     case moverIzquierda, moverDerecha, moverArriba, moverAbajo
@@ -62,7 +82,6 @@ struct Transportes3DView: View {
                     }
                     if let tipoSeleccionado {
                         PanelTransporte3D(tipo: tipoSeleccionado, identificacion: identificacion)
-                            .id(identificacion?.claveModelo ?? tipoSeleccionado.rawValue)
                     } else {
                         Text(L.t("Modelo de esta categoría próximamente", "Model for this category coming soon"))
                             .font(.bodySm)
@@ -92,12 +111,16 @@ struct PanelTransporte3D: View {
     var identificacion: IdentificacionRuta3D? = nil
     var activo = true
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @AppStorage("transportes3d.variante") private var variante: VarianteTransporte3D = .original
     @State private var estado: EstadoTransporte3D = .cargando
     @State private var intento = 0
     @State private var orden: OrdenTransporte3D?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            selectorModelo
             visor
             HStack(spacing: 6) {
                 control("arrow.counterclockwise", L.t("Girar a la izquierda", "Rotate left"), .izquierda)
@@ -114,18 +137,54 @@ struct PanelTransporte3D: View {
                 .font(.caption)
                 .foregroundStyle(Color.onSurfaceVariant)
         }
+        .onChange(of: variante) { _, _ in prepararCarga() }
+        .onChange(of: tipo) { _, _ in prepararCarga() }
+        .onChange(of: identificacion?.claveModelo) { _, _ in prepararCarga() }
+    }
+
+    private var selectorModelo: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L.t("Modelo del vehículo", "Vehicle model"))
+                .font(.subheadline.weight(.semibold))
+            if dynamicTypeSize.isAccessibilitySize {
+                opcionesModelo
+                    .pickerStyle(.menu)
+                    .frame(minHeight: 44)
+            } else {
+                opcionesModelo
+                    .pickerStyle(.segmented)
+            }
+        }
+        .tint(colorScheme == .dark ? Color.primaryFixed : Color.appPrimary)
+        .disabled(!activo)
+    }
+
+    private var opcionesModelo: some View {
+        Picker(L.t("Modelo del vehículo", "Vehicle model"), selection: $variante) {
+            ForEach(VarianteTransporte3D.allCases) { variante in
+                Text(variante.nombre).tag(variante)
+            }
+        }
+        .accessibilityIdentifier("transportes3d.variante")
+    }
+
+    private func prepararCarga() {
+        estado = .cargando
+        intento = 0
+        orden = nil
     }
 
     private var visor: some View {
         ZStack {
             Color.white
             if scenePhase == .active && activo {
-                VisorTransporte3D(tipo: tipo, color: UIColor(PaletasEmpresa.actual.colorMarca),
+                VisorTransporte3D(tipo: tipo, variante: variante, color: UIColor(PaletasEmpresa.actual.colorMarca),
                                  intento: intento, orden: orden, identificacion: identificacion, estado: $estado)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(identificacion.map {
                         L.f("Modelo 3D: {0}, letra {1}, {2}", "3D model: {0}, letter {1}, {2}", [$0.codigo, $0.letra, $0.empresa])
                     } ?? L.f("Modelo 3D de {0}", "3D model of {0}", [tipo.nombre]))
+                    .accessibilityValue(variante.nombre)
                     .accessibilityAction(named: L.t("Mover a la izquierda", "Move left")) { enviar(.moverIzquierda) }
                     .accessibilityAction(named: L.t("Mover a la derecha", "Move right")) { enviar(.moverDerecha) }
                     .accessibilityAction(named: L.t("Mover arriba", "Move up")) { enviar(.moverArriba) }
