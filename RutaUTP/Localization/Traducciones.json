@@ -125,6 +125,34 @@
     "de": "Endhaltestelle ohne Namen",
     "zh-Hans": "未命名终点站"
   },
+  "Frecuencia": {
+    "en": "Frequency",
+    "fr": "Fréquence",
+    "pt-BR": "Frequência",
+    "de": "Takt",
+    "zh-Hans": "发车间隔"
+  },
+  "Tiempo de viaje": {
+    "en": "Travel time",
+    "fr": "Temps de trajet",
+    "pt-BR": "Tempo de viagem",
+    "de": "Fahrzeit",
+    "zh-Hans": "行程时间"
+  },
+  "Pasaje": {
+    "en": "Fare",
+    "fr": "Tarif",
+    "pt-BR": "Passagem",
+    "de": "Fahrpreis",
+    "zh-Hans": "票价"
+  },
+  "Distancia": {
+    "en": "Distance",
+    "fr": "Distance",
+    "pt-BR": "Distância",
+    "de": "Entfernung",
+    "zh-Hans": "距离"
+  },
   "Buscar rutas": {
     "en": "Search routes",
     "fr": "Rechercher des itinéraires",

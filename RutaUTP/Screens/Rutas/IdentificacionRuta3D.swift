@@ -528,24 +528,31 @@ struct IdentificacionRuta3D {
 
 /// Micros, combis y colectivos comparten controles, con su propia geometria.
 struct IdentificacionRuta3DView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let identificacion: IdentificacionRuta3D
     var activo = true
     @State private var ampliar = false
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(L.t("Reconoce tu transporte", "Recognize your vehicle"))
-                    .font(.headlineSm)
+                    .font(.title3.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 4)
                 if identificacion.tipoModelo != nil {
                     Button { ampliar = true } label: {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.body.weight(.medium))
                             .frame(minWidth: 44, minHeight: 44)
+                            .background(Color.surfaceContainerLow, in: Circle())
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.appPrimary)
+                    .foregroundStyle(acento)
                     .accessibilityLabel(L.t("Ampliar modelo 3D", "Expand 3D model"))
                 }
             }
@@ -561,8 +568,8 @@ struct IdentificacionRuta3DView: View {
             }
         }
         .foregroundStyle(Color.onSurface)
-        .padding(16)
-        .background(Color.surfaceContainerLowest, in: RoundedRectangle(cornerRadius: 24))
+        .padding(20)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityIdentifier("ruta.identificacion3d")
         .sheet(isPresented: $ampliar) {
             Transportes3DView(identificacion: identificacion)
@@ -571,32 +578,38 @@ struct IdentificacionRuta3DView: View {
 
     private var datos: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center, spacing: 14) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                : AnyLayout(HStackLayout(alignment: .center, spacing: 14))
+            layout {
                 VStack(spacing: 2) {
                     Text(L.t("Letra", "Letter"))
-                        .font(.caption)
+                        .font(.caption2)
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(identificacion.letraPrincipal.isEmpty ? "—" : identificacion.letraPrincipal)
                         if let distintivo = identificacion.distintivoLetra {
                             Text(distintivo)
-                                .font(.system(size: 14, weight: .black, design: .rounded))
+                                .font(.caption.weight(.semibold))
                         }
                     }
-                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded).weight(.semibold))
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(Text(identificacion.letra.isEmpty ? "—" : identificacion.letra))
                 }
-                .foregroundStyle(Color.onPrimaryContainer)
-                .frame(width: 88, height: 78)
-                .background(Color.primaryContainer, in: RoundedRectangle(cornerRadius: 18))
+                .foregroundStyle(Color.onSurface)
+                .padding(.horizontal, 12)
+                .frame(minWidth: 88, minHeight: 78)
+                .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(identificacion.codigo).font(.headlineSm)
+                    Text(identificacion.codigo)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     Text(identificacion.empresa)
-                        .font(.bodySm)
-                        .foregroundStyle(Color.onSurfaceVariant)
+                        .font(.body.weight(.medium))
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .accessibilityElement(children: .combine)
@@ -626,7 +639,7 @@ struct ColoresReferenciaRutaView: View {
                 if let fuente = referencia.fuente {
                     Link(L.t("Ver fuente", "View source"), destination: fuente)
                         .font(.bodySm)
-                        .foregroundStyle(Color.appPrimary)
+                        .foregroundStyle(Color.appAccent)
                         .frame(minHeight: 44)
                 }
             } else {

@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Detalle de la ruta (sub-vista con back)
+// MARK: - Detalle de la ruta
 struct DetalleRutaView: View {
     let ruta: RutaOpcion
     let locationService: LocationServiceProtocol
@@ -10,138 +10,41 @@ struct DetalleRutaView: View {
     @State private var showCarPlay: Bool = false
     @State private var showExplorador: Bool = false
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.self) private var entorno
+    @ScaledMetric(relativeTo: .title) private var tamanoInsignia = 76
+
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
 
     var body: some View {
         VStack(spacing: 0) {
             header
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    // Mapa con el recorrido real: tocable → explorador fullscreen
-                    RutaMapKitView(ruta: ruta)
-                        .overlay(alignment: .bottom) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                    .font(.system(size: 11, weight: .bold))
-                                Text(L.t("Toca para ver el recorrido completo", "Tap to see the full route"))
-                                    .font(.system(size: 11, weight: .semibold))
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(Color.black.opacity(0.55)))
-                            .padding(.bottom, 10)
-                        }
-                        .frame(height: 280)
-                        .contentShape(Rectangle())
-                        .onTapGesture { showExplorador = true }
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(L.t("Explorar recorrido de la línea ", "Explore route for line ") + ruta.lineaConLetra)
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityAction { showExplorador = true }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
+                VStack(alignment: .leading, spacing: 24) {
+                    resumen
+                    datosDelViaje
+                    recorrido
 
-                    VStack(spacing: 20) {
-                        // Info card
-                        HStack(alignment: .top, spacing: 14) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(ruta.colorLinea)
-                                .frame(width: 6, height: 48)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(ruta.empresa)
-                                    .font(.headlineSm)
-                                    .foregroundStyle(.onSurface)
-                                if !ruta.letraTransporte.isEmpty {
-                                    Text(L.t("Letra del transporte: ", "Transport letter: ") + ruta.letraTransporte)
-                                        .font(.bodySm.weight(.semibold))
-                                        .foregroundStyle(.onSurface)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                Text(ruta.recorridoLocalizado)
-                                    .font(.bodySm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                            }
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(L.signable("rutas.frecuencia", "FRECUENCIA", "FREQUENCY"))
-                                    .font(.labelCapsMd)
-                                    .foregroundStyle(.onPrimaryContainer)
-                                    .appTracking(AppTracking.wideLabel)
-                                Text(ruta.frecuenciaTexto)
-                                    .font(.displayNumberMd)
-                                    .foregroundStyle(.onPrimaryContainer)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.primaryContainer))
-                            // La manita va en el CARD rojo, no en la palabra:
-                            // anclada al texto quedaba metida dentro del card.
-                            .seniable("rutas.frecuencia")
-                        }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color.surfaceContainerLowest)
-                                .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
-                        )
+                    IdentificacionRuta3DView(identificacion: IdentificacionRuta3D(ruta: ruta),
+                                            activo: !showExplorador && !showCarPlay)
 
-                        IdentificacionRuta3DView(identificacion: IdentificacionRuta3D(ruta: ruta),
-                                                activo: !showExplorador && !showCarPlay)
-
-                        // Stats grid (datos del feed GTFS)
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                                  spacing: 12) {
-                            StatTile(icon: "clock.fill", iconColor: .appPrimary,
-                                     label: L.signable("rutas.tiempo", "TIEMPO VIAJE", "TRIP TIME"), value: ruta.tiempoTexto)
-                                .seniable("rutas.tiempo")
-                            StatTile(icon: "creditcard.fill", iconColor: .appPrimary,
-                                     label: L.signable("rutas.costo", "COSTO", "FARE"), value: ruta.costo)
-                                .seniable("rutas.costo")
-                            StatTile(icon: "mappin.and.ellipse", iconColor: .appPrimary,
-                                     label: L.signable("rutas.paraderos", "PARADEROS", "STOPS"), value: "\(ruta.numParaderos)")
-                                .seniable("rutas.paraderos")
-                            StatTile(icon: "point.topleft.down.curvedto.point.bottomright.up",
-                                     iconColor: .secondary,
-                                     label: L.signable("rutas.recorrido", "RECORRIDO", "DISTANCE"), value: FormatoNumero.decimal(ruta.distanciaKm) + " km")
-                                .seniable("rutas.recorrido")
-                        }
-
-                        // Pasos
-                        VStack(alignment: .leading, spacing: 18) {
-                            Text(L.signable("rutas.guia", "Guía paso a paso", "Step-by-step guide"))
-                                .font(.headlineXs)
-                                .foregroundStyle(.onSurface)
-                                .seniable("rutas.guia", distintivoDx: 10)
-
-                            VStack(spacing: 0) {
-                                pasoRow("1", L.f("Ve al paradero {0}", "Go to {0} stop", ["\(ruta.paradaInicio)"]),
-                                        L.f("Sale uno {0}", "One departs {0}", ["\(ruta.frecuenciaTexto)"]),
-                                        "figure.walk", .surfaceContainerHighest, .onSurface, isLast: false)
-                                pasoRow("2", L.f("Sube a la línea {0}", "Board line {0}", ["\(ruta.lineaConLetra)"]),
-                                        L.f("{0} • {1} de viaje", "{0} • {1} trip", ["\(ruta.empresa)", "\(ruta.tiempoTexto)"]),
-                                        "bus.fill", ruta.colorLinea, .white, isLast: false)
-                                pasoRow("3", L.f("Baja en {0}", "Get off at {0}", ["\(ruta.paradaFin)"]),
-                                        L.t("Fin del recorrido", "End of the route"),
-                                        "flag.checkered.fill", .tertiary, .white, isLast: true)
-                            }
-                        }
-
-                        // Botón de iniciar navegación integrado al final del scroll
-                        ctaButton
-                            .padding(.top, 12)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 24)
+                    guia
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 24)
             }
-            .padding(.bottom, tabBarHeight + max(4, bottomSafeArea()))
+
+            ctaButton
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
+                .background(Color.appSurface)
         }
+        .padding(.bottom, tabBarHeight)
         .background(Color.appBackground.ignoresSafeArea())
         // Explorador del recorrido (se abre tocando el mapa)
         .fullScreenCover(isPresented: $showExplorador) {
@@ -157,133 +60,266 @@ struct DetalleRutaView: View {
         }
     }
 
-    // MARK: - Header
     private var header: some View {
         HStack(spacing: 12) {
             Button(action: onBack) {
-                Image(systemName: "arrow.left")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.onSurface)
-                    .frame(width: 40, height: 40)
-                    .background(Circle().fill(Color.surfaceContainerLow))
+                Image(systemName: "chevron.left")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.onSurface)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .background(Color.surfaceContainerLow, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(L.t("Volver", "Back"))
 
-            Image(systemName: "bus.fill")
-                .font(.system(size: 26, weight: .bold))
-                .foregroundStyle(.appPrimary)
             Text(L.t("Ruta ", "Route ") + ruta.linea)
-                .font(.headlineLgMobile)
-                .foregroundStyle(.appPrimary)
-            Spacer()
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(Color.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "bus")
+                .font(.title3)
+                .foregroundStyle(acento)
+                .accessibilityHidden(true)
         }
-        .padding(.horizontal, 16)
-        .frame(height: 56)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .frame(minHeight: 60)
         .background(Color.appSurface)
-        .overlay(
-            Rectangle()
-                .fill(Color.outlineVariant.opacity(0.25))
-                .frame(height: 1),
-            alignment: .bottom
-        )
     }
 
-    // MARK: - CTA (dentro del ScrollView)
+    private var resumen: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+                : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+            layout {
+                insignia
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(ruta.empresa)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
+                    Text(L.t("Línea ", "Line ") + ruta.lineaConLetra)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Text(ruta.recorridoLocalizado)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    tituloFrecuencia
+                    Spacer(minLength: 8)
+                    valorFrecuencia
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    tituloFrecuencia
+                    valorFrecuencia
+                }
+            }
+            .seniable("rutas.frecuencia")
+        }
+        .padding(20)
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var insignia: some View {
+        VStack(spacing: 2) {
+            if ruta.letraTransporte.isEmpty {
+                Image(systemName: "bus.fill")
+                    .font(.title)
+            } else {
+                Text(L.t("Letra", "Letter"))
+                    .font(.caption2.weight(.medium))
+                Text(ruta.letraTransporte)
+                    .font(.system(.largeTitle, design: .rounded).weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
+        }
+        .foregroundStyle(colorTextoLetra)
+        .padding(8)
+        .frame(width: tamanoInsignia, height: tamanoInsignia)
+        .background(ruta.colorLinea, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityHidden(true)
+    }
+
+    private var colorTextoLetra: Color {
+        let color = ruta.colorLinea.resolve(in: entorno)
+        let luminancia = 0.2126 * color.linearRed + 0.7152 * color.linearGreen + 0.0722 * color.linearBlue
+        let contrasteNegro = (luminancia + 0.05) / 0.05
+        let contrasteBlanco = 1.05 / (luminancia + 0.05)
+        return contrasteNegro >= contrasteBlanco ? .black : .white
+    }
+
+    private var tituloFrecuencia: some View {
+        Label(L.signable("rutas.frecuencia", "Frecuencia", "Frequency"), systemImage: "clock")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var valorFrecuencia: some View {
+        Text(ruta.frecuenciaTexto)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Color.onSurface)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var datosDelViaje: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading),
+                                 count: dynamicTypeSize.isAccessibilitySize ? 1 : 2),
+                  alignment: .leading, spacing: 20) {
+            StatTile(icon: "clock", label: L.signable("rutas.tiempo", "Tiempo de viaje", "Travel time"), value: ruta.tiempoTexto)
+                .seniable("rutas.tiempo")
+            StatTile(icon: "banknote", label: L.signable("rutas.costo", "Pasaje", "Fare"), value: ruta.costo)
+                .seniable("rutas.costo")
+            StatTile(icon: "mappin", label: L.signable("rutas.paraderos", "Paraderos", "Stops"), value: "\(ruta.numParaderos)")
+                .seniable("rutas.paraderos")
+            StatTile(icon: "point.topleft.down.curvedto.point.bottomright.up",
+                     label: L.signable("rutas.recorrido", "Distancia", "Distance"),
+                     value: FormatoNumero.decimal(ruta.distanciaKm) + " km")
+                .seniable("rutas.recorrido")
+        }
+        .padding(20)
+        .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var recorrido: some View {
+        Button { showExplorador = true } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    Text(L.t("Ver el recorrido", "Show route"))
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(acento)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .background(superficie, in: Circle())
+                }
+
+                RutaMapKitView(ruta: ruta)
+                    .frame(height: 240)
+                    .allowsHitTesting(false)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Explorar recorrido de la línea ", "Explore route for line ") + ruta.lineaConLetra)
+    }
+
+    private var guia: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L.signable("rutas.guia", "Guía paso a paso", "Step-by-step guide"))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.onSurface)
+                .accessibilityAddTraits(.isHeader)
+                .seniable("rutas.guia", distintivoDx: 10)
+
+            VStack(spacing: 0) {
+                pasoRow("1", L.f("Ve al paradero {0}", "Go to {0} stop", ["\(ruta.paradaInicioVisible)"]),
+                        L.f("Sale uno {0}", "One departs {0}", ["\(ruta.frecuenciaTexto)"]),
+                        "figure.walk", Color.surfaceContainerLow, Color.onSurface, isLast: false)
+                pasoRow("2", L.f("Sube a la línea {0}", "Board line {0}", ["\(ruta.lineaConLetra)"]),
+                        L.f("{0} • {1} de viaje", "{0} • {1} trip", ["\(ruta.empresa)", "\(ruta.tiempoTexto)"]),
+                        "bus", ruta.colorLinea, colorTextoLetra, isLast: false)
+                pasoRow("3", L.f("Baja en {0}", "Get off at {0}", ["\(ruta.paradaFinVisible)"]),
+                        L.t("Fin del recorrido", "End of the route"),
+                        "flag.checkered", Color.surfaceContainerLow, Color.onSurface, isLast: true)
+            }
+            .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+    }
+
     private var ctaButton: some View {
         Button {
             // Modo Señas: deja ver el videito antes de que el cover tape el miniplayer.
             SeniasPresenter.shared.ejecutarTrasVerSenia(clave: "nav.iniciar") { showCarPlay = true }
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "location.fill")
-                    .font(.system(size: 22, weight: .bold))
-                Text(L.signable("nav.iniciar", "Iniciar Navegación", "Start Navigation"))
-                    .font(.headlineSm)
+                Image(systemName: "location")
+                Text(L.signable("nav.iniciar", "Iniciar navegación", "Start navigation"))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
             }
-            .foregroundStyle(.onPrimaryContainer)
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.primaryContainer)
-                    .shadow(color: .primaryContainer.opacity(0.35), radius: 12, x: 0, y: 6)
-            )
-            .contentShape(Rectangle()) // ✅ CORREGIDO V3
+            .font(.headline)
+            .foregroundStyle(Color.onPrimaryFill)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(L.t("Iniciar navegación", "Start navigation"))
         .seniable("nav.iniciar", conGesto: false)
     }
 
-    private func bottomSafeArea() -> CGFloat {
-        guard let window = UIApplication.shared
-            .connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first?.windows.first
-        else { return 0 }
-        return window.safeAreaInsets.bottom
-    }
-
     private func pasoRow(_ n: String, _ title: String, _ subtitle: String,
-                          _ icon: String, _ bg: Color, _ fg: Color, isLast: Bool) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(spacing: 0) {
-                ZStack {
-                    Circle().fill(bg).frame(width: 24, height: 24)
-                    Image(systemName: icon)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(fg)
+                         _ icon: String, _ bg: Color, _ fg: Color, isLast: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(fg)
+                    .frame(minWidth: 40, minHeight: 40)
+                    .background(bg, in: Circle())
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("\(n). \(title)")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.onSurface)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                if !isLast {
-                    Rectangle().fill(Color.surfaceContainerHighest)
-                        .frame(width: 2, height: 36)
-                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(n). \(title)")
-                    .font(.bodyMd)
-                    .foregroundStyle(.onSurface)
-                Text(subtitle)
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
+            .padding(16)
+            .accessibilityElement(children: .combine)
+
+            if !isLast {
+                Divider().padding(.leading, 68)
             }
-            .padding(.top, 1)
-            Spacer()
         }
     }
 }
 
-// MARK: - Stat tile
+// MARK: - Datos del viaje
 private struct StatTile: View {
     let icon: String
-    let iconColor: Color
     let label: String
     let value: String
 
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(iconColor.opacity(0.12)).frame(width: 36, height: 36)
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(iconColor)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
-                Text(value)
-                    .font(.headlineXs)
-                    .foregroundStyle(iconColor == .secondary ? Color.secondary : Color.onSurface)
-            }
-            Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 8) {
+            Label(label, systemImage: icon)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(value)
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(Color.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.surfaceContainerLow)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue(value)
