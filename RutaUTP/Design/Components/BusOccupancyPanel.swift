@@ -392,11 +392,16 @@ private struct TripSelectionSheet: View {
 
     private func escribirDireccion(para punto: BoardingPoint) {
         tareaDireccion?.cancel()
+        // Guardar una referencia útil de inmediato, incluso sin red. No dejar
+        // la calle del punto anterior mientras se resuelve la nueva dirección.
+        boardingPlace = L.t("Punto en el mapa", "Picked spot")
+            + String(format: " (%.5f, %.5f)", punto.coordinate.latitude, punto.coordinate.longitude)
         let referenciaAnterior = boardingPlace
         tareaDireccion = Task { @MainActor in
             let nombre = await Geocodificacion.nombreDelLugar(punto.coordinate)
             guard !Task.isCancelled, boardingPoint == punto,
-                  boardingPlace == referenciaAnterior else { return }
+                  boardingPlace == referenciaAnterior,
+                  nombre != L.t("Punto en el mapa", "Picked spot") else { return }
             // La respuesta tardía nunca sustituye una corrección escrita por la persona.
             boardingPlace = String(nombre.prefix(120))
         }
@@ -485,7 +490,8 @@ private struct TripSelectionSheet: View {
                 if !activo { comenzarAlEstarListo = false }
             }
             .onDisappear {
-                tareaDireccion?.cancel()
+                // El mapa actualiza el formulario aunque lo cubra por completo.
+                if !showBoardingMap { tareaDireccion?.cancel() }
                 comenzarAlEstarListo = false
             }
         }
@@ -799,11 +805,11 @@ private struct TripSelectionSheet: View {
 }
 
 
-/// La cámara se acerca al usuario al abrir; solo una selección explícita cambia el pin.
+/// La cámara se acerca al usuario al abrir; cada selección explícita guarda el pin.
 private struct BoardingPointMap: View {
     let route: RutaGTFS
     let locationService: LocationServiceProtocol
-    let onConfirm: (BoardingPoint) -> Void
+    let onSelect: (BoardingPoint) -> Void
     private let regionInicial: MKCoordinateRegion
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -812,43 +818,47 @@ private struct BoardingPointMap: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
+    @Namespace private var mapaScope
     @State private var point: BoardingPoint?
     @State private var camera: MapCameraPosition
+    @State private var regionVisible: MKCoordinateRegion?
     @State private var ubicacionActual: CLLocation?
+    @State private var ultimoPermiso: CLAuthorizationStatus
     @State private var solicitudUbicacion = 0
-    @State private var revisionCamara = 0
     @State private var revisionPunto = 0
-    @State private var revisionCamaraSolicitada = 0
     @State private var revisionPuntoSolicitado = 0
-    @State private var buscandoUbicacion = true
+    @State private var buscandoUbicacion = false
     @State private var mensajeUbicacion: String?
     @State private var marcarUbicacionSolicitada = false
     @State private var mostrarAjustesUbicacion = false
     @State private var reanudarUbicacion = false
-    private static let antiguedadMaximaUbicacion: TimeInterval = 5
+    private static let antiguedadMaximaUbicacion: TimeInterval = 30
+    // Centrar un mapa admite la ubicación aproximada de iOS; no cambia la
+    // precisión exigida por navegación, detección ni los demás consumidores.
+    private static let precisionMaximaUbicacion: CLLocationAccuracy = 3_000
 
     init(route: RutaGTFS, initialPoint: BoardingPoint?, currentLocation: CLLocation?,
          locationService: LocationServiceProtocol,
-         onConfirm: @escaping (BoardingPoint) -> Void) {
+         onSelect: @escaping (BoardingPoint) -> Void) {
         self.route = route
         self.locationService = locationService
-        self.onConfirm = onConfirm
+        self.onSelect = onSelect
+        _ultimoPermiso = State(initialValue: locationService.authorizationStatus)
         _point = State(initialValue: initialPoint)
         let lecturas = [currentLocation, (locationService as? LocationService)?.lastKnownLocation]
             .compactMap { $0 }
             .filter { locationService.authorizationStatus.isAuthorized
                 && UbicacionPuntual.esValida($0, ahora: Date(),
-                    antiguedadMaxima: Self.antiguedadMaximaUbicacion) }
+                    antiguedadMaxima: Self.antiguedadMaximaUbicacion,
+                    precisionMaxima: Self.precisionMaximaUbicacion) }
         let lectura = lecturas.max { $0.timestamp < $1.timestamp }
-        let center = lectura?.coordinate ?? initialPoint?.coordinate ?? route.shape.first
-            ?? TransporteApp.referenciaInicio
-        regionInicial = Self.regionCercana(center)
+        let center = lectura?.coordinate ?? initialPoint?.coordinate ?? TransporteApp.referenciaInicio
+        regionInicial = lectura.map(Self.regionUbicacion) ?? Self.regionCercana(center)
         _ubicacionActual = State(initialValue: lectura)
-        // Una lectura reciente centra desde el primer fotograma. Mientras llega
-        // el GPS compartido, MapKit también puede mostrar el punto azul.
-        _camera = State(initialValue: lectura == nil
-            ? .userLocation(followsHeading: false, fallback: .region(regionInicial))
-            : .region(regionInicial))
+        // La caché solo es el respaldo inicial. MapKit conserva el seguimiento
+        // del punto azul incluso cuando ya había una lectura al abrir la vista.
+        _camera = State(initialValue:
+            .userLocation(followsHeading: false, fallback: .region(regionInicial)))
     }
 
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
@@ -860,6 +870,22 @@ private struct BoardingPointMap: View {
 
     private static func regionCercana(_ center: CLLocationCoordinate2D) -> MKCoordinateRegion {
         MKCoordinateRegion(center: center, latitudinalMeters: 500, longitudinalMeters: 500)
+    }
+
+    private static func regionUbicacion(_ location: CLLocation) -> MKCoordinateRegion {
+        let distancia = max(500, location.horizontalAccuracy * 2)
+        return MKCoordinateRegion(center: location.coordinate,
+                                  latitudinalMeters: distancia, longitudinalMeters: distancia)
+    }
+
+    private var lecturaDisponible: CLLocation? {
+        [ubicacionActual, (locationService as? LocationService)?.lastKnownLocation]
+            .compactMap { $0 }
+            .filter { locationService.authorizationStatus.isAuthorized
+                && UbicacionPuntual.esValida($0, ahora: Date(),
+                    antiguedadMaxima: Self.antiguedadMaximaUbicacion,
+                    precisionMaxima: Self.precisionMaximaUbicacion) }
+            .max { $0.timestamp < $1.timestamp }
     }
 
     @MainActor
@@ -874,24 +900,24 @@ private struct BoardingPointMap: View {
         guard let nuevoPunto = BoardingPoint(coordinate: coordinate) else { return }
         revisionPunto &+= 1
         point = nuevoPunto
+        onSelect(nuevoPunto)
     }
 
     @MainActor
     private func solicitarUbicacion(marcarPunto: Bool) {
-        revisionCamaraSolicitada = revisionCamara
+        // El centrado no depende de que el lector puntual consiga otro fix.
+        // La búsqueda de coordenadas solo sirve para guardar el punto de subida.
+        centrarEnUsuario()
         revisionPuntoSolicitado = revisionPunto
         marcarUbicacionSolicitada = marcarPunto
         mensajeUbicacion = nil
         mostrarAjustesUbicacion = false
-        if let lectura = ubicacionActual, locationService.authorizationStatus.isAuthorized,
-           UbicacionPuntual.esValida(lectura, ahora: Date(),
-               antiguedadMaxima: Self.antiguedadMaximaUbicacion) {
+        if let lectura = lecturaDisponible {
             // La nueva orden invalida cualquier respuesta puntual anterior.
             solicitudUbicacion &+= 1
             buscandoUbicacion = false
             marcarUbicacionSolicitada = false
-            revisionCamara &+= 1
-            moverCamara(.region(Self.regionCercana(lectura.coordinate)))
+            ubicacionActual = lectura
             if marcarPunto { seleccionar(lectura.coordinate) }
             return
         }
@@ -900,39 +926,64 @@ private struct BoardingPointMap: View {
     }
 
     @MainActor
+    private func centrarEnUsuario() {
+        let respaldo = lecturaDisponible.map(Self.regionUbicacion) ?? regionVisible ?? regionInicial
+        moverCamara(.userLocation(followsHeading: false, fallback: .region(respaldo)))
+    }
+
+    @MainActor
+    private func prepararUbicacion() async {
+        let permiso = await locationService.requestPermission()
+        guard !Task.isCancelled else { return }
+        if permiso.isDenied { informarFalloUbicacion() }
+    }
+
+    private func informarFalloUbicacion() {
+        switch locationService.authorizationStatus {
+        case .denied:
+            mostrarAjustesUbicacion = true
+            mensajeUbicacion = L.t("La ubicación está desactivada para esta app. Actívala en Ajustes o marca el lugar manualmente.",
+                                   "Location is turned off for this app. Enable it in Settings or mark the spot manually.")
+        case .restricted:
+            mensajeUbicacion = L.t("El dispositivo restringe el acceso a la ubicación. Puedes marcar el lugar manualmente.",
+                                   "This device restricts location access. You can mark the spot manually.")
+        default:
+            mensajeUbicacion = L.t("No pudimos obtener una ubicación reciente y precisa. Vuelve a intentarlo o marca el lugar manualmente.",
+                                   "Couldn't get a recent, accurate location. Try again or mark the spot manually.")
+        }
+    }
+
+    @MainActor
     private func actualizarUbicacionActual() async {
-        guard buscandoUbicacion, scenePhase != .background else { return }
+        guard buscandoUbicacion else { return }
+        guard scenePhase != .background else {
+            reanudarUbicacion = true
+            buscandoUbicacion = false
+            return
+        }
         let solicitud = solicitudUbicacion
-        // Conservar las revisiones originales también si se reanuda la misma
-        // búsqueda tras volver de Ajustes o del segundo plano.
-        let camaraAlSolicitar = revisionCamaraSolicitada
+        defer {
+            // Una cancelación de SwiftUI tampoco puede dejar el indicador activo.
+            if solicitud == solicitudUbicacion {
+                buscandoUbicacion = false
+                marcarUbicacionSolicitada = false
+            }
+        }
+        // Una respuesta tardía solo puede guardar el punto aún solicitado;
+        // nunca cambia la cámara que maneja el usuario o el control nativo.
         let puntoAlSolicitar = revisionPuntoSolicitado
         let marcarPunto = marcarUbicacionSolicitada
-        let location = await UbicacionPuntual.obtener(desde: locationService,
-            antiguedadMaxima: Self.antiguedadMaximaUbicacion)
+        let location = await UbicacionPuntual.obtener(desde: locationService, timeout: 8,
+            antiguedadMaxima: Self.antiguedadMaximaUbicacion,
+            precisionMaxima: Self.precisionMaximaUbicacion)
         guard !Task.isCancelled, solicitud == solicitudUbicacion else { return }
         buscandoUbicacion = false
         marcarUbicacionSolicitada = false
         guard let location else {
-            switch locationService.authorizationStatus {
-            case .denied:
-                mostrarAjustesUbicacion = true
-                mensajeUbicacion = L.t("La ubicación está desactivada para esta app. Actívala en Ajustes o marca el lugar manualmente.",
-                                       "Location is turned off for this app. Enable it in Settings or mark the spot manually.")
-            case .restricted:
-                mensajeUbicacion = L.t("El dispositivo restringe el acceso a la ubicación. Puedes marcar el lugar manualmente.",
-                                       "This device restricts location access. You can mark the spot manually.")
-            default:
-                mensajeUbicacion = L.t("No pudimos obtener una ubicación reciente y precisa. Vuelve a intentarlo o marca el lugar manualmente.",
-                                       "Couldn't get a recent, accurate location. Try again or mark the spot manually.")
-            }
+            informarFalloUbicacion()
             return
         }
         ubicacionActual = location
-        // Un resultado tardío no deshace un arrastre, «Ver recorrido» ni un tap.
-        if revisionCamara == camaraAlSolicitar {
-            moverCamara(.region(Self.regionCercana(location.coordinate)))
-        }
         if marcarPunto, revisionPunto == puntoAlSolicitar {
             seleccionar(location.coordinate)
         }
@@ -940,7 +991,6 @@ private struct BoardingPointMap: View {
 
     @MainActor
     private func verRecorrido() {
-        revisionCamara &+= 1
         let coordinates = (route.shape.isEmpty ? route.paraderos.map(\.coordinate) : route.shape)
             .filter { CLLocationCoordinate2DIsValid($0) }
         guard let first = coordinates.first else {
@@ -964,7 +1014,7 @@ private struct BoardingPointMap: View {
         NavigationStack {
             GeometryReader { geometry in
                 MapReader { proxy in
-                    Map(position: $camera) {
+                    Map(position: $camera, scope: mapaScope) {
                         UserAnnotation()
                         MapPolyline(coordinates: route.shape).stroke(route.color, lineWidth: 4)
                         if let point {
@@ -976,12 +1026,14 @@ private struct BoardingPointMap: View {
                     // gestos nativos. Tocar el mapa solo cambia la selección.
                     .onTapGesture { location in
                         if let coordinate = proxy.convert(location, from: .local) {
-                            revisionCamara &+= 1
+                            // Fijar la cámara al marcar: el seguimiento no debe
+                            // desplazar el mapa mientras se elige una subida.
+                            camera = .region(regionVisible ?? regionInicial)
                             seleccionar(coordinate)
                         }
                     }
-                    .onMapCameraChange(frequency: .continuous) {
-                        if camera.positionedByUser { revisionCamara &+= 1 }
+                    .onMapCameraChange(frequency: .onEnd) { contexto in
+                        regionVisible = contexto.region
                     }
                     .mapControlVisibility(.hidden)
                     .overlay(alignment: .topTrailing) {
@@ -997,11 +1049,20 @@ private struct BoardingPointMap: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.appSurface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .task { await prepararUbicacion() }
             .task(id: solicitudUbicacion) { await actualizarUbicacionActual() }
             .onReceive(locationService.authorizationPublisher) { estado in
-                guard scenePhase != .background, estado.isAuthorized,
-                      mostrarAjustesUbicacion, !buscandoUbicacion else { return }
-                solicitarUbicacion(marcarPunto: false)
+                // El publisher puede volver a emitir su valor al reconstruir
+                // la vista. Solo un cambio real de permiso permite reintentar.
+                guard estado != ultimoPermiso else { return }
+                ultimoPermiso = estado
+                if estado.isAuthorized {
+                    if mostrarAjustesUbicacion { centrarEnUsuario() }
+                    mostrarAjustesUbicacion = false
+                    mensajeUbicacion = nil
+                } else if estado.isDenied {
+                    informarFalloUbicacion()
+                }
             }
             .onChange(of: scenePhase) { _, fase in
                 if fase == .background, buscandoUbicacion {
@@ -1019,11 +1080,12 @@ private struct BoardingPointMap: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
+                    Button(L.t("Listo", "Done")) { dismiss() }
                         .frame(minHeight: 44)
                 }
             }
         }
+        .mapScope(mapaScope)
         .tint(acento)
     }
 
@@ -1032,24 +1094,16 @@ private struct BoardingPointMap: View {
             ? AnyLayout(HStackLayout(spacing: 12))
             : AnyLayout(VStackLayout(spacing: 12))
         return layout {
-            Button { solicitarUbicacion(marcarPunto: false) } label: {
-                Group {
-                    if buscandoUbicacion {
-                        ProgressView().tint(acento)
-                    } else {
-                        Image(systemName: "location.fill")
-                            .font(.body.weight(.semibold))
-                    }
-                }
-                .foregroundStyle(acento)
+            // Asociado explícitamente a ESTE mapa, no al mapa principal que
+            // sigue debajo de la presentación. No espera ni desactiva la flecha
+            // por el estado del lector usado para «Marcar mi ubicación».
+            MapUserLocationButton(scope: mapaScope)
+                .mapControlVisibility(.visible)
+                .tint(acento)
+                .buttonBorderShape(.circle)
                 .frame(minWidth: 48, minHeight: 48)
-                .background(.regularMaterial, in: Circle())
-                .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L.t("Mi ubicación", "My location"))
-            .accessibilityHint(L.t("Centra el mapa sin cambiar el lugar marcado", "Centers the map without changing the marked place"))
-            .accessibilityValue(buscandoUbicacion ? L.t("Buscando ubicación", "Finding location") : "")
+                .accessibilityLabel(L.t("Mi ubicación", "My location"))
+                .accessibilityHint(L.t("Centra el mapa sin cambiar el lugar marcado", "Centers the map without changing the marked place"))
 
             Button { verRecorrido() } label: {
                 Image(systemName: "map")
@@ -1075,14 +1129,21 @@ private struct BoardingPointMap: View {
                     Text(point == nil
                          ? L.t("Toca el mapa donde subiste o marca tu ubicación actual.",
                                "Tap where you boarded on the map or mark your current location.")
-                         : L.t("Punto seleccionado. Toca otro lugar del mapa para cambiarlo.",
-                               "Point selected. Tap another place on the map to change it."))
+                         : L.t("Punto guardado. Toca otro lugar del mapa para cambiarlo.",
+                               "Point saved. Tap another place on the map to change it."))
                         .font(.subheadline)
                         .foregroundStyle(Color.onSurfaceVariant)
                         .fixedSize(horizontal: false, vertical: true)
 
                     if buscandoUbicacion {
                         Label(L.t("Buscando tu ubicación…", "Finding your location…"), systemImage: "location")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.onSurfaceVariant)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let ubicacionActual, ubicacionActual.horizontalAccuracy > 50 {
+                        Text(L.t("Tu ubicación es aproximada. Ajusta el punto en el mapa si hace falta.",
+                                 "Your location is approximate. Adjust the point on the map if needed."))
                             .font(.subheadline)
                             .foregroundStyle(Color.onSurfaceVariant)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1113,11 +1174,11 @@ private struct BoardingPointMap: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .disabled(buscandoUbicacion)
                     .foregroundStyle(acento)
-                    .accessibilityHint(L.t("Coloca el punto donde estás. Después puedes confirmarlo.",
-                                          "Places the point where you are. You can then confirm it."))
+                    .accessibilityHint(L.t("Guarda tu ubicación actual como punto de subida.",
+                                          "Saves your current location as the boarding point."))
                     SelectorParaderoAccesible(paraderos: route.paraderos, seleccion: point?.coordinate) {
-                        revisionCamara &+= 1
                         seleccionar($0)
                         moverCamara(.region(Self.regionCercana($0)))
                     }
@@ -1132,11 +1193,10 @@ private struct BoardingPointMap: View {
             .frame(maxHeight: max(100, alturaDisponible * (dynamicTypeSize.isAccessibilitySize ? 0.45 : 0.32)))
 
             Button {
-                guard puedeConfirmar, let point else { return }
-                onConfirm(point)
+                guard puedeConfirmar else { return }
                 dismiss()
             } label: {
-                Text(L.t("Usar este punto", "Use this point"))
+                Text(L.t("Listo", "Done"))
                     .font(.headline)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
