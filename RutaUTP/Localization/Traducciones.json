@@ -160,6 +160,41 @@
     "de": "Gib eine gültige E-Mail-Adresse ein.",
     "zh-Hans": "请输入有效的邮箱地址。"
   },
+  "Tipo de reporte": {
+    "en": "Report type",
+    "fr": "Type de signalement",
+    "pt-BR": "Tipo de relato",
+    "de": "Art der Meldung",
+    "zh-Hans": "报告类型"
+  },
+  "Descripción": {
+    "en": "Description",
+    "fr": "Description",
+    "pt-BR": "Descrição",
+    "de": "Beschreibung",
+    "zh-Hans": "描述"
+  },
+  "Obras": {
+    "en": "Roadworks",
+    "fr": "Travaux",
+    "pt-BR": "Obras",
+    "de": "Bauarbeiten",
+    "zh-Hans": "施工"
+  },
+  "Cierre": {
+    "en": "Closure",
+    "fr": "Fermeture",
+    "pt-BR": "Interdição",
+    "de": "Sperrung",
+    "zh-Hans": "封闭"
+  },
+  "Desvío": {
+    "en": "Detour",
+    "fr": "Déviation",
+    "pt-BR": "Desvio",
+    "de": "Umleitung",
+    "zh-Hans": "绕行"
+  },
   "Paradero sin nombre": {
     "en": "Unnamed stop",
     "fr": "Arrêt sans nom",

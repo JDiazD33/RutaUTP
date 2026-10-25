@@ -10,6 +10,9 @@ struct RouteChangesSheet: View {
     /// máxima mientras este sheet está abierto.
     var locationService: LocationServiceProtocol
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
     @State private var routes: [RutaGTFS] = []
     @State private var cargandoRutas = true
     @State private var errorCargaRutas: String?
@@ -88,40 +91,12 @@ struct RouteChangesSheet: View {
                                 ? L.t("Conectando con el servicio de alertas…", "Connecting to route alerts…")
                                 : L.t("Alertas sin conexión", "Route alerts offline"),
                               systemImage: service.ready ? "checkmark.circle" : "wifi.slash")
+                            .font(.subheadline)
+                            .foregroundStyle(service.ready ? acento : Color(uiColor: .secondaryLabel))
                         if !service.ready {
                             Text(L.t("No podemos consultar ni enviar cambios ahora. Puedes preparar tu reporte aquí.",
                                      "We can't retrieve or send changes now. You can prepare your report here."))
                                 .font(.footnote).foregroundStyle(.secondary)
-                        }
-                    }
-                    Section(L.t("Cambios confirmados", "Confirmed changes")) {
-                        if service.alerts.isEmpty {
-                            Text(service.ready
-                                 ? L.t("No hay cambios confirmados recientes.", "No recent confirmed changes.")
-                                 : L.t("Sin información actualizada.", "No up-to-date information."))
-                                .foregroundStyle(.secondary)
-                        }
-                        ForEach(service.alerts) { alert in
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(routeTitle(alert.routeId)).font(.headline)
-                                Label(reasonTitle(alert.reason), systemImage: "arrow.triangle.branch")
-                                Text(alert.place)
-                                Text(L.f("{0} cuentas · vigente hasta ", "{0} accounts · valid until ", ["\(alert.confirmations)"])
-                                     + Date(timeIntervalSince1970: alert.expiresAt).formatted(
-                                        Date.FormatStyle(date: .omitted, time: .shortened).locale(FormatoFecha.localeActivo)))
-                                    .font(.caption).foregroundStyle(.secondary)
-                                Button(L.t("Ver lugar y confirmar", "View location and confirm")) {
-                                    routeID = alert.routeId
-                                    reason = alert.reason
-                                    place = alert.place
-                                    let coordinate = CLLocationCoordinate2D(latitude: alert.lat, longitude: alert.lon)
-                                    point = coordinate
-                                    camera = .region(MKCoordinateRegion(center: coordinate,
-                                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)))
-                                    withAnimation { scroll.scrollTo("report-form", anchor: .top) }
-                                }
-                            }
-                            .padding(.vertical, 4)
                         }
                     }
                     Section {
@@ -153,11 +128,7 @@ struct RouteChangesSheet: View {
                             }
                         }
                         .pickerStyle(.navigationLink)
-                        Picker(L.t("¿Qué ocurre?", "What's happening?"), selection: $reason) {
-                            ForEach(["works", "closure", "detour"], id: \.self) { value in
-                                Text(reasonTitle(value)).tag(value)
-                            }
-                        }
+                        selectorMotivo
                         if let route {
                             HStack {
                                 // El rótulo cambia con el estado: si el pin ya
@@ -175,39 +146,37 @@ struct RouteChangesSheet: View {
                                     } label: {
                                         Label(L.t("Mi ubicación", "My location"),
                                               systemImage: "location.fill")
-                                            .font(.caption.weight(.semibold))
+                                            .font(.subheadline.weight(.medium))
+                                            .frame(minHeight: 44)
                                     }
                                     .buttonStyle(.bordered)
                                     .accessibilityHint(L.t("Coloca el marcador donde estás ahora",
                                                            "Places the marker where you are now"))
                                 }
                             }
-                            // Redondeado y más alto que el anterior: 210 pt de
-                            // alto sobre un rectángulo de esquinas vivas se leía
-                            // como un recorte; con 300 y esquinas suaves el mapa
-                            // se ve como una pieza de la pantalla, no como un hueco.
                             RouteIncidentMap(route: route,
                                              point: $point,
                                              camera: $camera,
                                              onPointChange: { puntoEditadoAMano = true })
                                 .frame(height: 300)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(Color.outlineVariant.opacity(0.4),
-                                                      lineWidth: 0.5)
-                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                             Button { showExpandedMap = true } label: {
                                 Label(L.t("Ampliar mapa", "Expand map"),
                                       systemImage: "arrow.up.left.and.arrow.down.right")
                                     .frame(maxWidth: .infinity, minHeight: 44)
+                                    .contentShape(Rectangle())
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.plain)
+                            .foregroundStyle(acento)
 
                             AvisoCoherencia(evaluacion: coherencia, route: route)
 
-                            TextField(L.t("Calle o referencia (obligatorio)", "Street or landmark (required)"), text: $place)
+                            TextField(L.t("Calle o referencia (obligatorio)", "Street or landmark (required)"), text: $place, axis: .vertical)
+                                .font(.body)
+                                .lineLimit(1...3)
+                                .textInputAutocapitalization(.sentences)
+                                .accessibilityLabel(L.t("Calle o referencia (obligatorio)", "Street or landmark (required)"))
                                 .onChange(of: place) { _, value in place = String(value.prefix(120)) }
                             if point == nil {
                                 Text(L.t("Falta marcar el punto afectado.", "Mark the affected point to continue."))
@@ -218,17 +187,6 @@ struct RouteChangesSheet: View {
                                     .font(.caption).foregroundStyle(.red)
                             }
                         }
-                        Button {
-                            guard let point else { return }
-                            service.send(routeID: routeID, reason: reason, lat: point.latitude, lon: point.longitude,
-                                         place: place.trimmingCharacters(in: .whitespacesAndNewlines))
-                        } label: {
-                            HStack {
-                                if service.sending { ProgressView() }
-                                Text(service.sending ? L.t("Enviando…", "Sending…") : L.t("Reportar cambio", "Report change"))
-                            }
-                        }
-                        .disabled(!canSend)
                         if let result = service.result {
                             Text(result).font(.callout).accessibilityAddTraits(.updatesFrequently)
                         }
@@ -239,8 +197,53 @@ struct RouteChangesSheet: View {
                                  "Confirm only what you've seen. Two different accounts must report the same route, reason and area. Reports expire after 15 minutes. The alert identifies the incident; the alternative path hasn't been verified."))
                     }
                     .id("report-form")
+                    Section(L.t("Cambios confirmados", "Confirmed changes")) {
+                        if service.alerts.isEmpty {
+                            Text(service.ready
+                                 ? L.t("No hay cambios confirmados recientes.", "No recent confirmed changes.")
+                                 : L.t("Sin información actualizada.", "No up-to-date information."))
+                                .foregroundStyle(.secondary)
+                        }
+                        ForEach(service.alerts) { alert in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(routeTitle(alert.routeId)).font(.headline)
+                                Label(reasonTitle(alert.reason), systemImage: "arrow.triangle.branch")
+                                Text(alert.place)
+                                Text(L.f("{0} cuentas · vigente hasta ", "{0} accounts · valid until ", ["\(alert.confirmations)"])
+                                     + Date(timeIntervalSince1970: alert.expiresAt).formatted(
+                                        Date.FormatStyle(date: .omitted, time: .shortened).locale(FormatoFecha.localeActivo)))
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Button(L.t("Ver lugar y confirmar", "View location and confirm")) {
+                                    routeID = alert.routeId
+                                    reason = alert.reason
+                                    place = alert.place
+                                    let coordinate = CLLocationCoordinate2D(latitude: alert.lat, longitude: alert.lon)
+                                    point = coordinate
+                                    camera = .region(MKCoordinateRegion(center: coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)))
+                                    withAnimation { scroll.scrollTo("report-form", anchor: .top) }
+                                }
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(acento)
+                                .frame(minHeight: 44)
+                            }
+                            .padding(.vertical, 8)
+                        }
+                    }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.appBackground.ignoresSafeArea())
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                botonReportarCambio
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.appSurface)
+                    .overlay(alignment: .top) { Divider() }
+            }
+            .toolbarBackground(Color.appSurface, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .navigationTitle(L.t("Cambios de ruta", "Route changes"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -286,6 +289,74 @@ struct RouteChangesSheet: View {
                 colocarAutomaticamenteSiProcede()
             }
         }
+        .tint(acento)
+    }
+
+    @ViewBuilder
+    private var selectorMotivo: some View {
+        if dynamicTypeSize >= .xxLarge {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(L.t("¿Qué ocurre?", "What's happening?"))
+                    .font(.headline).padding(.bottom, 8)
+                ForEach(["works", "closure", "detour"], id: \.self) { value in
+                    Button {
+                        reason = value
+                        AppHaptics.selection()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text(reasonTitle(value))
+                                .foregroundStyle(Color.onSurface)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(acento)
+                                .opacity(reason == value ? 1 : 0)
+                                .accessibilityHidden(true)
+                        }
+                        .font(.body)
+                        .padding(.vertical, 10)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(reason == value ? .isSelected : [])
+                    if value != "detour" { Divider() }
+                }
+            }
+        } else {
+            Picker(L.t("¿Qué ocurre?", "What's happening?"), selection: $reason) {
+                Text(L.t("Obras", "Roadworks")).tag("works")
+                Text(L.t("Cierre", "Closure")).tag("closure")
+                Text(L.t("Desvío", "Detour")).tag("detour")
+            }
+            .pickerStyle(.segmented)
+            .frame(minHeight: 44)
+        }
+    }
+
+    private var botonReportarCambio: some View {
+        Button {
+            guard let point else { return }
+            service.send(routeID: routeID, reason: reason, lat: point.latitude, lon: point.longitude,
+                         place: place.trimmingCharacters(in: .whitespacesAndNewlines))
+        } label: {
+            HStack(spacing: 10) {
+                if service.sending { ProgressView().accessibilityHidden(true) }
+                Text(service.sending ? L.t("Enviando…", "Sending…") : L.t("Reportar cambio", "Report change"))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
+            }
+            .font(.headline)
+            .foregroundStyle(canSend ? Color.onPrimaryFill : Color.onSurfaceVariant)
+            .tint(Color.onSurfaceVariant)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(canSend ? Color.primaryFill : Color.surfaceContainerHigh,
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSend)
     }
 
     /// Pone el pin en la posición del usuario cuando esa posición es coherente
@@ -369,10 +440,10 @@ private struct LeyendaCoherencia: View {
                 .font(.caption2.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
-        .background(Capsule().fill(Color.black.opacity(0.5)))
+        .foregroundStyle(Color.onSurface)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: Capsule())
         .allowsHitTesting(false)
     }
 }
@@ -403,8 +474,9 @@ private struct AvisoCoherencia: View {
 
     private func etiqueta(_ texto: String, icono: String, tono: Color) -> some View {
         Label(texto, systemImage: icono)
-            .font(.caption)
+            .font(.footnote)
             .foregroundStyle(tono)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -427,7 +499,8 @@ private struct ExpandedRouteIncidentMap: View {
     var body: some View {
         NavigationStack {
             RouteIncidentMap(route: route, point: $point, camera: $camera)
-                .safeAreaInset(edge: .bottom) {                    VStack(spacing: 10) {
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: 10) {
                         Text(L.t("Amplía con dos dedos y toca el lugar afectado.",
                                  "Pinch to zoom and tap the affected location."))
                             .font(.subheadline)

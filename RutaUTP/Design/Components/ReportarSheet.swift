@@ -5,7 +5,7 @@
 //  Sheet compartido para reportar incidentes. Lo usan Mapa (pill REPORTAR)
 //  y Seguridad (header y sección Comunidad): una sola implementación.
 //
-//  - Selector de tipo por tarjetas, con detalle contextual por tipo.
+//  - Selector nativo de tipo, con detalle contextual por tipo.
 //  - Descripción limitada a 200 caracteres, con contador en vivo.
 //
 
@@ -21,6 +21,10 @@ struct ReportarSheet: View {
     var locationService: LocationServiceProtocol
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var superficie: Color { Color(uiColor: .secondarySystemGroupedBackground) }
     @State private var tipo: TipoReporte = .alerta
     @State private var descripcion: String = ""
     @State private var showSuccess = false
@@ -36,33 +40,37 @@ struct ReportarSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
                     encabezado
-                    Button { showRouteChanges = true } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "arrow.triangle.branch")
-                            Text(L.t("Obras, cierres o cambios de ruta", "Roadworks, closures or route changes"))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: "chevron.right")
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .padding()
-                        .background(Color.appPrimary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.appPrimary)
                     // Selector, detalle y descripción: compartidos con Publicar.
                     SelectorTipoReporte(tipo: $tipo, tiposDisponibles: [.alerta, .sugerencia, .otro])
+                    if tipo == .alerta { accesoCambiosDeRuta }
                     DetalleTipoReporte(tipo: tipo)
                     CampoDescripcionReporte(descripcion: $descripcion, tipo: tipo)
                 }
                 .padding(20)
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) { botonEnviar }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Color.appBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                botonEnviar
+                    .background(Color.appSurface)
+                    .overlay(alignment: .top) { Divider() }
+            }
+            .navigationTitle(L.t("Reportar incidente", "Report an incident"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
+                }
+            }
         }
+        .tint(acento)
         .sheet(isPresented: $showRouteChanges) {
             RouteChangesSheet(service: routeChanges,
                               initialRouteID: initialRouteID,
                               locationService: locationService)
                 .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .seguirTemaForzado()
                 .onAppear { routeChanges.start() }
                 .onDisappear { routeChanges.stop() }
         }
@@ -81,25 +89,43 @@ struct ReportarSheet: View {
     // MARK: - Encabezado
 
     private var encabezado: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.appPrimary.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                Image(systemName: "megaphone.fill")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.appPrimary)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L.t("Reportar incidente", "Report an incident"))
-                    .font(.headlineMd)
-                    .foregroundStyle(.onSurface)
-                Text(L.t("Tu reporte ayuda a otros estudiantes", "Your report helps other students"))
-                    .font(.bodySm)
-                    .foregroundStyle(.onSurfaceVariant)
-            }
-            Spacer()
+        HStack(alignment: .center, spacing: 16) {
+            Text(L.t("Tu reporte ayuda a otros estudiantes", "Your report helps other students"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "megaphone")
+                .font(.title3)
+                .foregroundStyle(acento)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(superficie, in: Circle())
+                .accessibilityHidden(true)
         }
+    }
+
+    private var accesoCambiosDeRuta: some View {
+        Button { showRouteChanges = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.body).foregroundStyle(acento)
+                    .frame(minWidth: 24).accessibilityHidden(true)
+                Text(L.t("Obras, cierres o cambios de ruta", "Roadworks, closures or route changes"))
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.onSurface)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
+                    .accessibilityHidden(true)
+            }
+            .padding(16)
+            .frame(minHeight: 52)
+            .background(superficie, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Enviar
@@ -109,39 +135,37 @@ struct ReportarSheet: View {
             AppHaptics.success()
             showSuccess = true
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "paperplane.fill")
-                    .font(.system(size: 15, weight: .bold))
-                Text(L.t("Enviar reporte", "Send report"))
-                    .font(.headlineSm)
-            }
-            .foregroundStyle(puedeEnviar ? Color.onPrimaryFill : Color.white)
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: puedeEnviar
-                                ? [.primaryFill, .primaryFill.opacity(0.78)]
-                                : [Color.onSurfaceVariant.opacity(0.35), Color.onSurfaceVariant.opacity(0.25)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: puedeEnviar ? .appPrimary.opacity(0.35) : .clear,
-                            radius: 10, x: 0, y: 5)
-            )
+            Label(L.t("Enviar reporte", "Send report"), systemImage: "paperplane")
+                .font(.headline)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(puedeEnviar ? Color.onPrimaryFill : Color.onSurfaceVariant)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(puedeEnviar ? Color.primaryFill : Color.surfaceContainerHigh,
+                            in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        .buttonStyle(PressableCapsuleStyle())
+        .buttonStyle(.plain)
         .disabled(!puedeEnviar)
         .padding(.horizontal, 20)
-        .padding(.bottom, 12)
-        .animation(.easeInOut(duration: 0.2), value: puedeEnviar)
+        .padding(.vertical, 12)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: puedeEnviar)
     }
 }
 
 // MARK: - Datos por tipo de reporte
 
 extension TipoReporte {
+    var iconoContorno: String {
+        switch self {
+        case .alerta: return "exclamationmark.shield"
+        case .trafico: return "car"
+        case .sugerencia: return "lightbulb"
+        case .otro: return "ellipsis.bubble"
+        }
+    }
+
 
     var icono: String {
         switch self {

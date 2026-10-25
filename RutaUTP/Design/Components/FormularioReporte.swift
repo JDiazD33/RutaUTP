@@ -25,31 +25,31 @@ enum FormularioReporte {
 
 // MARK: - Selector de tipo
 
-/// Selector de tipo por tarjetas. El tipo elegido se resalta con su propio
-/// color de fondo y borde.
+/// Selección directa, con presentación vertical cuando el texto necesita espacio.
 struct SelectorTipoReporte: View {
-
     @Binding var tipo: TipoReporte
     var tiposDisponibles: [TipoReporte] = TipoReporte.allCases
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L.t("TIPO DE REPORTE", "REPORT TYPE"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(spacing: 8) {
-                    ForEach(tiposDisponibles) { tarjeta($0) }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L.t("Tipo de reporte", "Report type"))
+                .font(.headline)
+                .foregroundStyle(Color.onSurface)
+                .accessibilityAddTraits(.isHeader)
+            if tiposDisponibles.count <= 3 && dynamicTypeSize < .xxLarge {
+                Picker(L.t("Tipo de reporte", "Report type"), selection: $tipo) {
+                    ForEach(tiposDisponibles) { t in Text(t.titulo).tag(t) }
                 }
-            } else if dynamicTypeSize >= .xxLarge {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
-                    ForEach(tiposDisponibles) { tarjeta($0) }
-                }
+                .pickerStyle(.segmented)
+                .frame(minHeight: 44)
+                .onChange(of: tipo) { _, _ in AppHaptics.selection() }
             } else {
-                HStack(spacing: 8) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()),
+                                         count: dynamicTypeSize.isAccessibilitySize || tiposDisponibles.count == 3 ? 1 : 2), spacing: 8) {
                     ForEach(tiposDisponibles) { tarjeta($0) }
                 }
             }
@@ -60,29 +60,28 @@ struct SelectorTipoReporte: View {
         let seleccionado = tipo == t
         return Button {
             AppHaptics.selection()
-            withAnimation(.easeInOut(duration: 0.18)) { tipo = t }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { tipo = t }
         } label: {
-            VStack(spacing: 6) {
-                Image(systemName: t.icono)
-                    .font(.system(size: 17, weight: .semibold))
+            HStack(spacing: 10) {
+                Image(systemName: t.iconoContorno)
+                    .font(.body).foregroundStyle(acento).accessibilityHidden(true)
                 Text(t.titulo)
-                    .font(.caption.weight(.semibold))
-                    .multilineTextAlignment(.center)
+                    .font(.subheadline).foregroundStyle(Color.onSurface)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "checkmark")
+                    .font(.caption.weight(.semibold)).foregroundStyle(acento)
+                    .opacity(seleccionado ? 1 : 0).accessibilityHidden(true)
             }
-            .foregroundStyle(seleccionado ? t.foreground : Color.onSurfaceVariant)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(seleccionado ? t.background : Color.surfaceContainerLow)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(seleccionado ? t.foreground.opacity(0.55) : Color.outlineVariant.opacity(0.35),
-                            lineWidth: seleccionado ? 1.5 : 0.5)
-            )
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(Color(uiColor: .secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(seleccionado ? acento : .clear, lineWidth: 1.5)
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -95,28 +94,17 @@ struct SelectorTipoReporte: View {
 
 /// Explica qué se espera que cuente el usuario, según el tipo elegido.
 struct DetalleTipoReporte: View {
-
     let tipo: TipoReporte
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: tipo.icono)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tipo.foreground)
-                .frame(width: 20)
-            Text(tipo.detalle)
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(tipo.background.opacity(0.45))
-        )
-        .animation(.easeInOut(duration: 0.2), value: tipo)
-        .id(tipo) // re-anima la entrada al cambiar de tipo
+        Text(tipo.detalle)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: tipo)
+            .id(tipo)
     }
 }
 
@@ -133,10 +121,9 @@ struct CampoDescripcionReporte: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(L.t("DESCRIPCIÓN", "DESCRIPTION"))
-                    .font(.labelCapsMd)
-                    .foregroundStyle(.onSurfaceVariant)
-                    .appTracking(AppTracking.wideLabel)
+                Text(L.t("Descripción", "Description"))
+                    .font(.headline)
+                    .foregroundStyle(Color.onSurface)
                 Spacer()
                 Text("\(restantes)")
                     .font(.caption.weight(.semibold).monospacedDigit())
@@ -145,18 +132,14 @@ struct CampoDescripcionReporte: View {
             }
 
             TextField(tipo.placeholder, text: $descripcion, axis: .vertical)
+                .font(.body)
+                .foregroundStyle(Color.onSurface)
                 .accessibilityLabel(L.t("Descripción del reporte", "Report description"))
                 .accessibilityHint(L.f("Máximo {0} caracteres", "Maximum {0} characters", ["\(FormularioReporte.maxCaracteres)"]))
                 .lineLimit(4...7)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.surfaceContainerLow)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.35), lineWidth: 0.5)
-                )
+                .padding(16)
+                .background(Color(uiColor: .secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .onChange(of: descripcion) { _, nuevo in
                     if nuevo.count > FormularioReporte.maxCaracteres {
                         descripcion = String(nuevo.prefix(FormularioReporte.maxCaracteres))
@@ -178,34 +161,36 @@ struct CampoDescripcionReporte: View {
 
 /// Frases rápidas que el usuario puede tocar para empezar a escribir.
 private struct ChipsSugerencias: View {
-
     let sugerencias: [String]
     let alTocar: (String) -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     var body: some View {
-        // Filas apiladas: suficiente para 2-3 frases cortas, sin layout math.
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(sugerencias, id: \.self) { texto in
                 Button {
                     alTocar(texto)
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 12) {
                         Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.body).foregroundStyle(acento).accessibilityHidden(true)
                         Text(texto)
-                            .font(.caption.weight(.medium))
+                            .font(.subheadline).foregroundStyle(Color.onSurface)
                             .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .foregroundStyle(.appPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                     .frame(minHeight: 44)
-                    .background(Capsule().fill(Color.appPrimary.opacity(0.09)))
-                    .overlay(Capsule().stroke(Color.appPrimary.opacity(0.25), lineWidth: 0.5))
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                if texto != sugerencias.last { Divider().padding(.leading, 44) }
             }
         }
+        .background(Color(uiColor: .secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -229,7 +214,7 @@ struct BotonMiUbicacion: View {
         } label: {
             Image(systemName: "location.fill")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(tieneUbicacion ? Color.appPrimary : Color.onSurfaceVariant)
+                .foregroundStyle(tieneUbicacion ? Color.appAccent : Color.onSurfaceVariant)
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(Color.surfaceContainerLowest))
                 .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
