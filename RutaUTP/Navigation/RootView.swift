@@ -29,6 +29,8 @@ struct RootView: View {
     @State private var cambioParaMostrar: ToqueCambioRuta?
     @State private var abriendoCambio = false
     @State private var diarioParaMostrar: TipoAvisoDiario?
+    @State private var mostrarMenuMapa = false
+    private let mapMenu: Binding<Bool>?
 
     /// Servicio de ubicación compartido con el rastreo pasivo. Se recibe desde
     /// `RutaUTPApp`; el valor por defecto solo sirve para las previsualizaciones.
@@ -54,7 +56,9 @@ struct RootView: View {
         }
     }
 
-    init(locationService: LocationServiceProtocol? = nil, router: AppRouter? = nil) {
+    init(locationService: LocationServiceProtocol? = nil, router: AppRouter? = nil,
+         mapMenu: Binding<Bool>? = nil) {
+        self.mapMenu = mapMenu
         let compartido = locationService ?? LocationService()
         self.locationService = compartido
         _trackingStore = StateObject(wrappedValue: ScreenModelStore(
@@ -86,7 +90,8 @@ struct RootView: View {
             case .bienvenida:    BienvenidaView()
             case .trackingDemo:  RouteTrackingDemoView(model: trackingStore.model)
                     .id(ObjectIdentifier(trackingStore.model))
-            default:            MainTabsView(locationService: locationService, busesUTPActivos: busesUTPActivos)
+            default:            MainTabsView(locationService: locationService, busesUTPActivos: busesUTPActivos,
+                                             mostrarMenuMapa: mapMenu ?? $mostrarMenuMapa)
             }
         }
         .ignoresSafeArea(edges: .bottom) // permite que BottomNavBar llegue al borde físico
@@ -159,7 +164,8 @@ struct RootView: View {
                 SeniasPresenter.shared.ocultar()
             }
         }
-        .onChange(of: router.currentScreen) { _, _ in
+        .onChange(of: router.currentScreen) { _, screen in
+            if screen != .mapaPrincipal { (mapMenu ?? $mostrarMenuMapa).wrappedValue = false }
             abrirRecordatorioSiCorresponde()
             abrirCambioSiCorresponde()
             abrirAvisoDiarioSiCorresponde()
@@ -291,6 +297,7 @@ struct RootView: View {
 struct MainTabsView: View {
     let locationService: LocationServiceProtocol
     let busesUTPActivos: Bool
+    @Binding var mostrarMenuMapa: Bool
     @EnvironmentObject private var router: AppRouter
     @State private var mapNavigation = MapNavigationBarPresentation()
 
@@ -303,20 +310,28 @@ struct MainTabsView: View {
         // TabView conserva la identidad de cada pestaña y entrega onAppear /
         // onDisappear solo al contenido visible. Así el mapa conserva su cámara
         // y los catálogos cargados se reutilizan sin dejar GPS o timers ocultos.
-        VStack(spacing: 0) {
-            contenidoPestanas
-                .environment(\.mainNavigationHostedExternally, true)
-                // La barra ocupa su propia fila; el contenido ya no necesita
-                // reservar su altura ni puede quedar encima de sus botones.
-                .environment(\.bottomNavBarHeight, 0)
+        ZStack {
+            VStack(spacing: 0) {
+                contenidoPestanas
+                    .environment(\.mainNavigationHostedExternally, true)
+                    // La barra ocupa su propia fila; el contenido ya no necesita
+                    // reservar su altura ni puede quedar encima de sus botones.
+                    .environment(\.bottomNavBarHeight, 0)
 
-            // Una única barra vive fuera del contenido que TabView presenta.
-            // Cambiar de pestaña no la retira, oculta ni vuelve a crear.
-            if router.currentScreen != .mapaPrincipal || mapNavigation.isVisible {
-                BottomNavBar()
-                    .accessibilityHidden(router.currentScreen == .mapaPrincipal && mapNavigation.accessibilityHidden)
-                    .zIndex(1)
+                // Una única barra vive fuera del contenido que TabView presenta.
+                // Cambiar de pestaña no la retira, oculta ni vuelve a crear.
+                if router.currentScreen != .mapaPrincipal || mapNavigation.isVisible {
+                    BottomNavBar()
+                        .accessibilityHidden(mostrarMenuMapa || (router.currentScreen == .mapaPrincipal && mapNavigation.accessibilityHidden))
+                        .allowsHitTesting(!mostrarMenuMapa)
+                        .zIndex(1)
+                }
             }
+            .allowsHitTesting(!mostrarMenuMapa)
+            .accessibilityHidden(mostrarMenuMapa)
+
+            // El menú cubre también la barra inferior sin cambiar el tamaño del mapa.
+            SideDrawer(isOpen: $mostrarMenuMapa)
         }
         .onPreferenceChange(MapNavigationBarPresentationKey.self) { presentation in
             if let presentation { mapNavigation = presentation }
@@ -328,7 +343,7 @@ struct MainTabsView: View {
 
     private var contenidoPestanas: some View {
         TabView(selection: $router.currentScreen) {
-            MapaView(locationService: locationService)
+            MapaView(locationService: locationService, mapMenu: $mostrarMenuMapa)
                 .id(ContentIdentity(screen: .mapaPrincipal, busesUTP: busesUTPActivos))
                 .modifier(MainTabBarHidden())
                 .tag(AppScreen.mapaPrincipal)

@@ -15,15 +15,18 @@ import MapKit
 
 struct MapaView: View {
     @StateObject private var store: ScreenModelStore<MapaViewModel>
+    @State private var menuLocalAbierto = false
+    private let mapMenu: Binding<Bool>?
 
-    init(locationService: LocationServiceProtocol? = nil) {
+    init(locationService: LocationServiceProtocol? = nil, mapMenu: Binding<Bool>? = nil) {
+        self.mapMenu = mapMenu
         _store = StateObject(wrappedValue: ScreenModelStore(
             MapaViewModel(locationService: locationService)
         ))
     }
 
     var body: some View {
-        MapaScreenContent(vm: store.model)
+        MapaScreenContent(vm: store.model, mostrarDrawer: mapMenu ?? $menuLocalAbierto)
     }
 }
 
@@ -35,7 +38,7 @@ private struct MapaScreenContent: View {
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
     @Bindable var vm: MapaViewModel
     @State private var pantallaVisible = false
-    @State private var mostrarDrawer = false
+    @Binding var mostrarDrawer: Bool
     @State private var showReportarSheet = false
     @State private var showBoardingConfirmation = false
     @State private var mostrarAvisoViaje = false
@@ -93,7 +96,7 @@ private struct MapaScreenContent: View {
     private var mostrandoRuta: Bool { vm.itinerario != nil }
     private var mostrarNavegacionPrincipal: Bool {
         vm.busquedaResultado == nil && !mostrandoRuta && !viajeActivo &&
-        !mostrarDrawer && !modoColocarMarcador && !vm.buscandoItinerarioInicial
+        !modoColocarMarcador && !vm.buscandoItinerarioInicial
     }
     private var viajeActivo: Bool {
         trackingCoordinator.isEnabled && trackingCoordinator.selectedTripRoute != nil
@@ -229,10 +232,9 @@ private struct MapaScreenContent: View {
             }
 
             // ── DRAWER OVERLAY ──
-            if mostrarDrawer {
+            if !navigationHostedExternally {
                 SideDrawer(isOpen: $mostrarDrawer)
                     .environmentObject(router)
-                    .transition(.move(edge: .leading))
                     .zIndex(30)
             }
 
@@ -259,7 +261,7 @@ private struct MapaScreenContent: View {
         .preference(key: MapNavigationBarPresentationKey.self,
                     value: navigationHostedExternally ? MapNavigationBarPresentation(
                         isVisible: mostrarNavegacionPrincipal,
-                        accessibilityHidden: modoColocarMarcador || vm.calculandoItinerario
+                        accessibilityHidden: mostrarDrawer || modoColocarMarcador || vm.calculandoItinerario
                     ) : nil)
         .ignoresSafeArea(edges: .bottom)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: mostrandoRuta)
@@ -368,7 +370,6 @@ private struct MapaScreenContent: View {
                 cameraPosition = .region(vm.region)
             }
         }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: mostrarDrawer)
         .sheet(isPresented: $showBoardingConfirmation) {
             BoardingConfirmationSheet(coordinator: trackingCoordinator,
                                       locationService: vm.sharedLocationService,

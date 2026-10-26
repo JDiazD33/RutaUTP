@@ -3,7 +3,6 @@ import MapKit
 
 struct MapHeaderView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let vm: MapaViewModel
     @Binding var mostrarDrawer: Bool
     @AccessibilityFocusState(for: .voiceOver) private var enfocarMenu: Bool
@@ -15,9 +14,7 @@ struct MapHeaderView: View {
         HStack(spacing: 12) {
             BotonMenuMapa {
                 AppHaptics.impact(.light)
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) {
-                    mostrarDrawer = true
-                }
+                mostrarDrawer = true
             }
             .accessibilityFocused($enfocarMenu)
 

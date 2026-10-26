@@ -61,7 +61,7 @@ struct SideDrawer: View {
                     .frame(maxHeight: .infinity)
                     .background(Color.appSurface.ignoresSafeArea(edges: .vertical))
                     .offset(x: isOpen ? dragOffset : -drawerWidth - 20)
-                    .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.85), value: isOpen)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: isOpen)
                     .simultaneousGesture(
                         DragGesture()
                             .onChanged { v in
@@ -75,12 +75,15 @@ struct SideDrawer: View {
                                    abs(v.translation.width) > abs(v.translation.height) {
                                     close()
                                 } else {
-                                    dragOffset = 0
+                                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                                        dragOffset = 0
+                                    }
                                 }
                             }
                     )
             }
         }
+        .allowsHitTesting(isOpen)
         .accessibilityHidden(!isOpen)
         .accessibilityAction(.escape) { close() }
         .onAppear { enfocarMenu = isOpen }
@@ -104,7 +107,12 @@ struct SideDrawer: View {
         }
         .onChange(of: isOpen) { _, abierto in
             enfocarMenu = abierto
-            if abierto { revisionFoto = UUID() }
+            if abierto {
+                revisionFoto = UUID()
+            } else {
+                dragOffset = 0
+                activeSheet = nil
+            }
         }
         .onChange(of: activeSheet) { _, sheet in
             if sheet == nil { revisionFoto = UUID() }

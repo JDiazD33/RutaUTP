@@ -20,9 +20,7 @@ struct MapaViajeOverlay<ReportButton: View, LocationButton: View>: View {
             HStack(alignment: .top, spacing: 10) {
                 BotonMenuMapa {
                     AppHaptics.impact(.light)
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.28)) {
-                        mostrarDrawer = true
-                    }
+                    mostrarDrawer = true
                 }
                 .accessibilityFocused($menuFocused)
 
