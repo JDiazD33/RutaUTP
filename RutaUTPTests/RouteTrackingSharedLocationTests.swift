@@ -480,6 +480,45 @@ private final class ExpectativaObservada {
 /// liberación del GPS con los mismos eventos de aparición que usa la app.
 @MainActor
 final class MainTabNavigationTests: XCTestCase {
+    func testAbrirYCerrarMenuConservaElEncuadreYLaAlturaDelMapa() async throws {
+        let menu = MainTabsMenuTestState()
+        let sesion = try MainTabsTestWindow(mapMenu: menu)
+        defer { sesion.cerrar() }
+        try await esperarEstado {
+            sesion.mapaVisible != nil && sesion.bordeInferiorPestanas != nil &&
+            sesion.gps.lectoresActivos == 1 && !sesion.barraNativaVisible
+        }
+        let mapa = try XCTUnwrap(sesion.mapaVisible)
+        try await esperarEncuadreEstable(mapa, en: sesion.ventana)
+        let encuadreInicial = MainTabsMapSnapshot(mapa, en: sesion.ventana)
+        let bordeInicial = try XCTUnwrap(sesion.bordeInferiorPestanas)
+        let iniciosGPS = sesion.gps.inicios
+        let paradasGPS = sesion.gps.paradasGlobales
+
+        // Comprobar también mientras está abierto: comparar solo antes y
+        // después del cierre no detecta un mapa que crece y vuelve a encogerse.
+        for abierto in [true, false, true, false] {
+            menu.isOpen = abierto
+            await siguienteActualizacionUI()
+            try await esperarEncuadreEstable(mapa, en: sesion.ventana)
+            let estado = abierto ? "con el menú abierto" : "tras cerrar el menú"
+            let actual = MainTabsMapSnapshot(mapa, en: sesion.ventana)
+            XCTAssertTrue(sesion.mapaVisible === mapa, "Debe conservar el mismo MKMapView \(estado)")
+            XCTAssertTrue(actual.coincide(con: encuadreInicial), "El marco, la región y la cámara deben conservarse \(estado). Antes: \(encuadreInicial). Ahora: \(actual)")
+            XCTAssertEqual(try XCTUnwrap(sesion.bordeInferiorPestanas), bordeInicial, accuracy: 0.5,
+                           "El menú no debe retirar ni ampliar la fila inferior")
+            XCTAssertFalse(sesion.barraNativaVisible, estado)
+            XCTAssertEqual(sesion.gps.lectoresActivos, 1, estado)
+            XCTAssertEqual(sesion.gps.inicios, iniciosGPS, "El menú no debe reiniciar el GPS")
+            XCTAssertEqual(sesion.gps.paradasGlobales, paradasGPS, "El menú no debe detener el GPS")
+        }
+
+        menu.isOpen = true
+        await siguienteActualizacionUI()
+        sesion.router.navigate(to: .rutas)
+        try await esperarEstado { !menu.isOpen && sesion.indiceVisible == 1 }
+    }
+
     func testTomarRutaOcultaLaFilaInferiorYLaRecuperaAlTerminar() async throws {
         let defaults = UserDefaults.standard
         let consentimiento = "rutautp.passive-tracking-consent"
@@ -599,6 +638,23 @@ final class MainTabNavigationTests: XCTestCase {
         }
     }
 
+    private func esperarEncuadreEstable(_ mapa: MKMapView, en ventana: UIWindow) async throws {
+        let limite = ContinuousClock.now.advanced(by: .seconds(3))
+        var anterior = MainTabsMapSnapshot(mapa, en: ventana)
+        var estableDesde = ContinuousClock.now
+        while ContinuousClock.now < limite {
+            await siguienteActualizacionUI()
+            let actual = MainTabsMapSnapshot(mapa, en: ventana)
+            if !actual.coincide(con: anterior) {
+                estableDesde = .now
+                anterior = actual
+            }
+            if estableDesde.duration(to: .now) >= .milliseconds(450) { return }
+        }
+        XCTFail("El mapa no terminó de ajustar su encuadre inicial")
+        throw ErrorNavegacion.agotado
+    }
+
     private func adjuntarCaptura(_ sesion: MainTabsTestWindow, nombre: String) async {
         await siguienteActualizacionUI()
         sesion.ventana.layoutIfNeeded()
@@ -622,7 +678,8 @@ private final class MainTabsTestWindow {
     let coordinador: PassiveTrackingCoordinator
     private let ventanaAnterior: UIWindow?
 
-    init(pantalla: AppScreen = .mapaPrincipal, observationPublisher: ObservationPublishing? = nil) throws {
+    init(pantalla: AppScreen = .mapaPrincipal, observationPublisher: ObservationPublishing? = nil,
+         mapMenu: MainTabsMenuTestState? = nil) throws {
         let escena = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         ventanaAnterior = escena.windows.first(where: \.isKeyWindow)
         ventana = UIWindow(windowScene: escena)
@@ -632,7 +689,10 @@ private final class MainTabsTestWindow {
                                                 configurationProvider: { nil },
                                                 preserveStoredConsentWhenUnconfigured: true)
         router.currentScreen = pantalla
-        let contenido = RootView(locationService: gps, router: router)
+        let menuBinding = mapMenu.map { menu in
+            Binding(get: { menu.isOpen }, set: { menu.isOpen = $0 })
+        }
+        let contenido = RootView(locationService: gps, router: router, mapMenu: menuBinding)
             .environmentObject(coordinador)
             .environment(\.scenePhase, .active)
         ventana.rootViewController = UIHostingController(rootView: contenido)
@@ -684,6 +744,42 @@ private final class MainTabsTestWindow {
             if let mapa = buscarMapa(en: hija) { return mapa }
         }
         return nil
+    }
+}
+
+@Observable
+private final class MainTabsMenuTestState {
+    var isOpen = false
+}
+
+@MainActor
+private struct MainTabsMapSnapshot {
+    let frame: CGRect
+    let region: MKCoordinateRegion
+    let altitude: CLLocationDistance
+    let heading: CLLocationDirection
+    let pitch: CGFloat
+
+    init(_ mapa: MKMapView, en ventana: UIWindow) {
+        frame = mapa.convert(mapa.bounds, to: ventana)
+        region = mapa.region
+        altitude = mapa.camera.altitude
+        heading = mapa.camera.heading
+        pitch = mapa.camera.pitch
+    }
+
+    func coincide(con otro: Self) -> Bool {
+        abs(frame.minX - otro.frame.minX) <= 0.5 &&
+        abs(frame.minY - otro.frame.minY) <= 0.5 &&
+        abs(frame.width - otro.frame.width) <= 0.5 &&
+        abs(frame.height - otro.frame.height) <= 0.5 &&
+        abs(region.center.latitude - otro.region.center.latitude) <= 0.000001 &&
+        abs(region.center.longitude - otro.region.center.longitude) <= 0.000001 &&
+        abs(region.span.latitudeDelta - otro.region.span.latitudeDelta) <= 0.000001 &&
+        abs(region.span.longitudeDelta - otro.region.span.longitudeDelta) <= 0.000001 &&
+        abs(altitude - otro.altitude) <= 0.5 &&
+        abs(heading - otro.heading) <= 0.01 &&
+        abs(pitch - otro.pitch) <= 0.01
     }
 }
 
