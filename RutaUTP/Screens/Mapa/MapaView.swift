@@ -63,6 +63,7 @@ private struct MapaScreenContent: View {
     )
 
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.mainNavigationHostedExternally) private var navigationHostedExternally
 
     /// Distancia a la que se empujan los paneles para retirarlos del mapa.
     ///
@@ -90,6 +91,10 @@ private struct MapaScreenContent: View {
     }
 
     private var mostrandoRuta: Bool { vm.itinerario != nil }
+    private var mostrarNavegacionPrincipal: Bool {
+        vm.busquedaResultado == nil && !mostrandoRuta && !viajeActivo &&
+        !mostrarDrawer && !modoColocarMarcador && !vm.buscandoItinerarioInicial
+    }
     private var viajeActivo: Bool {
         trackingCoordinator.isEnabled && trackingCoordinator.selectedTripRoute != nil
     }
@@ -245,12 +250,17 @@ private struct MapaScreenContent: View {
                 .zIndex(15)
 
             // La X de la guía devuelve todos los paneles y la navegación.
-            if !mostrandoRuta && !viajeActivo {
+            if !navigationHostedExternally && mostrarNavegacionPrincipal {
                 BottomNavBar()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .accessibilityHidden(mostrarDrawer || modoColocarMarcador || vm.calculandoItinerario)
             }
         }
+        .preference(key: MapNavigationBarPresentationKey.self,
+                    value: navigationHostedExternally ? MapNavigationBarPresentation(
+                        isVisible: mostrarNavegacionPrincipal,
+                        accessibilityHidden: modoColocarMarcador || vm.calculandoItinerario
+                    ) : nil)
         .ignoresSafeArea(edges: .bottom)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: mostrandoRuta)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: viajeActivo)

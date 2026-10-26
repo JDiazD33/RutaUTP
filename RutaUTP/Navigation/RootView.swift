@@ -10,7 +10,7 @@ import SwiftUI
 import UIKit
 
 struct RootView: View {
-    @StateObject private var router = AppRouter()
+    @StateObject private var router: AppRouter
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
     @AppStorage(PreferenciasApp.busesUTP) private var preferenciaBusesUTP = false
     private var busesUTPActivos: Bool {
@@ -54,7 +54,7 @@ struct RootView: View {
         }
     }
 
-    init(locationService: LocationServiceProtocol? = nil) {
+    init(locationService: LocationServiceProtocol? = nil, router: AppRouter? = nil) {
         let compartido = locationService ?? LocationService()
         self.locationService = compartido
         _trackingStore = StateObject(wrappedValue: ScreenModelStore(
@@ -77,6 +77,7 @@ struct RootView: View {
             }
         }
         #endif
+        _router = StateObject(wrappedValue: router ?? AppRouter())
     }
 
     var body: some View {
@@ -291,37 +292,122 @@ struct MainTabsView: View {
     let locationService: LocationServiceProtocol
     let busesUTPActivos: Bool
     @EnvironmentObject private var router: AppRouter
+    @State private var mapNavigation = MapNavigationBarPresentation()
+
+    private struct ContentIdentity: Hashable {
+        let screen: AppScreen
+        let busesUTP: Bool
+    }
 
     var body: some View {
         // TabView conserva la identidad de cada pestaña y entrega onAppear /
         // onDisappear solo al contenido visible. Así el mapa conserva su cámara
         // y los catálogos cargados se reutilizan sin dejar GPS o timers ocultos.
-        TabView(selection: $router.currentScreen) {
-            MapaView(locationService: locationService)
-                .id(busesUTPActivos)
-                .toolbar(.hidden, for: .tabBar)
-                .tag(AppScreen.mapaPrincipal)
-            RutasView(locationService: locationService)
-                .id(busesUTPActivos)
-                .toolbar(.hidden, for: .tabBar)
-                .tag(AppScreen.rutas)
-            GuardadoView(locationService: locationService)
-                .id(busesUTPActivos)
-                .toolbar(.hidden, for: .tabBar)
-                .tag(AppScreen.guardado)
-            SeguridadView(locationService: locationService)
-                .id(busesUTPActivos)
-                .toolbar(.hidden, for: .tabBar)
-                .tag(AppScreen.seguridad)
-            PerfilView()
-                .toolbar(.hidden, for: .tabBar)
-                .tag(AppScreen.perfil)
+        VStack(spacing: 0) {
+            contenidoPestanas
+                .environment(\.mainNavigationHostedExternally, true)
+                // La barra ocupa su propia fila; el contenido ya no necesita
+                // reservar su altura ni puede quedar encima de sus botones.
+                .environment(\.bottomNavBarHeight, 0)
+
+            // Una única barra vive fuera del contenido que TabView presenta.
+            // Cambiar de pestaña no la retira, oculta ni vuelve a crear.
+            if router.currentScreen != .mapaPrincipal || mapNavigation.isVisible {
+                BottomNavBar()
+                    .accessibilityHidden(router.currentScreen == .mapaPrincipal && mapNavigation.accessibilityHidden)
+                    .zIndex(1)
+            }
+        }
+        .onPreferenceChange(MapNavigationBarPresentationKey.self) { presentation in
+            if let presentation { mapNavigation = presentation }
         }
         .ignoresSafeArea(edges: .bottom)
         .background(Color.appBackground.ignoresSafeArea())
         .transition(.identity)
     }
 
+    private var contenidoPestanas: some View {
+        TabView(selection: $router.currentScreen) {
+            MapaView(locationService: locationService)
+                .id(ContentIdentity(screen: .mapaPrincipal, busesUTP: busesUTPActivos))
+                .modifier(MainTabBarHidden())
+                .tag(AppScreen.mapaPrincipal)
+            RutasView(locationService: locationService)
+                .id(ContentIdentity(screen: .rutas, busesUTP: busesUTPActivos))
+                .modifier(MainTabBarHidden())
+                .tag(AppScreen.rutas)
+            GuardadoView(locationService: locationService)
+                .id(ContentIdentity(screen: .guardado, busesUTP: busesUTPActivos))
+                .modifier(MainTabBarHidden())
+                .tag(AppScreen.guardado)
+            SeguridadView(locationService: locationService)
+                .id(ContentIdentity(screen: .seguridad, busesUTP: busesUTPActivos))
+                .modifier(MainTabBarHidden())
+                .tag(AppScreen.seguridad)
+            PerfilView()
+                .modifier(MainTabBarHidden())
+                .tag(AppScreen.perfil)
+        }
+    }
+
+}
+
+/// La navegación visible pertenece a RutaUTP. iOS 17 puede reactivar la barra
+/// vacía de TabView al regresar al mapa, aunque su preferencia siga oculta.
+private struct MainTabBarHidden: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .toolbar(.hidden, for: .tabBar)
+            .toolbarBackground(.hidden, for: .tabBar)
+            .background(NativeTabBarHider().frame(width: 0, height: 0))
+    }
+}
+
+private struct NativeTabBarHider: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> Controller { Controller() }
+
+    func updateUIViewController(_ controller: Controller, context: Context) {
+        controller.hideNativeBar()
+        // SwiftUI termina de aplicar sus preferencias tras actualizar al hijo.
+        DispatchQueue.main.async { [weak controller] in controller?.hideNativeBar() }
+    }
+
+    final class Controller: UIViewController {
+        override func loadView() {
+            view = UIView()
+            view.backgroundColor = .clear
+            view.isUserInteractionEnabled = false
+        }
+
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            hideNativeBar()
+        }
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            hideNativeBar()
+        }
+
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            guard let controller = tabBarController else { return }
+            if #available(iOS 18.0, *) {
+                if !controller.isTabBarHidden { hideNativeBar() }
+            } else if !controller.tabBar.isHidden {
+                hideNativeBar()
+            }
+        }
+
+        func hideNativeBar() {
+            guard let controller = tabBarController else { return }
+            if #available(iOS 18.0, *) {
+                controller.setTabBarHidden(true, animated: false)
+            } else if !controller.tabBar.isHidden {
+                controller.tabBar.isHidden = true
+            }
+        }
+    }
 }
 
 private struct CambioRutaNotificadoView: View {

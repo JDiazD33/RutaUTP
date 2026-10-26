@@ -23,6 +23,7 @@ struct RutasView: View {
     #endif
 
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.mainNavigationHostedExternally) private var navigationHostedExternally
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
     @FocusState private var busquedaEnfocada: Bool
@@ -44,7 +45,7 @@ struct RutasView: View {
                 listaScreen
                     .transition(.opacity)
             }
-            BottomNavBar()
+            if !navigationHostedExternally { BottomNavBar() }
         }
         .ignoresSafeArea(edges: .bottom)
         .animation(.spring(response: 0.3), value: rutaSeleccionada == nil)

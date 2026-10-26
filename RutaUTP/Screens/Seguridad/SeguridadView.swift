@@ -62,6 +62,7 @@ struct SeguridadView: View {
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.mainNavigationHostedExternally) private var navigationHostedExternally
 
     private enum Seccion: String, CaseIterable, Identifiable {
         case ayuda, comunidad
@@ -130,7 +131,7 @@ struct SeguridadView: View {
             .padding(.bottom, tabBarHeight)
 
             // Navbar
-            BottomNavBar()
+            if !navigationHostedExternally { BottomNavBar() }
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear {

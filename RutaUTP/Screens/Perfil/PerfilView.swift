@@ -10,6 +10,7 @@ import UIKit
 
 struct PerfilView: View {
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.mainNavigationHostedExternally) private var navigationHostedExternally
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.colorScheme) private var colorScheme
@@ -88,7 +89,7 @@ struct PerfilView: View {
                 }
                 .padding(.bottom, tabBarHeight)
 
-                BottomNavBar()
+                if !navigationHostedExternally { BottomNavBar() }
             }
 
         }

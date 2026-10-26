@@ -18,7 +18,28 @@ private struct BottomNavBarHeightEnvironmentKey: EnvironmentKey {
     static let defaultValue: CGFloat = 64
 }
 
+private struct MainNavigationHostedExternallyKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+struct MapNavigationBarPresentation: Equatable {
+    var isVisible = true
+    var accessibilityHidden = false
+}
+
+struct MapNavigationBarPresentationKey: PreferenceKey {
+    static let defaultValue: MapNavigationBarPresentation? = nil
+    static func reduce(value: inout MapNavigationBarPresentation?, nextValue: () -> MapNavigationBarPresentation?) {
+        value = nextValue() ?? value
+    }
+}
+
 extension EnvironmentValues {
+    var mainNavigationHostedExternally: Bool {
+        get { self[MainNavigationHostedExternallyKey.self] }
+        set { self[MainNavigationHostedExternallyKey.self] = newValue }
+    }
+
     var bottomNavBarHeight: CGFloat {
         get { self[BottomNavBarHeightEnvironmentKey.self] }
         set { self[BottomNavBarHeightEnvironmentKey.self] = newValue }
@@ -28,6 +49,16 @@ extension EnvironmentValues {
 // MARK: - Tab enum
 enum NavTab: CaseIterable, Hashable {
     case mapa, rutas, guardado, seguridad, perfil
+
+    var accessibilityID: String {
+        switch self {
+        case .mapa: return "main-navigation.mapa"
+        case .rutas: return "main-navigation.rutas"
+        case .guardado: return "main-navigation.guardado"
+        case .seguridad: return "main-navigation.seguridad"
+        case .perfil: return "main-navigation.perfil"
+        }
+    }
 
     var label: String {
         switch self {
@@ -118,6 +149,7 @@ struct BottomNavBar: View {
                     .buttonStyle(.plain)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(tab.label)
+                    .accessibilityIdentifier(tab.accessibilityID)
                     .accessibilityAddTraits(router.currentScreen == tab.screen ? .isSelected : [])
                 }
             }
@@ -140,6 +172,7 @@ struct BottomNavBar: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L.t("Navegación principal", "Main navigation"))
+        .accessibilityIdentifier("main-navigation")
     }
 }
 

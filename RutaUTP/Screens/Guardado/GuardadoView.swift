@@ -19,6 +19,7 @@ struct GuardadoView: View {
     let locationService: LocationServiceProtocol
     @EnvironmentObject private var router: AppRouter
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
+    @Environment(\.mainNavigationHostedExternally) private var navigationHostedExternally
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
@@ -69,7 +70,7 @@ struct GuardadoView: View {
             }
             .padding(.bottom, tabBarHeight)
 
-            BottomNavBar()
+            if !navigationHostedExternally { BottomNavBar() }
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear {
