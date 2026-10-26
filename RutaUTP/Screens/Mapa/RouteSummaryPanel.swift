@@ -113,22 +113,34 @@ struct RouteSummaryPanel: View {
     }
 
     private var carousel: some View {
-        TabView(selection: $visibleOptionID) {
-            ForEach(pages, id: \.optionID) { plan in
-                ScrollView(.vertical) {
-                    compactSummary(plan)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 2)
+        // Paginar el resumen sin montar otro TabView: sus preferencias de
+        // barra no deben alterar las pestañas principales ni reservar un pie.
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(pages, id: \.optionID) { plan in
+                    ScrollView(.vertical) {
+                        compactSummary(plan)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 2)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .containerRelativeFrame(.horizontal)
+                    .id(plan.optionID)
+                    .accessibilityHidden(visibleOptionID != plan.optionID)
+                    .allowsHitTesting(visibleOptionID == plan.optionID)
                 }
-                .scrollBounceBehavior(.basedOnSize)
-                .tag(plan.optionID)
-                .accessibilityHidden(visibleOptionID != plan.optionID)
-                .allowsHitTesting(visibleOptionID == plan.optionID)
             }
+            .scrollTargetLayout()
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: Binding<[String]?>(
+            get: { visibleOptionID.isEmpty ? nil : visibleOptionID },
+            set: { if let optionID = $0 { visibleOptionID = optionID } }
+        ))
         .frame(height: min(136, max(88, maximumPanelHeight - 132)))
+        .accessibilityIdentifier("route-options-carousel")
     }
 
     private func compactSummary(_ plan: TransitItinerary) -> some View {
