@@ -209,6 +209,7 @@
 		E3A915D455274F139F36C39C /* VehiclePresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F5A7A7D389A475BADD8A3E2 /* VehiclePresentationPolicyTests.swift */; };
 		8C399B6ADEA345E6976EE58D /* SimulationPresentationIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1F67DAD2164BC191B584AF /* SimulationPresentationIntegrationTests.swift */; };
 		D3E7F0B5D7424448A1909557 /* TrialProcessResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC4201735634E0F8EB7ECB3 /* TrialProcessResources.swift */; };
+		CA2600000000000000000001 = {isa = PBXBuildFile; fileRef = CA2600000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -219,6 +220,7 @@
 			remoteGlobalIDString = 0A40D9132FDE5E7D00F79FBC;
 			remoteInfo = RutaUTP;
 		};
+		CA260000000000000000000C = {isa = PBXContainerItemProxy; containerPortal = 0A40D90C2FDE5E7D00F79FBC; proxyType = 1; remoteGlobalIDString = 0A40D9132FDE5E7D00F79FBC; remoteInfo = RutaUTP; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -432,6 +434,8 @@
 		8F5A7A7D389A475BADD8A3E2 /* VehiclePresentationPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehiclePresentationPolicyTests.swift; sourceTree = "<group>"; };
 		1F1F67DAD2164BC191B584AF /* SimulationPresentationIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulationPresentationIntegrationTests.swift; sourceTree = "<group>"; };
 		6FC4201735634E0F8EB7ECB3 /* TrialProcessResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrialProcessResources.swift; sourceTree = "<group>"; };
+		CA2600000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainNavigationUITests.swift; sourceTree = "<group>"; };
+		CA2600000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RutaUTPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -450,6 +454,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CA2600000000000000000006 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -478,6 +483,7 @@
 		0A40D90B2FDE5E7D00F79FBC = {
 			isa = PBXGroup;
 			children = (
+				CA2600000000000000000004,
 				BD2000000000000000000005 /* gtfs-utp */,
 				0A8004F6300AD9FE004E1676 /* RutaUTP */,
 				AA6600000000000000000D01 /* gtfs */,
@@ -490,6 +496,7 @@
 		0A40D9152FDE5E7D00F79FBC /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				CA2600000000000000000003,
 				0A40D9142FDE5E7D00F79FBC /* RutaUTP.app */,
 				0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */,
 			);
@@ -976,6 +983,7 @@
 			path = Localization;
 			sourceTree = "<group>";
 		};
+		CA2600000000000000000004 = {isa = PBXGroup; children = (CA2600000000000000000002,); path = RutaUTPUITests; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1017,6 +1025,7 @@
 			productReference = 0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		CA2600000000000000000008 /* RutaUTPUITests */ = {isa = PBXNativeTarget; buildConfigurationList = CA2600000000000000000009; buildPhases = (CA2600000000000000000005,CA2600000000000000000006,CA2600000000000000000007,); buildRules = (); dependencies = (CA260000000000000000000D,); name = RutaUTPUITests; productName = RutaUTPUITests; productReference = CA2600000000000000000003; productType = "com.apple.product-type.bundle.ui-testing"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1027,6 +1036,7 @@
 				LastSwiftUpdateCheck = 1540;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					CA2600000000000000000008 = {CreatedOnToolsVersion = 27.1; TestTargetID = 0A40D9132FDE5E7D00F79FBC; };
 					0A40D9132FDE5E7D00F79FBC = {
 						CreatedOnToolsVersion = 15.4;
 					};
@@ -1057,6 +1067,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				CA2600000000000000000008,
 				0A40D9132FDE5E7D00F79FBC /* RutaUTP */,
 				0A80041C300AD9FE004E1676 /* RutaUTPTests */,
 			);
@@ -1088,6 +1099,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CA2600000000000000000007 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1296,6 +1308,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CA2600000000000000000005 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CA2600000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1304,6 +1317,7 @@
 			target = 0A40D9132FDE5E7D00F79FBC /* RutaUTP */;
 			targetProxy = 0A80041E300AD9FE004E1676 /* PBXContainerItemProxy */;
 		};
+		CA260000000000000000000D = {isa = PBXTargetDependency; target = 0A40D9132FDE5E7D00F79FBC; targetProxy = CA260000000000000000000C; };
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
@@ -1565,6 +1579,8 @@
 			};
 			name = Release;
 		};
+		CA260000000000000000000A = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.5; PRODUCT_BUNDLE_IDENTIFIER = apolito.RutaUTP.NavigationUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = RutaUTP; }; name = Debug; };
+		CA260000000000000000000B = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.5; PRODUCT_BUNDLE_IDENTIFIER = apolito.RutaUTP.NavigationUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = RutaUTP; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1595,6 +1611,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		CA2600000000000000000009 = {isa = XCConfigurationList; buildConfigurations = (CA260000000000000000000A,CA260000000000000000000B,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */

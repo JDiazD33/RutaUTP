@@ -38,6 +38,9 @@
                ReferencedContainer = "container:RutaUTP.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference skipped="NO">
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="CA2600000000000000000008" BuildableName="RutaUTPUITests.xctest" BlueprintName="RutaUTPUITests" ReferencedContainer="container:RutaUTP.xcodeproj"/>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

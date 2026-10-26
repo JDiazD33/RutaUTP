@@ -480,6 +480,53 @@ private final class ExpectativaObservada {
 /// liberación del GPS con los mismos eventos de aparición que usa la app.
 @MainActor
 final class MainTabNavigationTests: XCTestCase {
+    func testTomarRutaOcultaLaFilaInferiorYLaRecuperaAlTerminar() async throws {
+        let defaults = UserDefaults.standard
+        let consentimiento = "rutautp.passive-tracking-consent"
+        let claves = [consentimiento, BoardingPlaceStore.key]
+        let anteriores = claves.reduce(into: [String: Any]()) { guardados, clave in
+            guardados[clave] = defaults.object(forKey: clave)
+        }
+        defaults.set(true, forKey: consentimiento)
+        defer {
+            for clave in claves {
+                if let anterior = anteriores[clave] { defaults.set(anterior, forKey: clave) }
+                else { defaults.removeObject(forKey: clave) }
+            }
+        }
+
+        let publicador = MainTabsObservationPublisherMock()
+        let sesion = try MainTabsTestWindow(observationPublisher: publicador)
+        defer { sesion.cerrar() }
+        try await esperarEstado { sesion.mapaVisible != nil && sesion.bordeInferiorPestanas != nil }
+        let bordeNormal = try XCTUnwrap(sesion.bordeInferiorPestanas)
+        let bordeVentana = sesion.ventana.bounds.maxY
+        XCTAssertLessThan(bordeNormal, bordeVentana - 20, "La navegación normal ocupa su propia fila")
+
+        let ruta = DetectionRouteGeometry(id: "test-footer-trip", linea: "Prueba",
+            shape: [CLLocationCoordinate2D(latitude: -8.10, longitude: -79.04),
+                    CLLocationCoordinate2D(latitude: -8.10, longitude: -79.02)], stops: [])
+        sesion.coordinador.beginTrip(route: ruta, occupancy: nil)
+        XCTAssertEqual(sesion.coordinador.selectedTripRoute?.id, ruta.id)
+        try await esperarEstado {
+            guard let borde = sesion.bordeInferiorPestanas else { return false }
+            return abs(borde - bordeVentana) <= 1
+        }
+        let mapa = try XCTUnwrap(sesion.mapaVisible)
+        XCTAssertEqual(mapa.convert(mapa.bounds, to: sesion.ventana).maxY, bordeVentana, accuracy: 1)
+        XCTAssertFalse(sesion.barraNativaVisible)
+        XCTAssertEqual(publicador.inicios, 0, "Elegir la ruta no publica ni abre una conexión")
+        await adjuntarCaptura(sesion, nombre: "Viaje-sin-fila-inferior")
+
+        sesion.coordinador.endTrip()
+        try await esperarEstado {
+            guard let borde = sesion.bordeInferiorPestanas else { return false }
+            return abs(borde - bordeNormal) <= 1
+        }
+        XCTAssertFalse(sesion.barraNativaVisible)
+        await adjuntarCaptura(sesion, nombre: "Mapa-tras-finalizar-viaje")
+    }
+
     func testRecorrerLasCincoPestanasConservaMapaYLiberaGPSEnLasOcultas() async throws {
         let sesion = try MainTabsTestWindow()
         defer { sesion.cerrar() }
@@ -572,19 +619,20 @@ private final class MainTabsTestWindow {
     let gps = TrackingGPSMock()
     let router = AppRouter()
     let ventana: UIWindow
-    private let coordinador: PassiveTrackingCoordinator
+    let coordinador: PassiveTrackingCoordinator
     private let ventanaAnterior: UIWindow?
 
-    init() throws {
+    init(pantalla: AppScreen = .mapaPrincipal, observationPublisher: ObservationPublishing? = nil) throws {
         let escena = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         ventanaAnterior = escena.windows.first(where: \.isKeyWindow)
         ventana = UIWindow(windowScene: escena)
         ventana.frame = escena.coordinateSpace.bounds
-        coordinador = PassiveTrackingCoordinator(locationService: gps, configurationProvider: { nil },
+        coordinador = PassiveTrackingCoordinator(locationService: gps, observationPublisher: observationPublisher,
+                                                tripOccupancy: OccupancyService(configurationProvider: { nil }),
+                                                configurationProvider: { nil },
                                                 preserveStoredConsentWhenUnconfigured: true)
-        router.currentScreen = .mapaPrincipal
-        let contenido = MainTabsView(locationService: gps, busesUTPActivos: TransporteApp.busesUTPActivos)
-            .environmentObject(router)
+        router.currentScreen = pantalla
+        let contenido = RootView(locationService: gps, router: router)
             .environmentObject(coordinador)
             .environment(\.scenePhase, .active)
         ventana.rootViewController = UIHostingController(rootView: contenido)
@@ -606,6 +654,11 @@ private final class MainTabsTestWindow {
     }
 
     var mapaVisible: MKMapView? { buscarMapa(en: ventana) }
+
+    var bordeInferiorPestanas: CGFloat? {
+        guard let vista = controladorPestanas(ventana.rootViewController)?.view else { return nil }
+        return vista.convert(vista.bounds, to: ventana).maxY
+    }
 
     func cerrar() {
         ventana.isHidden = true
@@ -632,6 +685,17 @@ private final class MainTabsTestWindow {
         }
         return nil
     }
+}
+
+@MainActor
+private final class MainTabsObservationPublisherMock: ObservationPublishing {
+    var state: ObservationPublisherState = .inactive
+    var onStateChange: (@MainActor (ObservationPublisherState) -> Void)?
+    private(set) var inicios = 0
+
+    func start(sessionID: String, linea: String) { inicios += 1 }
+    func publish(location: CLLocation, routeID: String, activity: DetectedMotionActivity) {}
+    func stop() {}
 }
 
 private final class TrackingGPSMock: LocationServiceProtocol {
