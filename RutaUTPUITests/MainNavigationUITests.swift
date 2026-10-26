@@ -89,6 +89,66 @@ final class MainNavigationUITests: XCTestCase {
     }
 
     @MainActor
+    private func verificarNavegacionBloqueadaPorElMenu(_ app: XCUIApplication) {
+        // La fila se conserva para no redimensionar el mapa. Su contenedor
+        // puede existir en XCTest aunque sus controles estén ocultos/inactivos.
+        XCTAssertEqual(app.tabBars.count, 0)
+        for pantalla in ["mapa", "rutas", "guardado", "seguridad", "perfil"] {
+            let boton = app.descendants(matching: .any)["main-navigation.\(pantalla)"]
+            if boton.exists { XCTAssertFalse(boton.isHittable, "El menú debe bloquear \(pantalla)") }
+        }
+    }
+
+    @MainActor
+    func testMenuPermiteLosTresCierresSinCambiarElMapa() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--pantalla", "mapa", "-isDarkMode", "YES"]
+        app.launch()
+        permitirUbicacionSiSeSolicita()
+
+        let abrir = app.buttons["Abrir menú"]
+        let ubicacion = app.buttons["Centrar en mi ubicación"]
+        XCTAssertTrue(abrir.waitForExistence(timeout: 5))
+        XCTAssertTrue(ubicacion.waitForExistence(timeout: 5))
+        // El foco puede ampliar el rectángulo accesible hasta toda la cabecera.
+        // Volver a tocar el mismo punto visible comprueba que el icono no se mueve.
+        let puntoMenu = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: abrir.frame.midX, dy: abrir.frame.midY))
+        let mapaInicial = app.maps.firstMatch.frame
+        adjuntarCaptura(app, nombre: "Mapa-antes-del-menu")
+
+        for cierre in 0..<3 {
+            puntoMenu.tap()
+            let cerrar = app.buttons["Cerrar menú"]
+            XCTAssertTrue(cerrar.waitForExistence(timeout: 5))
+            let menuVisible = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                cerrar.exists && cerrar.isHittable
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [menuVisible], timeout: 5), .completed)
+            verificarNavegacionBloqueadaPorElMenu(app)
+            if cierre == 0 { adjuntarCaptura(app, nombre: "Menu-sobre-mapa-inmovil") }
+            switch cierre {
+            case 0: cerrar.tap()
+            // Tocar donde queda Perfil bajo el fondo debe cerrar el menú,
+            // conservando Mapa, sin activar la navegación que hay debajo.
+            case 1: app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.95)).tap()
+            default: app.staticTexts["Menú principal"].swipeLeft()
+            }
+            XCTAssertTrue(abrir.waitForExistence(timeout: 5))
+            XCTAssertTrue(ubicacion.isHittable)
+            XCTAssertTrue(app.descendants(matching: .any)["main-navigation.mapa"].isSelected)
+            let actual = app.maps.firstMatch.frame
+            let inicial = mapaInicial
+            XCTAssertEqual(actual.minX, inicial.minX, accuracy: 1)
+            XCTAssertEqual(actual.minY, inicial.minY, accuracy: 1)
+            XCTAssertEqual(actual.width, inicial.width, accuracy: 1)
+            XCTAssertEqual(actual.height, inicial.height, accuracy: 1)
+        }
+        adjuntarCaptura(app, nombre: "Mapa-tras-cerrar-menu")
+    }
+
+    @MainActor
     func testLosCincoIconosPermanecenVisiblesAlNavegar() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -135,7 +195,7 @@ final class MainNavigationUITests: XCTestCase {
 
         app.buttons["Abrir menú"].tap()
         XCTAssertTrue(app.buttons["Cerrar menú"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.otherElements["main-navigation"].exists)
+        verificarNavegacionBloqueadaPorElMenu(app)
         adjuntarCaptura(app, nombre: "Menu-oscuro-sin-franja")
         app.buttons["Cerrar menú"].tap()
         verificarBarra()
