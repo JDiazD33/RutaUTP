@@ -213,6 +213,7 @@
 		F7C0A7481B1D6B72F50D665D /* AddLineaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098732D04B5763C32F4B9C09 /* AddLineaSheet.swift */; };
 		AA9900000000000000000A02 /* PagoQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A01 /* PagoQR.swift */; };
 		AA9900000000000000000A04 /* EscanerQRView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A03 /* EscanerQRView.swift */; };
+		BA9900000000000000000062 /* VentanaEscanerQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000061 /* VentanaEscanerQR.swift */; };
 		AA9900000000000000000B02 /* BusEn3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000B01 /* BusEn3D.swift */; };
 		BA9900000000000000000002 /* RouteChangesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000001 /* RouteChangesService.swift */; };
 		BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000011 /* RouteChangesSheet.swift */; };
@@ -479,6 +480,7 @@
 		098732D04B5763C32F4B9C09 /* AddLineaSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddLineaSheet.swift; sourceTree = "<group>"; };
 		AA9900000000000000000A01 /* PagoQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PagoQR.swift; sourceTree = "<group>"; };
 		AA9900000000000000000A03 /* EscanerQRView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscanerQRView.swift; sourceTree = "<group>"; };
+		BA9900000000000000000061 /* VentanaEscanerQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VentanaEscanerQR.swift; sourceTree = "<group>"; };
 		AA9900000000000000000B01 /* BusEn3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BusEn3D.swift; sourceTree = "<group>"; };
 		BA9900000000000000000001 /* RouteChangesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesService.swift; sourceTree = "<group>"; };
 		BA9900000000000000000011 /* RouteChangesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesSheet.swift; sourceTree = "<group>"; };
@@ -849,6 +851,7 @@
 				B961A9048B5EA8CC7A142693 /* QRPasajeSheet.swift */,
 				7F055CA6EC17559193C0C248 /* MarcaBilletera.swift */,
 				AA9900000000000000000A03 /* EscanerQRView.swift */,
+				BA9900000000000000000061 /* VentanaEscanerQR.swift */,
 				0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */,
 			);
 			path = Perfil;
@@ -1438,6 +1441,7 @@
 				A2AEFC86F801F548324915CB /* MarcaBilletera.swift in Sources */,
 				AA9900000000000000000A02 /* PagoQR.swift in Sources */,
 				AA9900000000000000000A04 /* EscanerQRView.swift in Sources */,
+				BA9900000000000000000062 /* VentanaEscanerQR.swift in Sources */,
 				0A800516300AD9FE004E1676 /* TrackingPoint.swift in Sources */,
 				0A800411300AD9FE004E1676 /* AppHaptics.swift in Sources */,
 				0A800413300AD9FE004E1676 /* Persistencia.swift in Sources */,
