@@ -75,7 +75,7 @@ def test_status_uses_persisted_daily_budget_and_separate_counts(rig):
     assert current['budget']['reservedPublishCallsRun'] == 20
     assert current['budget']['reservedPublishCallsDay'] == 40
     assert current['budget']['maxRunSeconds'] == 900
-    assert current['budget']['maxPublishCallsDay'] == 6000
+    assert current['budget']['maxPublishCallsDay'] == 10000
     assert current['counts']['expectedActors'] == 30
     assert current['counts']['nominalVehicles'] == 10
     assert current['counts']['mqttConnections'] == 25
@@ -198,7 +198,7 @@ def test_supervisor_deadlines_budget_and_producer_freshness(rig, kind):
     if kind == 'duration': now += 900
     elif kind == 'service': now = state['serviceEndsAt']
     elif kind == 'producer': now += 16
-    else: rig.control.runtime(publishBudget={'runs': {state['runId']: 6000}, 'days': {state['serviceDate']: 6000}})
+    else: rig.control.runtime(publishBudget={'runs': {state['runId']: 6000}, 'days': {state['serviceDate']: 10000}})
     result = supervise(rig.control, health, now)
     expected = {'duration': 'max_run_duration', 'service': 'service_closed',
         'budget': 'publish_budget_exhausted_day', 'producer': 'producer_missing_stopped_or_stale'}[kind]

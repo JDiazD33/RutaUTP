@@ -11,6 +11,7 @@ import argparse
 from contextlib import ExitStack
 import json
 import ipaddress
+import math
 import os
 from pathlib import Path
 import secrets
@@ -71,11 +72,38 @@ def local_acl(principals) -> str:
     lines = ['user backend', 'topic read rutautp/observaciones/+/+/posicion',
         'topic read rutautp/simulacion/+/observaciones/+/+/posicion',
         'topic write rutautp/vehiculos/+/posicion', 'topic write rutautp/simulacion/estado',
+        'topic write rutautp/cambios/estado', 'topic write rutautp/ocupacion/estado',
         'user reader', 'topic read rutautp/vehiculos/+/posicion', 'topic read rutautp/simulacion/estado']
     for principal in sorted(principals):
         lines.extend([f'user {principal}', 'topic read rutautp/simulacion/estado',
             f'topic write rutautp/simulacion/+/observaciones/{principal}/+/posicion'])
     return '\n'.join(lines)+'\n'
+
+
+def probe_disable_delivery_seconds(snapshot: dict, requested_revision: int, requested_uptime: float):
+    """Solo la entrega del OFF solicitado; otro OFF no mide esta operación."""
+    body = snapshot.get('control') or {}
+    seen = snapshot.get('controlSeenAtUptime')
+    if (body.get('enabled') is not False or type(body.get('controlRevision')) is not int
+            or body['controlRevision'] != requested_revision
+            or type(seen) not in (int, float) or not math.isfinite(seen) or seen < requested_uptime):
+        return None
+    return seen-requested_uptime
+
+
+def disable_measurements(before: dict, requested_revision: int, device: dict | None = None) -> dict:
+    was_enabled = before.get('requestedEnabled') is True
+    uninterrupted = requested_revision == before['controlRevision']+1
+    usable = was_enabled and uninterrupted
+    diagnostic = (device or {}).get('cleanupUpperBoundSeconds')
+    valid_diagnostic = (type(diagnostic) in (int, float)
+        and math.isfinite(diagnostic) and diagnostic >= 0)
+    return {'controlWasEnabledBeforeDisable': was_enabled,
+        'disableRequestedRevision': requested_revision,
+        'automaticDisableReason': before.get('reason') if not was_enabled else None,
+        'controlChangedBeforeManualDisable': not uninterrupted,
+        'iosCleanupTimingUsable': usable and valid_diagnostic,
+        'iosCleanupSeconds': diagnostic if usable and valid_diagnostic else None}
 
 
 def wait_until(predicate, seconds: float = 30):
@@ -196,6 +224,7 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
     password_file = output/'passwords'; credentials_file = output/'actors-credentials.json'
     probe = None; children = []; control = None; report = {'complete': False, 'profile': name,
         'host': host, 'externalBrokerContacted': False, 'iPhoneMeasured': False, 'iosCleanupSeconds': None,
+        'iosCleanupTimingUsable': False, 'captureEndedEarly': None,
         'localACLVerified': False, 'externalACLVerified': False, 'capturedSecondsRequested': seconds, 'failure': None}
     with ExitStack() as stack:
         try:
@@ -238,8 +267,11 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                 # actores ni posiciones. La cuenta iOS es solo lectora.
                 report['mode'] = 'disabled_control_no_actors'
                 observer.capture_started(require_positions=False)
+                capture_started = time.monotonic()
                 report['resources'] = capture({'backend': backend.pid, 'broker': broker.pid},
                     output/'resources.jsonl', seconds)
+                report['captureElapsedSeconds'] = time.monotonic()-capture_started
+                report['captureEndedEarly'] = report['captureElapsedSeconds'] < seconds
                 observer.prepare_disable()
                 if check_reconnect:
                     def disconnect():
@@ -278,23 +310,31 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                 wait_until(lambda: status(control, time.time())['counts']['mqttConnections'] == len(profile.principals), 45)
                 print(json.dumps({'phase': 'capture', 'profile': name, 'seconds': seconds}), flush=True)
                 if observer is not None: observer.capture_started()
+                capture_started = time.monotonic()
                 report['resources'] = capture({'backend': backend.pid, 'producer': actor.pid,
                     'broker': broker.pid}, output/'resources.jsonl', seconds)
+                report['captureElapsedSeconds'] = time.monotonic()-capture_started
+                report['captureEndedEarly'] = report['captureElapsedSeconds'] < seconds
                 report['statusBeforeDisable'] = status(control, time.time())
                 report['heartbeatBeforeDisable'] = read_heartbeat(str(output/'health.json'))
                 report['diskBeforeDisableBytes'] = trial_disk(output)
                 if observer is not None: observer.prepare_disable()
-                requested = time.monotonic(); control.disable(time.time(), 's10_local_trial_finished')
+                requested = time.monotonic()
+                disabled = control.disable(time.time(), 's10_local_trial_finished')
+                report.update(disable_measurements(report['statusBeforeDisable'], disabled['revision']))
                 report['disableRequestedWall'] = time.time()
                 if observer is not None:
                     report['device'] = observer.finished(requested)
                     report['iPhoneMeasured'] = report['device']['cpu']['complete']
-                    report['iosCleanupSeconds'] = report['device']['cleanupUpperBoundSeconds']
+                    report.update(disable_measurements(report['statusBeforeDisable'], disabled['revision'], report['device']))
+                    report['device']['manualDisableTimingUsable'] = report['iosCleanupTimingUsable']
+                delivery_seconds = None
                 def off():
-                    snapshot = probe.snapshot(); body = snapshot['control'] or {}
-                    return body.get('enabled') is False and body.get('controlRevision', 0) > report['controlRevision']
+                    nonlocal delivery_seconds
+                    delivery_seconds = probe_disable_delivery_seconds(probe.snapshot(), disabled['revision'], requested)
+                    return delivery_seconds is not None
                 wait_until(off, 15)
-                report['probeDisableDeliverySeconds'] = probe.snapshot()['controlSeenAtUptime']-requested
+                report['probeDisableDeliverySeconds'] = delivery_seconds
                 wait_until(lambda: status(control, time.time())['producer'].get('status') == 'stopped', 15)
                 wait_until(lambda: status(control, time.time())['backend']['appliedRevision'] == control.read()['revision'], 15)
                 report['probe'] = probe.snapshot()
@@ -302,7 +342,8 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                 with (output/'comparison.csv').open('x') as exported:
                     export_comparison(output/'history.sqlite', report['runId'], exported, format='csv')
                 report['statusAfterDisable'] = status(control, time.time())
-                report['functionalComplete'] = (report['resources']['complete'] and report['probe']['receivedPositions'] > 0
+                report['functionalComplete'] = (report['resources']['complete'] and not report['captureEndedEarly']
+                    and report['controlWasEnabledBeforeDisable'] and report['probe']['receivedPositions'] > 0
                     and report['probe']['invalidPositions'] == 0 and report['history']['historyComplete']
                     and report['history']['stored']['observations']['rows'] > 0)
                 report['complete'] = report['functionalComplete'] and (observer is None or report['iPhoneMeasured'])

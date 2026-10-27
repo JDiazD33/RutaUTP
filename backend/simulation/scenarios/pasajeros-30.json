@@ -2,7 +2,7 @@
   "$schema": "../schemas/scenario-v1.schema.json",
   "schemaVersion": 1,
   "scenarioId": "pasajeros-30",
-  "scenarioVersion": 1,
+  "scenarioVersion": 2,
   "dataOrigin": "simulated",
   "enabledByDefault": false,
   "seed": 20261021,
@@ -37,7 +37,7 @@
     "nominalVehicleCount": 10,
     "maxRunDurationSeconds": 900,
     "maxObservationPublishCallsPerRun": 6000,
-    "maxObservationPublishCallsPerDay": 6000
+    "maxObservationPublishCallsPerDay": 10000
   },
   "publication": {
     "qos": 1,

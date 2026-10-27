@@ -44,6 +44,41 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     private var stalenessTimer: Timer?
     private var trialResourceTimer: Timer?
 
+    /// Códigos estables del diagnóstico S10; applicationState usa los valores
+    /// UIKit: active=0, inactive=1, background=2. startEntered y stopEntered
+    /// registran el estado anterior a las mutaciones de ese método; los ACK
+    /// y disconnected registran connected después de actualizarlo.
+    private enum TrialLifecycleStage: Int {
+        case startEntered = 1
+        case startRunning = 2
+        case socketStartRejected = 3
+        case stopEntered = 4
+        case connectionAckAccepted = 5
+        case connectionAckRejected = 6
+        case disconnected = 7
+        case willResignActive = 8
+        case didBecomeActive = 9
+        case didEnterBackground = 10
+        case willEnterForeground = 11
+    }
+
+    // MainActor serializa el contador; fuera de un ensayo no se asignan IDs.
+    // La pareja processID/providerInstance identifica la instancia sin direcciones.
+    private static var trialInstanceSequence = 0
+    private let trialInstanceID: Int?
+
+    private func logTrialLifecycle(_ stage: TrialLifecycleStage) {
+        guard TrialProcessResources.isEnabled(), let trialInstanceID else { return }
+        MQTTConfiguration.trialLog("providerLifecycle", [
+            "processID": Int(ProcessInfo.processInfo.processIdentifier),
+            "providerInstance": trialInstanceID,
+            "stage": stage.rawValue,
+            "running": isRunning ? 1 : 0,
+            "connected": connected ? 1 : 0,
+            "applicationState": UIApplication.shared.applicationState.rawValue
+        ])
+    }
+
     private func startTrialResourceSampling() {
         guard TrialProcessResources.isEnabled(), trialResourceTimer == nil else { return }
         let token = generation
@@ -169,6 +204,12 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         self.loadCheckpoint = loadCheckpoint ?? { try file.read() }
         self.saveCheckpoint = saveCheckpoint ?? { try file.write($0) }
         self.conectar = conectar
+        if TrialProcessResources.isEnabled() {
+            Self.trialInstanceSequence += 1
+            self.trialInstanceID = Self.trialInstanceSequence
+        } else {
+            self.trialInstanceID = nil
+        }
     }
 
     private func makeClient() -> CocoaMQTT {
@@ -203,6 +244,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
 
     func start() {
         guard !isRunning else { return }
+        logTrialLifecycle(.startEntered)
 
         if !checkpointLoaded {
             checkpointLoaded = true
@@ -225,6 +267,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         mqtt = client
         configureCallbacks(for: client)
         isRunning = true
+        logTrialLifecycle(.startRunning)
         startTrialResourceSampling()
         startStalenessSweep()
         observeLifecycle()
@@ -236,6 +279,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         let aceptado = conectar(client)
         guard isRunning, mqtt === client else { return }
         if !aceptado {
+            logTrialLifecycle(.socketStartRejected)
             // Un fallo al iniciar el socket no debe bloquear un start posterior.
             mqtt = nil
             isRunning = false
@@ -250,6 +294,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     }
 
     func stop() {
+        logTrialLifecycle(.stopEntered)
         isRunning = false
         generation = UUID()
         let previous = mqtt
@@ -317,6 +362,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                 guard let self, self.isCurrent(client, token: token) else { return }
                 self.connected = acknowledgment == .accept
                 MQTTConfiguration.trialLog("connection", ["accepted": self.connected ? 1 : 0])
+                self.logTrialLifecycle(self.connected ? .connectionAckAccepted : .connectionAckRejected)
                 self.controlSubscribed = false
                 self.control.invalidate()
                 self.stopControlExpiry()
@@ -370,6 +416,7 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                 MQTTConfiguration.trialLog("disconnection", ["accepted": 0])
                 self.connected = false
                 self.controlSubscribed = false
+                self.logTrialLifecycle(.disconnected)
                 self.control.invalidate()
                 self.stopControlExpiry()
                 self.publishIfChanged(now: self.clock())
@@ -465,11 +512,27 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
     private func observeLifecycle() {
         guard lifecycleObservers.isEmpty else { return }
         let token = generation
-        for name in [UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification] {
+        var names = [UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification]
+        if TrialProcessResources.isEnabled() {
+            names += [UIApplication.willResignActiveNotification, UIApplication.didBecomeActiveNotification]
+        }
+        for name in names {
             lifecycleObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) {
                 [weak self] notification in
                 MainActor.assumeIsolated {
                     guard let self, self.isRunning, self.generation == token else { return }
+                    switch notification.name {
+                    case UIApplication.willResignActiveNotification:
+                        self.logTrialLifecycle(.willResignActive)
+                        return // Solo diagnóstico; no invalidar ni reconectar.
+                    case UIApplication.didBecomeActiveNotification:
+                        self.logTrialLifecycle(.didBecomeActive)
+                        return // Solo diagnóstico; no invalidar ni reconectar.
+                    case UIApplication.didEnterBackgroundNotification:
+                        self.logTrialLifecycle(.didEnterBackground)
+                    default:
+                        self.logTrialLifecycle(.willEnterForeground)
+                    }
                     self.isForeground = notification.name == UIApplication.willEnterForegroundNotification
                     self.control.invalidate() // esperar otro control recibido, no restaurar el guardado
                     self.stopControlExpiry()

@@ -21,6 +21,7 @@ from typing import Callable
 import uuid
 
 from .simulation_models import canonical_uuid, finite_time
+from .simulation_profile import PROFILE_DAY_LIMITS
 
 MAX_REVISION = 2**53 - 1
 STATE_KEYS = frozenset({"revision", "enabled", "profile", "runId", "owner", "serviceDate",
@@ -323,10 +324,21 @@ class ControlStore:
 
     def reserve_publish(self, run_id: str, revision: int, owner: str, instance: str,
                         service_date: str, *, max_run: int, max_day: int) -> tuple[int, int]:
-        if any(type(limit) is not int or not 1 <= limit <= 6000 for limit in (max_run, max_day)):
-            raise ValueError("presupuesto inicial entre 1 y 6000")
+        if (type(max_run) is not int or not 1 <= max_run <= 6000
+                or type(max_day) is not int or max_day < 1):
+            raise ValueError("presupuesto inicial inválido; máximo por run 6000")
         counts = []
         def reserve(runtime, state):
+            # Aplicar el techo del perfil y el manifiesto fijado en ESTE run.
+            # Un run v1 ya fijado a 6000 no gana cuota al actualizar el código.
+            try:
+                profile = state["profile"]
+                ceiling = PROFILE_DAY_LIMITS[profile["name"]]
+                pinned_day = json.loads(profile["raw"])["limits"]["maxObservationPublishCallsPerDay"]
+            except (KeyError, TypeError, ValueError) as error:
+                raise ControlUnavailable("presupuesto del perfil fijado inválido") from error
+            if type(pinned_day) is not int or not 1 <= pinned_day <= ceiling or max_day > pinned_day:
+                raise ControlUnavailable("presupuesto diario excede el perfil fijado")
             claims = runtime.get("producerClaims", {})
             if not isinstance(claims, dict):
                 raise ControlUnavailable("registro de productores inválido")

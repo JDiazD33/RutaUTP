@@ -14,7 +14,7 @@ import uuid
 
 from rutautp_backend.persistence import ObservationStore, SimulationPersistenceUnavailable
 from rutautp_backend.simulation_control_store import ControlBusy, ControlStore, ControlUnavailable
-from rutautp_backend.simulation_profile import SimulationProfile, PROFILE_SPECS
+from rutautp_backend.simulation_profile import SimulationProfile, PROFILE_SPECS, PROFILE_DAY_LIMITS
 from .clock import ClockDiscontinuity, ClockGuard, ClockSample, RealtimeClock
 from .publisher import MqttTransport
 from .scenario import ScenarioEngine, ScenarioFrame
@@ -63,6 +63,8 @@ class LocalAuthority:
 
     def current(self, sample: ClockSample) -> dict:
         started = self.monotonic()
+        if started < sample.monotonic:
+            raise ProducerStopped("monotonic_clock_regressed")
         state = self.control.read()
         if (not state["enabled"] or state["runId"] != self.run_id or state["revision"] != self.revision
                 or state["owner"] != self.owner or state["profile"] != self.profile.pinned()):
@@ -70,9 +72,13 @@ class LocalAuthority:
         if self.profile.signatures(self.gtfs_dir) != self.profile.verified_signatures:
             raise ProducerStopped("profile_or_feed_changed")
         runtime = self.control.runtime()
-        elapsed = self.monotonic() - started
-        if elapsed < 0:
+        evaluated_mono = self.monotonic()
+        if evaluated_mono < started:
             raise ProducerStopped("monotonic_clock_regressed")
+        # Un tick reutiliza su muestra después de commits y otros mensajes.
+        # Contar también ese tiempo previo evita tratar un ACK recién leído
+        # como futuro y no prolonga un lease que caducó antes de esta llamada.
+        elapsed = evaluated_mono - sample.monotonic
         evaluated_at = sample.unix + elapsed
         inside, day, closes = self.profile.window(evaluated_at)
         if (not inside or state["serviceDate"] != day or state["serviceEndsAt"] != closes
@@ -100,7 +106,7 @@ def validate_publication(profile: SimulationProfile):
             or len(profile.principals) != PROFILE_SPECS[profile.name][0]):
         raise ValueError('contrato de publicación no coincide con el perfil preparado')
     for key in ("maxObservationPublishCallsPerRun", "maxObservationPublishCallsPerDay"):
-        maximum = PROFILE_SPECS[profile.name][3] if key.endswith('PerRun') else 6000
+        maximum = PROFILE_SPECS[profile.name][3] if key.endswith('PerRun') else PROFILE_DAY_LIMITS[profile.name]
         if type(manifest["limits"][key]) is not int or not 1 <= manifest["limits"][key] <= maximum:
             raise ValueError("presupuesto inicial inválido")
 

@@ -16,6 +16,8 @@ PROFILE_DIRECTORY = Path(__file__).resolve().parents[1] / "simulation/scenarios"
 # Perfiles explícitos: no habilitar tamaños arbitrarios ni 50/100 incidentalmente.
 PROFILE_SPECS = {'ensayo-2': (2, 1, 300, 240), 'ensayo-6': (6, 2, 300, 720),
                  'pasajeros-30': (30, 10, 900, 6000)}
+# La ampliación diaria corresponde solo al perfil de 30; los ensayos conservan 6000.
+PROFILE_DAY_LIMITS = {'ensayo-2': 6000, 'ensayo-6': 6000, 'pasajeros-30': 10000}
 def lima_zone() -> ZoneInfo:
     # No exigir la base IANA al arrancar el circuito observado con simulación
     # apagada. Si falta al activar, el controlador revoca el perfil.
@@ -78,7 +80,7 @@ class SimulationProfile:
         if type(duration) is not int or not 1 <= duration <= max_duration:
             raise ValueError("duración del run inválida")
         for key, maximum in (('maxObservationPublishCallsPerRun', max_calls),
-                             ('maxObservationPublishCallsPerDay', 6000)):
+                             ('maxObservationPublishCallsPerDay', PROFILE_DAY_LIMITS[name])):
             if type(limits[key]) is not int or not 1 <= limits[key] <= maximum:
                 raise ValueError('presupuesto del perfil fuera de rango')
         vehicles = body["vehicles"]

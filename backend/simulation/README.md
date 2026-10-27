@@ -24,7 +24,7 @@ se conserva internamente en todos los datos y métricas de la ejecución.
 | `schemas/passenger-observation-v1.schema.json` | Emisión canónica del generador con las 11 claves Swift actuales. |
 | `schemas/vehicle-position-v2.schema.json` | Salida futura del backend, con procedencia. |
 | `schemas/simulation-control-v1.schema.json` | Estado administrativo y autorización temporal. |
-| `scenarios/pasajeros-30.json` | Perfil inicial S01 sin cambios: 30 actores, 10 rutas. |
+| `scenarios/pasajeros-30.json` | Perfil v2: 30 actores, 10 rutas; revisión de cuota diaria. |
 | `scenarios/ensayo-2.json`, `scenarios/ensayo-6.json` | Escalones S10 con whitelist y presupuesto propios: 2/1 y 6/2. |
 | `examples/synthetic/*.json` | Ejemplos ficticios de documentación, nunca mensajes listos para publicar. |
 
@@ -207,7 +207,8 @@ Reglas cruzadas obligatorias para el futuro cargador, además del esquema:
    definida y registrar el incidente; nunca rejuvenecer muestras antiguas.
 
 El ensayo futuro de este perfil está acotado a **900 s**, hasta **6.000 llamadas
-de publicación de observaciones por run y por día**, con una cola y un mensaje
+de publicación de observaciones por run y 10.000 por día** en el escenario v2,
+con una cola y un mensaje
 en vuelo por actor. Nominalmente son hasta 5.400 observaciones en 15 minutos,
 sin jitter, rampas ni reconexiones. Los contadores incluyen llamadas iniciales y
 reintentos de la aplicación; las retransmisiones internas QoS 1 y las entregas a

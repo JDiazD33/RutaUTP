@@ -90,6 +90,49 @@ def test_producer_evaluates_ack_after_read_wait_and_still_rejects_actual_future(
         with pytest.raises(ProducerStopped): authority.current(sample)
 
 
+@pytest.mark.parametrize('field', ['backendSeenAt', 'lastAckedAt'])
+@pytest.mark.parametrize('before_call,read_wait,ack_offset,accepted', [
+    (.03, 0, .02, True),  # ACK confirmado después de crear el tick.
+    (.02, .03, .04, True),  # Más trabajo anterior y un commit durante la lectura.
+    (.03, 0, .04, False),  # Un timestamp realmente futuro sigue cerrado.
+    (.03, 0, -14.97, False),  # Edad exacta de 15 s al evaluar, no al crear el tick.
+    (.02, .03, -14.96, False),  # La lectura tampoco prolonga el lease.
+])
+def test_producer_counts_sample_age_before_authority_read(
+        rig, monkeypatch, field, before_call, read_wait, ack_offset, accepted):
+    tick(rig, ack=True)
+    state = rig.control.read()
+    sample = ClockSample(rig.clock.now, rig.clock.mono)
+    rig.clock.advance(before_call)
+    authority = LocalAuthority(rig.control, rig.controller._profile, state['runId'],
+        state['revision'], state['owner'], GTFS_DIR, monotonic_clock=lambda: rig.clock.mono)
+    runtime = rig.control.runtime
+    def committed_after_tick():
+        result = runtime()
+        rig.clock.advance(read_wait)
+        result['backendSeenAt'] = result['lastAckedAt'] = rig.clock.now
+        result[field] = sample.unix + ack_offset
+        return result
+    monkeypatch.setattr(rig.control, 'runtime', committed_after_tick)
+    if accepted:
+        assert authority.current(sample)['runId'] == state['runId']
+    else:
+        with pytest.raises(ProducerStopped, match='backend_or_puback_expired'):
+            authority.current(sample)
+
+
+@pytest.mark.parametrize('entry,exit_value', [(99.99, 100.01), (100.03, 100.02)])
+def test_producer_rejects_monotonic_regression_before_or_during_authority_read(rig, entry, exit_value):
+    tick(rig, ack=True)
+    state = rig.control.read()
+    sample = ClockSample(rig.clock.now, rig.clock.mono)
+    values = iter([entry, exit_value])
+    authority = LocalAuthority(rig.control, rig.controller._profile, state['runId'],
+        state['revision'], state['owner'], GTFS_DIR, monotonic_clock=lambda: next(values))
+    with pytest.raises(ProducerStopped, match='monotonic_clock_regressed'):
+        authority.current(sample)
+
+
 def test_busy_rejection_count_is_distinct_from_invalid_principal(rig, feed, sample_route, monkeypatch):
     bridge, _, run = populated_bridge(rig, feed, sample_route)
     with monkeypatch.context() as patch:

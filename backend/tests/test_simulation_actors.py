@@ -60,7 +60,7 @@ def runner_for(rig, geometries, *, history=None, reference=None):
     state = rig.control.read()
     engine = ScenarioEngine(rig.controller._profile, geometries, body["runId"], GTFS_DIR)
     authority = LocalAuthority(rig.control, engine.profile, body["runId"], body["controlRevision"],
-                               state["owner"], GTFS_DIR)
+                               state["owner"], GTFS_DIR, monotonic_clock=lambda: rig.clock.mono)
     transport = Transport(engine.profile.principals, body["runId"])
     clock = SimpleNamespace(read=lambda: ClockSample(rig.clock.now, rig.clock.mono))
     runner = ActorRunner(engine, rig.control, history or rig.history, transport, authority,

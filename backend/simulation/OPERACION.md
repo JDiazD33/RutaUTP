@@ -117,8 +117,9 @@ que el backend lo publicó ni que los iPhones lo aplicaron.
 
 ## Presupuestos y retención
 
-Se conservan **900 s por run, 6.000 reservas/run y 6.000 reservas/día** del perfil
-inicial, con fecha America/Lima. S06 reserva antes de intentar publicar; fallar
+El perfil `pasajeros-30` v2 conserva **900 s por run y 6.000 reservas/run**, con
+**10.000 reservas/día** desde la revisión explícita del 26 de octubre de 2026.
+Los perfiles `ensayo-2` y `ensayo-6` conservan 6.000/día. La fecha es America/Lima. S06 reserva antes de intentar publicar; fallar
 después no devuelve la reserva. Cambiar run o reiniciar el productor no reinicia
 el total diario. No borrar/restaurar el ledger de control para recuperar cuota.
 Estos límites no son una cuota garantizada del broker ni una medición de capacidad.

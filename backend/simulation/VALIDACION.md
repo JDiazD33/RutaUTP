@@ -10,11 +10,11 @@ de ensayo; importar los módulos o compilar la app no los inicia.
 | --- | --- | --- | --- |
 | `ensayo-2` | 2 / 1 | 300 s | 240 / 6000 |
 | `ensayo-6` | 6 / 2 | 300 s | 720 / 6000 |
-| `pasajeros-30` | 30 / 10 | 900 s | 6000 / 6000 |
+| `pasajeros-30` v2 | 30 / 10 | 900 s | 6000 / 10000 |
 
 Los escalones pequeños tienen manifiesto, whitelist, cuentas y presupuesto
 propios. Se mantienen quorum 2, cadencia 5 s, tiempo real 1×, GTFS y ventana de
-servicio del perfil. No hay perfil 50/100. El original 30/10 no se modifica.
+servicio del perfil. No hay perfil 50/100. Se conservan los 30 actores y 10 vehículos nominales; la revisión v2 solo amplía el tope diario de ese perfil.
 
 ## Prueba conectada aislada en la Mac
 
@@ -165,3 +165,54 @@ reservar las 6000 llamadas del perfil para el ensayo largo. No resetear ni eleva
 los contadores para encajarlo. La captura con 30 balizas, los cortes con flota
 activa y la suspensión física de iOS siguen pendientes si el horario o el
 presupuesto impiden ejecutarlos. Conservar los estados Vacío/Con espacio/Lleno.
+
+
+## Ensayo físico del 26 de octubre de 2026
+
+El intento sostenido con 30 actores, 10 vehículos nominales y ocupación terminó
+antes del objetivo: captura Mac de 543,098 s frente a 870 s solicitados, apagado
+automático `backend_or_puback_expired`. Se conservaron 3108 observaciones
+aceptadas, cero rechazos y 1054 posiciones con ocupación válida; esto no acredita
+la aceptación sostenida. La CPU global del iPhone quedó inválida por huecos de
+5,658 s y 20,258 s. Los segmentos independientes válidos dieron 27,43% durante
+403 s y 29,68% durante 116 s, normalizados a un núcleo. No unirlos ni sustituir
+por el resultado de mapa vacío anterior. El usuario confirmó Mapa visible.
+
+Se reprodujo y corrigió una carrera de `LocalAuthority`: evaluar el lease desde
+la muestra completa del tick, incluyendo su antigüedad previa a las lecturas.
+Un ACK realmente futuro o vencido y un retroceso monotónico siguen rechazados.
+El harness distingue el OFF automático previo del apagado manual, exige la
+revisión manual exacta al medir su entrega y no publica latencias negativas o
+una retirada manual cuando ya estaba OFF. Se añadieron únicamente los grants
+exactos de escritura backend para los dos status existentes de cambios y
+ocupación. El nuevo diagnóstico iOS de instancia/inicio/parada/ciclo de vida
+requiere ambos flags explícitos del ensayo y no cambia leases, timers ni
+reconexión. Tras estas correcciones pasaron 686 casos Python offline en los
+26 archivos de regresión; Debug y Release de simulador compilaron. La nueva
+medición física sostenida sigue pendiente.
+
+El informe y las métricas están en la carpeta `metricas` del workspace padre,
+con fecha 2026-10-26; la evidencia cerrada está en
+`mds/evidencias-ensayo-sostenido-30-2026-10-26`. El intento usó el perfil v1. La revisión v2 del 26 de octubre eleva solo su
+techo diario a 10.000 para permitir un reintento completo, conservando 6.000/run,
+900 s/run y las 3108 reservas ya consumidas. No se restableció el ledger.
+
+
+El reintento v2 del mismo día conservó 2915 observaciones aceptadas, cero
+rechazos y 988 posiciones con ocupación válida. La CPU parcial del iPhone fue
+27,89% de un núcleo durante 488 s, con 489 muestras continuas. La consola de
+desarrollo se perdió antes del apagado. Después, pmset confirmó Clamshell Sleep
+y suspensión de mantenimiento de la Mac; el productor detectó discontinuidad
+civil/monotónica y persistió OFF. La captura Mac de 509,792 s no completó 870 s
+y la retirada visual posterior no quedó observada. La pérdida previa de consola
+no se atribuye a la suspensión posterior. Control OFF y procesos propios cerrados
+fueron comprobados; no se relajó la protección de reloj.
+
+Se reservaron 6023 llamadas agregadas del día entre ambos controles, sin borrar
+el consumo. Con horario ya cerrado y menos de 6000 reservas disponibles no se
+inició un tercer ensayo. Tras la cuota v2 pasaron 723 casos Python en los 26
+archivos y una regresión adicional de cambio de generación (724 distintos),
+además de builds genéricos Debug/Release y Release física firmada. El informe de
+cierre está en `metricas/INFORME-S10-30-BALIZAS-2026-10-26.md` del workspace padre.
+La aceptación sostenida, corte con flota activa y suspensión física iOS siguen
+pendientes; no se activaron perfiles 50/100 ni automaciones.

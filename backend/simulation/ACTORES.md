@@ -84,7 +84,8 @@ aplicar la revocación. Los datos conservados no se borran. El control guarda
 `producerClaims` y `publishBudget` en runtime sin cambiar versión/revisión de
 orden. Cada reserva compara run/revisión/propietario/productor y confirma
 atómicamente contadores por run y fecha de Lima con SQLite FULL antes de llamar
-Paho: máximo **6.000 por run y por día**. Incluye reservas cuyo envío falla o se
+Paho: en `pasajeros-30` v2, máximo **6.000 por run y 10.000 por día**; los
+ensayos pequeños conservan 6.000/día. Incluye reservas cuyo envío falla o se
 cancela después; es un límite conservador de intentos de aplicación, no de
 paquetes/cuota del broker. Reiniciar o cambiar de run no reinicia el total diario.
 S09 añade [status, reportes y supervisor](OPERACION.md); preserva los registros
