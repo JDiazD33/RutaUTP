@@ -20,6 +20,10 @@
 		A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB21F36F1AC047BD94BC3115 /* AvisosDiarios.swift */; };
 		ECF34513F945499ABD8EB439 /* PushRutasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE808E3026E54669B06DFE24 /* PushRutasService.swift */; };
 		F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2972779301B74337A0930235 /* NotificacionesView.swift */; };
+		EA168A55BA354A5A87A5F079 /* EditorAvisosDiariosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9B2A2C29E648A494DC56E0 /* EditorAvisosDiariosView.swift */; };
+		50E3B2A0C8454BCD8A741D27 /* EditorRecordatorioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009C29AFB34B45C6AC39A82C /* EditorRecordatorioView.swift */; };
+		817F8244707340259114B8F6 /* SeleccionDiasNotificaciones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C442B0EA417478AA34C803B /* SeleccionDiasNotificaciones.swift */; };
+		6A9C393987BD4B83A82DA503 /* DiasNotificaciones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C74060F01A541469F8DDFAD /* DiasNotificaciones.swift */; };
 		0D5914DEA00142519A50A1E1 /* NotificacionesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D98B0269CA244709B2AF09A /* NotificacionesService.swift */; };
 		8334E005EAE0477B8A014A43 /* ProgramadorRecordatorios.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8ACACBB0204A4FBD90ACA4 /* ProgramadorRecordatorios.swift */; };
 		5AF6BD67C5964F5298355C6C /* PreferenciasNotificacionesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19CF9A4A902F4815B7F12FA1 /* PreferenciasNotificacionesStore.swift */; };
@@ -270,6 +274,10 @@
 		AE808E3026E54669B06DFE24 /* PushRutasService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRutasService.swift; sourceTree = "<group>"; };
 		C193FD90B1EF4256AB1FBEDF /* RutaUTP-Push.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "RutaUTP-Push.entitlements"; sourceTree = "<group>"; };
 		2972779301B74337A0930235 /* NotificacionesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificacionesView.swift; sourceTree = "<group>"; };
+		DD9B2A2C29E648A494DC56E0 /* EditorAvisosDiariosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorAvisosDiariosView.swift; sourceTree = "<group>"; };
+		009C29AFB34B45C6AC39A82C /* EditorRecordatorioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorRecordatorioView.swift; sourceTree = "<group>"; };
+		0C442B0EA417478AA34C803B /* SeleccionDiasNotificaciones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeleccionDiasNotificaciones.swift; sourceTree = "<group>"; };
+		8C74060F01A541469F8DDFAD /* DiasNotificaciones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiasNotificaciones.swift; sourceTree = "<group>"; };
 		0D98B0269CA244709B2AF09A /* NotificacionesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificacionesService.swift; sourceTree = "<group>"; };
 		CD8ACACBB0204A4FBD90ACA4 /* ProgramadorRecordatorios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramadorRecordatorios.swift; sourceTree = "<group>"; };
 		19CF9A4A902F4815B7F12FA1 /* PreferenciasNotificacionesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferenciasNotificacionesStore.swift; sourceTree = "<group>"; };
@@ -632,6 +640,10 @@
 			isa = PBXGroup;
 			children = (
 				2972779301B74337A0930235 /* NotificacionesView.swift */,
+				DD9B2A2C29E648A494DC56E0 /* EditorAvisosDiariosView.swift */,
+				009C29AFB34B45C6AC39A82C /* EditorRecordatorioView.swift */,
+				0C442B0EA417478AA34C803B /* SeleccionDiasNotificaciones.swift */,
+				8C74060F01A541469F8DDFAD /* DiasNotificaciones.swift */,
 				BD3000000000000000000001 /* SelectorTematicasSheet.swift */,
 				BD2000000000000000000003 /* ModoBusesUTPSection.swift */,
 				4D7CF8EC6FD44D9D8BAE522B /* SelectorIdioma.swift */,
@@ -1211,6 +1223,10 @@
 				BD6000000000000000000002 /* Transportes3DView.swift in Sources */,
 				BD6000000000000000000004 /* VisorTransporte3D.swift in Sources */,
 				F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */,
+				EA168A55BA354A5A87A5F079 /* EditorAvisosDiariosView.swift in Sources */,
+				50E3B2A0C8454BCD8A741D27 /* EditorRecordatorioView.swift in Sources */,
+				817F8244707340259114B8F6 /* SeleccionDiasNotificaciones.swift in Sources */,
+				6A9C393987BD4B83A82DA503 /* DiasNotificaciones.swift in Sources */,
 				0D5914DEA00142519A50A1E1 /* NotificacionesService.swift in Sources */,
 				A1B65AFB1B8141A1AFC201B8 /* AvisosDiarios.swift in Sources */,
 				ECF34513F945499ABD8EB439 /* PushRutasService.swift in Sources */,
