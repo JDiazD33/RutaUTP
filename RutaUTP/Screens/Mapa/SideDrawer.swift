@@ -5,8 +5,10 @@
 //  Drawer lateral del Mapa. Cada item abre un mini card (sheet) con
 //  animación nativa de SwiftUI.
 //
-//  El archivo contiene SOLO el panel: sus hojas viven en `DrawerSheets.swift`,
-//  el formulario de datos personales en `DatosPersonalesSheet.swift`, el
+//  El archivo contiene SOLO el panel: sus hojas viven en archivos propios
+//  (NotificacionesSheet, CiudadSheet, AjustesSheet, SoporteSheet,
+//  SobreNosotrosSheet, CerrarSesionSheet y la cabecera SheetHeader), el
+//  formulario de datos personales en `DatosPersonalesSheet.swift`, el
 //  selector de cámara en `Design/Components/ImagePicker.swift` y la foto de
 //  perfil en `Services/Imagenes/ProfileImageStore.swift`.
 //

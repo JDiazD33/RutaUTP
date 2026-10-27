@@ -79,7 +79,13 @@
 		0A800411300AD9FE004E1676 /* AppHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800410300AD9FE004E1676 /* AppHaptics.swift */; };
 		0A800413300AD9FE004E1676 /* Persistencia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800412300AD9FE004E1676 /* Persistencia.swift */; };
 		0A800415300AD9FE004E1676 /* RutaUTPTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800416300AD9FE004E1676 /* RutaUTPTests.swift */; };
-		0A800424300AD9FE004E1676 /* DrawerSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800423300AD9FE004E1676 /* DrawerSheets.swift */; };
+		82D6EFEA9BD1F77397FAD744 /* NotificacionesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A4BEB04230A2EB3D327479A /* NotificacionesSheet.swift */; };
+		74165B67B070B805950A47E7 /* CiudadSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C39297E8C6CD69E4D46EC17 /* CiudadSheet.swift */; };
+		E00DE0DA15F632BC5E345402 /* AjustesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0815D8451EE6EE57214E4BE /* AjustesSheet.swift */; };
+		953A3482F305C88B03071DDE /* SoporteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C72CDF25A9DBFB13EF4C820 /* SoporteSheet.swift */; };
+		C810FA03C46CE5A6004CB802 /* SobreNosotrosSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDBCEC2C4D82D151F411571 /* SobreNosotrosSheet.swift */; };
+		50D730FBE4A99EA360496DB8 /* CerrarSesionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3962E99092A21DDD6BD6132C /* CerrarSesionSheet.swift */; };
+		0635D31F857233418F0C447D /* SheetHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117CEB7244A7025C622D430D /* SheetHeader.swift */; };
 		0A800426300AD9FE004E1676 /* DatosPersonalesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */; };
 		0A800428300AD9FE004E1676 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800427300AD9FE004E1676 /* ImagePicker.swift */; };
 		0A80042A300AD9FE004E1676 /* ProfileImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800429300AD9FE004E1676 /* ProfileImageStore.swift */; };
@@ -307,7 +313,13 @@
 		0A800412300AD9FE004E1676 /* Persistencia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Persistencia.swift; sourceTree = "<group>"; };
 		0A800416300AD9FE004E1676 /* RutaUTPTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaUTPTests.swift; sourceTree = "<group>"; };
 		0A800417300AD9FE004E1676 /* RutaUTPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RutaUTPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		0A800423300AD9FE004E1676 /* DrawerSheets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DrawerSheets.swift; sourceTree = "<group>"; };
+		1A4BEB04230A2EB3D327479A /* NotificacionesSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificacionesSheet.swift; sourceTree = "<group>"; };
+		9C39297E8C6CD69E4D46EC17 /* CiudadSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CiudadSheet.swift; sourceTree = "<group>"; };
+		F0815D8451EE6EE57214E4BE /* AjustesSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AjustesSheet.swift; sourceTree = "<group>"; };
+		6C72CDF25A9DBFB13EF4C820 /* SoporteSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoporteSheet.swift; sourceTree = "<group>"; };
+		7DDBCEC2C4D82D151F411571 /* SobreNosotrosSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SobreNosotrosSheet.swift; sourceTree = "<group>"; };
+		3962E99092A21DDD6BD6132C /* CerrarSesionSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CerrarSesionSheet.swift; sourceTree = "<group>"; };
+		117CEB7244A7025C622D430D /* SheetHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SheetHeader.swift; sourceTree = "<group>"; };
 		0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DatosPersonalesSheet.swift; sourceTree = "<group>"; };
 		0A800427300AD9FE004E1676 /* ImagePicker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		0A800429300AD9FE004E1676 /* ProfileImageStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileImageStore.swift; sourceTree = "<group>"; };
@@ -697,7 +709,13 @@
 				AA9900000000000000000B01 /* BusEn3D.swift */,
 				0A8004D1300AD9FE004E1676 /* SideDrawer.swift */,
 				0A800425300AD9FE004E1676 /* DatosPersonalesSheet.swift */,
-				0A800423300AD9FE004E1676 /* DrawerSheets.swift */,
+				1A4BEB04230A2EB3D327479A /* NotificacionesSheet.swift */,
+				9C39297E8C6CD69E4D46EC17 /* CiudadSheet.swift */,
+				F0815D8451EE6EE57214E4BE /* AjustesSheet.swift */,
+				6C72CDF25A9DBFB13EF4C820 /* SoporteSheet.swift */,
+				7DDBCEC2C4D82D151F411571 /* SobreNosotrosSheet.swift */,
+				3962E99092A21DDD6BD6132C /* CerrarSesionSheet.swift */,
+				117CEB7244A7025C622D430D /* SheetHeader.swift */,
 			);
 			path = Mapa;
 			sourceTree = "<group>";
@@ -1246,7 +1264,13 @@
 				0A800428300AD9FE004E1676 /* ImagePicker.swift in Sources */,
 				0A800426300AD9FE004E1676 /* DatosPersonalesSheet.swift in Sources */,
 				BD7100000000000000000002 /* ContactoEmergenciaSheet.swift in Sources */,
-				0A800424300AD9FE004E1676 /* DrawerSheets.swift in Sources */,
+				82D6EFEA9BD1F77397FAD744 /* NotificacionesSheet.swift in Sources */,
+				74165B67B070B805950A47E7 /* CiudadSheet.swift in Sources */,
+				E00DE0DA15F632BC5E345402 /* AjustesSheet.swift in Sources */,
+				953A3482F305C88B03071DDE /* SoporteSheet.swift in Sources */,
+				C810FA03C46CE5A6004CB802 /* SobreNosotrosSheet.swift in Sources */,
+				50D730FBE4A99EA360496DB8 /* CerrarSesionSheet.swift in Sources */,
+				0635D31F857233418F0C447D /* SheetHeader.swift in Sources */,
 				0A800512300AD9FE004E1676 /* RouteTrackingViewModel.swift in Sources */,
 				0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */,
 				B7E0C5037B014557A9E34CAA /* RespaldosRecuperacionSheet.swift in Sources */,
