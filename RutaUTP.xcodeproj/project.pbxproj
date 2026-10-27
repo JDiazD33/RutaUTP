@@ -214,6 +214,9 @@
 		AA9900000000000000000A02 /* PagoQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A01 /* PagoQR.swift */; };
 		AA9900000000000000000A04 /* EscanerQRView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A03 /* EscanerQRView.swift */; };
 		BA9900000000000000000062 /* VentanaEscanerQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000061 /* VentanaEscanerQR.swift */; };
+		BA9900000000000000000072 /* MapaViewModel+Busqueda.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000071 /* MapaViewModel+Busqueda.swift */; };
+		BA9900000000000000000074 /* MapaViewModel+SimulacionBuses.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000073 /* MapaViewModel+SimulacionBuses.swift */; };
+		BA9900000000000000000076 /* MapaViewModel+Destinos.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000075 /* MapaViewModel+Destinos.swift */; };
 		AA9900000000000000000B02 /* BusEn3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000B01 /* BusEn3D.swift */; };
 		BA9900000000000000000002 /* RouteChangesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000001 /* RouteChangesService.swift */; };
 		BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000011 /* RouteChangesSheet.swift */; };
@@ -481,6 +484,9 @@
 		AA9900000000000000000A01 /* PagoQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PagoQR.swift; sourceTree = "<group>"; };
 		AA9900000000000000000A03 /* EscanerQRView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscanerQRView.swift; sourceTree = "<group>"; };
 		BA9900000000000000000061 /* VentanaEscanerQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VentanaEscanerQR.swift; sourceTree = "<group>"; };
+		BA9900000000000000000071 /* MapaViewModel+Busqueda.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+Busqueda.swift"; sourceTree = "<group>"; };
+		BA9900000000000000000073 /* MapaViewModel+SimulacionBuses.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+SimulacionBuses.swift"; sourceTree = "<group>"; };
+		BA9900000000000000000075 /* MapaViewModel+Destinos.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+Destinos.swift"; sourceTree = "<group>"; };
 		AA9900000000000000000B01 /* BusEn3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BusEn3D.swift; sourceTree = "<group>"; };
 		BA9900000000000000000001 /* RouteChangesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesService.swift; sourceTree = "<group>"; };
 		BA9900000000000000000011 /* RouteChangesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesSheet.swift; sourceTree = "<group>"; };
@@ -813,6 +819,9 @@
 				BC0200000000000000000005 /* BusDetailPopup.swift */,
 				0A8004CE300AD9FE004E1676 /* MapaView.swift */,
 				0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */,
+				BA9900000000000000000071 /* MapaViewModel+Busqueda.swift */,
+				BA9900000000000000000073 /* MapaViewModel+SimulacionBuses.swift */,
+				BA9900000000000000000075 /* MapaViewModel+Destinos.swift */,
 				0A8004D0300AD9FE004E1676 /* MapMarkers.swift */,
 				AA9900000000000000000B01 /* BusEn3D.swift */,
 				0A8004D1300AD9FE004E1676 /* SideDrawer.swift */,
@@ -1442,6 +1451,9 @@
 				AA9900000000000000000A02 /* PagoQR.swift in Sources */,
 				AA9900000000000000000A04 /* EscanerQRView.swift in Sources */,
 				BA9900000000000000000062 /* VentanaEscanerQR.swift in Sources */,
+				BA9900000000000000000072 /* MapaViewModel+Busqueda.swift in Sources */,
+				BA9900000000000000000074 /* MapaViewModel+SimulacionBuses.swift in Sources */,
+				BA9900000000000000000076 /* MapaViewModel+Destinos.swift in Sources */,
 				0A800516300AD9FE004E1676 /* TrackingPoint.swift in Sources */,
 				0A800411300AD9FE004E1676 /* AppHaptics.swift in Sources */,
 				0A800413300AD9FE004E1676 /* Persistencia.swift in Sources */,

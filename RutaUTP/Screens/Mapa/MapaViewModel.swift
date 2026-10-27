@@ -66,13 +66,13 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
     var textoBusqueda: String = ""
     var destinoSeleccionado: DestinoChip? = nil
-    private(set) var destinoFocusTick = 0
-    @ObservationIgnored private var selectionRevision = UUID()
+    var destinoFocusTick = 0
+    @ObservationIgnored var selectionRevision = UUID()
     @ObservationIgnored private var routeRevision = UUID()
     @ObservationIgnored private var routeTask: Task<Void, Never>?
-    @ObservationIgnored private var activeSearch: MKLocalSearch?
+    @ObservationIgnored var activeSearch: MKLocalSearch?
 
-    private func invalidarSeleccionAnterior() {
+    func invalidarSeleccionAnterior() {
         selectionRevision = UUID()
         routeRevision = UUID()
         activeSearch?.cancel()
@@ -265,7 +265,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     private let routeService: RouteCalculationService
     private let repositorioGTFS: RutasGTFSProviding
     private let crearProveedorReal: @MainActor () -> VehicleTrackingProviding?
-    private let completer = MKLocalSearchCompleter()
+    let completer = MKLocalSearchCompleter()
     @ObservationIgnored private var locationTask: Task<Void, Never>?
 
     init(
@@ -305,26 +305,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         region = Self.regionDeReferencia(coordenadaInicio)
         recentrarToken += 1
         recargarLineas(cercaDe: nil)
-    }
-
-    /// Reconstruye los chips: fijos + lugares guardados por el usuario.
-    ///
-    /// Llamar al aparecer la pantalla (onAppear): si el usuario guardó o
-    /// eliminó un lugar en la pestaña Guardado, el chip aparece/desaparece
-    /// aquí sin reiniciar la app. LugaresStore es la misma fuente que
-    /// GuardadoView, así ambos siempre ven lo mismo.
-    func refrescarDestinos() {
-        lugaresParaChips = LugaresStore.cargar()
-
-        // Si el destino seleccionado era un chip guardado que ya no existe,
-        // limpiarlo para no mostrar una ruta hacia un lugar eliminado.
-        if let seleccionado = destinoSeleccionado,
-           seleccionado.id >= 100,
-           !destinos.contains(where: { $0.id == seleccionado.id && $0.label == seleccionado.label }) {
-            destinoSeleccionado = nil
-            busquedaResultado = nil
-            invalidarSeleccionAnterior()
-        }
     }
 
     deinit {
@@ -541,104 +521,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         rutasCercanas = []
         cargandoLineas = false
         errorLineas = nil
-    }
-
-    /// Construye un bus animado por ruta del feed.
-    private static func busesDesde(_ feed: [RutaGTFS],
-                                   ancla: CLLocationCoordinate2D) -> [BusAnimado] {
-        let n = max(feed.count, 1)
-        return feed.enumerated().compactMap { index, ruta in
-            // Sin geometría suficiente no hay nada que animar. Antes se caía a
-            // un trazado de demostración, así que el mapa mostraba un bus
-            // recorriendo una línea que no era la suya.
-            let waypoints = decimarCoordenadas(ruta.shape, maximoPuntos: 240)
-            guard waypoints.count >= 2 else { return nil }
-            let acumulados = distanciasAcumuladas(waypoints)
-
-            var bus = BusAnimado(
-                id: "simulated-\(ruta.id)",
-                linea: ruta.linea,
-                rutaId: ruta.id,
-                empresa: ruta.empresa,
-                tipo: "Bus",
-                variante: ruta.variante,
-                minutosLlegada: max(1, 2 + index * max(1, ruta.headwayMin / n)),
-                colorDeRuta: ruta.color,
-                lat: waypoints[0].latitude,
-                lon: waypoints[0].longitude,
-                heading: 0,
-                rutaCoordenadas: waypoints,
-                acumulados: acumulados
-            )
-
-            // Nacimiento REPARTIDO por el corredor: se toma el tramo del
-            // shape más cercano al punto consultado y cada vehículo arranca
-            // de un punto distinto a su alrededor (±1.8 km), con dirección y
-            // velocidad propias. Si varias líneas comparten avenida, quedan
-            // escalonadas a lo largo de ella y no amontonadas en un punto.
-            let idxAncla = waypointMasCercano(waypoints, a: ancla)
-            let distanciaAnclaM = acumulados.isEmpty ? 0 : acumulados[idxAncla]
-            // Fracciones de Fibonacci (0.618) escalonan los arranques de
-            // forma determinista (~38% del rango entre vecinos); el jitter
-            // aleatorio evita que dos recargas se vean idénticas.
-            let fraccion = fmod(Double(index) * 0.6180339887, 1.0)
-            let offsetM = fraccion * 3600 - 1800 + Double.random(in: -120...120)
-            // Se envuelve módulo la longitud del recorrido (un vehículo en
-            // otro ciclo de la línea) en vez de amontonar en los extremos.
-            var d = distanciaAnclaM + offsetM
-            let total = bus.longitudRutaM
-            if total > 0 {
-                d = d.truncatingRemainder(dividingBy: total)
-                if d < 0 { d += total }
-            }
-            bus.distanciaM = d
-            bus.velocidadMS = Double.random(in: 7...12)   // 25–43 km/h
-            bus.isMovingForward = Bool.random()
-            bus.actualizarPosicion()
-            return bus
-        }
-    }
-
-    /// Distancia acumulada (metros) de cada waypoint respecto al inicio.
-    private static func distanciasAcumuladas(_ pts: [CLLocationCoordinate2D]) -> [Double] {
-        guard !pts.isEmpty else { return [] }
-        var acc: [Double] = [0]
-        acc.reserveCapacity(pts.count)
-        for j in 1..<pts.count {
-            acc.append(acc[j - 1] + PolylineMatching.distanceMeters(pts[j - 1], pts[j]))
-        }
-        return acc
-    }
-
-    /// Índice del waypoint más cercano a un punto (distancia planar:
-    /// solo sirve para elegir un índice, no para medir).
-    private static func waypointMasCercano(_ puntos: [CLLocationCoordinate2D],
-                                           a destino: CLLocationCoordinate2D) -> Int {
-        var mejor = 0
-        var mejorD = Double.greatestFiniteMagnitude
-        for (i, p) in puntos.enumerated() {
-            let d = (p.latitude - destino.latitude) * (p.latitude - destino.latitude)
-                  + (p.longitude - destino.longitude) * (p.longitude - destino.longitude)
-            if d < mejorD { mejorD = d; mejor = i }
-        }
-        return mejor
-    }
-
-    /// Reduce la densidad de un shape conservando el orden (perf del timer).
-    private static func decimarCoordenadas(_ puntos: [CLLocationCoordinate2D],
-                                           maximoPuntos: Int) -> [CLLocationCoordinate2D] {
-        guard puntos.count > maximoPuntos else { return puntos }
-        let paso = Double(puntos.count) / Double(maximoPuntos)
-        var resultado: [CLLocationCoordinate2D] = []
-        resultado.reserveCapacity(maximoPuntos)
-        for j in 0..<maximoPuntos {
-            resultado.append(puntos[min(Int(Double(j) * paso), puntos.count - 1)])
-        }
-        if let ultima = puntos.last, resultado.last?.latitude != ultima.latitude
-                                                || resultado.last?.longitude != ultima.longitude {
-            resultado.append(ultima)
-        }
-        return resultado
     }
 
     func detenerSimulacionBuses() {
@@ -858,196 +740,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         }
     }
 
-    // Máximo de chips visibles en el panel del mapa (fijos + guardados).
-    static let maxDestinos = 6
-
-    /// Nombres en español de los chips fijos, para no duplicar un lugar
-    /// guardado que ya es un chip. Se derivan de `DestinosFijos` (fuente única).
-    private static let nombresFijosEstables: Set<String> = DestinosFijos.nombresEstables
-
-    /// Chips de inicio: la sede elegida y referencias conocidas de Trujillo.
-    /// Casa/Trabajo ya no son fijos: si el usuario los guarda, aparecen solos.
-    ///
-    /// El dato (coordenadas, icono y clave señable) vive en `DestinosFijos`,
-    /// compartido con el módulo de tracking: antes estaba escrito literalmente
-    /// en los dos sitios. Aquí solo se adapta al tipo de esta pantalla.
-    ///
-    /// Calculada y no almacenada: el `label` sale en el idioma activo en cada
-    /// lectura. Con el texto congelado en un `let`, cambiar de idioma dejaría
-    /// los chips en el idioma anterior (una lista pequeña de referencias).
-    private var destinosFijos: [DestinoChip] {
-        let referencias = DestinosFijos.todos.filter { utpComoReferencia || $0.id != 1 }.map {
-            DestinoChip(id: $0.id, label: $0.label, icon: $0.icono,
-                        lat: $0.lat, lon: $0.lon, claveSenia: $0.claveSenia)
-        }
-        guard let sedeTrabajo else { return referencias }
-        let sede = DestinoChip(id: CatalogoSedesTrabajo.idChipSede,
-                               label: sedeTrabajo.nombre, icon: "building.2.fill",
-                               lat: sedeTrabajo.lat, lon: sedeTrabajo.lon)
-        return [sede] + referencias
-    }
-
     /// Lugares guardados leídos de disco. Se cachean aquí para que `destinos`
     /// pueda ser calculada sin tocar `UserDefaults` en cada render.
     /// Observation permite que refrescar la lista actualice sus chips.
-    private var lugaresParaChips: [LugarGuardado] = []
-
-    /// Chips visibles: fijos primero, luego los lugares que el usuario guardó
-    /// en la pestaña Guardado (vía LugaresStore), hasta un total de 6.
-    ///
-    /// CALCULADA, no almacenada: la etiqueta de los chips fijos se resuelve en
-    /// el idioma activo en cada lectura. Antes era un `@Published` que se
-    /// construía una sola vez, así que al cambiar de idioma los chips se
-    /// quedaban en el idioma anterior («Centro» en vez de «Downtown»).
-    var destinos: [DestinoChip] {
-        let guardados = lugaresParaChips
-            .filter { lugar in
-                // Solo lugares con coordenadas y que no dupliquen un chip fijo.
-                guard lugar.coordinate != nil else { return false }
-                return !Self.nombresFijosEstables.contains(lugar.nombre.lowercased())
-            }
-            .prefix(Self.maxDestinos - destinosFijos.count)
-            .enumerated()
-            .map { indice, lugar in
-                DestinoChip(id: 100 + indice,
-                            label: lugar.nombre,
-                            icon: lugar.icono,
-                            lat: lugar.lat ?? 0,
-                            lon: lugar.lon ?? 0)
-            }
-        return destinosFijos + guardados
-    }
-
-    // MARK: - Búsqueda en tiempo real
-    //
-    // NO vuelve a asignar `textoBusqueda`: el TextField ya está enlazado a esa
-    // propiedad. Reasignarla desde aquí creaba un doble camino sobre el mismo
-    // estado y lanzaba consultas de autocompletado incluso cuando el texto lo
-    // había puesto el propio código (al elegir un chip o un resultado). El
-    // filtro por foco lo aplica la vista, que es quien lo conoce.
-    func actualizarTextoBusqueda(_ nuevoTexto: String) {
-        let t = nuevoTexto.trimmingCharacters(in: .whitespacesAndNewlines)
-        if t.isEmpty {
-            sugerenciasBusqueda = []
-            completer.queryFragment = ""
-        } else {
-            completer.queryFragment = t
-        }
-    }
-
-    nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.sugerenciasBusqueda = self.completer.results
-        }
-    }
-
-    nonisolated func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
-        #if DEBUG
-        print("[MapaViewModel] MKLocalSearchCompleter error: \(error.localizedDescription)")
-        #endif
-    }
-
-    // MARK: - Selección y Búsqueda de Destino
-    func seleccionar(destino: DestinoChip) {
-        invalidarSeleccionAnterior()
-        sugerenciasBusqueda = []
-        destinoSeleccionado = destino
-        let destCoord = CLLocationCoordinate2D(latitude: destino.lat, longitude: destino.lon)
-        busquedaResultado = (titulo: destino.label, coordenada: destCoord)
-        textoBusqueda = destino.label
-
-        withAnimation(.spring(response: 0.5)) {
-            region = MKCoordinateRegion(
-                center: destCoord,
-                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
-            )
-        }
-        destinoFocusTick += 1
-        calcularRutaHacia(destCoord)
-        recargarLineas(cercaDe: destCoord)
-    }
-
-    func seleccionarSugerencia(_ completion: MKLocalSearchCompletion) {
-        invalidarSeleccionAnterior()
-        let revision = selectionRevision
-        sugerenciasBusqueda = []
-        textoBusqueda = completion.title
-        buscando = true
-
-        let searchRequest = MKLocalSearch.Request(completion: completion)
-        let search = MKLocalSearch(request: searchRequest)
-        activeSearch = search
-
-        search.start { [weak self] response, error in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                guard self.selectionRevision == revision else { return }
-                self.activeSearch = nil
-                self.buscando = false
-                if let mapItem = response?.mapItems.first {
-                    self.seleccionarLugar(
-                        titulo: mapItem.name ?? completion.title,
-                        coordenada: mapItem.placemark.coordinate
-                    )
-                }
-            }
-        }
-    }
-
-    func buscarTexto(_ texto: String) {
-        let t = texto.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else { return }
-        sugerenciasBusqueda = []
-
-        if let match = destinos.first(where: {
-            $0.label.compare(t, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
-        }) {
-            seleccionar(destino: match)
-            return
-        }
-
-        invalidarSeleccionAnterior()
-        let revision = selectionRevision
-        buscando = true
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = t
-        request.region = region
-
-        let search = MKLocalSearch(request: request)
-        activeSearch = search
-        search.start { [weak self] response, error in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                guard self.selectionRevision == revision else { return }
-                self.activeSearch = nil
-                self.buscando = false
-                if let mapItem = response?.mapItems.first {
-                    self.seleccionarLugar(
-                        titulo: mapItem.name ?? t,
-                        coordenada: mapItem.placemark.coordinate
-                    )
-                }
-            }
-        }
-    }
-
-    func seleccionarLugar(titulo: String, coordenada: CLLocationCoordinate2D) {
-        invalidarSeleccionAnterior()
-        textoBusqueda = titulo
-        destinoSeleccionado = nil
-        busquedaResultado = (titulo: titulo, coordenada: coordenada)
-
-        withAnimation(.spring(response: 0.5)) {
-            region = MKCoordinateRegion(
-                center: coordenada,
-                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
-            )
-        }
-        destinoFocusTick += 1
-        calcularRutaHacia(coordenada)
-        recargarLineas(cercaDe: coordenada)
-    }
+    var lugaresParaChips: [LugarGuardado] = []
 
     // MARK: - Caminata + recorrido GTFS + caminata al destino
     func calcularRutaHacia(_ destinoCoord: CLLocationCoordinate2D) {
