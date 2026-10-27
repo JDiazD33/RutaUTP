@@ -186,6 +186,8 @@
 		AA6600000000000000000E04 /* SeniasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E03 /* SeniasService.swift */; };
 		AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E05 /* SeniasOverlay.swift */; };
 		BA9900000000000000000022 /* SeniasPlayerUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000021 /* SeniasPlayerUIView.swift */; };
+		BA9900000000000000000032 /* ParaderosIluminados.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000031 /* ParaderosIluminados.swift */; };
+		BA9900000000000000000034 /* CatalogoParaderosSeguridad.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000033 /* CatalogoParaderosSeguridad.swift */; };
 		BA9900000000000000000024 /* SeniasPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000023 /* SeniasPlayerView.swift */; };
 		BA9900000000000000000026 /* SeniasOverlayVentana.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000025 /* SeniasOverlayVentana.swift */; };
 		BA9900000000000000000028 /* SeniableModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000027 /* SeniableModifier.swift */; };
@@ -448,6 +450,8 @@
 		AA6600000000000000000E03 /* SeniasService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasService.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E05 /* SeniasOverlay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlay.swift; sourceTree = "<group>"; };
 		BA9900000000000000000021 /* SeniasPlayerUIView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasPlayerUIView.swift; sourceTree = "<group>"; };
+		BA9900000000000000000031 /* ParaderosIluminados.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ParaderosIluminados.swift; sourceTree = "<group>"; };
+		BA9900000000000000000033 /* CatalogoParaderosSeguridad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CatalogoParaderosSeguridad.swift; sourceTree = "<group>"; };
 		BA9900000000000000000023 /* SeniasPlayerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasPlayerView.swift; sourceTree = "<group>"; };
 		BA9900000000000000000025 /* SeniasOverlayVentana.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlayVentana.swift; sourceTree = "<group>"; };
 		BA9900000000000000000027 /* SeniableModifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniableModifier.swift; sourceTree = "<group>"; };
@@ -876,6 +880,8 @@
 				0A80042B300AD9FE004E1676 /* SeguridadComunidad.swift */,
 				BD5400000000000000000001 /* FotoComunidadViales.swift */,
 				AA6600000000000000000A06 /* ParaderosIluminadosView.swift */,
+				BA9900000000000000000031 /* ParaderosIluminados.swift */,
+				BA9900000000000000000033 /* CatalogoParaderosSeguridad.swift */,
 			);
 			path = Seguridad;
 			sourceTree = "<group>";
@@ -1328,6 +1334,8 @@
 				AA6600000000000000000E04 /* SeniasService.swift in Sources */,
 				AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */,
 				BA9900000000000000000022 /* SeniasPlayerUIView.swift in Sources */,
+				BA9900000000000000000032 /* ParaderosIluminados.swift in Sources */,
+				BA9900000000000000000034 /* CatalogoParaderosSeguridad.swift in Sources */,
 				BA9900000000000000000024 /* SeniasPlayerView.swift in Sources */,
 				BA9900000000000000000026 /* SeniasOverlayVentana.swift in Sources */,
 				BA9900000000000000000028 /* SeniableModifier.swift in Sources */,
