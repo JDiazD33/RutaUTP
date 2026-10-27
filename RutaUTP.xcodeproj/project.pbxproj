@@ -182,7 +182,12 @@
 		AA7700000000000000000006 /* negocios_promocionados.json in Resources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000005 /* negocios_promocionados.json */; };
 		AA7700000000000000000009 /* NegociosComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000008 /* NegociosComponents.swift */; };
 		AA8800000000000000000B01 /* GuardadoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8800000000000000000A01 /* GuardadoViewModel.swift */; };
-		AA8800000000000000000B02 /* GuardadoSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8800000000000000000A02 /* GuardadoSheets.swift */; };
+
+		15023DD815C19CCEDCC144DB /* LineaDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7D95FAABBB717B46FCD7DB /* LineaDetailSheet.swift */; };
+		1CDCA1F06ED8470CCEA1134D /* UbicacionMapaLugar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F2DA1E342B099BFFDDB6211 /* UbicacionMapaLugar.swift */; };
+		7BCB9000123A135E46433A81 /* AddLugarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 557910246D5A2536E010A7E1 /* AddLugarSheet.swift */; };
+		6BCB35E37D39269649585D93 /* MapaElegirExpandido.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CEAA7BFC216AA723926BA1C /* MapaElegirExpandido.swift */; };
+		F7C0A7481B1D6B72F50D665D /* AddLineaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098732D04B5763C32F4B9C09 /* AddLineaSheet.swift */; };
 		AA9900000000000000000A02 /* PagoQR.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A01 /* PagoQR.swift */; };
 		AA9900000000000000000A04 /* EscanerQRView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000A03 /* EscanerQRView.swift */; };
 		AA9900000000000000000B02 /* BusEn3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000B01 /* BusEn3D.swift */; };
@@ -418,7 +423,12 @@
 		AA7700000000000000000005 /* negocios_promocionados.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = negocios_promocionados.json; sourceTree = "<group>"; };
 		AA7700000000000000000008 /* NegociosComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NegociosComponents.swift; sourceTree = "<group>"; };
 		AA8800000000000000000A01 /* GuardadoViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoViewModel.swift; sourceTree = "<group>"; };
-		AA8800000000000000000A02 /* GuardadoSheets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoSheets.swift; sourceTree = "<group>"; };
+
+		7C7D95FAABBB717B46FCD7DB /* LineaDetailSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LineaDetailSheet.swift; sourceTree = "<group>"; };
+		0F2DA1E342B099BFFDDB6211 /* UbicacionMapaLugar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UbicacionMapaLugar.swift; sourceTree = "<group>"; };
+		557910246D5A2536E010A7E1 /* AddLugarSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddLugarSheet.swift; sourceTree = "<group>"; };
+		4CEAA7BFC216AA723926BA1C /* MapaElegirExpandido.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaElegirExpandido.swift; sourceTree = "<group>"; };
+		098732D04B5763C32F4B9C09 /* AddLineaSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddLineaSheet.swift; sourceTree = "<group>"; };
 		AA9900000000000000000A01 /* PagoQR.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PagoQR.swift; sourceTree = "<group>"; };
 		AA9900000000000000000A03 /* EscanerQRView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EscanerQRView.swift; sourceTree = "<group>"; };
 		AA9900000000000000000B01 /* BusEn3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BusEn3D.swift; sourceTree = "<group>"; };
@@ -709,7 +719,12 @@
 				24DB2824EC9BCDE427FD9113 /* MapaElegirLugar.swift */,
 				296B02D8E919E323C6A5867D /* LugarDetailSheet.swift */,
 				AA8800000000000000000A01 /* GuardadoViewModel.swift */,
-				AA8800000000000000000A02 /* GuardadoSheets.swift */,
+
+				7C7D95FAABBB717B46FCD7DB /* LineaDetailSheet.swift */,
+				0F2DA1E342B099BFFDDB6211 /* UbicacionMapaLugar.swift */,
+				557910246D5A2536E010A7E1 /* AddLugarSheet.swift */,
+				4CEAA7BFC216AA723926BA1C /* MapaElegirExpandido.swift */,
+				098732D04B5763C32F4B9C09 /* AddLineaSheet.swift */,
 			);
 			path = Guardado;
 			sourceTree = "<group>";
@@ -1278,7 +1293,12 @@
 				368A233DC383BA783B28198C /* MapaElegirLugar.swift in Sources */,
 				5A5587299DBBFCF7C6F9E986 /* LugarDetailSheet.swift in Sources */,
 				AA8800000000000000000B01 /* GuardadoViewModel.swift in Sources */,
-				AA8800000000000000000B02 /* GuardadoSheets.swift in Sources */,
+
+				15023DD815C19CCEDCC144DB /* LineaDetailSheet.swift in Sources */,
+				1CDCA1F06ED8470CCEA1134D /* UbicacionMapaLugar.swift in Sources */,
+				7BCB9000123A135E46433A81 /* AddLugarSheet.swift in Sources */,
+				6BCB35E37D39269649585D93 /* MapaElegirExpandido.swift in Sources */,
+				F7C0A7481B1D6B72F50D665D /* AddLineaSheet.swift in Sources */,
 				0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */,
 				0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */,
 				0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */,
