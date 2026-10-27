@@ -99,7 +99,10 @@
 		0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */; };
 		0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */; };
 		0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043E300AD9FE004E1676 /* MonederoStore.swift */; };
-		0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800440300AD9FE004E1676 /* MonederoView.swift */; };
+		49EADB7EA6F0189AD0228901 /* MonederoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F92B1C8AFDD6C07D3EAC03 /* MonederoCard.swift */; };
+		95AC579424A2378971D4EFE4 /* RecargarSaldoSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD097D0F78F1D9AF5B37AAC0 /* RecargarSaldoSheet.swift */; };
+		8C041BDCCE43E6E777572074 /* QRPasajeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B961A9048B5EA8CC7A142693 /* QRPasajeSheet.swift */; };
+		A2AEFC86F801F548324915CB /* MarcaBilletera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F055CA6EC17559193C0C248 /* MarcaBilletera.swift */; };
 		0A8004F7300AD9FE004E1676 /* BottomNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */; };
 		0A8004FA300AD9FE004E1676 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004B9300AD9FE004E1676 /* Colors.swift */; };
 		0A8004FC300AD9FE004E1676 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004BB300AD9FE004E1676 /* Typography.swift */; };
@@ -333,7 +336,10 @@
 		0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OfflineMapSheet.swift; sourceTree = "<group>"; };
 		0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvisoRutaAproximada.swift; sourceTree = "<group>"; };
 		0A80043E300AD9FE004E1676 /* MonederoStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoStore.swift; sourceTree = "<group>"; };
-		0A800440300AD9FE004E1676 /* MonederoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoView.swift; sourceTree = "<group>"; };
+		24F92B1C8AFDD6C07D3EAC03 /* MonederoCard.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoCard.swift; sourceTree = "<group>"; };
+		AD097D0F78F1D9AF5B37AAC0 /* RecargarSaldoSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecargarSaldoSheet.swift; sourceTree = "<group>"; };
+		B961A9048B5EA8CC7A142693 /* QRPasajeSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QRPasajeSheet.swift; sourceTree = "<group>"; };
+		7F055CA6EC17559193C0C248 /* MarcaBilletera.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MarcaBilletera.swift; sourceTree = "<group>"; };
 		0A8004B5300AD9FE004E1676 /* BottomNavBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BottomNavBar.swift; sourceTree = "<group>"; };
 		0A8004B9300AD9FE004E1676 /* Colors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		0A8004BB300AD9FE004E1676 /* Typography.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
@@ -733,7 +739,10 @@
 				0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */,
 				0A8004D6300AD9FE004E1676 /* PerfilView.swift */,
 				9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */,
-				0A800440300AD9FE004E1676 /* MonederoView.swift */,
+				24F92B1C8AFDD6C07D3EAC03 /* MonederoCard.swift */,
+				AD097D0F78F1D9AF5B37AAC0 /* RecargarSaldoSheet.swift */,
+				B961A9048B5EA8CC7A142693 /* QRPasajeSheet.swift */,
+				7F055CA6EC17559193C0C248 /* MarcaBilletera.swift */,
 				AA9900000000000000000A03 /* EscanerQRView.swift */,
 				0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */,
 			);
@@ -1275,7 +1284,10 @@
 				0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */,
 				B7E0C5037B014557A9E34CAA /* RespaldosRecuperacionSheet.swift in Sources */,
 				0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */,
-				0A800441300AD9FE004E1676 /* MonederoView.swift in Sources */,
+				49EADB7EA6F0189AD0228901 /* MonederoCard.swift in Sources */,
+				95AC579424A2378971D4EFE4 /* RecargarSaldoSheet.swift in Sources */,
+				8C041BDCCE43E6E777572074 /* QRPasajeSheet.swift in Sources */,
+				A2AEFC86F801F548324915CB /* MarcaBilletera.swift in Sources */,
 				AA9900000000000000000A02 /* PagoQR.swift in Sources */,
 				AA9900000000000000000A04 /* EscanerQRView.swift in Sources */,
 				0A800516300AD9FE004E1676 /* TrackingPoint.swift in Sources */,
