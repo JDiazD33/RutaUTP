@@ -190,6 +190,10 @@
 		BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000011 /* RouteChangesSheet.swift */; };
 		BB9900000000000000000002 /* OccupancyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000001 /* OccupancyService.swift */; };
 		BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000011 /* BusOccupancyPanel.swift */; };
+		7D3DB5EEFF915DDB491652AC /* TripContributionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED482651D549D04A68A2BA1B /* TripContributionPanel.swift */; };
+		A31F9825D02B986A46E405F9 /* BoardingConfirmationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0B38D1C466BF4B8B226FE6 /* BoardingConfirmationSheet.swift */; };
+		D16704376AEAA305C8E9C234 /* TripSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C0FD90E20C1FF0183E72C4 /* TripSelectionSheet.swift */; };
+		2102EC41EDE83B453742D292 /* BoardingPointMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 740CB3E4E51C6A2D3BE147C5 /* BoardingPointMap.swift */; };
 		BB9900000000000000000022 /* OccupancyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000021 /* OccupancyTests.swift */; };
 		BB9900000000000000000062 /* RouteChangesLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000061 /* RouteChangesLocationTests.swift */; };
 		BB9900000000000000000072 /* RouteTrackingSharedLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */; };
@@ -422,6 +426,10 @@
 		BA9900000000000000000011 /* RouteChangesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesSheet.swift; sourceTree = "<group>"; };
 		BB9900000000000000000001 /* OccupancyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyService.swift; sourceTree = "<group>"; };
 		BB9900000000000000000011 /* BusOccupancyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusOccupancyPanel.swift; sourceTree = "<group>"; };
+		ED482651D549D04A68A2BA1B /* TripContributionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripContributionPanel.swift; sourceTree = "<group>"; };
+		1C0B38D1C466BF4B8B226FE6 /* BoardingConfirmationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardingConfirmationSheet.swift; sourceTree = "<group>"; };
+		06C0FD90E20C1FF0183E72C4 /* TripSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripSelectionSheet.swift; sourceTree = "<group>"; };
+		740CB3E4E51C6A2D3BE147C5 /* BoardingPointMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardingPointMap.swift; sourceTree = "<group>"; };
 		BB9900000000000000000021 /* OccupancyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000061 /* RouteChangesLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesLocationTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTrackingSharedLocationTests.swift; sourceTree = "<group>"; };
@@ -605,6 +613,10 @@
 				AA6600000000000000000E09 /* ReportarSheet.swift */,
 				BB9900000000000000000141 /* TextoConsentimientoContribucion.swift */,
 				BB9900000000000000000011 /* BusOccupancyPanel.swift */,
+				ED482651D549D04A68A2BA1B /* TripContributionPanel.swift */,
+				1C0B38D1C466BF4B8B226FE6 /* BoardingConfirmationSheet.swift */,
+				06C0FD90E20C1FF0183E72C4 /* TripSelectionSheet.swift */,
+				740CB3E4E51C6A2D3BE147C5 /* BoardingPointMap.swift */,
 				BA9900000000000000000011 /* RouteChangesSheet.swift */,
 				0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */,
 				0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */,
@@ -1232,6 +1244,10 @@
 				AA6600000000000000000E10 /* ReportarSheet.swift in Sources */,
 				BB9900000000000000000142 /* TextoConsentimientoContribucion.swift in Sources */,
 				BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */,
+				7D3DB5EEFF915DDB491652AC /* TripContributionPanel.swift in Sources */,
+				A31F9825D02B986A46E405F9 /* BoardingConfirmationSheet.swift in Sources */,
+				D16704376AEAA305C8E9C234 /* TripSelectionSheet.swift in Sources */,
+				2102EC41EDE83B453742D292 /* BoardingPointMap.swift in Sources */,
 				BB9900000000000000000002 /* OccupancyService.swift in Sources */,
 				BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */,
 				BA9900000000000000000002 /* RouteChangesService.swift in Sources */,
