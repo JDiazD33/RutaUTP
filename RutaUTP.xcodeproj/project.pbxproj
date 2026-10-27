@@ -128,6 +128,10 @@
 		0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D1300AD9FE004E1676 /* SideDrawer.swift */; };
 		0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */; };
 		0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */; };
+		35907ECDE8E14788A69BFAC6 /* FotoParaEncuadrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19DCC580F52D41F18A0E5506 /* FotoParaEncuadrar.swift */; };
+		BCC5E15A4AC04B198AB81643 /* VisorFotoCarnet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56DB3C715F964FD9B8D707EE /* VisorFotoCarnet.swift */; };
+		597B6A7CD7844494B14A1A02 /* EncuadreFotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0193AB49D1484FBA21067A /* EncuadreFotoView.swift */; };
+		929ED9474A434DD6849FB62E /* EditorFotoPerfilModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCC085072B1542739A29A01A /* EditorFotoPerfilModifier.swift */; };
 		0A80050D300AD9FE004E1676 /* PerfilView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D6300AD9FE004E1676 /* PerfilView.swift */; };
 		0A80050E300AD9FE004E1676 /* TarjetaFormSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */; };
 		0A80050F300AD9FE004E1676 /* RutasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D9300AD9FE004E1676 /* RutasView.swift */; };
@@ -379,6 +383,10 @@
 		0A8004D0300AD9FE004E1676 /* MapMarkers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapMarkers.swift; sourceTree = "<group>"; };
 		0A8004D1300AD9FE004E1676 /* SideDrawer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideDrawer.swift; sourceTree = "<group>"; };
 		0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarnetScannerView.swift; sourceTree = "<group>"; };
+		19DCC580F52D41F18A0E5506 /* FotoParaEncuadrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FotoParaEncuadrar.swift; sourceTree = "<group>"; };
+		56DB3C715F964FD9B8D707EE /* VisorFotoCarnet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisorFotoCarnet.swift; sourceTree = "<group>"; };
+		7B0193AB49D1484FBA21067A /* EncuadreFotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EncuadreFotoView.swift; sourceTree = "<group>"; };
+		DCC085072B1542739A29A01A /* EditorFotoPerfilModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorFotoPerfilModifier.swift; sourceTree = "<group>"; };
 		0A8004D6300AD9FE004E1676 /* PerfilView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerfilView.swift; sourceTree = "<group>"; };
 		0A8004D7300AD9FE004E1676 /* TarjetaFormSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TarjetaFormSheet.swift; sourceTree = "<group>"; };
 		0A8004D9300AD9FE004E1676 /* RutasView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutasView.swift; sourceTree = "<group>"; };
@@ -781,6 +789,10 @@
 				BC0200000000000000000013 /* PerfilCuponesGuardados.swift */,
 				0AC4E0A220260907004E1676 /* CarneDigitalView.swift */,
 				0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */,
+				19DCC580F52D41F18A0E5506 /* FotoParaEncuadrar.swift */,
+				56DB3C715F964FD9B8D707EE /* VisorFotoCarnet.swift */,
+				7B0193AB49D1484FBA21067A /* EncuadreFotoView.swift */,
+				DCC085072B1542739A29A01A /* EditorFotoPerfilModifier.swift */,
 				0A8004D6300AD9FE004E1676 /* PerfilView.swift */,
 				9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */,
 				24F92B1C8AFDD6C07D3EAC03 /* MonederoCard.swift */,
@@ -1326,6 +1338,10 @@
 				0A800513300AD9FE004E1676 /* LocationService.swift in Sources */,
 				0A800500300AD9FE004E1676 /* AppRouter.swift in Sources */,
 				0A80050C300AD9FE004E1676 /* CarnetScannerView.swift in Sources */,
+				35907ECDE8E14788A69BFAC6 /* FotoParaEncuadrar.swift in Sources */,
+				BCC5E15A4AC04B198AB81643 /* VisorFotoCarnet.swift in Sources */,
+				597B6A7CD7844494B14A1A02 /* EncuadreFotoView.swift in Sources */,
+				929ED9474A434DD6849FB62E /* EditorFotoPerfilModifier.swift in Sources */,
 				0AC4E0A120260907004E1676 /* CarneDigitalView.swift in Sources */,
 				0A800511300AD9FE004E1676 /* RouteTrackingDemoView.swift in Sources */,
 				0A8005AA300AD9FE004E1676 /* TrackingDemoComponents.swift in Sources */,
