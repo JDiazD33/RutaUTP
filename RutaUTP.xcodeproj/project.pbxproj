@@ -115,6 +115,9 @@
 		0A800504300AD9FE004E1676 /* BienvenidaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004C8300AD9FE004E1676 /* BienvenidaView.swift */; };
 		0A800505300AD9FE004E1676 /* RutaMapKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CA300AD9FE004E1676 /* RutaMapKitView.swift */; };
 		0A800506300AD9FE004E1676 /* GuardadoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CC300AD9FE004E1676 /* GuardadoView.swift */; };
+		1E6C224CC9F310F05E4AD258 /* PressableCapsuleStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 530A088E951CB7AF6B8B3312 /* PressableCapsuleStyle.swift */; };
+		368A233DC383BA783B28198C /* MapaElegirLugar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24DB2824EC9BCDE427FD9113 /* MapaElegirLugar.swift */; };
+		5A5587299DBBFCF7C6F9E986 /* LugarDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 296B02D8E919E323C6A5867D /* LugarDetailSheet.swift */; };
 		0A800507300AD9FE004E1676 /* MapaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CE300AD9FE004E1676 /* MapaView.swift */; };
 		0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */; };
 		0A800509300AD9FE004E1676 /* MapMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D0300AD9FE004E1676 /* MapMarkers.swift */; };
@@ -351,6 +354,9 @@
 		0A8004C8300AD9FE004E1676 /* BienvenidaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BienvenidaView.swift; sourceTree = "<group>"; };
 		0A8004CA300AD9FE004E1676 /* RutaMapKitView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RutaMapKitView.swift; sourceTree = "<group>"; };
 		0A8004CC300AD9FE004E1676 /* GuardadoView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GuardadoView.swift; sourceTree = "<group>"; };
+		530A088E951CB7AF6B8B3312 /* PressableCapsuleStyle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PressableCapsuleStyle.swift; sourceTree = "<group>"; };
+		24DB2824EC9BCDE427FD9113 /* MapaElegirLugar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaElegirLugar.swift; sourceTree = "<group>"; };
+		296B02D8E919E323C6A5867D /* LugarDetailSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugarDetailSheet.swift; sourceTree = "<group>"; };
 		0A8004CE300AD9FE004E1676 /* MapaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaView.swift; sourceTree = "<group>"; };
 		0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaViewModel.swift; sourceTree = "<group>"; };
 		0A8004D0300AD9FE004E1676 /* MapMarkers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapMarkers.swift; sourceTree = "<group>"; };
@@ -687,6 +693,9 @@
 			isa = PBXGroup;
 			children = (
 				0A8004CC300AD9FE004E1676 /* GuardadoView.swift */,
+				530A088E951CB7AF6B8B3312 /* PressableCapsuleStyle.swift */,
+				24DB2824EC9BCDE427FD9113 /* MapaElegirLugar.swift */,
+				296B02D8E919E323C6A5867D /* LugarDetailSheet.swift */,
 				AA8800000000000000000A01 /* GuardadoViewModel.swift */,
 				AA8800000000000000000A02 /* GuardadoSheets.swift */,
 			);
@@ -1249,6 +1258,9 @@
 				D3E7F0B5D7424448A1909557 /* TrialProcessResources.swift in Sources */,
 				0A800515300AD9FE004E1676 /* RouteCalculationService.swift in Sources */,
 				0A800506300AD9FE004E1676 /* GuardadoView.swift in Sources */,
+				1E6C224CC9F310F05E4AD258 /* PressableCapsuleStyle.swift in Sources */,
+				368A233DC383BA783B28198C /* MapaElegirLugar.swift in Sources */,
+				5A5587299DBBFCF7C6F9E986 /* LugarDetailSheet.swift in Sources */,
 				AA8800000000000000000B01 /* GuardadoViewModel.swift in Sources */,
 				AA8800000000000000000B02 /* GuardadoSheets.swift in Sources */,
 				0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */,
