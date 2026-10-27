@@ -208,6 +208,8 @@
 		AA9900000000000000000B02 /* BusEn3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9900000000000000000B01 /* BusEn3D.swift */; };
 		BA9900000000000000000002 /* RouteChangesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000001 /* RouteChangesService.swift */; };
 		BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000011 /* RouteChangesSheet.swift */; };
+		E1890BE919EB4B67A28FB7F7 /* RouteIncidentMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE616017857B4178B07037CD /* RouteIncidentMap.swift */; };
+		712B40DCD2344F0E950B7A1D /* ExpandedRouteIncidentMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = D608E15ABE8443148FF2840D /* ExpandedRouteIncidentMap.swift */; };
 		BB9900000000000000000002 /* OccupancyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000001 /* OccupancyService.swift */; };
 		BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000011 /* BusOccupancyPanel.swift */; };
 		7D3DB5EEFF915DDB491652AC /* TripContributionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED482651D549D04A68A2BA1B /* TripContributionPanel.swift */; };
@@ -464,6 +466,8 @@
 		AA9900000000000000000B01 /* BusEn3D.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BusEn3D.swift; sourceTree = "<group>"; };
 		BA9900000000000000000001 /* RouteChangesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesService.swift; sourceTree = "<group>"; };
 		BA9900000000000000000011 /* RouteChangesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesSheet.swift; sourceTree = "<group>"; };
+		DE616017857B4178B07037CD /* RouteIncidentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteIncidentMap.swift; sourceTree = "<group>"; };
+		D608E15ABE8443148FF2840D /* ExpandedRouteIncidentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedRouteIncidentMap.swift; sourceTree = "<group>"; };
 		BB9900000000000000000001 /* OccupancyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyService.swift; sourceTree = "<group>"; };
 		BB9900000000000000000011 /* BusOccupancyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusOccupancyPanel.swift; sourceTree = "<group>"; };
 		ED482651D549D04A68A2BA1B /* TripContributionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripContributionPanel.swift; sourceTree = "<group>"; };
@@ -662,6 +666,8 @@
 				06C0FD90E20C1FF0183E72C4 /* TripSelectionSheet.swift */,
 				740CB3E4E51C6A2D3BE147C5 /* BoardingPointMap.swift */,
 				BA9900000000000000000011 /* RouteChangesSheet.swift */,
+				DE616017857B4178B07037CD /* RouteIncidentMap.swift */,
+				D608E15ABE8443148FF2840D /* ExpandedRouteIncidentMap.swift */,
 				0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */,
 				0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */,
 				0A800435300AD9FE004E1676 /* FormularioReporte.swift */,
@@ -1318,6 +1324,8 @@
 				2102EC41EDE83B453742D292 /* BoardingPointMap.swift in Sources */,
 				BB9900000000000000000002 /* OccupancyService.swift in Sources */,
 				BA9900000000000000000012 /* RouteChangesSheet.swift in Sources */,
+				E1890BE919EB4B67A28FB7F7 /* RouteIncidentMap.swift in Sources */,
+				712B40DCD2344F0E950B7A1D /* ExpandedRouteIncidentMap.swift in Sources */,
 				BA9900000000000000000002 /* RouteChangesService.swift in Sources */,
 				0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */,
 				0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */,
