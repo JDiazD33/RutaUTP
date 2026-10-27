@@ -60,7 +60,7 @@ final class CamaraQR: NSObject, @unchecked Sendable {
     /// Sesión para la capa de previsualización.
     let sesion = AVCaptureSession()
 
-    /// Lectura de un QR. Se llama en la cola de la cámara.
+    /// Lectura de un QR. Se llama en la cola de la camara.
     var alLeer: (@Sendable (String, UUID) -> Void)? {
         get {
             capturaLock.lock()
