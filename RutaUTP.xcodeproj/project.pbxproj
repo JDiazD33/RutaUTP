@@ -10,6 +10,10 @@
 		BD7200000000000000000002 /* AvisosLineasSeguridad.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7200000000000000000001 /* AvisosLineasSeguridad.swift */; };
 		BD7100000000000000000002 /* ContactoEmergenciaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */; };
 		BD6100000000000000000002 /* IdentificacionRuta3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6100000000000000000001 /* IdentificacionRuta3D.swift */; };
+		E81C1E1883B8F5B84772D4A4 /* ColorTransporteReferencia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1504C2E38815D1E67B598385 /* ColorTransporteReferencia.swift */; };
+		19F05445E54309DE1643E82D /* ColoresTransporteReferencia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3109104412A62A64972CF9F /* ColoresTransporteReferencia.swift */; };
+		E17DA4C915FB3DD271AF61DD /* IdentificacionRuta3DView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964D3DBB9BA31CC75B00F261 /* IdentificacionRuta3DView.swift */; };
+		6567A64EE3F482E859FDE874 /* ColoresReferenciaRutaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A69151CD164A085833866A2 /* ColoresReferenciaRutaView.swift */; };
 		BD6000000000000000000002 /* Transportes3DView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000001 /* Transportes3DView.swift */; };
 		BD6000000000000000000004 /* VisorTransporte3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000003 /* VisorTransporte3D.swift */; };
 		BD6000000000000000000006 /* Transportes3D in Resources */ = {isa = PBXBuildFile; fileRef = BD6000000000000000000005 /* Transportes3D */; };
@@ -248,6 +252,10 @@
 		BD7200000000000000000001 /* AvisosLineasSeguridad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvisosLineasSeguridad.swift; sourceTree = "<group>"; };
 		BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactoEmergenciaSheet.swift; sourceTree = "<group>"; };
 		BD6100000000000000000001 /* IdentificacionRuta3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificacionRuta3D.swift; sourceTree = "<group>"; };
+		1504C2E38815D1E67B598385 /* ColorTransporteReferencia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTransporteReferencia.swift; sourceTree = "<group>"; };
+		D3109104412A62A64972CF9F /* ColoresTransporteReferencia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoresTransporteReferencia.swift; sourceTree = "<group>"; };
+		964D3DBB9BA31CC75B00F261 /* IdentificacionRuta3DView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificacionRuta3DView.swift; sourceTree = "<group>"; };
+		1A69151CD164A085833866A2 /* ColoresReferenciaRutaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoresReferenciaRutaView.swift; sourceTree = "<group>"; };
 		BD6000000000000000000001 /* Transportes3DView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DView.swift; sourceTree = "<group>"; };
 		BD6000000000000000000003 /* VisorTransporte3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisorTransporte3D.swift; sourceTree = "<group>"; };
 		BD6000000000000000000005 /* Transportes3D */ = {isa = PBXFileReference; lastKnownFileType = folder; path = RutaUTP/Resources/Transportes3D; sourceTree = SOURCE_ROOT; };
@@ -789,6 +797,10 @@
 			isa = PBXGroup;
 			children = (
 				BD6100000000000000000001 /* IdentificacionRuta3D.swift */,
+				1504C2E38815D1E67B598385 /* ColorTransporteReferencia.swift */,
+				D3109104412A62A64972CF9F /* ColoresTransporteReferencia.swift */,
+				964D3DBB9BA31CC75B00F261 /* IdentificacionRuta3DView.swift */,
+				1A69151CD164A085833866A2 /* ColoresReferenciaRutaView.swift */,
 				BD6000000000000000000001 /* Transportes3DView.swift */,
 				BD6000000000000000000003 /* VisorTransporte3D.swift */,
 				BD6000000000000000000005 /* Transportes3D */,
@@ -1171,6 +1183,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				BD6100000000000000000002 /* IdentificacionRuta3D.swift in Sources */,
+				E81C1E1883B8F5B84772D4A4 /* ColorTransporteReferencia.swift in Sources */,
+				19F05445E54309DE1643E82D /* ColoresTransporteReferencia.swift in Sources */,
+				E17DA4C915FB3DD271AF61DD /* IdentificacionRuta3DView.swift in Sources */,
+				6567A64EE3F482E859FDE874 /* ColoresReferenciaRutaView.swift in Sources */,
 				BD6000000000000000000002 /* Transportes3DView.swift in Sources */,
 				BD6000000000000000000004 /* VisorTransporte3D.swift in Sources */,
 				F85E73B8B914408A9E7CA49E /* NotificacionesView.swift in Sources */,
