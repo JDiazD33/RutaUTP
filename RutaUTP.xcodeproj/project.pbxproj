@@ -185,6 +185,10 @@
 		AA6600000000000000000E02 /* Senia.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E01 /* Senia.swift */; };
 		AA6600000000000000000E04 /* SeniasService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E03 /* SeniasService.swift */; };
 		AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E05 /* SeniasOverlay.swift */; };
+		BA9900000000000000000022 /* SeniasPlayerUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000021 /* SeniasPlayerUIView.swift */; };
+		BA9900000000000000000024 /* SeniasPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000023 /* SeniasPlayerView.swift */; };
+		BA9900000000000000000026 /* SeniasOverlayVentana.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000025 /* SeniasOverlayVentana.swift */; };
+		BA9900000000000000000028 /* SeniableModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9900000000000000000027 /* SeniableModifier.swift */; };
 		AA6600000000000000000E08 /* senias in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E07 /* senias */; };
 		AA6600000000000000000E10 /* ReportarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E09 /* ReportarSheet.swift */; };
 		AA6600000000000000000E12 /* PublicarComunidadSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E11 /* PublicarComunidadSheet.swift */; };
@@ -443,6 +447,10 @@
 		AA6600000000000000000E01 /* Senia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Senia.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E03 /* SeniasService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasService.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E05 /* SeniasOverlay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlay.swift; sourceTree = "<group>"; };
+		BA9900000000000000000021 /* SeniasPlayerUIView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasPlayerUIView.swift; sourceTree = "<group>"; };
+		BA9900000000000000000023 /* SeniasPlayerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasPlayerView.swift; sourceTree = "<group>"; };
+		BA9900000000000000000025 /* SeniasOverlayVentana.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniasOverlayVentana.swift; sourceTree = "<group>"; };
+		BA9900000000000000000027 /* SeniableModifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeniableModifier.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E07 /* senias */ = {isa = PBXFileReference; lastKnownFileType = folder; path = senias; sourceTree = "<group>"; };
 		AA6600000000000000000E09 /* ReportarSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportarSheet.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E11 /* PublicarComunidadSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PublicarComunidadSheet.swift; sourceTree = "<group>"; };
@@ -676,6 +684,10 @@
 				76DAE7E605BE476292A02007 /* MapaUbicacionPicker.swift */,
 				EB4A94E9AA4C40E5AD9FB856 /* GaleriaPicker.swift */,
 				AA6600000000000000000E05 /* SeniasOverlay.swift */,
+				BA9900000000000000000021 /* SeniasPlayerUIView.swift */,
+				BA9900000000000000000023 /* SeniasPlayerView.swift */,
+				BA9900000000000000000025 /* SeniasOverlayVentana.swift */,
+				BA9900000000000000000027 /* SeniableModifier.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1315,6 +1327,10 @@
 				AA6600000000000000000E02 /* Senia.swift in Sources */,
 				AA6600000000000000000E04 /* SeniasService.swift in Sources */,
 				AA6600000000000000000E06 /* SeniasOverlay.swift in Sources */,
+				BA9900000000000000000022 /* SeniasPlayerUIView.swift in Sources */,
+				BA9900000000000000000024 /* SeniasPlayerView.swift in Sources */,
+				BA9900000000000000000026 /* SeniasOverlayVentana.swift in Sources */,
+				BA9900000000000000000028 /* SeniableModifier.swift in Sources */,
 				AA6600000000000000000E10 /* ReportarSheet.swift in Sources */,
 				BB9900000000000000000142 /* TextoConsentimientoContribucion.swift in Sources */,
 				BB9900000000000000000012 /* BusOccupancyPanel.swift in Sources */,
