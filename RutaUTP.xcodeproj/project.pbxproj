@@ -184,6 +184,9 @@
 		AA6600000000000000000E08 /* senias in Resources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E07 /* senias */; };
 		AA6600000000000000000E10 /* ReportarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E09 /* ReportarSheet.swift */; };
 		AA6600000000000000000E12 /* PublicarComunidadSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000E11 /* PublicarComunidadSheet.swift */; };
+		D0A0D54D16A045DBB3FBC45C /* GeocodificacionComunidadModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105CBE16669A466E8142011F /* GeocodificacionComunidadModel.swift */; };
+		D1A8937C26114B5C8902A4D9 /* MapaUbicacionPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76DAE7E605BE476292A02007 /* MapaUbicacionPicker.swift */; };
+		28E33D38E9FB4BA2AF267588 /* GaleriaPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4A94E9AA4C40E5AD9FB856 /* GaleriaPicker.swift */; };
 		AA6600000000000000000F02 /* Idioma.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6600000000000000000F01 /* Idioma.swift */; };
 		AA7700000000000000000002 /* Negocio.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000001 /* Negocio.swift */; };
 		AA7700000000000000000004 /* NegociosService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7700000000000000000003 /* NegociosService.swift */; };
@@ -433,6 +436,9 @@
 		AA6600000000000000000E07 /* senias */ = {isa = PBXFileReference; lastKnownFileType = folder; path = senias; sourceTree = "<group>"; };
 		AA6600000000000000000E09 /* ReportarSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReportarSheet.swift; sourceTree = "<group>"; };
 		AA6600000000000000000E11 /* PublicarComunidadSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PublicarComunidadSheet.swift; sourceTree = "<group>"; };
+		105CBE16669A466E8142011F /* GeocodificacionComunidadModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeocodificacionComunidadModel.swift; sourceTree = "<group>"; };
+		76DAE7E605BE476292A02007 /* MapaUbicacionPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapaUbicacionPicker.swift; sourceTree = "<group>"; };
+		EB4A94E9AA4C40E5AD9FB856 /* GaleriaPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaleriaPicker.swift; sourceTree = "<group>"; };
 		AA6600000000000000000F01 /* Idioma.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Idioma.swift; sourceTree = "<group>"; };
 		AA7700000000000000000001 /* Negocio.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Negocio.swift; sourceTree = "<group>"; };
 		AA7700000000000000000003 /* NegociosService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NegociosService.swift; sourceTree = "<group>"; };
@@ -648,6 +654,9 @@
 				0A800439300AD9FE004E1676 /* OfflineMapSheet.swift */,
 				0A800435300AD9FE004E1676 /* FormularioReporte.swift */,
 				AA6600000000000000000E11 /* PublicarComunidadSheet.swift */,
+				105CBE16669A466E8142011F /* GeocodificacionComunidadModel.swift */,
+				76DAE7E605BE476292A02007 /* MapaUbicacionPicker.swift */,
+				EB4A94E9AA4C40E5AD9FB856 /* GaleriaPicker.swift */,
 				AA6600000000000000000E05 /* SeniasOverlay.swift */,
 			);
 			path = Components;
@@ -1298,6 +1307,9 @@
 				0A80043A300AD9FE004E1676 /* OfflineMapSheet.swift in Sources */,
 				0A800436300AD9FE004E1676 /* FormularioReporte.swift in Sources */,
 				AA6600000000000000000E12 /* PublicarComunidadSheet.swift in Sources */,
+				D0A0D54D16A045DBB3FBC45C /* GeocodificacionComunidadModel.swift in Sources */,
+				D1A8937C26114B5C8902A4D9 /* MapaUbicacionPicker.swift in Sources */,
+				28E33D38E9FB4BA2AF267588 /* GaleriaPicker.swift in Sources */,
 				AA6600000000000000000B01 /* GTFSModels.swift in Sources */,
 				AA6600000000000000000B02 /* GTFSCSV.swift in Sources */,
 				AA6600000000000000000B03 /* GTFSRepository.swift in Sources */,
