@@ -12,26 +12,50 @@ struct VisorTransporte3D: UIViewRepresentable {
     let identificacion: IdentificacionRuta3D?
     @Binding var estado: EstadoTransporte3D
 
+    @MainActor
+    final class Coordinator {
+        var estado: Binding<EstadoTransporte3D>
+        var generacion: UUID?
+
+        init(estado: Binding<EstadoTransporte3D>) { self.estado = estado }
+
+        @discardableResult
+        func publicar(_ nuevo: EstadoTransporte3D, generacion: UUID) -> Task<Void, Never> {
+            // SwiftUI no debe mutarse dentro de updateUIView. Al entregar el
+            // aviso diferido, comprobar de nuevo que aun pertenece a esta carga.
+            Task { @MainActor [weak self] in
+                guard let self, self.generacion == generacion else { return }
+                self.estado.wrappedValue = nuevo
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(estado: $estado) }
+
     func makeUIView(context: Context) -> VistaTransporte3D {
         let view = VistaTransporte3D()
-        view.cambioEstado = { nuevo in
-            Task { @MainActor in estado = nuevo }
+        view.cambioEstado = { [weak coordinator = context.coordinator] nuevo, generacion in
+            coordinator?.publicar(nuevo, generacion: generacion)
         }
         return view
     }
 
     func updateUIView(_ view: VistaTransporte3D, context: Context) {
+        context.coordinator.estado = $estado
         view.actualizar(tipo: tipo, variante: variante, color: color, intento: intento, orden: orden, identificacion: identificacion)
+        context.coordinator.generacion = view.generacionActual
     }
 
-    static func dismantleUIView(_ view: VistaTransporte3D, coordinator: ()) {
+    static func dismantleUIView(_ view: VistaTransporte3D, coordinator: Coordinator) {
+        coordinator.generacion = nil
         view.cerrar()
     }
 }
 
 /// Visor nativo sin sesion AR ni acceso a la camara del telefono.
 final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
-    var cambioEstado: ((EstadoTransporte3D) -> Void)?
+    var cambioEstado: ((EstadoTransporte3D, UUID) -> Void)?
+    var generacionActual: UUID { generacion }
     private let render = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
     private let ancla = AnchorEntity(world: .zero)
     private let camara = PerspectiveCamera()
@@ -112,17 +136,17 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
     }
 
     private func cargar(_ tipo: TipoTransporte3D, variante: VarianteTransporte3D) {
+        generacion = UUID()
         carga?.cancel()
         cargaAnterior?.cancel()
         modelo?.removeFromParent()
         modelo = nil
         contornos.removeAll()
         carrocerias.removeAll()
-        generacion = UUID()
         let solicitud = generacion
-        cambioEstado?(.cargando)
+        publicarEstado(.cargando)
         guard let url = Bundle.main.url(forResource: tipo.rawValue, withExtension: "usdz", subdirectory: variante.subdirectorioRecurso) else {
-            cambioEstado?(.fallo)
+            publicarEstado(.fallo)
             return
         }
         if #available(iOS 18.0, *) {
@@ -133,7 +157,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                     self.presentar(entidad, tipo: tipo, variante: variante)
                 } catch {
                     guard !Task.isCancelled, let self, self.generacion == solicitud else { return }
-                    self.cambioEstado?(.fallo)
+                    self.publicarEstado(.fallo)
                 }
             }
         } else {
@@ -142,7 +166,7 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] resultado in
                     guard let self, self.generacion == solicitud else { return }
-                    if case .failure = resultado { self.cambioEstado?(.fallo) }
+                    if case .failure = resultado { self.publicarEstado(.fallo) }
                 } receiveValue: { [weak self] entidad in
                     guard let self, self.generacion == solicitud else { return }
                     self.presentar(entidad, tipo: tipo, variante: variante)
@@ -154,19 +178,19 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         let caja = entidad.visualBounds(relativeTo: nil)
         let extensionMayor = max(caja.extents.x, caja.extents.y, caja.extents.z)
         guard extensionMayor.isFinite, extensionMayor > 0 else {
-            cambioEstado?(.fallo)
+            publicarEstado(.fallo)
             return
         }
         registrarContornos(entidad)
         guard !contornos.isEmpty else {
-            cambioEstado?(.fallo)
+            publicarEstado(.fallo)
             return
         }
         if let identificacion, identificacion.tipoModelo == tipo {
             // Los dos juegos de USDZ declaran unidades distintas. Los adornos se
             // anclan al mesh autorado en metros y heredan sus transformaciones.
             guard let carroceria = carrocerias.first?.0 else {
-                cambioEstado?(.fallo)
+                publicarEstado(.fallo)
                 return
             }
             aplicarPinturaReferencia(a: carroceria, colores: identificacion.colores?.colores ?? [], tipo: tipo, variante: variante)
@@ -181,7 +205,11 @@ final class VistaTransporte3D: UIView, UIGestureRecognizerDelegate {
         radio = simd_length(caja.extents * escala) / 2
         colorear()
         restablecer()
-        cambioEstado?(.listo)
+        publicarEstado(.listo(tipo, variante))
+    }
+
+    private func publicarEstado(_ nuevo: EstadoTransporte3D) {
+        cambioEstado?(nuevo, generacion)
     }
 
     private func registrarContornos(_ entidad: Entity) {

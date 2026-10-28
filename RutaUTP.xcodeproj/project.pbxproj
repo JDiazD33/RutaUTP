@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F7A193280B384C919C88D805 /* Transportes3DCargaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */; };
+		DE08174B36CB4F479B294DD7 /* Transportes3DUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4491B4B791014C98BCCCE6CF /* Transportes3DUITests.swift */; };
 		BD7200000000000000000002 /* AvisosLineasSeguridad.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7200000000000000000001 /* AvisosLineasSeguridad.swift */; };
 		BD7100000000000000000002 /* ContactoEmergenciaSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */; };
 		BD6100000000000000000002 /* IdentificacionRuta3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD6100000000000000000001 /* IdentificacionRuta3D.swift */; };
@@ -274,6 +276,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DCargaTests.swift; sourceTree = "<group>"; };
+		4491B4B791014C98BCCCE6CF /* Transportes3DUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DUITests.swift; sourceTree = "<group>"; };
 		BD7200000000000000000001 /* AvisosLineasSeguridad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvisosLineasSeguridad.swift; sourceTree = "<group>"; };
 		BD7100000000000000000001 /* ContactoEmergenciaSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactoEmergenciaSheet.swift; sourceTree = "<group>"; };
 		BD6100000000000000000001 /* IdentificacionRuta3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificacionRuta3D.swift; sourceTree = "<group>"; };
@@ -617,6 +621,7 @@
 		0A80041B300AD9FE004E1676 /* RutaUTPTests */ = {
 			isa = PBXGroup;
 			children = (
+				43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */,
 				BB9900000000000000000161 /* SeniasPlayerTests.swift */,
 				BB9900000000000000000151 /* SeniasPresentationTests.swift */,
 				BB9900000000000000000131 /* QRCurrencyAndAmountTests.swift */,
@@ -1133,7 +1138,7 @@
 			path = Localization;
 			sourceTree = "<group>";
 		};
-		CA2600000000000000000004 = {isa = PBXGroup; children = (CA2600000000000000000002,); path = RutaUTPUITests; sourceTree = "<group>"; };
+		CA2600000000000000000004 = {isa = PBXGroup; children = (CA2600000000000000000002,4491B4B791014C98BCCCE6CF,); path = RutaUTPUITests; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1481,6 +1486,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F7A193280B384C919C88D805 /* Transportes3DCargaTests.swift in Sources */,
 				BB9900000000000000000162 /* SeniasPlayerTests.swift in Sources */,
 				BB9900000000000000000152 /* SeniasPresentationTests.swift in Sources */,
 				BB9900000000000000000132 /* QRCurrencyAndAmountTests.swift in Sources */,
@@ -1508,7 +1514,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		CA2600000000000000000005 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CA2600000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
+		CA2600000000000000000005 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (CA2600000000000000000001,DE08174B36CB4F479B294DD7,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */

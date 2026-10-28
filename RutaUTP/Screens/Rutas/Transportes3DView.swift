@@ -34,7 +34,7 @@ enum VarianteTransporte3D: String, CaseIterable, Identifiable {
     }
 }
 
-enum AccionTransporte3D {
+enum AccionTransporte3D: String {
     case izquierda, derecha, acercar, alejar, restablecer
     case moverIzquierda, moverDerecha, moverArriba, moverAbajo
 }
@@ -44,7 +44,15 @@ struct OrdenTransporte3D {
     let accion: AccionTransporte3D
 }
 
-enum EstadoTransporte3D { case cargando, listo, fallo }
+enum EstadoTransporte3D: Equatable {
+    case cargando
+    case listo(TipoTransporte3D, VarianteTransporte3D)
+    case fallo
+
+    func corresponde(tipo: TipoTransporte3D, variante: VarianteTransporte3D) -> Bool {
+        self == .listo(tipo, variante)
+    }
+}
 
 struct Transportes3DView: View {
     var identificacion: IdentificacionRuta3D? = nil
@@ -70,15 +78,9 @@ struct Transportes3DView: View {
                         }
                         ColoresReferenciaRutaView(referencia: identificacion.colores)
                     } else {
-                        Picker(L.t("Tipo de transporte", "Vehicle type"), selection: $tipo) {
-                            ForEach(TipoTransporte3D.allCases) { tipo in
-                                Text(tipo.nombre).tag(tipo)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .tint(Color.appAccent)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .accessibilityIdentifier("transportes3d.tipo")
+                        SelectorTransporte3D(titulo: L.t("Tipo de transporte", "Vehicle type"),
+                                             opciones: TipoTransporte3D.allCases, seleccion: $tipo,
+                                             nombre: \.nombre, identificador: "transportes3d.tipo")
                     }
                     if let tipoSeleccionado {
                         PanelTransporte3D(tipo: tipoSeleccionado, identificacion: identificacion)
@@ -111,8 +113,6 @@ struct PanelTransporte3D: View {
     var identificacion: IdentificacionRuta3D? = nil
     var activo = true
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("transportes3d.variante") private var variante: VarianteTransporte3D = .original
     @State private var estado: EstadoTransporte3D = .cargando
     @State private var intento = 0
@@ -129,7 +129,7 @@ struct PanelTransporte3D: View {
                 control("minus.magnifyingglass", L.t("Alejar", "Zoom out"), .alejar)
                 control("arrow.uturn.backward", L.t("Restablecer vista", "Reset view"), .restablecer)
             }
-            .disabled(estado != .listo || !activo)
+            .disabled(!modeloListo || !activo)
             Text(L.t("Un dedo para girar; dos para mover o ampliar.", "One finger to rotate; two to pan or zoom."))
                 .font(.bodySm)
                 .foregroundStyle(Color.onSurfaceVariant)
@@ -137,41 +137,26 @@ struct PanelTransporte3D: View {
                 .font(.caption)
                 .foregroundStyle(Color.onSurfaceVariant)
         }
-        .onChange(of: variante) { _, _ in prepararCarga() }
-        .onChange(of: tipo) { _, _ in prepararCarga() }
-        .onChange(of: identificacion?.claveModelo) { _, _ in prepararCarga() }
     }
 
     private var selectorModelo: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L.t("Modelo del vehículo", "Vehicle model"))
-                .font(.subheadline.weight(.semibold))
-            if dynamicTypeSize.isAccessibilitySize {
-                opcionesModelo
-                    .pickerStyle(.menu)
-                    .frame(minHeight: 44)
-            } else {
-                opcionesModelo
-                    .pickerStyle(.segmented)
-            }
-        }
-        .tint(colorScheme == .dark ? Color.primaryFixed : Color.appPrimary)
-        .disabled(!activo)
+        SelectorTransporte3D(titulo: L.t("Modelo del vehículo", "Vehicle model"),
+                             opciones: VarianteTransporte3D.allCases, seleccion: $variante,
+                             nombre: \.nombre, identificador: "transportes3d.variante")
+            .disabled(!activo)
     }
 
-    private var opcionesModelo: some View {
-        Picker(L.t("Modelo del vehículo", "Vehicle model"), selection: $variante) {
-            ForEach(VarianteTransporte3D.allCases) { variante in
-                Text(variante.nombre).tag(variante)
-            }
-        }
-        .accessibilityIdentifier("transportes3d.variante")
+    private var modeloListo: Bool {
+        estado.corresponde(tipo: tipo, variante: variante)
     }
 
-    private func prepararCarga() {
-        estado = .cargando
-        intento = 0
-        orden = nil
+    private var descripcionModeloCargado: String {
+        switch estado {
+        case let .listo(tipoCargado, varianteCargada):
+            return tipoCargado.nombre + ", " + varianteCargada.nombre
+        case .cargando: return L.t("Cargando modelo…", "Loading model…")
+        case .fallo: return L.t("No se pudo cargar el modelo.", "The model could not be loaded.")
+        }
     }
 
     private var visor: some View {
@@ -184,14 +169,14 @@ struct PanelTransporte3D: View {
                     .accessibilityLabel(identificacion.map {
                         L.f("Modelo 3D: {0}, letra {1}, {2}", "3D model: {0}, letter {1}, {2}", [$0.codigo, $0.letra, $0.empresa])
                     } ?? L.f("Modelo 3D de {0}", "3D model of {0}", [tipo.nombre]))
-                    .accessibilityValue(variante.nombre)
+                    .accessibilityValue(descripcionModeloCargado)
                     .accessibilityAction(named: L.t("Mover a la izquierda", "Move left")) { enviar(.moverIzquierda) }
                     .accessibilityAction(named: L.t("Mover a la derecha", "Move right")) { enviar(.moverDerecha) }
                     .accessibilityAction(named: L.t("Mover arriba", "Move up")) { enviar(.moverArriba) }
                     .accessibilityAction(named: L.t("Mover abajo", "Move down")) { enviar(.moverAbajo) }
                     .accessibilityIdentifier("transportes3d.modelo")
             }
-            if estado == .cargando {
+            if !modeloListo && estado != .fallo {
                 ProgressView(L.t("Cargando modelo…", "Loading model…"))
                     .tint(Color(UIColor.darkGray))
                     .foregroundStyle(Color(UIColor.darkGray))
@@ -216,6 +201,7 @@ struct PanelTransporte3D: View {
     }
 
     private func enviar(_ accion: AccionTransporte3D) {
+        guard modeloListo && activo else { return }
         orden = OrdenTransporte3D(accion: accion)
     }
 
@@ -229,5 +215,48 @@ struct PanelTransporte3D: View {
         .buttonStyle(.plain)
         .foregroundStyle(Color.appAccent)
         .accessibilityLabel(etiqueta)
+        .accessibilityIdentifier("transportes3d.control." + accion.rawValue)
+    }
+}
+
+/// Opciones directas: no dependen de presentar un menu mientras arranca RealityKit.
+/// La fila completa recibe el toque, tambien durante la carga de otro modelo.
+private struct SelectorTransporte3D<Opcion: Hashable & RawRepresentable>: View where Opcion.RawValue == String {
+    let titulo: String
+    let opciones: [Opcion]
+    @Binding var seleccion: Opcion
+    let nombre: KeyPath<Opcion, String>
+    let identificador: String
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(titulo)
+                .font(.subheadline.weight(.semibold))
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 8))
+                : AnyLayout(HStackLayout(spacing: 8))
+            layout {
+                ForEach(opciones, id: \.self) { opcion in
+                    Button { seleccion = opcion } label: {
+                        Text(opcion[keyPath: nombre])
+                            .font(.bodySm.weight(.medium))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .foregroundStyle(seleccion == opcion ? Color.onPrimaryContainer : Color.onSurface)
+                            .background(seleccion == opcion ? Color.primaryContainer : Color.surfaceContainerLow,
+                                        in: RoundedRectangle(cornerRadius: 12))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(seleccion == opcion ? .isSelected : [])
+                    .accessibilityIdentifier(identificador + "." + opcion.rawValue)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(titulo)
+        .accessibilityIdentifier(identificador)
     }
 }
