@@ -323,7 +323,9 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     func detener() {
         locationTask?.cancel()
         locationTask = nil
-        detenerSimulacionBuses()
+        if vehicleProvider?.keepsConnectionWhileMapHidden != true {
+            detenerSimulacionBuses()
+        }
         invalidarSeleccionAnterior()
         // Al volver, el primer fix recalcula el destino que siga seleccionado.
         userRealCoordinate = nil
@@ -590,22 +592,28 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 // no tenemos metadatos; no sustituirlas por una flota demo.
                 feed = nil
             }
-            guard !Task.isCancelled, let self, self.flotaRevision == revision,
-                  self.fuenteFlota == .real else { return }
+            guard !Task.isCancelled, self?.flotaRevision == revision,
+                  self?.fuenteFlota == .real else { return }
 
             if let feed {
-                self.rutasPorId = Dictionary(
+                self?.rutasPorId = Dictionary(
                     feed.map { ($0.id, $0) },
                     uniquingKeysWith: { primera, _ in primera }
                 )
             }
 
+            guard !Task.isCancelled else { return }
             provider.start()
 
             for await _ in provider.positions() {
-                guard !Task.isCancelled, self.flotaRevision == revision,
+                guard !Task.isCancelled, let self, self.flotaRevision == revision,
                       self.fuenteFlota == .real else { break }
-                self.aplicarFlotaReal()
+                // Conservar recepción en las otras pestañas sin redibujar el
+                // mapa oculto. Una retirada sí debe limpiar también su caché.
+                if self.actividadVisual || !provider.keepsConnectionWhileMapHidden
+                    || provider.currentPositions.isEmpty {
+                    self.aplicarFlotaReal()
+                }
             }
         }
 

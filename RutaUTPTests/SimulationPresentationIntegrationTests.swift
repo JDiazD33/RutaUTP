@@ -172,6 +172,40 @@ final class SimulationPresentationIntegrationTests: XCTestCase {
         XCTAssertEqual(vm.fuenteFlota, .real)
     }
 
+    func testPresentacionConservaConexionEntrePestanasYAplicaSnapshotActualAlVolver() async throws {
+        let provider = PresentationProvider([position()])
+        provider.keepsConnectionWhileMapHidden = true
+        let vm = map(provider); defer { vm.detenerSimulacionBuses() }
+        vm.iniciarSimulacionBuses()
+        await wait("primero") { vm.busesAnimados.count == 1 }
+        vm.actualizarActividadVisual(false)
+        vm.detener()
+        XCTAssertEqual(provider.stops, 0)
+        var updated = position(); updated.lat += 0.001; updated.timestamp += 1
+        provider.emit([updated])
+        await Task.yield()
+        vm.actualizarActividadVisual(true)
+        vm.iniciarSimulacionBuses()
+        XCTAssertEqual(provider.starts, 1)
+        XCTAssertEqual(vm.busesAnimados.first?.lat, updated.lat)
+        vm.actualizarActividadVisual(false)
+        provider.emit([])
+        await wait("OFF aun oculto") { vm.busesAnimados.isEmpty }
+        vm.actualizarActividadVisual(true)
+        XCTAssertTrue(vm.busesAnimados.isEmpty)
+    }
+
+    func testPresentacionNoRetieneViewModelAlDestruirLaPantalla() async {
+        let provider = PresentationProvider([position()]); provider.keepsConnectionWhileMapHidden = true
+        var vm: MapaViewModel? = map(provider)
+        weak var released = vm
+        vm?.iniciarSimulacionBuses()
+        await wait("iniciado") { provider.starts == 1 }
+        vm?.actualizarActividadVisual(false); vm?.detener()
+        vm = nil
+        await wait("liberado") { released == nil && provider.stops == 1 }
+    }
+
     func testOcupacionDesconocidaYLegadaNoUsanTransporteComoProcedencia() async {
         let provider = PresentationProvider([position("unknown", origin: .unknown),
             position("legacy", origin: .legacyUnknown), position("observed", origin: .observed)])
@@ -263,8 +297,10 @@ private final class PresentationProvider: VehicleTrackingProviding {
     let source: VehicleTrackingSource = .real
     var initialOnStart: [VehiclePosition]
     var allowSynthetic = true
+    var keepsConnectionWhileMapHidden = false
     private(set) var currentPositions: [VehiclePosition] = []
     private(set) var starts = 0
+    private(set) var stops = 0
     private(set) var presentationReads = 0
     private var stream: AsyncStream<[VehiclePosition]>?
     private var continuation: AsyncStream<[VehiclePosition]>.Continuation?
@@ -272,6 +308,7 @@ private final class PresentationProvider: VehicleTrackingProviding {
     init(_ initial: [VehiclePosition]) { initialOnStart = initial }
     func start() { starts += 1; currentPositions = initialOnStart; continuation?.yield(currentPositions) }
     func stop() {
+        stops += 1
         currentPositions = []
         continuation?.finish(); continuation = nil; stream = nil
     }

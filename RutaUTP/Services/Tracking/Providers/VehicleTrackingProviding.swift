@@ -17,6 +17,9 @@ import Foundation
 protocol VehicleTrackingProviding: AnyObject {
     /// Transporte; la procedencia de cada dato pertenece a `VehiclePosition.dataOrigin`.
     var source: VehicleTrackingSource { get }
+    /// Una cuenta lectora de presentación puede seguir recibiendo al cambiar
+    /// pestaña; el ciclo de vida de la app sigue controlando el transporte.
+    var keepsConnectionWhileMapHidden: Bool { get }
 
     /// Inicia la emisión de posiciones. Idempotente: llamar dos veces no duplica.
     func start()
@@ -39,5 +42,6 @@ protocol VehicleTrackingProviding: AnyObject {
 }
 
 extension VehicleTrackingProviding {
+    var keepsConnectionWhileMapHidden: Bool { false }
     func positionsForPresentation() -> [VehiclePosition] { currentPositions }
 }

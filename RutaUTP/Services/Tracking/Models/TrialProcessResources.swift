@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-/// Contadores del proceso propio, solo para una captura explícita de S10.
+/// Contadores del proceso propio, solo para una captura explícita.
 /// No interpreta RSS como footprint ni sustituye un perfil de pilas.
 struct TrialProcessResources {
     let processID: Int
@@ -10,7 +10,8 @@ struct TrialProcessResources {
     let logicalCPUs: Int
 
     static func isEnabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        environment["RUTAUTP_S10_TRIAL"] == "1"
+        (environment["RUTAUTP_S10_TRIAL"] == "1"
+            || environment["RUTAUTP_PRESENTATION_DIAGNOSTICS"] == "1")
             && environment["RUTAUTP_S10_RESOURCE_SAMPLING"] == "1"
     }
 

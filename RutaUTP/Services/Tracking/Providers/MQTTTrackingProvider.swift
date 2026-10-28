@@ -6,6 +6,7 @@ import UIKit
 final class MQTTTrackingProvider: VehicleTrackingProviding {
 
     let source: VehicleTrackingSource = .real
+    var keepsConnectionWhileMapHidden: Bool { configuration.isReadOnly }
 
     private var mqtt: CocoaMQTT?
     private let configuration: MQTTConfiguration
@@ -272,6 +273,11 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         startStalenessSweep()
         observeLifecycle()
 
+        if configuration.isReadOnly && !isForeground {
+            retirePresentationSocket()
+            return
+        }
+
         #if DEBUG
         print("[MQTT] Intentando conectar con el broker...")
         #endif
@@ -282,6 +288,11 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
             logTrialLifecycle(.socketStartRejected)
             // Un fallo al iniciar el socket no debe bloquear un start posterior.
             mqtt = nil
+            if configuration.isReadOnly {
+                client.autoReconnect = false
+                client.disconnect()
+                return // Conservar stream y observadores para el siguiente foreground.
+            }
             isRunning = false
             generation = UUID()
             client.autoReconnect = false
@@ -513,14 +524,29 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
         guard lifecycleObservers.isEmpty else { return }
         let token = generation
         var names = [UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification]
-        if TrialProcessResources.isEnabled() {
+        if TrialProcessResources.isEnabled() || configuration.isReadOnly {
             names += [UIApplication.willResignActiveNotification, UIApplication.didBecomeActiveNotification]
+        }
+        if configuration.isReadOnly {
+            names += [UIScene.didEnterBackgroundNotification, UIScene.willEnterForegroundNotification,
+                      UIScene.didActivateNotification]
         }
         for name in names {
             lifecycleObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) {
                 [weak self] notification in
                 MainActor.assumeIsolated {
                     guard let self, self.isRunning, self.generation == token else { return }
+                    if self.configuration.isReadOnly {
+                        switch notification.name {
+                        case UIApplication.didEnterBackgroundNotification, UIScene.didEnterBackgroundNotification:
+                            self.enterPresentationBackground()
+                        case UIApplication.willEnterForegroundNotification, UIScene.willEnterForegroundNotification,
+                             UIApplication.didBecomeActiveNotification, UIScene.didActivateNotification:
+                            self.resumePresentationConnection()
+                        default: break
+                        }
+                        return
+                    }
                     switch notification.name {
                     case UIApplication.willResignActiveNotification:
                         self.logTrialLifecycle(.willResignActive)
@@ -537,9 +563,55 @@ final class MQTTTrackingProvider: VehicleTrackingProviding {
                     self.control.invalidate() // esperar otro control recibido, no restaurar el guardado
                     self.stopControlExpiry()
                     self.publishIfChanged(now: self.clock())
+                    if self.isForeground, self.connected, let client = self.mqtt {
+                        // Pedir el retained de nuevo; la puerta de control sigue
+                        // exigiendo vigencia, run y revisión antes de mostrar datos.
+                        client.subscribe(VehicleTrackingWire.controlTopic, qos: .qos1)
+                    }
                 }
             })
         }
+    }
+
+    private func retirePresentationSocket() {
+        let previous = mqtt
+        // Invalidar la identidad antes de disconnect: callbacks pendientes del
+        // socket retirado no pueden revocar ni repoblar la conexión siguiente.
+        mqtt = nil
+        connected = false
+        controlSubscribed = false
+        previous?.autoReconnect = false
+        previous?.disconnect()
+    }
+
+    private func enterPresentationBackground() {
+        guard isForeground || mqtt != nil else { return }
+        isForeground = false
+        control.invalidate()
+        stopControlExpiry()
+        stopStalenessSweep()
+        retirePresentationSocket()
+        publishIfChanged(now: clock())
+    }
+
+    private func resumePresentationConnection() {
+        // UIKit y UIScene pueden emitir el mismo cambio. No abrir dos sockets
+        // ni renovar la autorización en el segundo aviso.
+        let needsConnection = !isForeground || mqtt == nil
+        isForeground = true
+        guard needsConnection else { return }
+        control.invalidate()
+        stopControlExpiry()
+        retirePresentationSocket()
+        publishIfChanged(now: clock())
+        startStalenessSweep()
+        let client = makeClient()
+        mqtt = client
+        configureCallbacks(for: client)
+        if !conectar(client), mqtt === client {
+            retirePresentationSocket()
+        }
+        // No terminar AsyncStream: Mapa conserva su consumidor al volver.
     }
 
     private func stopObservingLifecycle() {

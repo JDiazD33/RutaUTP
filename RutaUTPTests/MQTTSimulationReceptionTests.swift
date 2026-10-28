@@ -16,9 +16,10 @@ final class MQTTSimulationReceptionTests: XCTestCase {
         var failRead = false
     }
 
-    private func provider(_ rig: Rig, legacy: LegacyVehicleCompatibility = .disabled) -> MQTTTrackingProvider {
+    private func provider(_ rig: Rig, legacy: LegacyVehicleCompatibility = .disabled,
+                          readOnly: Bool = false) -> MQTTTrackingProvider {
         MQTTTrackingProvider(configuration: MQTTConfiguration(host: "offline.invalid", port: 8883,
-            username: "captured-reader", password: "unused", useTLS: true), legacyCompatibility: legacy,
+            username: "captured-reader", password: "unused", useTLS: true, isReadOnly: readOnly), legacyCompatibility: legacy,
             clock: { rig.now }, loadCheckpoint: {
                 if rig.failRead { throw CocoaError(.fileReadCorruptFile) }
                 return rig.checkpoint
@@ -171,6 +172,52 @@ final class MQTTSimulationReceptionTests: XCTestCase {
         client.didReceiveMessage(client, try state(), 4)
         client.didReceiveMessage(client, try position(rig), 5)
         XCTAssertEqual(provider.currentPositions.count, 1)
+    }
+
+    func testPresentacionRenuevaSocketSinTerminarStreamNiAceptarCallbacksViejos() async throws {
+        let rig = Rig(); let provider = provider(rig, readOnly: true); defer { provider.stop() }
+        let old = try connect(provider, rig)
+        var iterator = provider.positions().makeAsyncIterator()
+        old.didReceiveMessage(old, try state(), 1)
+        old.didReceiveMessage(old, try position(rig), 2)
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.post(name: UIScene.didEnterBackgroundNotification, object: nil)
+        XCTAssertTrue(provider.currentPositions.isEmpty)
+        XCTAssertFalse(old.autoReconnect)
+        NotificationCenter.default.post(name: UIScene.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: nil)
+        XCTAssertEqual(rig.clients.count, 2)
+        let fresh = try XCTUnwrap(rig.clients.last)
+        XCTAssertFalse(old === fresh)
+        old.didConnectAck(old, .accept)
+        old.didReceiveMessage(old, try state(), 3)
+        old.didReceiveMessage(old, try position(rig), 4)
+        XCTAssertTrue(provider.currentPositions.isEmpty)
+        fresh.didConnectAck(fresh, .accept)
+        fresh.didSubscribeTopics(fresh, [VehicleTrackingWire.controlTopic: 1] as NSDictionary, [])
+        fresh.didReceiveMessage(fresh, try position(rig), 5)
+        XCTAssertTrue(provider.currentPositions.isEmpty)
+        fresh.didReceiveMessage(fresh, try state(), 6)
+        fresh.didReceiveMessage(fresh, try position(rig), 7)
+        let value = await iterator.next()
+        XCTAssertEqual(value?.count, 1)
+        XCTAssertTrue(provider.keepsConnectionWhileMapHidden)
+    }
+
+    func testPresentacionVuelveAControlOffSinReponerPosiciones() throws {
+        let rig = Rig(); let provider = provider(rig, readOnly: true); defer { provider.stop() }
+        let old = try connect(provider, rig)
+        old.didReceiveMessage(old, try state(), 1)
+        old.didReceiveMessage(old, try position(rig), 2)
+        NotificationCenter.default.post(name: UIScene.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.post(name: UIScene.didActivateNotification, object: nil)
+        let fresh = try XCTUnwrap(rig.clients.last)
+        fresh.didConnectAck(fresh, .accept)
+        fresh.didSubscribeTopics(fresh, [VehicleTrackingWire.controlTopic: 1] as NSDictionary, [])
+        fresh.didReceiveMessage(fresh, try state(["enabled":false,"controlRevision":4,"validUntil":1000]), 3)
+        fresh.didReceiveMessage(fresh, try position(rig), 4)
+        XCTAssertTrue(provider.currentPositions.isEmpty)
     }
 
     func testCallbackDeClienteAnteriorNoRevocaNiRepueblaNuevaConexion() throws {

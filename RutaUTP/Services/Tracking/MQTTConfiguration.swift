@@ -10,6 +10,8 @@ struct MQTTConfiguration {
     let port: UInt16
     let username: String
     let password: String
+    /// Cuenta aprovisionada para presentar el mapa sin publicar aportes.
+    let isReadOnly: Bool
 
     /// Cifrado TLS. Sin TLS las credenciales y las ubicaciones viajan en
     /// texto plano por la red, así que cualquier despliegue accesible
@@ -36,12 +38,14 @@ struct MQTTConfiguration {
         username: String,
         password: String,
         useTLS: Bool = false,
-        trustedCACertificates: [SecCertificate] = []
+        trustedCACertificates: [SecCertificate] = [],
+        isReadOnly: Bool = false
     ) {
         self.host = host
         self.port = port
         self.username = username
         self.password = password
+        self.isReadOnly = isReadOnly
         self.useTLS = useTLS
         self.trustedCACertificates = trustedCACertificates
     }
@@ -73,12 +77,49 @@ struct MQTTConfiguration {
     }
 
     static func contributionFromEnvironment() -> MQTTConfiguration? {
-        isReadOnlyTrial ? nil : fromEnvironment()
+        contributionFrom(environment: ProcessInfo.processInfo.environment,
+                         defaults: .standard, bundle: .main, credentialStore: MQTTKeychainStore())
+    }
+
+    /// El lector de presentación no reemplaza la cuenta propia del teléfono.
+    /// Reutilizar únicamente la credencial habitual del MISMO endpoint: no
+    /// enviar ubicaciones con el lector ni a un destino anterior diferente.
+    static func contributionFrom(environment: [String: String], defaults: UserDefaults,
+                                 bundle: Bundle? = nil, credentialStore: MQTTCredentialStoring) -> MQTTConfiguration? {
+        guard environment["RUTAUTP_S10_TRIAL"] == nil,
+              let receiver = from(environment: environment, defaults: defaults,
+                                  bundle: bundle, credentialStore: credentialStore) else { return nil }
+        guard receiver.isReadOnly else { return receiver }
+        let endpoint = "\(receiver.useTLS ? "mqtts" : "mqtt")://\(receiver.host.lowercased()):\(receiver.port)"
+        let credentials: MQTTCredentials
+        do {
+            if environment["MQTT_CONTRIBUTION_USERNAME"] != nil || environment["MQTT_CONTRIBUTION_PASSWORD"] != nil {
+                guard let username = environment["MQTT_CONTRIBUTION_USERNAME"],
+                      let password = environment["MQTT_CONTRIBUTION_PASSWORD"] else { return nil }
+                credentials = MQTTCredentials(username: username, password: password)
+            } else {
+                guard let stored = try credentialStore.load(endpoint: endpoint) else { return nil }
+                credentials = stored
+            }
+        } catch { return nil }
+        guard credentials.isValid,
+              credentials.username != receiver.username,
+              !["backend", "observer", "presentation-reader"].contains(credentials.username),
+              !credentials.username.hasPrefix("sim-") else { return nil }
+        if environment["MQTT_CONTRIBUTION_USERNAME"] != nil {
+            do { try credentialStore.save(credentials, endpoint: endpoint) }
+            catch { return nil }
+        }
+        return MQTTConfiguration(host: receiver.host, port: receiver.port,
+                                 username: credentials.username, password: credentials.password,
+                                 useTLS: receiver.useTLS, trustedCACertificates: receiver.trustedCACertificates)
     }
 
     /// Solo cantidades y tiempos del ensayo; nunca payloads o credenciales.
     static func trialLog(_ event: String, _ counts: [String: Int]) {
-        guard ProcessInfo.processInfo.environment["RUTAUTP_S10_TRIAL"] == "1" else { return }
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["RUTAUTP_S10_TRIAL"] == "1"
+            || environment["RUTAUTP_PRESENTATION_DIAGNOSTICS"] == "1" else { return }
         let body: [String: Any] = ["event": event, "counts": counts,
             "wall": Date().timeIntervalSince1970, "uptime": ProcessInfo.processInfo.systemUptime]
         if let data = try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys]),
@@ -103,7 +144,33 @@ struct MQTTConfiguration {
                   ["0", "1"].contains(environment["MQTT_TLS"] ?? "") else { return nil }
             var ephemeral = environment
             ephemeral.removeValue(forKey: "RUTAUTP_S10_TRIAL")
+            ephemeral.removeValue(forKey: "MQTT_PRESENTATION_MODE")
             return from(environment: ephemeral)
+        }
+        // Aprovisionamiento explícito una sola vez; nunca guardar secretos en
+        // preferencias. La selección lectora pertenece a endpoint + cuenta.
+        let presentation = environment["MQTT_PRESENTATION_MODE"]
+        if let presentation {
+            guard ["0", "1"].contains(presentation) else { return nil }
+            if presentation == "1" {
+                guard defaults != nil, credentialStore != nil,
+                      ["MQTT_HOST", "MQTT_PORT", "MQTT_TLS", "MQTT_USERNAME", "MQTT_PASSWORD"]
+                        .allSatisfy({ !(environment[$0] ?? "").isEmpty }),
+                      ["0", "1"].contains(environment["MQTT_TLS"] ?? "") else { return nil }
+            }
+        }
+        let destinationKeys = ["MQTT_HOST", "MQTT_PORT", "MQTT_TLS", "MQTT_CA_CERT"]
+        let previousDestination = defaults?.dictionary(forKey: "MQTT_PRESENTATION_PREVIOUS_DESTINATION") as? [String: String]
+        if presentation == "0", let defaults {
+            if let previousDestination {
+                for key in destinationKeys {
+                    if let value = previousDestination[key] { defaults.set(value, forKey: key) }
+                    else { defaults.removeObject(forKey: key) }
+                }
+            }
+            for key in ["MQTT_PRESENTATION_ENDPOINT", "MQTT_PRESENTATION_USERNAME", "MQTT_PRESENTATION_PREVIOUS_DESTINATION"] {
+                defaults.removeObject(forKey: key)
+            }
         }
         func valor(_ clave: String) -> String? {
             let candidatos: [String?] = [
@@ -143,6 +210,12 @@ struct MQTTConfiguration {
         }
 
         let endpoint = "\(useTLS ? "mqtts" : "mqtt")://\(host.lowercased()):\(port)"
+        let hasEnvironmentCredentials = environment["MQTT_USERNAME"] != nil || environment["MQTT_PASSWORD"] != nil
+        let presentationCredentials = presentation == "1" || (presentation == nil
+            && !hasEnvironmentCredentials && defaults?.string(forKey: "MQTT_PRESENTATION_ENDPOINT") == endpoint)
+        // La cuenta lectora usa otra entrada: conservar la credencial habitual
+        // incluso cuando ambos roles pertenecen al mismo broker.
+        let credentialEndpoint = presentationCredentials ? endpoint + "#presentation" : endpoint
         let credentials: MQTTCredentials
         do {
             // No mezclar usuario de una fuente con contraseña de otra.
@@ -151,8 +224,8 @@ struct MQTTConfiguration {
                       let password = environment["MQTT_PASSWORD"] else { return nil }
                 credentials = MQTTCredentials(username: username, password: password)
                 guard credentials.isValid else { return nil }
-                try credentialStore?.save(credentials, endpoint: endpoint)
-            } else if let stored = try credentialStore?.load(endpoint: endpoint) {
+                try credentialStore?.save(credentials, endpoint: credentialEndpoint)
+            } else if let stored = try credentialStore?.load(endpoint: credentialEndpoint) {
                 credentials = stored
             } else {
                 guard let credentialStore,
@@ -160,7 +233,7 @@ struct MQTTConfiguration {
                       let password = defaults?.string(forKey: "MQTT_PASSWORD") else { return nil }
                 credentials = MQTTCredentials(username: username, password: password)
                 guard credentials.isValid else { return nil }
-                try credentialStore.save(credentials, endpoint: endpoint)
+                try credentialStore.save(credentials, endpoint: credentialEndpoint)
             }
             guard credentials.isValid else { return nil }
             if credentialStore != nil,
@@ -199,11 +272,28 @@ struct MQTTConfiguration {
         // Así, un fallo de Keychain no reemplaza la conexión anterior. Se guarda
         // el nombre relativo de la CA, no la ruta variable del paquete instalado.
         if credentialStore != nil, let defaults {
+            if presentation == "1", previousDestination == nil {
+                let previous = Dictionary(uniqueKeysWithValues: destinationKeys.compactMap { key in
+                    defaults.string(forKey: key).map { (key, $0) }
+                })
+                defaults.set(previous, forKey: "MQTT_PRESENTATION_PREVIOUS_DESTINATION")
+            }
             defaults.set(host, forKey: "MQTT_HOST")
             defaults.set(String(port), forKey: "MQTT_PORT")
             defaults.set(useTLS ? "1" : "0", forKey: "MQTT_TLS")
             defaults.set(configuredCA, forKey: "MQTT_CA_CERT")
+            if presentation == "1" {
+                defaults.set(endpoint, forKey: "MQTT_PRESENTATION_ENDPOINT")
+                defaults.set(credentials.username, forKey: "MQTT_PRESENTATION_USERNAME")
+            } else if presentation == "0" || hasEnvironmentCredentials {
+                defaults.removeObject(forKey: "MQTT_PRESENTATION_ENDPOINT")
+                defaults.removeObject(forKey: "MQTT_PRESENTATION_USERNAME")
+                defaults.removeObject(forKey: "MQTT_PRESENTATION_PREVIOUS_DESTINATION")
+            }
         }
+
+        let isReadOnly = presentationCredentials && defaults?.string(forKey: "MQTT_PRESENTATION_ENDPOINT") == endpoint
+            && defaults?.string(forKey: "MQTT_PRESENTATION_USERNAME") == credentials.username
 
         return MQTTConfiguration(
             host: host,
@@ -211,7 +301,8 @@ struct MQTTConfiguration {
             username: credentials.username,
             password: credentials.password,
             useTLS: useTLS,
-            trustedCACertificates: trustedCA
+            trustedCACertificates: trustedCA,
+            isReadOnly: isReadOnly
         )
     }
 

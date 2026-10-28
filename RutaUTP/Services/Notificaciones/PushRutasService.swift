@@ -171,7 +171,7 @@ final class PushRutasService {
             estado = disponibleEnVersion ? .desactivadas : .versionSinPush
             return
         }
-        guard let config = MQTTConfiguration.fromEnvironment() else {
+        guard let config = MQTTConfiguration.contributionFromEnvironment() else {
             desconectar(); estado = .faltaConexion; registroConfirmado = false; return
         }
         guard config.useTLS else {

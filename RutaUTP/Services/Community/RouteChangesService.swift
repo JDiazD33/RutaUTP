@@ -52,7 +52,7 @@ final class RouteChangesService: ObservableObject {
 
     func start() {
         guard !running else { return }
-        guard let config = MQTTConfiguration.fromEnvironment() else { return }
+        guard let config = MQTTConfiguration.contributionFromEnvironment() else { return }
         configured = true
         running = true
         principal = config.username

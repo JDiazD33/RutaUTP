@@ -50,7 +50,7 @@ final class OccupancyService: ObservableObject {
     private let deadlineScheduler: ServiceDeadlineScheduler
 
     /// Permite comprobar reportes de viaje sin abrir un canal real en tests.
-    init(configurationProvider: @escaping () -> MQTTConfiguration? = MQTTConfiguration.fromEnvironment,
+    init(configurationProvider: @escaping () -> MQTTConfiguration? = MQTTConfiguration.contributionFromEnvironment,
          clock: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 }) {
         self.configurationProvider = configurationProvider
         self.clock = clock
@@ -97,7 +97,7 @@ final class OccupancyService: ObservableObject {
     func start() {
         guard !running else { return }
         refresh(allowTripAttempt: false)
-        guard let config = configurationProvider() else { return }
+        guard let config = configurationProvider(), !config.isReadOnly else { return }
         configured = true
         running = true
         principal = config.username

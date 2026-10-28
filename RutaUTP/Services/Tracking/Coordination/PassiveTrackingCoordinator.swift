@@ -256,6 +256,7 @@ private let isForcedOnboardForMQTTTest =
         detectionClock: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 },
         configurationProvider: () -> MQTTConfiguration? = MQTTConfiguration.contributionFromEnvironment,
         preserveStoredConsentWhenUnconfigured: Bool = MQTTConfiguration.isReadOnlyTrial
+            || MQTTConfiguration.fromEnvironment()?.isReadOnly == true
     ) {
         self.locationService = locationService
         self.motionService = motionService ?? CoreMotionActivityService()
@@ -301,6 +302,9 @@ private let isForcedOnboardForMQTTTest =
                 self?.observationPublisherState = newState
             }
         refreshObservationPublisherState()
+        MQTTConfiguration.trialLog("contributionConfiguration", [
+            "configured": isPublisherConfigured ? 1 : 0, "enabled": isEnabled ? 1 : 0
+        ])
     }
 
 

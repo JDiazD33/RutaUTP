@@ -23,6 +23,10 @@ final class MQTTConfigurationTests: XCTestCase {
         }
         XCTAssertTrue(TrialProcessResources.isEnabled(environment:
             ["RUTAUTP_S10_TRIAL": "1", "RUTAUTP_S10_RESOURCE_SAMPLING": "1"]))
+        XCTAssertFalse(TrialProcessResources.isEnabled(environment:
+            ["RUTAUTP_PRESENTATION_DIAGNOSTICS": "1"]))
+        XCTAssertTrue(TrialProcessResources.isEnabled(environment:
+            ["RUTAUTP_PRESENTATION_DIAGNOSTICS": "1", "RUTAUTP_S10_RESOURCE_SAMPLING": "1"]))
     }
 
     func testContadoresCPUConservanMicrosegundosYRechazanDesbordamiento() {
@@ -449,6 +453,185 @@ final class MQTTConfigurationTests: XCTestCase {
         let reopened = try XCTUnwrap(MQTTConfiguration.from(
             environment: [:], bundle: bundle, credentialStore: store))
         XCTAssertEqual(reopened.username, "device-002")
+    }
+
+    func testPresentacionPersisteLectorSinVariablesNiSecretosEnPreferencias() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        var environment = baseEnvironment()
+        environment["MQTT_PORT"] = "8883"
+        environment["MQTT_TLS"] = "1"
+        environment["MQTT_PRESENTATION_MODE"] = "1"
+        XCTAssertTrue(try XCTUnwrap(MQTTConfiguration.from(environment: environment,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        let reopened = try XCTUnwrap(MQTTConfiguration.from(environment: [:],
+            defaults: defaults, credentialStore: store))
+        XCTAssertTrue(reopened.isReadOnly)
+        XCTAssertEqual(reopened.username, environment["MQTT_USERNAME"])
+        XCTAssertNil(defaults.string(forKey: "MQTT_PASSWORD"))
+        XCTAssertNil(defaults.string(forKey: "MQTT_USERNAME"))
+        XCTAssertNil(defaults.string(forKey: "RUTAUTP_S10_TRIAL"))
+    }
+
+    func testPresentacionNoSeHeredaEntreCuentasNiServidores() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        var environment = baseEnvironment()
+        environment.merge(["MQTT_PORT":"1883", "MQTT_TLS":"0", "MQTT_PRESENTATION_MODE":"1"], uniquingKeysWith: { _, new in new })
+        XCTAssertTrue(try XCTUnwrap(MQTTConfiguration.from(environment: environment,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        environment.removeValue(forKey: "MQTT_PRESENTATION_MODE")
+        environment["MQTT_USERNAME"] = "otra-cuenta"
+        XCTAssertFalse(try XCTUnwrap(MQTTConfiguration.from(environment: environment,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        environment["MQTT_HOST"] = "otro.example"
+        XCTAssertFalse(try XCTUnwrap(MQTTConfiguration.from(environment: environment,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+    }
+
+    func testAprovisionamientoIncompletoNoCambiaLaConexionGuardada() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        XCTAssertNotNil(MQTTConfiguration.from(environment: baseEnvironment(), defaults: defaults, credentialStore: store))
+        XCTAssertNil(MQTTConfiguration.from(environment: ["MQTT_PRESENTATION_MODE":"1"],
+            defaults: defaults, credentialStore: store))
+        let reopened = try XCTUnwrap(MQTTConfiguration.from(environment: [:], defaults: defaults, credentialStore: store))
+        XCTAssertFalse(reopened.isReadOnly)
+        XCTAssertEqual(reopened.host, "mqtt.ejemplo.com")
+        XCTAssertNil(defaults.string(forKey: "MQTT_PRESENTATION_ENDPOINT"))
+    }
+
+    func testFalloKeychainNoActivaArranqueDePresentacion() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials(); store.failSave = true
+        var environment = baseEnvironment()
+        environment.merge(["MQTT_PORT":"1883", "MQTT_TLS":"0", "MQTT_PRESENTATION_MODE":"1"], uniquingKeysWith: { _, new in new })
+        XCTAssertNil(MQTTConfiguration.from(environment: environment, defaults: defaults, credentialStore: store))
+        XCTAssertNil(defaults.string(forKey: "MQTT_PRESENTATION_ENDPOINT"))
+        XCTAssertNil(defaults.string(forKey: "MQTT_HOST"))
+    }
+
+    func testPresentacionPuedeDesactivarseSinBorrarCredenciales() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        XCTAssertNotNil(MQTTConfiguration.from(environment: baseEnvironment(),
+            defaults: defaults, credentialStore: store))
+        var environment = baseEnvironment()
+        environment.merge(["MQTT_PORT":"1883", "MQTT_TLS":"0", "MQTT_PRESENTATION_MODE":"1"], uniquingKeysWith: { _, new in new })
+        XCTAssertTrue(try XCTUnwrap(MQTTConfiguration.from(environment: environment,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        XCTAssertFalse(try XCTUnwrap(MQTTConfiguration.from(environment: ["MQTT_PRESENTATION_MODE":"0"],
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        XCTAssertFalse(try XCTUnwrap(MQTTConfiguration.from(environment: [:],
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        XCTAssertEqual(store.entries.count, 2)
+    }
+
+    func testPresentacionPreservaCuentaHabitualYDestinoAnterior() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        XCTAssertNotNil(MQTTConfiguration.from(environment: baseEnvironment(), defaults: defaults, credentialStore: store))
+        var presentation = baseEnvironment()
+        presentation.merge(["MQTT_USERNAME":"presentation-reader", "MQTT_PASSWORD":"other-secret",
+                            "MQTT_HOST":"presentation.example", "MQTT_PORT":"8883", "MQTT_TLS":"1",
+                            "MQTT_PRESENTATION_MODE":"1"], uniquingKeysWith: { _, new in new })
+        XCTAssertTrue(try XCTUnwrap(MQTTConfiguration.from(environment: presentation,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        XCTAssertEqual(store.entries["mqtt://mqtt.ejemplo.com:1883"]?.password, "secreto")
+        let restored = try XCTUnwrap(MQTTConfiguration.from(environment: ["MQTT_PRESENTATION_MODE":"0"],
+            defaults: defaults, credentialStore: store))
+        XCTAssertFalse(restored.isReadOnly)
+        XCTAssertEqual(restored.host, "mqtt.ejemplo.com")
+        XCTAssertEqual(restored.username, "observer")
+        XCTAssertEqual(restored.password, "secreto")
+    }
+
+    func testPresentacionRecuperaPublicadorPropioSinSustituirElLector() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        var writer = baseEnvironment(); writer["MQTT_USERNAME"] = "device-001"
+        XCTAssertNotNil(MQTTConfiguration.from(environment: writer, defaults: defaults, credentialStore: store))
+        var reader = writer
+        reader.merge(["MQTT_PRESENTATION_MODE":"1", "MQTT_USERNAME":"presentation-reader",
+                      "MQTT_PORT":"1883", "MQTT_TLS":"0", "MQTT_PASSWORD":"reader-secret"], uniquingKeysWith: { _, new in new })
+        XCTAssertTrue(try XCTUnwrap(MQTTConfiguration.from(environment: reader,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        let publisher = try XCTUnwrap(MQTTConfiguration.contributionFrom(environment: [:],
+            defaults: defaults, credentialStore: store))
+        XCTAssertEqual(publisher.username, "device-001")
+        XCTAssertFalse(publisher.isReadOnly)
+        let reopened = try XCTUnwrap(MQTTConfiguration.from(environment: [:], defaults: defaults, credentialStore: store))
+        XCTAssertTrue(reopened.isReadOnly)
+        XCTAssertEqual(reopened.username, "presentation-reader")
+        XCTAssertNil(defaults.string(forKey: "MQTT_PASSWORD"))
+    }
+
+    func testPresentacionSinCuentaPropiaNoUsaLectorNiCuentaPrivilegiadaParaPublicar() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        var reader = baseEnvironment()
+        reader.merge(["MQTT_PRESENTATION_MODE":"1", "MQTT_USERNAME":"presentation-reader",
+                      "MQTT_PORT":"1883", "MQTT_TLS":"0"],
+                     uniquingKeysWith: { _, new in new })
+        let receiver = try XCTUnwrap(MQTTConfiguration.from(environment: reader,
+            defaults: defaults, credentialStore: store))
+        let endpoint = "mqtt://\(receiver.host):\(receiver.port)"
+        XCTAssertNil(MQTTConfiguration.contributionFrom(environment: [:], defaults: defaults, credentialStore: store))
+        for role in ["presentation-reader", "backend", "observer", "sim-001"] {
+            store.entries[endpoint] = MQTTCredentials(username: role, password: "test-secret")
+            XCTAssertNil(MQTTConfiguration.contributionFrom(environment: [:], defaults: defaults, credentialStore: store))
+        }
+        store.entries[endpoint] = nil
+        store.entries["mqtt://previous.example:1883"] = MQTTCredentials(username: "device-001", password: "test-secret")
+        XCTAssertNil(MQTTConfiguration.contributionFrom(environment: [:], defaults: defaults, credentialStore: store))
+    }
+
+    func testAprovisionarCuentaDeEnvioNoReemplazaLaRecepcionYRechazaParejaIncompleta() throws {
+        let suite = "rutautp.tests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MemoryCredentials()
+        var reader = baseEnvironment()
+        reader.merge(["MQTT_PRESENTATION_MODE":"1", "MQTT_USERNAME":"presentation-reader",
+                      "MQTT_PORT":"1883", "MQTT_TLS":"0"], uniquingKeysWith: { _, new in new })
+        XCTAssertTrue(try XCTUnwrap(MQTTConfiguration.from(environment: reader,
+            defaults: defaults, credentialStore: store)).isReadOnly)
+        let writerEnvironment = ["MQTT_CONTRIBUTION_USERNAME":"device-001", "MQTT_CONTRIBUTION_PASSWORD":"writer-secret"]
+        let writer = try XCTUnwrap(MQTTConfiguration.contributionFrom(environment: writerEnvironment,
+            defaults: defaults, credentialStore: store))
+        XCTAssertEqual(writer.username, "device-001")
+        XCTAssertTrue(try XCTUnwrap(MQTTConfiguration.from(environment: [:], defaults: defaults,
+            credentialStore: store)).isReadOnly)
+        XCTAssertEqual(try XCTUnwrap(MQTTConfiguration.contributionFrom(environment: [:], defaults: defaults,
+            credentialStore: store)).username, "device-001")
+        XCTAssertNil(MQTTConfiguration.contributionFrom(environment: ["MQTT_CONTRIBUTION_USERNAME":"device-002"],
+            defaults: defaults, credentialStore: store))
+        XCTAssertNil(defaults.string(forKey: "MQTT_CONTRIBUTION_PASSWORD"))
+    }
+
+    func testEnsayoEfimeroSigueSinPublicadorAunqueExistaCuentaPropia() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "rutautp.tests.\(UUID().uuidString)"))
+        let store = MemoryCredentials()
+        var environment = baseEnvironment(); environment["MQTT_USERNAME"] = "device-001"
+        XCTAssertNotNil(MQTTConfiguration.from(environment: environment, defaults: defaults, credentialStore: store))
+        environment["RUTAUTP_S10_TRIAL"] = "1"
+        XCTAssertNil(MQTTConfiguration.contributionFrom(environment: environment, defaults: defaults, credentialStore: store))
     }
 
     private final class MemoryCredentials: MQTTCredentialStoring {
