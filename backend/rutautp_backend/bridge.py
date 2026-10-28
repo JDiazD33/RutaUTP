@@ -512,7 +512,7 @@ class Bridge:
             'persistence': self.store.counts.as_dict(),
             'simulationStorage': self.store.simulation_storage_status(),
             'positionPublicationMeaning': 'accepted_by_publisher_not_client_receipt',
-            'app': {'positionsReceived': None, 'markersRendered': None, 'markerLimit': 8},
+            'app': {'positionsReceived': None, 'markersRendered': None, 'markerLimit': None},
         }
         if self.simulation_control is not None:
             payload["simulationControlError"] = self.simulation_control.error

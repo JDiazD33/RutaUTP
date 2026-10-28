@@ -110,7 +110,7 @@ def _summary(db: sqlite3.Connection, run_id: str, now: float) -> dict:
         'rejectionReasons': reasons, 'historyComplete': bool(run['history_complete']),
         'detailComplete': run['detail_purged_before'] is None,
         'mqttConnections': None, 'positionsReceivedByApp': None, 'markersRendered': None,
-        'markerLimit': 8, 'positionRowsMeaning': 'stored_attempts_not_broker_or_client_ack',
+        'markerLimit': None, 'positionRowsMeaning': 'stored_attempts_not_broker_or_client_ack',
         'referenceMeaning': 'durable_boarding_records_joined_by_run_session_route_and_time'}
 
 

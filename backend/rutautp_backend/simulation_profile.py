@@ -13,11 +13,11 @@ from zoneinfo import ZoneInfo
 from .simulation_models import FEED_HASH_FILES, SimulationRunRecord
 
 PROFILE_DIRECTORY = Path(__file__).resolve().parents[1] / "simulation/scenarios"
-# Perfiles explícitos: no habilitar tamaños arbitrarios ni 50/100 incidentalmente.
+# Perfiles explícitos: cada ampliación conserva su whitelist y presupuesto.
 PROFILE_SPECS = {'ensayo-2': (2, 1, 300, 240), 'ensayo-6': (6, 2, 300, 720),
-                 'pasajeros-30': (30, 10, 900, 6000)}
-# La ampliación diaria corresponde solo al perfil de 30; los ensayos conservan 6000.
-PROFILE_DAY_LIMITS = {'ensayo-2': 6000, 'ensayo-6': 6000, 'pasajeros-30': 10000}
+                 'pasajeros-30': (30, 10, 900, 6000), 'pasajeros-50': (50, 15, 300, 6000)}
+PROFILE_DAY_LIMITS = {'ensayo-2': 6000, 'ensayo-6': 6000, 'pasajeros-30': 10000,
+                      'pasajeros-50': 10000}
 def lima_zone() -> ZoneInfo:
     # No exigir la base IANA al arrancar el circuito observado con simulación
     # apagada. Si falta al activar, el controlador revoca el perfil.
@@ -42,7 +42,7 @@ class SimulationProfile:
     @classmethod
     def load(cls, name: str, gtfs_dir: Path) -> "SimulationProfile":
         if name not in PROFILE_SPECS:
-            raise ValueError('perfil no preparado; solo ensayo-2, ensayo-6 y pasajeros-30')
+            raise ValueError('perfil no preparado: ' + ', '.join(PROFILE_SPECS))
         actor_count, vehicle_count, max_duration, max_calls = PROFILE_SPECS[name]
         path = PROFILE_DIRECTORY / f"{name}.json"
         watched = [path, *(gtfs_dir / filename for filename in sorted(FEED_HASH_FILES))]

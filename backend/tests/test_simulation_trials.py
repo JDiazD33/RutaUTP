@@ -40,7 +40,7 @@ def test_profiles_produce_exact_actor_counts_with_quorum_and_wire_contract(name,
     assert body['limits']['maxRunDurationSeconds']<=PROFILE_SPECS[name][2]
 
 
-@pytest.mark.parametrize('name', ['pasajeros-50','pasajeros-100','../pasajeros-30','arbitrary'])
+@pytest.mark.parametrize('name', ['pasajeros-100','../pasajeros-30','arbitrary'])
 def test_unprepared_profiles_never_expand_trial(name):
     with pytest.raises(ValueError): SimulationProfile.load(name,GTFS_DIR)
 

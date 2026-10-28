@@ -96,7 +96,7 @@ def status(store: ControlStore, now: float) -> dict:
                    'readyActors': count('readyActors'), 'inflight': count('inflight'),
                    'observationPubacks': count('publishAcks'),
                    'estimatedVehicles': None, 'positionsReceivedByApp': None, 'markersRendered': None,
-                   'markerLimit': 8},
+                   'markerLimit': None},
         'budget': {'available': valid_budget, 'serviceDate': day,
                    'reservedPublishCallsRun': run_calls, 'reservedPublishCallsDay': day_calls,
                    'maxPublishCallsRun': limits.get('maxObservationPublishCallsPerRun'),

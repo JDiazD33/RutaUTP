@@ -1,0 +1,297 @@
+{
+  "$schema": "../schemas/scenario-v1.schema.json",
+  "schemaVersion": 1,
+  "scenarioId": "pasajeros-50",
+  "scenarioVersion": 1,
+  "dataOrigin": "simulated",
+  "enabledByDefault": false,
+  "seed": 20261021,
+  "clock": {
+    "mode": "realtime",
+    "rate": 1
+  },
+  "service": {
+    "timeZone": "America/Lima",
+    "startsAtLocal": "07:00",
+    "endsAtLocal": "22:30",
+    "closePolicy": "stop_at_boundary"
+  },
+  "feed": {
+    "pathFromRepositoryRoot": "gtfs",
+    "tripSelector": "lexicographic_min_trip_per_route",
+    "sha256": {
+      "routes.txt": "3b72327c0650f676c9a73ff22369c146bcf2e03b488324cbf25f83905d8d36a2",
+      "trips.txt": "a45196230c5e51d842675acf677b371106ec98932a6e47e9d54fff5f9e29be8f",
+      "shapes.txt": "0009011b8a87fbd2c456bc5c4671c64a3bcd002a0c1c542a8b361a471c15a786",
+      "stops.txt": "f946cda12b3f61d1022b0479b30f1d1310500726e42e607ff607994baaf52870",
+      "stop_times.txt": "758e0dab4d016af03aeb7f57025ae85731d09172c775c48748314dee7933dd2f"
+    }
+  },
+  "contracts": {
+    "passengerObservation": 1,
+    "vehiclePosition": 2,
+    "simulationControl": 1
+  },
+  "limits": {
+    "maxConcurrentActors": 50,
+    "nominalVehicleCount": 15,
+    "maxRunDurationSeconds": 300,
+    "maxObservationPublishCallsPerRun": 6000,
+    "maxObservationPublishCallsPerDay": 10000
+  },
+  "publication": {
+    "qos": 1,
+    "retained": false,
+    "minimumIntervalSeconds": 5,
+    "positiveJitterMaxSeconds": 0.25,
+    "phaseWindowSeconds": 5,
+    "maxQueuedMessagesPerActor": 1,
+    "maxInflightMessagesPerActor": 1,
+    "maxMessageAgeSeconds": 10,
+    "reconnectBackoffSeconds": {
+      "min": 1,
+      "max": 60
+    }
+  },
+  "control": {
+    "heartbeatIntervalSeconds": 5,
+    "leaseSeconds": 15,
+    "healthyShutdownTargetSeconds": 5,
+    "expiryRemovalTargetSeconds": 20
+  },
+  "movement": {
+    "cruiseSpeedMetersPerSecond": {
+      "min": 5,
+      "max": 12
+    },
+    "accelerationMetersPerSecondSquared": 1,
+    "decelerationMetersPerSecondSquared": 1.5,
+    "stopDwellSeconds": {
+      "min": 15,
+      "max": 40
+    },
+    "terminalPauseSeconds": {
+      "min": 60,
+      "max": 120
+    },
+    "maxStopProjectionDistanceMeters": 50,
+    "unknownHeadingWhenStopped": -1,
+    "routeEndPolicy": "finish_without_wrapping"
+  },
+  "gps": {
+    "declaredAccuracyMeters": {
+      "min": 5,
+      "max": 15
+    },
+    "maxNoiseOffsetMeters": 3,
+    "noiseSmoothingSeconds": 5
+  },
+  "operationalPolicy": {
+    "pauseOnPersistenceFailure": true,
+    "onLongSuspension": "discard_backlog_and_new_sessions",
+    "onCivilClockJump": "pause",
+    "onMissingOrExpiredControl": "stop_publishing"
+  },
+  "vehicles": [
+    {
+      "scenarioVehicleId": "scenario-bus-01",
+      "routeId": "17350695",
+      "linea": "C-01",
+      "tripId": "0",
+      "shapeId": "17350695",
+      "initialProgress": 0.05,
+      "principals": [
+        "sim-001",
+        "sim-002",
+        "sim-003"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-02",
+      "routeId": "17419574",
+      "linea": "C-06",
+      "tripId": "1",
+      "shapeId": "17419574",
+      "initialProgress": 0.1,
+      "principals": [
+        "sim-004",
+        "sim-005",
+        "sim-006"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-03",
+      "routeId": "17434299",
+      "linea": "M-07",
+      "tripId": "2",
+      "shapeId": "17434299",
+      "initialProgress": 0.15,
+      "principals": [
+        "sim-007",
+        "sim-008",
+        "sim-009"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-04",
+      "routeId": "17434307",
+      "linea": "C-07",
+      "tripId": "3",
+      "shapeId": "17434307",
+      "initialProgress": 0.2,
+      "principals": [
+        "sim-010",
+        "sim-011",
+        "sim-012"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-05",
+      "routeId": "17434313",
+      "linea": "C-09",
+      "tripId": "4",
+      "shapeId": "17434313",
+      "initialProgress": 0.25,
+      "principals": [
+        "sim-013",
+        "sim-014",
+        "sim-015"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-06",
+      "routeId": "17434314",
+      "linea": "M-21",
+      "tripId": "5",
+      "shapeId": "17434314",
+      "initialProgress": 0.3,
+      "principals": [
+        "sim-016",
+        "sim-017",
+        "sim-018"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-07",
+      "routeId": "17434330",
+      "linea": "M-22",
+      "tripId": "6",
+      "shapeId": "17434330",
+      "initialProgress": 0.35,
+      "principals": [
+        "sim-019",
+        "sim-020",
+        "sim-021"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-08",
+      "routeId": "17434332",
+      "linea": "C-20",
+      "tripId": "7",
+      "shapeId": "17434332",
+      "initialProgress": 0.4,
+      "principals": [
+        "sim-022",
+        "sim-023",
+        "sim-024"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-09",
+      "routeId": "17434339",
+      "linea": "C-11",
+      "tripId": "8",
+      "shapeId": "17434339",
+      "initialProgress": 0.45,
+      "principals": [
+        "sim-025",
+        "sim-026",
+        "sim-027"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-10",
+      "routeId": "17434457",
+      "linea": "M-34",
+      "tripId": "9",
+      "shapeId": "17434457",
+      "initialProgress": 0.5,
+      "principals": [
+        "sim-028",
+        "sim-029",
+        "sim-030"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-11",
+      "routeId": "17434472",
+      "linea": "M-20",
+      "tripId": "10",
+      "shapeId": "17434472",
+      "initialProgress": 0.15,
+      "principals": [
+        "sim-031",
+        "sim-032",
+        "sim-033",
+        "sim-034"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-12",
+      "routeId": "17463346",
+      "linea": "C-10",
+      "tripId": "11",
+      "shapeId": "17463346",
+      "initialProgress": 0.2,
+      "principals": [
+        "sim-035",
+        "sim-036",
+        "sim-037",
+        "sim-038"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-13",
+      "routeId": "17463348",
+      "linea": "C-14",
+      "tripId": "12",
+      "shapeId": "17463348",
+      "initialProgress": 0.25,
+      "principals": [
+        "sim-039",
+        "sim-040",
+        "sim-041",
+        "sim-042"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-14",
+      "routeId": "17463362",
+      "linea": "C-20",
+      "tripId": "13",
+      "shapeId": "17463362",
+      "initialProgress": 0.3,
+      "principals": [
+        "sim-043",
+        "sim-044",
+        "sim-045",
+        "sim-046"
+      ]
+    },
+    {
+      "scenarioVehicleId": "scenario-bus-15",
+      "routeId": "17463369",
+      "linea": "C-21",
+      "tripId": "14",
+      "shapeId": "17463369",
+      "initialProgress": 0.35,
+      "principals": [
+        "sim-047",
+        "sim-048",
+        "sim-049",
+        "sim-050"
+      ]
+    }
+  ]
+}
