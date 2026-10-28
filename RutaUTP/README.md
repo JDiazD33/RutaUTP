@@ -119,7 +119,9 @@ En este entorno hay dos esquemas **locales** ya configurados: `RutaUTP-iPhone-00
 
 El proceso Python debe estar en marcha además del broker. Desde la raíz del proyecto, `backend/.venv/bin/python backend/tools/run_configured.py` lo inicia con el archivo local existente; `backend/.venv/bin/python backend/tools/run_configured.py --health-check` verifica su latido y conexión. Si el Mac se apaga o duerme, mantener EMQX activo no sustituye a ese proceso. El 5 de octubre se verificó autenticación TLS de las dos cuentas de teléfonos y del backend, y se restauró el proceso local; esto no sustituye la comprobación de GPS, permisos y viaje real en cada iPhone.
 
-El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuando existe una configuración MQTT completa. Al activarlo, la app solicita consentimiento antes de iniciar GPS y Core Motion. El mapa muestra el estado de la contribución sobre el buscador. La publicación se pausa al bloquear la pantalla o enviar la app a segundo plano.
+El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuando existe una cuenta propia para enviar observaciones. La cuenta lectora de presentación se conserva por separado; el publicador puede recuperar la credencial habitual del mismo endpoint desde Keychain. Sin esa cuenta, Ajustes indica «Envío de ubicaciones no configurado». Al activarlo, la app solicita consentimiento antes de iniciar GPS y Core Motion. El mapa muestra el estado de la contribución sobre el buscador. La publicación se pausa al bloquear la pantalla o enviar la app a segundo plano.
+
+Justo debajo, **Micros en el mapa** permite elegir Todos, 5, 10, 15 o 20 y recuerda la selección. Solo limita los marcadores: se conserva la flota para rutas y fichas, y el seleccionado tiene prioridad dentro del límite. El contador distingue visibles y recibidos; el botón encuadra los visibles. Todos es la opción inicial.
 
 El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición.
 

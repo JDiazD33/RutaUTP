@@ -25,6 +25,7 @@ se conserva internamente en todos los datos y métricas de la ejecución.
 | `schemas/vehicle-position-v2.schema.json` | Salida futura del backend, con procedencia. |
 | `schemas/simulation-control-v1.schema.json` | Estado administrativo y autorización temporal. |
 | `scenarios/pasajeros-30.json` | Perfil v2: 30 actores, 10 rutas; revisión de cuota diaria. |
+| `scenarios/pasajeros-50.json` | Perfil v1: 50 actores, 15 rutas; máximo 300 s, 6000/run y 10000/día. |
 | `scenarios/ensayo-2.json`, `scenarios/ensayo-6.json` | Escalones S10 con whitelist y presupuesto propios: 2/1 y 6/2. |
 | `examples/synthetic/*.json` | Ejemplos ficticios de documentación, nunca mensajes listos para publicar. |
 

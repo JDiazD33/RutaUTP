@@ -293,3 +293,11 @@ durante el ensayo largo. La suspensión automática elegida por iOS, FPS, energ�
 batería y el número de marcadores efectivamente dibujados no fueron medidos. El
 límite de render sigue siendo ocho aunque se reciban diez modelos. Los perfiles
 50/100 y la operación continua son fases posteriores; no se activaron aquí.
+
+## Actualización de presentación del 28 de octubre
+
+El cierre anterior describe la versión medida en S10. Después se validó la
+presentación sin cable, el perfil de 50 balizas / quince micros y el selector
+de cantidad visible en Ajustes. El límite fijo de ocho corresponde a la versión
+anterior, no a la configuración actual. Resultados y límites de cada medición:
+[RESULTADOS-PRESENTACION-2026-10-28.md](RESULTADOS-PRESENTACION-2026-10-28.md).
