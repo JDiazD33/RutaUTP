@@ -138,6 +138,22 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     var busesAnimados: [BusAnimado] = [] {
         didSet { refrescarPresentacionFlota() }
     }
+    @ObservationIgnored private let mapVehiclePreferences: MapVehiclePreferences
+    var busesEnMapa: [BusAnimado] {
+        mapVehiclePreferences.limit.displayed(busesAnimados, selectedID: busSeleccionado?.id)
+    }
+    /// Encuadre explícito de la flota vigente; no mueve la cámara al recibir posiciones.
+    var encuadreDeMicros: MKMapRect? {
+        let points = busesEnMapa.map { MKMapPoint($0.coordinate) }
+        guard let first = points.first else { return nil }
+        var rect = MKMapRect(origin: first, size: MKMapSize(width: 1, height: 1))
+        for point in points.dropFirst() {
+            rect = rect.union(MKMapRect(origin: point, size: MKMapSize(width: 1, height: 1)))
+        }
+        // Margen para marcadores y paneles superior/inferior del mapa.
+        return rect.insetBy(dx: -max(rect.width * 0.30, 1500),
+                            dy: -max(rect.height * 0.65, 2000))
+    }
     /// Catálogo del ancla vigente. La flota global permanece disponible en
     /// el mapa; el panel solo puede atribuirle unidades de estas rutas.
     private(set) var rutasCercanas: [RutaGTFS] = [] {
@@ -272,6 +288,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         locationService: LocationServiceProtocol? = nil,
         routeService: RouteCalculationService = RouteCalculationService(),
         repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio,
+        mapVehiclePreferences: MapVehiclePreferences? = nil,
         crearProveedorReal: @escaping @MainActor () -> VehicleTrackingProviding? = {
             guard !TransporteApp.rutasUTPPendientes else { return nil }
             guard MQTTConfiguration.fromEnvironment() != nil else { return nil }
@@ -282,6 +299,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         self.routeService = routeService
         self.repositorioGTFS = repositorioGTFS
         self.crearProveedorReal = crearProveedorReal
+        self.mapVehiclePreferences = mapVehiclePreferences ?? .shared
         super.init()
 
         completer.delegate = self

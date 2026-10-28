@@ -505,8 +505,10 @@ private struct MapaScreenContent: View {
 
     private var controlesMapaSinRuta: some View {
         HStack(alignment: .bottom, spacing: 12) {
-            botonReportar
-                .frame(minHeight: 44)
+            VStack(alignment: .leading, spacing: 10) {
+                if !vm.busesAnimados.isEmpty { botonVerMicros }
+                botonReportar.frame(minHeight: 44)
+            }
             Spacer(minLength: 12)
             VStack(spacing: 10) {
                 botonColocarMarcador
@@ -515,6 +517,29 @@ private struct MapaScreenContent: View {
         }
         .frame(minHeight: 44)
         .padding(.horizontal, 20)
+    }
+
+    private var botonVerMicros: some View {
+        Button {
+            guard let rect = vm.encuadreDeMicros else { return }
+            campoEnfocado = false
+            withAnimation(.easeInOut(duration: 0.4)) {
+                cameraPosition = .rect(rect)
+            }
+        } label: {
+            Label(vm.busesEnMapa.count == vm.busesAnimados.count
+                  ? L.f("{0} micros", "{0} buses", ["\(vm.busesEnMapa.count)"])
+                  : L.f("{0} de {1} micros", "{0} of {1} buses",
+                        ["\(vm.busesEnMapa.count)", "\(vm.busesAnimados.count)"]),
+                  systemImage: "bus.fill")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(.regularMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.f("Ver los {0} micros del mapa", "Show the {0} buses on the map",
+                                ["\(vm.busesEnMapa.count)"]))
     }
 
     // MARK: - Botón Mi Ubicación (centra el mapa en el GPS real)

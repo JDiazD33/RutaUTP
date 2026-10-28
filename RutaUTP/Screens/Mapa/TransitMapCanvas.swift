@@ -136,14 +136,14 @@ struct TransitMapCanvas: View {
             }
 
             // 5. Marcadores de Buses Animados en Tiempo Real.
-            // Tope de 8 en el mapa por rendimiento. El canal real conserva
-            // la flota global; el panel filtra por rutas cercanas al destino.
+            // La preferencia limita los marcadores. El panel conserva su filtro
+            // por rutas cercanas al destino, independiente de los marcadores.
             //
             // El marcador lleva el modelo 3D del bus y la etiqueta de la
             // línea encima. El ancla no es el centro de la vista: con la
             // etiqueta arriba, centrarla dejaría el vehículo dibujado por
             // debajo del punto real.
-            ForEach(vm.busesAnimados.prefix(rutaViaje == nil ? VehiclePresentationLimits.maximumMapMarkers : 0)) { bus in
+            ForEach(rutaViaje == nil ? vm.busesEnMapa : []) { bus in
                 Annotation(L.t("Línea", "Line") + " \(bus.linea)",
                            coordinate: bus.coordinate,
                            anchor: BusMarker3D.ancla) {

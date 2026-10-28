@@ -31,16 +31,19 @@ final class SimulationPresentationIntegrationTests: XCTestCase {
             distanciaKm: 4.4, distanciaUTPMetros: 0)
     }
 
-    private func map(_ provider: PresentationProvider) -> MapaViewModel {
-        MapaViewModel(locationService: PresentationGPS(),
-            repositorioGTFS: PresentationCatalog(feed: [route()]), crearProveedorReal: { provider })
+    private func map(_ provider: PresentationProvider, preferences: MapVehiclePreferences? = nil) -> MapaViewModel {
+        let defaults = UserDefaults(suiteName: "RutaUTP.MapLimit.\(UUID().uuidString)")!
+        return MapaViewModel(locationService: PresentationGPS(),
+            repositorioGTFS: PresentationCatalog(feed: [route()]),
+            mapVehiclePreferences: preferences ?? MapVehiclePreferences(defaults: defaults), crearProveedorReal: { provider })
     }
 
-    private func tracking(_ provider: PresentationProvider) -> RouteTrackingViewModel {
+    private func tracking(_ provider: PresentationProvider, preferences: MapVehiclePreferences? = nil) -> RouteTrackingViewModel {
         // Suite vacía exclusiva del test; no se escribe ningún valor persistente.
         let defaults = UserDefaults(suiteName: "RutaUTP.S08.\(UUID().uuidString)")!
         return RouteTrackingViewModel(locationService: PresentationGPS(), vehicleProvider: provider,
-            repositorioGTFS: PresentationCatalog(feed: [route()]), defaults: defaults)
+            repositorioGTFS: PresentationCatalog(feed: [route()]), defaults: defaults,
+            mapVehiclePreferences: preferences ?? MapVehiclePreferences(defaults: defaults))
     }
 
     private func wait(_ description: String, _ condition: () -> Bool) async {
@@ -282,13 +285,76 @@ final class SimulationPresentationIntegrationTests: XCTestCase {
         XCTAssertEqual(vm.fuenteVehiculos, .real)
     }
 
-    func testTrackingDoceRecibidosSoloOchoMarcadores() async {
-        let provider = PresentationProvider((0..<12).map { position("sim:\(run):bus-\($0)") })
+    func testMapaQuinceMicrosEncuadreIncluyeTodaLaFlotaYOFFLoRetira() async throws {
+        let values = (0..<15).map { index -> VehiclePosition in
+            let base = position("sim:\(run):bus-\(index)")
+            return VehiclePosition(id: base.id, linea: base.linea, routeId: base.routeId,
+                lat: campus.latitude + Double(index) * 0.001,
+                lon: campus.longitude - Double(index) * 0.002,
+                timestamp: base.timestamp, dataOrigin: .simulated,
+                simulationRunId: run, controlRevision: 3)
+        }
+        let provider = PresentationProvider(values)
+        let vm = map(provider); defer { vm.detener() }
+        XCTAssertNil(vm.encuadreDeMicros)
+        vm.iniciarSimulacionBuses()
+        await wait("quince micros") { vm.busesAnimados.count == 15 }
+        let rect = try XCTUnwrap(vm.encuadreDeMicros)
+        for bus in vm.busesAnimados { XCTAssertTrue(rect.contains(MKMapPoint(bus.coordinate))) }
+        provider.allowSynthetic = false
+        provider.yieldStale(values)
+        await wait("OFF") { vm.busesAnimados.isEmpty }
+        XCTAssertNil(vm.encuadreDeMicros)
+    }
+
+    func testLimiteVisibleConservaFlotaSeleccionYNoReiniciaProveedor() async {
+        let defaults = UserDefaults(suiteName: "RutaUTP.MapLimit.\(UUID().uuidString)")!
+        let preferences = MapVehiclePreferences(defaults: defaults)
+        preferences.setLimit(.five)
+        let provider = PresentationProvider((0..<15).map { position("sim:\(run):bus-\($0)") })
+        let vm = map(provider, preferences: preferences); defer { vm.detener() }
+        vm.iniciarSimulacionBuses()
+        await wait("flota completa") { vm.busesAnimados.count == 15 }
+        XCTAssertEqual(vm.busesEnMapa.count, 5)
+        await wait("panel completo") { vm.busesDelPanel.count == 15 }
+        XCTAssertEqual(vm.busesDelPanel.count, 15)
+        vm.busSeleccionado = vm.busesAnimados.last
+        XCTAssertEqual(vm.busesEnMapa.count, 5)
+        XCTAssertTrue(vm.busesEnMapa.contains { $0.id == vm.busSeleccionado?.id })
+        preferences.setLimit(.ten)
+        XCTAssertEqual(vm.busesEnMapa.count, 10)
+        XCTAssertEqual(vm.busesAnimados.count, 15)
+        XCTAssertEqual(provider.starts, 1)
+        provider.allowSynthetic = false
+        provider.yieldStale(provider.currentPositions)
+        await wait("retirada total") { vm.busesAnimados.isEmpty }
+        XCTAssertTrue(vm.busesEnMapa.isEmpty)
+        XCTAssertNil(vm.encuadreDeMicros)
+    }
+
+    func testLimiteCompartidoActualizaSeguimientoSinPerderSeleccion() async {
+        let defaults = UserDefaults(suiteName: "RutaUTP.MapLimit.\(UUID().uuidString)")!
+        let preferences = MapVehiclePreferences(defaults: defaults)
+        let provider = PresentationProvider((0..<15).map { position("sim:\(run):bus-\($0)") })
+        let vm = tracking(provider, preferences: preferences); defer { vm.stop() }
+        await vm.requestPermissionAndStart()
+        await wait("quince") { vm.vehiculos.count == 15 }
+        vm.vehiculoSeleccionadoID = vm.vehiculos.last?.id
+        preferences.setLimit(.five)
+        XCTAssertEqual(vm.vehiculosEnMapa.count, 5)
+        XCTAssertTrue(vm.vehiculosEnMapa.contains { $0.id == vm.vehiculoSeleccionadoID })
+        XCTAssertEqual(vm.vehiculos.count, 15)
+        preferences.setLimit(.all)
+        XCTAssertEqual(vm.vehiculosEnMapa.count, 15)
+    }
+
+    func testTrackingQuinceRecibidosConservaTodaLaFlotaEnMapa() async {
+        let provider = PresentationProvider((0..<15).map { position("sim:\(run):bus-\($0)") })
         let vm = tracking(provider); defer { vm.stop() }
         await vm.requestPermissionAndStart()
-        await wait("doce") { vm.vehiculos.count == 12 }
-        XCTAssertEqual(vm.vehiculosEnMapa.count, 8)
-        XCTAssertEqual(vm.vehiculos.count, 12)
+        await wait("quince") { vm.vehiculos.count == 15 }
+        XCTAssertEqual(vm.vehiculosEnMapa.map(\.id), vm.vehiculos.map(\.id))
+        XCTAssertEqual(vm.vehiculosEnMapa.count, 15)
     }
 }
 

@@ -9,6 +9,45 @@
 
 import Foundation
 import CoreLocation
+import Observation
+
+enum MapVehicleLimit: Int, CaseIterable, Identifiable, Hashable {
+    case all = 0, five = 5, ten = 10, fifteen = 15, twenty = 20
+    var id: Int { rawValue }
+    var title: String {
+        self == .all ? L.t("Todos", "All") : String(rawValue)
+    }
+
+    func displayed<T: Identifiable>(_ vehicles: [T], selectedID: T.ID? = nil) -> [T] {
+        guard self != .all, vehicles.count > rawValue else { return vehicles }
+        var visible = Array(vehicles.prefix(rawValue))
+        if let selectedID, !visible.contains(where: { $0.id == selectedID }),
+           let selected = vehicles.first(where: { $0.id == selectedID }) {
+            visible[visible.count - 1] = selected
+        }
+        return visible
+    }
+}
+
+@MainActor
+@Observable
+final class MapVehiclePreferences {
+    static let shared = MapVehiclePreferences()
+    static let storageKey = "mapa.micros-visibles.v1"
+    @ObservationIgnored private let defaults: UserDefaults
+    private(set) var limit: MapVehicleLimit
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let stored = defaults.object(forKey: Self.storageKey) as? Int
+        limit = stored.flatMap(MapVehicleLimit.init(rawValue:)) ?? .all
+    }
+
+    func setLimit(_ value: MapVehicleLimit) {
+        limit = value
+        defaults.set(value.rawValue, forKey: Self.storageKey)
+    }
+}
 
 struct VehiclePosition: Codable, Equatable, Identifiable {
     let id: String           // identificador único del vehículo (placa o backend id)
@@ -134,10 +173,6 @@ extension VehiclePosition {
     var reportedSpeedForPresentation: Double? {
         speed.isFinite && (0...100).contains(speed) ? speed : nil
     }
-}
-
-enum VehiclePresentationLimits {
-    static let maximumMapMarkers = 8
 }
 
 /// Limita movimiento visual a 4 Hz; las retiradas y cambios de procedencia,

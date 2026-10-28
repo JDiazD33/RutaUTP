@@ -11,6 +11,7 @@ struct AjustesSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
+    private let mapVehiclePreferences = MapVehiclePreferences.shared
 
     /// La confirmación completa se presenta antes de activar la contribución.
     @State private var mostrarConsentimiento = false
@@ -77,6 +78,23 @@ struct AjustesSheet: View {
                     .disabled(!trackingCoordinator.isPublisherConfigured)
                     .accessibilityHint(TextoConsentimientoContribucion.pistaAccesibilidad)
 
+                    Menu {
+                        Picker(L.t("Micros en el mapa", "Buses on the map"), selection: Binding(
+                            get: { mapVehiclePreferences.limit },
+                            set: { mapVehiclePreferences.setLimit($0) }
+                        )) {
+                            ForEach(MapVehicleLimit.allCases) { limit in
+                                Text(limit.title).tag(limit)
+                            }
+                        }
+                    } label: {
+                        FilaAjustes(titulo: L.t("Micros en el mapa", "Buses on the map"),
+                                    simbolo: "bus.fill", detalle: mapVehiclePreferences.limit.title)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(L.t("Elige cuántos micros se muestran en el mapa",
+                                            "Choose how many buses appear on the map"))
+
                     Button { mostrarDetallesContribucion = true } label: {
                         Label(L.t("Uso de ubicaciones", "Location data use"), systemImage: "info.circle")
                             .font(.subheadline)
@@ -120,14 +138,16 @@ struct AjustesSheet: View {
                isPresented: $mostrarDetallesContribucion) {
             Button(L.t("Entendido", "OK"), role: .cancel) {}
         } message: {
-            Text(TextoConsentimientoContribucion.explicacion)
+            Text(TextoConsentimientoContribucion.explicacion + (trackingCoordinator.isPublisherConfigured ? "" :
+                "\n\n" + L.t("Puedes ver los micros, pero el envío de ubicaciones desde este teléfono aún no está configurado. Necesita una cuenta propia para enviar sus aportes.",
+                              "You can see buses, but location uploads from this phone are not configured yet. It needs its own account to send contributions.")))
         }
     }
 
     private var resumenContribucion: String {
         trackingCoordinator.isPublisherConfigured
             ? L.t("Solo con la app abierta", "Only while the app is open")
-            : L.t("Servicio no configurado", "Service not configured")
+            : L.t("Envío de ubicaciones no configurado", "Location uploads not configured")
     }
 
     private enum TemaOpcion { case light, dark }

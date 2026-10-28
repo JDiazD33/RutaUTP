@@ -137,9 +137,38 @@ final class VehiclePresentationPolicyTests: XCTestCase {
         XCTAssertEqual(position(speed: 100).reportedSpeedForPresentation, 100)
     }
 
-    func testLimiteDeMarcadoresNoRecortaSnapshot() {
-        let snapshot = (0..<12).map { position("bus-\($0)") }
-        XCTAssertEqual(snapshot.prefix(VehiclePresentationLimits.maximumMapMarkers).count, 8)
-        XCTAssertEqual(snapshot.count, 12)
+    @MainActor
+    func testLimiteMapaPersisteYSeRecuperaSinCambiarElValorPredeterminado() throws {
+        let suite = "RutaUTP.MapLimit.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = MapVehiclePreferences(defaults: defaults)
+        XCTAssertEqual(preferences.limit, .all)
+        preferences.setLimit(.ten)
+        XCTAssertEqual(MapVehiclePreferences(defaults: defaults).limit, .ten)
+        preferences.setLimit(.all)
+        XCTAssertEqual(MapVehiclePreferences(defaults: defaults).limit, .all)
     }
+
+    @MainActor
+    func testLimiteMapaDesconocidoNoOcultaLaFlotaNiReescribePreferencia() throws {
+        let suite = "RutaUTP.MapLimit.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for invalid in ["5", -1, 8, 5.5, true] as [Any] {
+            defaults.set(invalid, forKey: MapVehiclePreferences.storageKey)
+            XCTAssertEqual(MapVehiclePreferences(defaults: defaults).limit, .all)
+        }
+    }
+
+    func testLimiteNoOcultaElVehiculoSeleccionadoNiRecortaElSnapshot() {
+        let fleet = (0..<15).map { position("bus-\($0)") }
+        let visible = MapVehicleLimit.five.displayed(fleet, selectedID: "bus-14")
+        XCTAssertEqual(visible.count, 5)
+        XCTAssertEqual(visible.last?.id, "bus-14")
+        XCTAssertEqual(fleet.count, 15)
+        XCTAssertEqual(MapVehicleLimit.all.displayed(fleet).count, 15)
+        XCTAssertTrue(MapVehicleLimit.five.displayed([VehiclePosition]()).isEmpty)
+    }
+
 }

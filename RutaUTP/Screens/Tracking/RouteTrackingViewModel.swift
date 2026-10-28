@@ -94,7 +94,7 @@ final class RouteTrackingViewModel {
         vehiculos.first { $0.id == vehiculoSeleccionadoID }
     }
     var vehiculosEnMapa: [VehiclePosition] {
-        Array(vehiculos.prefix(VehiclePresentationLimits.maximumMapMarkers))
+        mapVehiclePreferences.limit.displayed(vehiculos, selectedID: vehiculoSeleccionadoID)
     }
 
     /// Color de cada línea según el `route_color` del feed GTFS, en hex.
@@ -279,6 +279,7 @@ final class RouteTrackingViewModel {
     private let vehicleProvider: VehicleTrackingProviding
     private let repositorioGTFS: RutasGTFSProviding
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let mapVehiclePreferences: MapVehiclePreferences
 
     // Shape completo: conserva todas las esquinas de la calle para matching y simulación.
     private var polyCoords: [CLLocationCoordinate2D] = []
@@ -308,8 +309,10 @@ final class RouteTrackingViewModel {
          routeService: RouteCalculationService = RouteCalculationService(),
          vehicleProvider: VehicleTrackingProviding? = nil,
          repositorioGTFS: RutasGTFSProviding = TransporteApp.repositorio,
-         defaults: UserDefaults = .standard) {
+         defaults: UserDefaults = .standard,
+         mapVehiclePreferences: MapVehiclePreferences? = nil) {
         self.defaults = defaults
+        self.mapVehiclePreferences = mapVehiclePreferences ?? .shared
         self.velocidadPreferida = Self.leer(.velocidad, defaults: defaults)
         self.radioPreferido = Self.leer(.radio, defaults: defaults)
         self.locationService = locationService
