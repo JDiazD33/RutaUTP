@@ -216,3 +216,80 @@ además de builds genéricos Debug/Release y Release física firmada. El informe
 cierre está en `metricas/INFORME-S10-30-BALIZAS-2026-10-26.md` del workspace padre.
 La aceptación sostenida, corte con flota activa y suspensión física iOS siguen
 pendientes; no se activaron perfiles 50/100 ni automaciones.
+
+## Fallos con flota activa: modo opt-in
+
+`--check-active-faults` exige iPhone físico, `pasajeros-30`, ocupación y una
+captura inicial de 35 s. El intervalo de CPU termina antes de provocar los
+fallos. El plazo total desde ON es de 300 s, con margen final de limpieza;
+reservar como máximo 1830 publicaciones del presupuesto agregado diario.
+
+```sh
+PYTHONPATH=backend backend/.venv/bin/python -m simulation.local_trial \
+  --profile pasajeros-30 --seconds 35 --scenario-occupancy \
+  --listen-host IP_PRIVADA_MAC --device UDID_IPHONE \
+  --check-active-faults --output /ruta/nueva/fallos-activos run
+```
+
+Después de confirmar diez modelos y su ocupación, el observador solicita volver
+a Inicio sin forzar el cierre. Comprueba background y mapa vacío, suspende el
+PID propio con CoreDevice durante 25 s, lo reanuda y activa la misma instancia.
+Exige control vigente antes de recuperar la flota. Esto acredita una suspensión
+forzada del proceso en iOS físico; la política automática de suspensión del
+sistema requiere una observación independiente.
+
+Después detiene únicamente el broker local propio durante 25 s. Comprueba la
+retirada de buses y ocupación en un máximo de 20 s, OFF automático por caducidad,
+reconexión con control deshabilitado y ausencia de reaparición de buses. No
+modifica Wi-Fi ni servicios externos. `device-faults.jsonl` conserva las fases y
+los resultados sanitizados; no contiene credenciales. El resultado separa CPU
+inicial, suspensión, corte y limpieza. Un fallo parcial no acredita todo el modo.
+
+El estado administrativo de un productor terminado pasa a `unknown` al caducar
+su último latido. El ensayo exige primero un `stopped` reciente y la salida de
+su proceso propio; después conserva esa prueba, confirma que el proceso sigue
+terminado y que el mismo run permanece OFF. No convierte un latido viejo en
+actividad vigente ni cambia la política de frescura del backend.
+
+## Cierre físico del 27 de octubre de 2026
+
+El ensayo largo completó 870,024 s con 30 principales y diez vehículos nominales,
+4957 observaciones guardadas, cero rechazos y 1681 posiciones. Los estados de
+ocupación fueron Vacío (585), Con espacio (921) y Lleno (175). El apagado manual
+retiró modelos y ocupación en un máximo observado de 1,157 s desde la Mac;
+el intervalo OFF→mapa vacío del reloj del iPhone fue 24,30 ms.
+
+La media CPU del iPhone fue 25,20% de un núcleo durante 874 s de contadores
+continuos. Incluye tres intervalos breves de inactividad de UIKit (7,25 s entre
+notificaciones); el usuario no observó interrupciones. Se conserva inválido el
+artefacto que exige primer plano continuo durante todo el tramo. La media que
+incluye ambos estados y los segmentos separados no sustituyen esa aceptación.
+
+El último ensayo de fallos completó 117,571 s: suspensión forzada de 25,404 s
+con el mismo PID, recuperación con control vigente, corte del broker propio de
+25 s, retirada de modelos/ocupación en ≤0,114 s y reconexión a OFF sin reaparición.
+El observador tardó ≤12,182 s desde reiniciar el broker hasta terminar de
+comprobar la reconexión, incluidos cinco segundos adicionales de observación.
+La CPU inicial, separada de los fallos, fue 17,29% durante 35 s. Guardó 399
+observaciones sin rechazos y 135 posiciones con los tres estados de ocupación.
+La revisión offline independiente aceptó todos los checks de este último ensayo.
+
+Se conservan los dos intentos parciales: uno agotó la espera del paso a segundo
+plano; otro completó suspensión y reconexión, pero su verificador exigía un
+latido `stopped` todavía reciente al final. Tras corregir esa comprobación
+pasaron 306 pruebas offline en nueve archivos. Debug y Release genéricos arm64
+de simulador compilaron sin diagnósticos de advertencia/error en esos logs.
+Las mediciones físicas corresponden a Release del commit `31482f0`; los builds
+finales incluyen los refactors posteriores registrados en su manifiesto.
+
+Los cuatro controles aislados consumieron 6884 de las 10000 reservas del día
+Lima, sin restablecerlas. Todos quedaron OFF, los procesos propios terminaron y
+se retiraron las credenciales temporales. El informe y los JSON están en
+`metricas/INFORME-S10-30-BALIZAS-2026-10-27.md` del workspace padre; la evidencia
+original está en `mds/evidencias-s10-validacion-30-2026-10-27`.
+
+Permanece pendiente la aceptación de CPU con primer plano estrictamente continuo
+durante el ensayo largo. La suspensión automática elegida por iOS, FPS, energía,
+batería y el número de marcadores efectivamente dibujados no fueron medidos. El
+límite de render sigue siendo ocho aunque se reciban diez modelos. Los perfiles
+50/100 y la operación continua son fases posteriores; no se activaron aquí.

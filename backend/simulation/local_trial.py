@@ -201,12 +201,16 @@ def verify_local_acl(host: str, port: int, accounts: dict[str, str], run_id: str
 
 def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DEFAULT_GTFS_DIR),
               host: str = HOST, observer=None, scenario_occupancy: bool = False,
-              control_only: bool = False, check_reconnect: bool = False) -> dict:
+              control_only: bool = False, check_reconnect: bool = False,
+              check_active_faults: bool = False) -> dict:
     root = Path(__file__).resolve().parents[2]
     output = output.expanduser().absolute()
     host = trial_host(host)
     if output.resolve().is_relative_to(root):
         raise ValueError('el ensayo requiere un directorio nuevo fuera del repositorio Git')
+    if check_active_faults and (observer is None or name != 'pasajeros-30' or seconds != 35
+            or control_only or check_reconnect or not scenario_occupancy):
+        raise ValueError('active-faults requiere iPhone, pasajeros-30, ocupación, baseline de 35 s y modo exclusivo')
     profile = SimulationProfile.load(name, gtfs_dir)
     if type(seconds) is not int or not 10 <= seconds <= profile.max_run_seconds-30:
         raise ValueError('captura de al menos 10 s y margen de 30 s antes del máximo del perfil')
@@ -227,6 +231,15 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
         'iosCleanupTimingUsable': False, 'captureEndedEarly': None,
         'localACLVerified': False, 'externalACLVerified': False, 'capturedSecondsRequested': seconds, 'failure': None}
     with ExitStack() as stack:
+        hard_deadline = None
+        def trial_wait(predicate, seconds=30):
+            if check_active_faults and hard_deadline is not None:
+                remaining = hard_deadline-20-time.monotonic()
+                if remaining <= 0:
+                    from .device_faults import ActiveFaultError
+                    raise ActiveFaultError('global_deadline_exhausted')
+                seconds = min(seconds,remaining)
+            return wait_until(predicate,seconds)
         try:
             fd = os.open(password_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             with os.fdopen(fd, 'w') as passwords:
@@ -253,11 +266,11 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                 try:
                     with socket.create_connection((host, port), timeout=.2): return True
                 except OSError: return False
-            wait_until(broker_ready, 10)
+            trial_wait(broker_ready, 10)
             control = ControlStore.initialize(output/'control/control.sqlite', time.time())
             backend = spawn([sys.executable, '-m', 'rutautp_backend'], 'backend.log')
-            wait_until(lambda: (read_heartbeat(str(output/'health.json')) or {}).get('connected') is True)
-            probe = Probe(port, accounts['reader'], host); wait_until(lambda: probe.snapshot()['connected'])
+            trial_wait(lambda: (read_heartbeat(str(output/'health.json')) or {}).get('connected') is True)
+            probe = Probe(port, accounts['reader'], host); trial_wait(lambda: probe.snapshot()['connected'])
             report['aclChecks'] = verify_local_acl(host, port, accounts, str(uuid.uuid4()))
             report['localACLVerified'] = True
             if observer is not None: observer.started(host, port, accounts['reader'], output)
@@ -294,12 +307,18 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                     and all(value == 0 for value in report['controlOnlyStorageCounts'].values()))
                 report['complete'] = report['functionalComplete'] and report['iPhoneMeasured']
             else:
+                if check_active_faults:
+                    started = time.monotonic()
+                    hard_deadline = started+300
+                    observer.begin_active_run(started)
+                    report['mode'] = 'active_fleet_faults'
+                    report['globalDeadlineSeconds'] = 300
                 control.enable(profile.pinned(), time.time())
                 def applied():
                     state = status(control, time.time())
                     return (state['runOwner'] is not None and state['backend']['fresh']
                         and state['mqtt']['lastAckedRevision'] == state['controlRevision'])
-                wait_until(applied)
+                trial_wait(applied)
                 state = status(control, time.time()); report['runId'] = state['runId']
                 report['controlRevision'] = state['controlRevision']
                 private_json(credentials_file, {'schemaVersion': 1, 'host': host, 'port': port, 'tls': False,
@@ -307,24 +326,43 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                 actor = spawn([sys.executable, '-m', 'simulation', '--control-db', str(control.path),
                     '--history-db', str(output/'history.sqlite'), '--credentials-file', str(credentials_file),
                     '--profile', name, '--gtfs-dir', str(gtfs_dir), '--reference-jsonl', str(output/'reference.jsonl'), 'run'], 'producer.log')
-                wait_until(lambda: status(control, time.time())['counts']['mqttConnections'] == len(profile.principals), 45)
+                trial_wait(lambda: status(control, time.time())['counts']['mqttConnections'] == len(profile.principals), 45)
                 print(json.dumps({'phase': 'capture', 'profile': name, 'seconds': seconds}), flush=True)
                 if observer is not None: observer.capture_started()
+                if check_active_faults and observer.remaining() < seconds:
+                    from .device_faults import ActiveFaultError
+                    raise ActiveFaultError('insufficient_time_for_baseline')
                 capture_started = time.monotonic()
                 report['resources'] = capture({'backend': backend.pid, 'producer': actor.pid,
                     'broker': broker.pid}, output/'resources.jsonl', seconds)
                 report['captureElapsedSeconds'] = time.monotonic()-capture_started
                 report['captureEndedEarly'] = report['captureElapsedSeconds'] < seconds
+                if check_active_faults:
+                    observer.prepare_disable()  # CPU termina ANTES de cualquier fallo.
+                    def active_disconnect():
+                        broker.terminate()
+                        broker.wait(timeout=min(7,observer.remaining()))
+                    def active_reconnect():
+                        nonlocal broker
+                        broker = spawn([broker_exe,'-c',str(output/'mosquitto.conf')], 'broker-reconnected.log')
+                        trial_wait(broker_ready,10)
+                    def active_status():
+                        current = status(control,time.time())
+                        current['producerProcessExited'] = actor.poll() is not None
+                        return current
+                    report['activeFaults'] = observer.check_active_faults(active_disconnect,active_reconnect,
+                        active_status)
                 report['statusBeforeDisable'] = status(control, time.time())
                 report['heartbeatBeforeDisable'] = read_heartbeat(str(output/'health.json'))
                 report['diskBeforeDisableBytes'] = trial_disk(output)
-                if observer is not None: observer.prepare_disable()
+                if observer is not None and not check_active_faults: observer.prepare_disable()
                 requested = time.monotonic()
                 disabled = control.disable(time.time(), 's10_local_trial_finished')
                 report.update(disable_measurements(report['statusBeforeDisable'], disabled['revision']))
                 report['disableRequestedWall'] = time.time()
                 if observer is not None:
-                    report['device'] = observer.finished(requested)
+                    report['device'] = (observer.finished(requested,require_positions=False)
+                        if check_active_faults else observer.finished(requested))
                     report['iPhoneMeasured'] = report['device']['cpu']['complete']
                     report.update(disable_measurements(report['statusBeforeDisable'], disabled['revision'], report['device']))
                     report['device']['manualDisableTimingUsable'] = report['iosCleanupTimingUsable']
@@ -333,23 +371,41 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
                     nonlocal delivery_seconds
                     delivery_seconds = probe_disable_delivery_seconds(probe.snapshot(), disabled['revision'], requested)
                     return delivery_seconds is not None
-                wait_until(off, 15)
+                trial_wait(off, 15)
                 report['probeDisableDeliverySeconds'] = delivery_seconds
-                wait_until(lambda: status(control, time.time())['producer'].get('status') == 'stopped', 15)
-                wait_until(lambda: status(control, time.time())['backend']['appliedRevision'] == control.read()['revision'], 15)
+                trial_wait(lambda: (actor.poll() is not None if check_active_faults else
+                    status(control, time.time())['producer'].get('status') == 'stopped'), 15)
+                trial_wait(lambda: status(control, time.time())['backend']['appliedRevision'] == control.read()['revision'], 15)
                 report['probe'] = probe.snapshot()
                 report['history'] = run_report(output/'history.sqlite', report['runId'], time.time())
                 with (output/'comparison.csv').open('x') as exported:
                     export_comparison(output/'history.sqlite', report['runId'], exported, format='csv')
                 report['statusAfterDisable'] = status(control, time.time())
                 report['functionalComplete'] = (report['resources']['complete'] and not report['captureEndedEarly']
-                    and report['controlWasEnabledBeforeDisable'] and report['probe']['receivedPositions'] > 0
+                    and (report['controlWasEnabledBeforeDisable'] if not check_active_faults else (
+                        report['activeFaults']['complete'] and report['iPhoneMeasured']
+                        and not report['statusAfterDisable']['requestedEnabled']
+                        and actor.poll() is not None))
+                    and report['probe']['receivedPositions'] > 0
                     and report['probe']['invalidPositions'] == 0 and report['history']['historyComplete']
                     and report['history']['stored']['observations']['rows'] > 0)
                 report['complete'] = report['functionalComplete'] and (observer is None or report['iPhoneMeasured'])
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, KeyboardInterrupt) as error:
             report['failure'] = type(error).__name__
+            if check_active_faults:
+                from .device_faults import ActiveFaultError
+                if isinstance(error,ActiveFaultError): report['failureReason'] = error.reason_code
+                if observer is not None: report['activeFaults'] = observer.active_faults
         finally:
+            if check_active_faults and observer is not None:
+                from .device_faults import ActiveFaultError
+                try:
+                    observer.resume_for_cleanup()
+                    report['suspendedProcessResumedOrNeverSuspended'] = not observer.suspended
+                except ActiveFaultError as error:
+                    report['suspendedProcessResumedOrNeverSuspended'] = False
+                    report['resumeCleanupFailureReason'] = error.reason_code
+                    report['complete'] = False
             if control is not None:
                 try:
                     if control.read()['enabled']: control.disable(time.time(), 's10_local_trial_cleanup')
@@ -361,11 +417,30 @@ def run_trial(output: Path, name: str, seconds: int, *, gtfs_dir: Path = Path(DE
             for child in reversed(children):
                 if child.poll() is None:
                     child.terminate()
-                    try: child.wait(timeout=7)
-                    except subprocess.TimeoutExpired: child.kill(); child.wait(timeout=3)
+                    if hard_deadline is None:
+                        try: child.wait(timeout=7)
+                        except subprocess.TimeoutExpired: child.kill(); child.wait(timeout=3)
+                        continue
+                    remaining = (hard_deadline-time.monotonic()) if hard_deadline is not None else 7
+                    try: child.wait(timeout=max(.01,min(7,remaining)))
+                    except subprocess.TimeoutExpired:
+                        child.kill()
+                        remaining = (hard_deadline-time.monotonic()) if hard_deadline is not None else 3
+                        try: child.wait(timeout=max(.01,min(3,remaining)))
+                        except subprocess.TimeoutExpired: pass
             report['ownedProcessesStopped'] = all(p.poll() is not None for p in children)
             password_file.unlink(missing_ok=True); credentials_file.unlink(missing_ok=True)
             report['diskAfterStopBytes'] = trial_disk(output)
+            if check_active_faults and observer is not None:
+                observer.close()
+                report['suspendedProcessResumedOrNeverSuspended'] = not observer.suspended
+                if hard_deadline is not None:
+                    report['activeRunElapsedSeconds'] = time.monotonic()-(hard_deadline-300)
+                    report['globalDeadlineExceeded'] = report['activeRunElapsedSeconds'] > 300
+                    if report['globalDeadlineExceeded'] or observer.suspended:
+                        report['complete'] = report['functionalComplete'] = False
+                        report.setdefault('failureReason','global_deadline_exceeded' if report['globalDeadlineExceeded']
+                            else 'suspended_process_resume_not_confirmed')
         private_json(output/'result.json', report)
     return report
 
@@ -380,6 +455,7 @@ def main(argv=None) -> int:
     parser.add_argument('--scenario-occupancy', action='store_true', help='guion de ocupación v1, salida sintética v3')
     parser.add_argument('--control-only', action='store_true', help='diagnóstico iPhone con control OFF; cero actores, permitido fuera de horario')
     parser.add_argument('--check-reconnect', action='store_true', help='reiniciar solo el broker propio después de la captura de CPU; requiere control-only')
+    parser.add_argument('--check-active-faults', action='store_true', help='ensayo iPhone opt-in: baseline35 s, background/suspend y corte del broker propio; máximo300 s')
     parser.add_argument('--instruments', action='store_true', help='una traza adicional opcional; su guardado no valida CPU')
     parser.add_argument('--device', help='UDID del iPhone; requiere Release instalado y una IP LAN')
     parser.add_argument('--bundle-id', default='apolito.RutaUTP.dev-joaquindiaz.RutaUTP')
@@ -390,13 +466,20 @@ def main(argv=None) -> int:
     try:
         for signum in (signal.SIGINT, signal.SIGTERM):
             previous[signum] = signal.signal(signum, interrupted)
+        if args.check_active_faults and args.instruments:
+            raise ValueError('active-faults no combina Instruments')
         if args.device:
             if ipaddress.ip_address(args.listen_host).is_loopback:
                 raise ValueError('el iPhone requiere la interfaz LAN privada de la Mac')
-            from .device_trial import DeviceObserver
-            observer = DeviceObserver(args.device, args.bundle_id, instruments=args.instruments)
+            if args.check_active_faults:
+                from .device_faults import ActiveFaultObserver
+                observer = ActiveFaultObserver(args.device,args.bundle_id)
+            else:
+                from .device_trial import DeviceObserver
+                observer = DeviceObserver(args.device, args.bundle_id, instruments=args.instruments)
         result = run_trial(args.output, args.profile, args.seconds, host=args.listen_host, observer=observer,
-            scenario_occupancy=args.scenario_occupancy, control_only=args.control_only, check_reconnect=args.check_reconnect)
+            scenario_occupancy=args.scenario_occupancy, control_only=args.control_only, check_reconnect=args.check_reconnect,
+            check_active_faults=args.check_active_faults)
         print(json.dumps({'phase': 'finished', 'complete': result['complete'],
             'profile': args.profile, 'failure': result['failure']}), flush=True)
         return 130 if result['failure'] == 'KeyboardInterrupt' else (0 if result['complete'] else 2)
