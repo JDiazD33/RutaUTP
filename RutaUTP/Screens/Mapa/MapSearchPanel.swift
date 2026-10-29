@@ -46,114 +46,13 @@ struct MapSearchPanel: View {
     var body: some View {
         VStack(spacing: 10) {
             // TextField
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.onSurfaceVariant)
-                    .font(.body)
-                TextField(L.t("¿A dónde vas hoy?", "Where to today?"), text: $vm.textoBusqueda)
-                    .font(.body)
-                    .foregroundStyle(.onSurface)
-                    .focused($campoEnfocado)
-                    .submitLabel(.search)
-                    .onSubmit {
-                        campoEnfocado = false
-                        vm.buscarTexto(vm.textoBusqueda)
-                    }
-                    .onChange(of: vm.textoBusqueda) { _, nuevo in
-                        // Solo se autocompleta mientras el usuario escribe en
-                        // el campo. Cuando el texto lo pone el código (al
-                        // elegir un chip, un resultado o un lugar guardado) el
-                        // campo no está enfocado y no hay que consultar nada.
-                        guard campoEnfocado else { return }
-                        vm.actualizarTextoBusqueda(nuevo)
-                    }
-                if vm.buscando {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .accessibilityLabel(L.t("Buscando destino", "Searching for destination"))
-                } else if !vm.textoBusqueda.isEmpty {
-                    Button {
-                        vm.limpiar()
-                        campoEnfocado = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.onSurfaceVariant.opacity(0.5))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(L.t("Borrar destino y ruta", "Clear destination and route"))
-                    .frame(minWidth: 44, minHeight: 44)
-                }
-
-                botonDestinosGuardados
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+            barraBusqueda
 
             // Lista de Sugerencias Autocompletadas (ej. UPAO)
-            if !vm.sugerenciasBusqueda.isEmpty && campoEnfocado {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(vm.sugerenciasBusqueda.prefix(5), id: \.self) { sug in
-                        Button {
-                            campoEnfocado = false
-                            vm.seleccionarSugerencia(sug)
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "mappin.circle.fill")
-                                    .foregroundStyle(acento)
-                                    .font(.body)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(sug.title)
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(.onSurface)
-                                        .lineLimit(1)
-                                    if !sug.subtitle.isEmpty {
-                                        Text(sug.subtitle)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.onSurfaceVariant)
-                                            .lineLimit(1)
-                                    }
-                                }
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                        }
-                        .buttonStyle(.plain)
-                        .transition(.opacity)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(sug.title)
-                        .accessibilityValue(sug.subtitle)
-                        .accessibilityHint(L.t("Busca una ruta hasta este lugar", "Finds a route to this place"))
-
-                        if sug != vm.sugerenciasBusqueda.prefix(5).last {
-                            Divider()
-                        }
-                    }
-                }
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLowest))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
-                )
-                .transition(.opacity)
-            }
+            listaSugerencias
 
             // Chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(vm.destinos) { destino in
-                        chip(destino)
-                            .transition(.opacity)
-                    }
-                }
-                // Respiración para la manita del distintivo: el ScrollView
-                // recorta todo lo que sale del contenido y la parte de arriba
-                // (y la derecha del último chip) se veía a la mitad.
-                .padding(.leading, 2)
-                .padding(.trailing, 10)
-                .padding(.top, 8)
-            }
+            destinosRapidos
         }
         .padding(14)
         .background(
@@ -169,6 +68,133 @@ struct MapSearchPanel: View {
         .animation(animacionBusqueda, value: vm.destinos.map(\.id))
         .onChange(of: showDestinosGuardados) { _, abierto in
             if !abierto && vm.busquedaResultado == nil { guardadosEnfocados = true }
+        }
+    }
+
+    private var barraBusqueda: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.onSurfaceVariant)
+                .font(.body)
+            campoBusqueda
+            estadoBusqueda
+
+            botonDestinosGuardados
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
+    }
+
+    private var campoBusqueda: some View {
+        TextField(L.t("¿A dónde vas hoy?", "Where to today?"), text: $vm.textoBusqueda)
+            .font(.body)
+            .foregroundStyle(.onSurface)
+            .focused($campoEnfocado)
+            .submitLabel(.search)
+            .onSubmit {
+                campoEnfocado = false
+                vm.buscarTexto(vm.textoBusqueda)
+            }
+            .onChange(of: vm.textoBusqueda) { _, nuevo in
+                // Solo se autocompleta mientras el usuario escribe en
+                // el campo. Cuando el texto lo pone el código (al
+                // elegir un chip, un resultado o un lugar guardado) el
+                // campo no está enfocado y no hay que consultar nada.
+                guard campoEnfocado else { return }
+                vm.actualizarTextoBusqueda(nuevo)
+            }
+    }
+
+    @ViewBuilder
+    private var estadoBusqueda: some View {
+        if vm.buscando {
+            ProgressView()
+                .scaleEffect(0.8)
+                .accessibilityLabel(L.t("Buscando destino", "Searching for destination"))
+        } else if !vm.textoBusqueda.isEmpty {
+            Button {
+                vm.limpiar()
+                campoEnfocado = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.onSurfaceVariant.opacity(0.5))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L.t("Borrar destino y ruta", "Clear destination and route"))
+            .frame(minWidth: 44, minHeight: 44)
+        }
+    }
+
+    @ViewBuilder
+    private var listaSugerencias: some View {
+        if !vm.sugerenciasBusqueda.isEmpty && campoEnfocado {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(vm.sugerenciasBusqueda.prefix(5), id: \.self) { sug in
+                    botonSugerencia(sug)
+
+                    if sug != vm.sugerenciasBusqueda.prefix(5).last {
+                        Divider()
+                    }
+                }
+            }
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLowest))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
+            )
+            .transition(.opacity)
+        }
+    }
+
+    private func botonSugerencia(_ sug: MKLocalSearchCompletion) -> some View {
+        Button {
+            campoEnfocado = false
+            vm.seleccionarSugerencia(sug)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "mappin.circle.fill")
+                    .foregroundStyle(acento)
+                    .font(.body)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(sug.title)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.onSurface)
+                        .lineLimit(1)
+                    if !sug.subtitle.isEmpty {
+                        Text(sug.subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.onSurfaceVariant)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
+        .transition(.opacity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(sug.title)
+        .accessibilityValue(sug.subtitle)
+        .accessibilityHint(L.t("Busca una ruta hasta este lugar", "Finds a route to this place"))
+    }
+
+    private var destinosRapidos: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(vm.destinos) { destino in
+                    chip(destino)
+                        .transition(.opacity)
+                }
+            }
+            // Respiración para la manita del distintivo: el ScrollView
+            // recorta todo lo que sale del contenido y la parte de arriba
+            // (y la derecha del último chip) se veía a la mitad.
+            .padding(.leading, 2)
+            .padding(.trailing, 10)
+            .padding(.top, 8)
         }
     }
 
