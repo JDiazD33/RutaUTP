@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1540"
+   LastUpgradeVersion = "2710"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -38,8 +38,15 @@
                ReferencedContainer = "container:RutaUTP.xcodeproj">
             </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="CA2600000000000000000008" BuildableName="RutaUTPUITests.xctest" BlueprintName="RutaUTPUITests" ReferencedContainer="container:RutaUTP.xcodeproj"/>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CA2600000000000000000008"
+               BuildableName = "RutaUTPUITests.xctest"
+               BlueprintName = "RutaUTPUITests"
+               ReferencedContainer = "container:RutaUTP.xcodeproj">
+            </BuildableReference>
          </TestableReference>
       </Testables>
    </TestAction>
