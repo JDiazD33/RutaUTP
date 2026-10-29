@@ -38,6 +38,7 @@ private struct MapaScreenContent: View {
     @EnvironmentObject private var trackingCoordinator: PassiveTrackingCoordinator
     @Bindable var vm: MapaViewModel
     @State private var pantallaVisible = false
+    @State private var tareaCamara: Task<Void, Never>?
     @Binding var mostrarDrawer: Bool
     @State private var showReportarSheet = false
     @State private var showBoardingConfirmation = false
@@ -68,14 +69,18 @@ private struct MapaScreenContent: View {
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
     @Environment(\.mainNavigationHostedExternally) private var navigationHostedExternally
 
-    /// Distancia a la que se empujan los paneles para retirarlos del mapa.
-    ///
-    /// Es un valor fijo y holgado, no la altura de la pantalla: sirve para
-    /// expulsarlos del todo sea cual sea el dispositivo, y evita depender de
-    /// `UIScreen.main` (deprecado, y que en iPad mide la pantalla en vez de la
-    /// ventana). 900 pt supera con holgura la altura de cualquier iPhone,
-    /// incluso en landscape.
-    private let desplazamientoFueraDePantalla: CGFloat = 900
+    /// Retirar los paneles con un movimiento corto, sin atravesar el mapa.
+    /// La opacidad, los toques y VoiceOver comparten `panelesRetirados`.
+    private var desplazamientoPaneles: CGFloat { reduceMotion ? 0 : 12 }
+
+    private var animacionPaneles: Animation? {
+        reduceMotion ? nil : .smooth(duration: 0.4)
+    }
+
+    private var encuadreRegion: [Double] {
+        [vm.region.center.latitude, vm.region.center.longitude,
+         vm.region.span.latitudeDelta, vm.region.span.longitudeDelta]
+    }
 
     /// Paneles flotantes retirados del mapa.
     ///
@@ -131,12 +136,11 @@ private struct MapaScreenContent: View {
 
             // ── UI FLOTANTE ──
             VStack(spacing: 0) {
-                // Todo lo de ARRIBA (header, buscador y resumen del itinerario) viaja como un solo bloque:
-                // así se retira hacia arriba de un tirón y no pieza a pieza.
+                // Encabezado, buscador y guía comparten una sola transición.
                 VStack(spacing: 0) {
                     if !mostrandoRuta {
                         MapHeaderView(vm: vm, mostrarDrawer: $mostrarDrawer)
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .transition(.opacity)
                     }
 
                     // Panel de búsqueda. Se aparta en cuanto hay un itinerario
@@ -148,7 +152,7 @@ private struct MapaScreenContent: View {
                                        showDestinosGuardados: $showDestinosGuardados)
                             .padding(.horizontal, 16)
                             .padding(.top, 12)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .transition(.opacity)
                     }
 
                     if vm.busquedaResultado != nil {
@@ -167,16 +171,15 @@ private struct MapaScreenContent: View {
                             .padding(.top, 8)
                     }
                 }
-                .offset(y: panelesRetirados ? -desplazamientoFueraDePantalla : 0)
+                .offset(y: panelesRetirados ? -desplazamientoPaneles : 0)
                 .opacity(panelesRetirados ? 0 : 1)
-                // Sin esto el bloque se sigue dibujando fuera de pantalla y
-                // seguiría robando toques al mapa.
+                // Los paneles invisibles no deben robar toques al mapa.
                 .allowsHitTesting(!panelesRetirados)
                 .accessibilityHidden(panelesRetirados)
 
                 Spacer()
 
-                // Todo lo de ABAJO se va por abajo, por el mismo motivo.
+                // Los controles inferiores comparten la salida breve.
                 VStack(spacing: 0) {
                     if mostrandoRuta {
                         HStack(alignment: .center) {
@@ -191,22 +194,17 @@ private struct MapaScreenContent: View {
                     } else {
                         NearbyTransportPanel(vm: vm, mapControls: controlesMapaSinRuta)
                             .padding(.bottom, tabBarHeight)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.opacity)
                     }
                 }
-                .offset(y: panelesRetirados ? desplazamientoFueraDePantalla : 0)
+                .offset(y: panelesRetirados ? desplazamientoPaneles : 0)
                 .opacity(panelesRetirados ? 0 : 1)
                 .allowsHitTesting(!panelesRetirados)
                 .accessibilityHidden(panelesRetirados)
             }
-            .animation(
-                reduceMotion ? nil : panelesRetirados
-                ? .easeIn(duration: 0.26)
-                : .spring(response: 0.42, dampingFraction: 0.86),
-                value: panelesRetirados
-            )
+            .animation(animacionPaneles, value: panelesRetirados)
             // Entrada/salida del buscador según haya o no itinerario resuelto.
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: vm.itinerario != nil)
+            .animation(animacionPaneles, value: vm.itinerario != nil)
             .accessibilityHidden(mostrarDrawer)
 
             if viajeActivo {
@@ -264,8 +262,9 @@ private struct MapaScreenContent: View {
                         accessibilityHidden: mostrarDrawer || modoColocarMarcador || vm.calculandoItinerario
                     ) : nil)
         .ignoresSafeArea(edges: .bottom)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: mostrandoRuta)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: viajeActivo)
+        .animation(animacionPaneles, value: mostrandoRuta)
+        .animation(animacionPaneles, value: viajeActivo)
+        .animation(animacionPaneles, value: vm.buscandoItinerarioInicial)
         .onAppear {
             pantallaVisible = true
             vm.actualizarActividadVisual(scenePhase == .active && !viajeActivo)
@@ -276,6 +275,8 @@ private struct MapaScreenContent: View {
         }
         .onDisappear {
             pantallaVisible = false
+            tareaCamara?.cancel()
+            tareaCamara = nil
             campoEnfocado = false
             vm.actualizarActividadVisual(false)
             cancelarPreguntaDeViaje()
@@ -323,10 +324,8 @@ private struct MapaScreenContent: View {
             // Comparar líneas mostrando su recorrido completo, con espacio
             // alrededor para la guía flotante y los controles del mapa.
             let rect = polyline.boundingMapRect
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.4)) {
-                cameraPosition = .rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
-                                                   dy: -max(rect.height * 0.65, 1800)))
-            }
+            moverCamara(.rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
+                                           dy: -max(rect.height * 0.65, 1800))))
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
             guard !viajeActivo else { return }
@@ -335,9 +334,7 @@ private struct MapaScreenContent: View {
             // Conservar entonces el encuadre completo y su recordatorio nuevo.
             guard vm.itinerario == nil else { return }
             cancelarPreguntaDeViaje()
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) {
-                cameraPosition = .region(vm.region)
-            }
+            moverCamara(.region(vm.region))
         }
         .onChange(of: vm.busquedaResultado?.titulo) { _, _ in
             if !marcadorEsDestinoActual { marcadorUsuario = nil }
@@ -351,24 +348,15 @@ private struct MapaScreenContent: View {
                 programarPreguntaDeViaje(en: 30)
             }
         }
-        .onChange(of: vm.region.center.latitude) { _, _ in
-            guard !viajeActivo, vm.itinerario == nil else { return }
-            withAnimation {
-                cameraPosition = .region(vm.region)
-            }
-        }
-        .onChange(of: vm.region.center.longitude) { _, _ in
-            guard !viajeActivo, vm.itinerario == nil else { return }
-            withAnimation {
-                cameraPosition = .region(vm.region)
-            }
+        .onChange(of: encuadreRegion) { _, _ in
+            // Los destinos tienen su propio evento; no repetirlo por cada eje.
+            guard !viajeActivo, vm.itinerario == nil, vm.busquedaResultado == nil else { return }
+            moverCamara(.region(vm.region))
         }
         .onChange(of: vm.recentrarToken) { _, _ in
             // Recentrado explícito (botón flecha): siempre mueve la cámara,
             // sin depender de que `region` cambie de valor.
-            withAnimation(.spring(response: 0.5)) {
-                cameraPosition = .region(vm.region)
-            }
+            moverCamara(.region(vm.region))
         }
         .sheet(isPresented: $showBoardingConfirmation) {
             BoardingConfirmationSheet(coordinator: trackingCoordinator,
@@ -523,9 +511,7 @@ private struct MapaScreenContent: View {
         Button {
             guard let rect = vm.encuadreDeMicros else { return }
             campoEnfocado = false
-            withAnimation(.easeInOut(duration: 0.4)) {
-                cameraPosition = .rect(rect)
-            }
+            moverCamara(.rect(rect))
         } label: {
             Label(vm.busesEnMapa.count == vm.busesAnimados.count
                   ? L.f("{0} micros", "{0} buses", ["\(vm.busesEnMapa.count)"])
@@ -546,9 +532,7 @@ private struct MapaScreenContent: View {
     private var botonMiUbicacion: some View {
         BotonMiUbicacion(tieneUbicacion: vm.userRealCoordinate != nil) {
             if mostrandoRuta || viajeActivo, let origin = vm.userRealCoordinate {
-                withAnimation(.easeInOut(duration: 0.4)) {
-                    cameraPosition = .region(MapaViewModel.regionDePersona(origin, duranteViaje: true))
-                }
+                moverCamara(.region(MapaViewModel.regionDePersona(origin, duranteViaje: true)))
             } else {
                 vm.recenterOnUser()
             }
@@ -575,10 +559,10 @@ private struct MapaScreenContent: View {
                 latitudeDelta: min(regionActual.span.latitudeDelta, cercana.span.latitudeDelta),
                 longitudeDelta: min(regionActual.span.longitudeDelta, cercana.span.longitudeDelta)
             ))
-            withAnimation(.easeInOut(duration: 0.3)) {
+            withAnimation(animacionPaneles) {
                 modoColocarMarcador = true
-                cameraPosition = .region(enfoque)
             }
+            moverCamara(.region(enfoque))
             AppHaptics.impact(.light)
         } label: {
             Image(systemName: "mappin.and.ellipse")
@@ -719,6 +703,22 @@ private struct MapaScreenContent: View {
                 .padding(.bottom, tabBarHeight + 32)
             }
             .transition(.opacity)
+        }
+    }
+
+    private func moverCamara(_ posicion: MapCameraPosition) {
+        // Agrupar los cambios de un mismo render (GPS, destino o ruta cacheada).
+        // Las respuestas nuevas retoman el movimiento sin un rebote adicional.
+        tareaCamara?.cancel()
+        tareaCamara = Task { @MainActor in
+            await Task.yield()
+            // La elección puede llegar mientras se cierra el selector a pantalla
+            // completa. Conservarla aunque el mapa todavía no haya reaparecido.
+            guard !Task.isCancelled else { return }
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.7)) {
+                cameraPosition = posicion
+            }
+            tareaCamara = nil
         }
     }
 

@@ -49,12 +49,10 @@ extension MapaViewModel {
         busquedaResultado = (titulo: destino.label, coordenada: destCoord)
         textoBusqueda = destino.label
 
-        withAnimation(.spring(response: 0.5)) {
-            region = MKCoordinateRegion(
-                center: destCoord,
-                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
-            )
-        }
+        region = MKCoordinateRegion(
+            center: destCoord,
+            span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
+        )
         destinoFocusTick += 1
         calcularRutaHacia(destCoord)
         recargarLineas(cercaDe: destCoord)
@@ -130,12 +128,10 @@ extension MapaViewModel {
         destinoSeleccionado = nil
         busquedaResultado = (titulo: titulo, coordenada: coordenada)
 
-        withAnimation(.spring(response: 0.5)) {
-            region = MKCoordinateRegion(
-                center: coordenada,
-                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
-            )
-        }
+        region = MKCoordinateRegion(
+            center: coordenada,
+            span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
+        )
         destinoFocusTick += 1
         calcularRutaHacia(coordenada)
         recargarLineas(cercaDe: coordenada)

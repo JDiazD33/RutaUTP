@@ -954,8 +954,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         // Sin destino: volver a la sede o al punto disponible, sin elegir viaje.
         recargarLineas(cercaDe: nil)
 
-        withAnimation(.spring(response: 0.5)) {
-            region = Self.regionDeReferencia(coordenadaInicio)
-        }
+        region = Self.regionDeReferencia(coordenadaInicio)
     }
 }

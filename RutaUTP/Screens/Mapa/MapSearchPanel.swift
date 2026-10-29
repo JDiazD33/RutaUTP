@@ -3,12 +3,20 @@ import MapKit
 
 struct MapSearchPanel: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var vm: MapaViewModel
     @FocusState.Binding var campoEnfocado: Bool
     @Binding var showDestinosGuardados: Bool
     @AccessibilityFocusState private var guardadosEnfocados: Bool
 
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    private var animacionBusqueda: Animation? {
+        reduceMotion ? nil : .smooth(duration: 0.25)
+    }
+    private var sugerenciasVisibles: [[String]] {
+        guard campoEnfocado else { return [] }
+        return vm.sugerenciasBusqueda.prefix(5).map { [$0.title, $0.subtitle] }
+    }
 
     /// Abre los mismos paraderos que se guardan desde Seguridad.
     private var botonDestinosGuardados: some View {
@@ -112,6 +120,7 @@ struct MapSearchPanel: View {
                             .padding(.vertical, 10)
                         }
                         .buttonStyle(.plain)
+                        .transition(.opacity)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(sug.title)
                         .accessibilityValue(sug.subtitle)
@@ -127,6 +136,7 @@ struct MapSearchPanel: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.outlineVariant.opacity(0.3), lineWidth: 0.5)
                 )
+                .transition(.opacity)
             }
 
             // Chips
@@ -134,6 +144,7 @@ struct MapSearchPanel: View {
                 HStack(spacing: 8) {
                     ForEach(vm.destinos) { destino in
                         chip(destino)
+                            .transition(.opacity)
                     }
                 }
                 // Respiración para la manita del distintivo: el ScrollView
@@ -154,6 +165,8 @@ struct MapSearchPanel: View {
                 .stroke(Color.outlineVariant.opacity(0.30), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
+        .animation(animacionBusqueda, value: sugerenciasVisibles)
+        .animation(animacionBusqueda, value: vm.destinos.map(\.id))
         .onChange(of: showDestinosGuardados) { _, abierto in
             if !abierto && vm.busquedaResultado == nil { guardadosEnfocados = true }
         }
@@ -181,6 +194,7 @@ struct MapSearchPanel: View {
                     Image(systemName: "checkmark")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(acento)
+                        .transition(.opacity)
                 }
             }
             .foregroundStyle(Color.onSurface)
@@ -191,6 +205,7 @@ struct MapSearchPanel: View {
             // Compacto a la vista, con un área cómoda para tocar.
             .frame(minHeight: 44)
             .contentShape(Rectangle())
+            .animation(animacionBusqueda, value: activo)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
