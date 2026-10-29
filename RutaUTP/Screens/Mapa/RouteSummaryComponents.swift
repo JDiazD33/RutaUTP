@@ -34,6 +34,7 @@ struct RouteCategoryBadges: View {
 struct RouteLineIdentity: View {
     let route: RutaGTFS
     var showsOperator = false
+    var titleFont: Font = .subheadline.weight(.semibold)
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -41,7 +42,7 @@ struct RouteLineIdentity: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(route.lineaConLetra)
-                    .font(.subheadline.weight(.semibold))
+                    .font(titleFont)
                     .foregroundStyle(Color.onSurface)
                     .fixedSize(horizontal: false, vertical: true)
                 if showsOperator {

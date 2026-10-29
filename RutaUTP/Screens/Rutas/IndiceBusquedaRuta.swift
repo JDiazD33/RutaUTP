@@ -14,6 +14,13 @@ struct IndiceBusquedaRuta {
                                  + ruta.paraderos.map(\.nombre)).joined(separator: " "))
     }
 
+    init(ruta: RutaGTFS) {
+        letra = Self.compactar(ruta.letraTransporte)
+        codigo = Self.compactar(ruta.linea)
+        texto = Self.normalizar(([ruta.linea, ruta.letraTransporte, ruta.empresa, ruta.recorrido]
+                                 + ruta.paraderos.map(\.nombre)).joined(separator: " "))
+    }
+
     func coincide(con consulta: ConsultaRuta) -> Bool {
         if let requerida = consulta.letra, letra != requerida { return false }
         return consulta.terminos.allSatisfy { termino in

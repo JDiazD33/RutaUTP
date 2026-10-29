@@ -25,68 +25,74 @@ enum FormularioReporte {
 
 // MARK: - Selector de tipo
 
-/// Selección directa, con presentación vertical cuando el texto necesita espacio.
+/// Fila de formulario con selección única en un menú nativo de iOS.
 struct SelectorTipoReporte: View {
     @Binding var tipo: TipoReporte
     var tiposDisponibles: [TipoReporte] = TipoReporte.allCases
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L.t("Tipo de reporte", "Report type"))
-                .font(.headline)
-                .foregroundStyle(Color.onSurface)
-                .accessibilityAddTraits(.isHeader)
-            if tiposDisponibles.count <= 3 && dynamicTypeSize < .xxLarge {
-                Picker(L.t("Tipo de reporte", "Report type"), selection: $tipo) {
-                    ForEach(tiposDisponibles) { t in Text(t.titulo).tag(t) }
-                }
-                .pickerStyle(.segmented)
-                .frame(minHeight: 44)
-                .onChange(of: tipo) { _, _ in AppHaptics.selection() }
-            } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()),
-                                         count: dynamicTypeSize.isAccessibilitySize || tiposDisponibles.count == 3 ? 1 : 2), spacing: 8) {
-                    ForEach(tiposDisponibles) { tarjeta($0) }
+        Menu {
+            Picker(L.t("Tipo de reporte", "Report type"), selection: $tipo) {
+                ForEach(tiposDisponibles) { opcion in
+                    Label(opcion.titulo, systemImage: opcion.iconoContorno)
+                        .tag(opcion)
                 }
             }
-        }
-    }
-
-    private func tarjeta(_ t: TipoReporte) -> some View {
-        let seleccionado = tipo == t
-        return Button {
-            AppHaptics.selection()
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { tipo = t }
+            .pickerStyle(.inline)
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: t.iconoContorno)
-                    .font(.body).foregroundStyle(acento).accessibilityHidden(true)
-                Text(t.titulo)
-                    .font(.subheadline).foregroundStyle(Color.onSurface)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "checkmark")
-                    .font(.caption.weight(.semibold)).foregroundStyle(acento)
-                    .opacity(seleccionado ? 1 : 0).accessibilityHidden(true)
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    filaVertical
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 16) {
+                            titulo.fixedSize()
+                            Spacer(minLength: 12)
+                            valor.fixedSize()
+                        }
+                        filaVertical
+                    }
+                }
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 52)
+            .font(.body)
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
             .background(Color(uiColor: .secondarySystemGroupedBackground),
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(seleccionado ? acento : .clear, lineWidth: 1.5)
-            }
+                        in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .tint(Color.appAccent)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(t.titulo)
-        .accessibilityAddTraits(seleccionado ? .isSelected : [])
+        .accessibilityLabel(L.t("Tipo de reporte", "Report type"))
+        .accessibilityValue(tipo.titulo)
+        .onChange(of: tipo) { _, _ in AppHaptics.selection() }
+    }
+
+    private var titulo: some View {
+        Text(L.t("Tipo de reporte", "Report type"))
+            .foregroundStyle(Color.onSurface)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var valor: some View {
+        HStack(spacing: 8) {
+            Text(tipo.titulo)
+                .foregroundStyle(Color.appAccent)
+                .fixedSize(horizontal: false, vertical: true)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var filaVertical: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            titulo
+            valor
+        }
     }
 }
 

@@ -13,6 +13,7 @@ struct RouteIncidentMap: View {
     let route: RutaGTFS
     @Binding var point: CLLocationCoordinate2D?
     @Binding var camera: MapCameraPosition
+    var markerTint: Color = .orange
     /// Se llama cuando el usuario toca el mapa. Permite distinguir "el pin
     /// está donde yo lo puse" de "el pin se puso solo", que es lo que decide
     /// si se recoloca al cambiar de línea.
@@ -24,9 +25,10 @@ struct RouteIncidentMap: View {
                 MapPolyline(coordinates: route.shape).stroke(route.color, lineWidth: 4)
                 if let point {
                     Marker(L.t("Lugar afectado", "Affected location"), coordinate: point)
-                        .tint(.orange)
+                        .tint(markerTint)
                 }
             }
+            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
             .onTapGesture { location in
                 if let coordinate = proxy.convert(location, from: .local) {
                     point = coordinate
@@ -81,13 +83,13 @@ struct AvisoCoherencia: View {
             case .coherente:
                 etiqueta(L.t("El punto está sobre el recorrido de ",
                              "The point is on ") + rutaCorta(route),
-                         icono: "checkmark.circle.fill", tono: .green)
+                         icono: "checkmark.circle.fill", tono: Color(light: "#1F6F45", dark: "#81DCA6"))
             case .limite(let d):
                 etiqueta(L.f("A {0} m del recorrido. Se aceptará, pero revisa que sea el lugar correcto.", "{0} m from the route. It'll be accepted, but check it's the right spot.", ["\(Int(d.rounded()))"]),
-                         icono: "exclamationmark.triangle.fill", tono: .orange)
+                         icono: "exclamationmark.triangle.fill", tono: Color(light: "#854A0E", dark: "#FFC078"))
             case .fueraDeRuta(let d):
-                etiqueta(L.f("Este punto está a {0} m de la ruta {1}. No corresponde a esta línea: toca el recorrido azul.", "This point is {0} m from route {1}. It doesn't belong to this line: tap the blue path.", ["\(Int(d.rounded()))", "\(rutaCorta(route))"]),
-                         icono: "xmark.octagon.fill", tono: .red)
+                etiqueta(L.f("Este punto está a {0} m de la ruta {1}. No corresponde a esta línea: toca el recorrido de la línea.", "This point is {0} m from route {1}. It doesn't belong to this line: tap the line's route.", ["\(Int(d.rounded()))", "\(rutaCorta(route))"]),
+                         icono: "xmark.octagon.fill", tono: .appError)
             }
         }
     }

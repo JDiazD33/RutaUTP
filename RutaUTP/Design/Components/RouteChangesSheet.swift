@@ -10,9 +10,9 @@ struct RouteChangesSheet: View {
     /// máxima mientras este sheet está abierto.
     var locationService: LocationServiceProtocol
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var acento: Color { .appAccent }
     @State private var routes: [RutaGTFS] = []
     @State private var cargandoRutas = true
     @State private var errorCargaRutas: String?
@@ -28,6 +28,8 @@ struct RouteChangesSheet: View {
     /// arriba, así que una ubicación arrastrada por el movimiento del micro no
     /// ayudaría.
     @StateObject private var ubicacion = RouteChangesLocationModel()
+    @StateObject private var referenciaMapa = GeocodificacionComunidadModel()
+    @State private var errorReferencia = false
     /// `true` cuando el marcador actual NO es el que se puso automáticamente.
     /// Así "usar mi ubicación" sigue disponible para recolocar el pin.
     @State private var puntoEditadoAMano = false
@@ -58,18 +60,19 @@ struct RouteChangesSheet: View {
 
     /// Coloca el pin donde está el usuario y centra el mapa ahí.
     private func usarMiUbicacion() {
-        guard let ruta = route, let aqui = puntoEnMiUbicacion else { return }
+        guard route != nil, let aqui = puntoEnMiUbicacion else { return }
         AppHaptics.impact(.light)
         // Solo se marca automáticamente si el sitio es coherente con la línea.
         // Si el usuario está a tres calles del recorrido, un pin automático
         // ahí sería ruido: se deja que marque él a mano sobre el trazado.
-        guard let veredicto = VerificadorCoherencia.evaluar(point: aqui, ruta: ruta),
-              veredicto.esValido else { return }
-        withAnimation(.easeInOut(duration: 0.25)) {
+        // Este botón es una elección explícita: siempre muestra la ubicación.
+        // La coherencia sigue controlando el aviso y el permiso para enviar.
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
             point = aqui
-            puntoEditadoAMano = false
+            puntoEditadoAMano = true
             camera = .region(Self.vecindad(alrededorDe: aqui))
         }
+        completarReferenciaDesdeMapa()
     }
 
     /// Región que encuadra el punto con aire alrededor, para que se vea el
@@ -85,162 +88,67 @@ struct RouteChangesSheet: View {
             ScrollViewReader { scroll in
                 Form {
                     Section {
-                        Label(service.ready
-                              ? L.t("Reportes compartidos en línea", "Shared reports online")
-                              : service.configured
-                                ? L.t("Conectando con el servicio de alertas…", "Connecting to route alerts…")
-                                : L.t("Alertas sin conexión", "Route alerts offline"),
-                              systemImage: service.ready ? "checkmark.circle" : "wifi.slash")
-                            .font(.subheadline)
-                            .foregroundStyle(service.ready ? acento : Color(uiColor: .secondaryLabel))
-                        if !service.ready {
-                            Text(L.t("No podemos consultar ni enviar cambios ahora. Puedes preparar tu reporte aquí.",
-                                     "We can't retrieve or send changes now. You can prepare your report here."))
-                                .font(.footnote).foregroundStyle(.secondary)
-                        }
+                        estadoConexion
                     }
                     Section {
-                        if cargandoRutas {
-                            ProgressView(L.t("Cargando rutas…", "Loading routes…"))
-                        } else if let errorCargaRutas {
-                            Text(L.aviso(errorCargaRutas)).foregroundStyle(.secondary)
-                            Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
-                        } else if routes.isEmpty {
-                            Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
-                                 : L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
-                                .foregroundStyle(.secondary)
-                        }
-                        Picker(L.t("Línea y ramal", "Line and branch"), selection: Binding(get: { routeID }, set: { value in
-                            routeID = value
-                            // Al cambiar de línea el punto anterior ya no
-                            // significa nada: pertenecía a otro recorrido.
-                            // Se suelta para que `colocarAutomaticamente` lo
-                            // reponga en la nueva ruta, si procede.
-                            point = nil
-                            puntoEditadoAMano = false
-                            place = ""
-                            camera = .automatic
-                            colocarAutomaticamenteSiProcede()
-                        })) {
-                            Text(L.t("Selecciona una ruta", "Select a route")).tag("")
-                            ForEach(routes) { route in
-                                Text("\(route.linea) · \(route.variante) · \(route.recorridoLocalizado)").tag(route.id)
-                            }
-                        }
-                        .pickerStyle(.navigationLink)
+                        selectorRuta
                         selectorMotivo
-                        if let route {
-                            HStack {
-                                // El rótulo cambia con el estado: si el pin ya
-                                // está puesto (suelo o a mano), decir "toca"
-                                // sería una instrucción que ya no aplica.
-                                Text(point == nil
-                                     ? L.t("Toca el lugar afectado en el mapa",
-                                           "Tap the affected location on the map")
-                                     : L.t("Lugar afectado", "Affected location"))
-                                    .font(.subheadline)
-                                Spacer()
-                                if puntoEnMiUbicacion != nil {
-                                    Button {
-                                        usarMiUbicacion()
-                                    } label: {
-                                        Label(L.t("Mi ubicación", "My location"),
-                                              systemImage: "location.fill")
-                                            .font(.subheadline.weight(.medium))
-                                            .frame(minHeight: 44)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .accessibilityHint(L.t("Coloca el marcador donde estás ahora",
-                                                           "Places the marker where you are now"))
-                                }
-                            }
-                            RouteIncidentMap(route: route,
-                                             point: $point,
-                                             camera: $camera,
-                                             onPointChange: { puntoEditadoAMano = true })
-                                .frame(height: 300)
-                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-
-                            Button { showExpandedMap = true } label: {
-                                Label(L.t("Ampliar mapa", "Expand map"),
-                                      systemImage: "arrow.up.left.and.arrow.down.right")
-                                    .frame(maxWidth: .infinity, minHeight: 44)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(acento)
-
-                            AvisoCoherencia(evaluacion: coherencia, route: route)
-
-                            TextField(L.t("Calle o referencia (obligatorio)", "Street or landmark (required)"), text: $place, axis: .vertical)
-                                .font(.body)
-                                .lineLimit(1...3)
-                                .textInputAutocapitalization(.sentences)
-                                .accessibilityLabel(L.t("Calle o referencia (obligatorio)", "Street or landmark (required)"))
-                                .onChange(of: place) { _, value in place = String(value.prefix(120)) }
-                            if point == nil {
-                                Text(L.t("Falta marcar el punto afectado.", "Mark the affected point to continue."))
-                                    .font(.caption).foregroundStyle(.secondary)
-                            } else if !coherenciaValida {
-                                Text(L.t("El punto no pertenece a esta ruta. Ajusta el marcador sobre el recorrido azul o cambia de línea.",
-                                         "This point doesn't belong to this route. Move the marker onto the blue path or change the line."))
-                                    .font(.caption).foregroundStyle(.red)
-                            }
-                        }
-                        if let result = service.result {
-                            Text(result).font(.callout).accessibilityAddTraits(.updatesFrequently)
-                        }
                     } header: {
-                        Text(L.t("Reportar o confirmar un cambio", "Report or confirm a change"))
+                        tituloSeccion(L.t("Reportar cambio", "Report change"))
                     } footer: {
-                        Text(L.t("Confirma solo si lo has visto. Se necesitan dos cuentas distintas en la misma ruta, motivo y zona. Los reportes vencen a los 15 minutos. El aviso señala la incidencia; el recorrido alterno aún no está verificado.",
-                                 "Confirm only what you've seen. Two different accounts must report the same route, reason and area. Reports expire after 15 minutes. The alert identifies the incident; the alternative path hasn't been verified."))
+                        Text(L.t("Confirma solo si lo has visto.", "Confirm only what you've seen."))
                     }
+                    .disabled(service.sending)
                     .id("report-form")
-                    Section(L.t("Cambios confirmados", "Confirmed changes")) {
-                        if service.alerts.isEmpty {
-                            Text(service.ready
-                                 ? L.t("No hay cambios confirmados recientes.", "No recent confirmed changes.")
-                                 : L.t("Sin información actualizada.", "No up-to-date information."))
-                                .foregroundStyle(.secondary)
+
+                    if let route {
+                        seccionUbicacion(route)
+                            .disabled(service.sending)
+                    }
+                    if let result = service.result {
+                        Section {
+                            Label(L.aviso(result), systemImage: "info.circle")
+                                .font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityAddTraits(.updatesFrequently)
                         }
-                        ForEach(service.alerts) { alert in
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(routeTitle(alert.routeId)).font(.headline)
-                                Label(reasonTitle(alert.reason), systemImage: "arrow.triangle.branch")
-                                Text(alert.place)
-                                Text(L.f("{0} cuentas · vigente hasta ", "{0} accounts · valid until ", ["\(alert.confirmations)"])
-                                     + Date(timeIntervalSince1970: alert.expiresAt).formatted(
-                                        Date.FormatStyle(date: .omitted, time: .shortened).locale(FormatoFecha.localeActivo)))
-                                    .font(.caption).foregroundStyle(.secondary)
-                                Button(L.t("Ver lugar y confirmar", "View location and confirm")) {
-                                    routeID = alert.routeId
-                                    reason = alert.reason
-                                    place = alert.place
-                                    let coordinate = CLLocationCoordinate2D(latitude: alert.lat, longitude: alert.lon)
-                                    point = coordinate
-                                    camera = .region(MKCoordinateRegion(center: coordinate,
-                                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)))
-                                    withAnimation { scroll.scrollTo("report-form", anchor: .top) }
-                                }
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(acento)
-                                .frame(minHeight: 44)
-                            }
-                            .padding(.vertical, 8)
+                    }
+                    cambiosConfirmados(scroll: scroll)
+                    Section {
+                        DisclosureGroup {
+                            Text(L.t("Confirma solo si lo has visto. Se necesitan dos cuentas distintas en la misma ruta, motivo y zona. Los reportes vencen a los 15 minutos. El aviso señala la incidencia; el recorrido alterno aún no está verificado.",
+                                     "Confirm only what you've seen. Two different accounts must report the same route, reason and area. Reports expire after 15 minutes. The alert identifies the incident; the alternative path hasn't been verified."))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } label: {
+                            Label(L.t("Cómo se confirman los cambios", "How changes are confirmed"),
+                                  systemImage: "info.circle")
+                                .font(.subheadline)
                         }
                     }
                 }
+                .listSectionSpacing(20)
+                .contentMargins(.top, 16, for: .scrollContent)
             }
             .scrollContentBackground(.hidden)
             .background(Color.appBackground.ignoresSafeArea())
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                botonReportarCambio
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color.appSurface)
-                    .overlay(alignment: .top) { Divider() }
+                VStack(spacing: 8) {
+                    if let ayudaEnvio {
+                        Text(ayudaEnvio)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    botonReportarCambio
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.appSurface)
+                .overlay(alignment: .top) { Divider() }
             }
             .toolbarBackground(Color.appSurface, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -253,10 +161,14 @@ struct RouteChangesSheet: View {
             }
             .fullScreenCover(isPresented: $showExpandedMap) {
                 if let route {
-                    ExpandedRouteIncidentMap(route: route, initialPoint: point, initialCamera: camera) { selected, position in
+                    ExpandedRouteIncidentMap(route: route, initialPoint: point, locationService: locationService,
+                                             markerTint: MotivoCambioRuta(rawValue: reason)?.tinta ?? acento) { selected, position in
+                        let cambiaPunto = point?.latitude != selected.latitude || point?.longitude != selected.longitude
                         point = selected
                         camera = position
                         puntoEditadoAMano = true
+                        // Mover solo la cámara conserva una referencia editada.
+                        if cambiaPunto || place.isEmpty { completarReferenciaDesdeMapa() }
                     }
                 }
             }
@@ -267,6 +179,15 @@ struct RouteChangesSheet: View {
                     let catalogo = try await TransporteApp.repositorio.cargarRutas(reintentar: revisionCatalogo > 0)
                     guard !Task.isCancelled else { return }
                     routes = catalogo
+                    if !routeID.isEmpty, !routes.contains(where: { $0.id == routeID }) {
+                        referenciaMapa.cancelar(limpiar: true)
+                        errorReferencia = false
+                        routeID = ""
+                        point = nil
+                        puntoEditadoAMano = false
+                        place = ""
+                        camera = .automatic
+                    }
                 } catch {
                     guard !Task.isCancelled else { return }
                     errorCargaRutas = (error as? FalloCargaGTFS)?.mensajeUsuario
@@ -290,53 +211,447 @@ struct RouteChangesSheet: View {
             }
         }
         .tint(acento)
+        .onAppear {
+            if point != nil, place.isEmpty, !referenciaMapa.buscando {
+                completarReferenciaDesdeMapa()
+            }
+        }
+        .onDisappear { referenciaMapa.cancelar() }
+    }
+
+    private func tituloSeccion(_ titulo: String) -> some View {
+        Text(titulo)
+            .font(.headline)
+            .foregroundStyle(Color.onSurface)
+            .textCase(nil)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var estadoConexion: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: service.ready ? "checkmark.circle" : "wifi.slash")
+                .font(.title3)
+                .foregroundStyle(service.ready ? acento : Color(uiColor: .secondaryLabel))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(service.ready
+                     ? L.t("Reportes compartidos en línea", "Shared reports online")
+                     : service.configured
+                        ? L.t("Sin información actualizada", "No up-to-date information")
+                        : L.t("Alertas sin conexión", "Route alerts offline"))
+                    .font(.subheadline.weight(.medium))
+                if !service.ready {
+                    Text(L.t("No podemos consultar ni enviar cambios ahora. Puedes preparar tu reporte aquí.",
+                             "We can't retrieve or send changes now. You can prepare your report here."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    if service.configured {
+                        Button(L.t("Reintentar", "Retry")) {
+                            service.stop()
+                            service.start()
+                        }
+                        .font(.subheadline)
+                        .buttonStyle(.bordered)
+                        .frame(minHeight: 44)
+                        .disabled(service.sending)
+                    }
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
     }
 
     @ViewBuilder
-    private var selectorMotivo: some View {
-        if dynamicTypeSize >= .xxLarge {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(L.t("¿Qué ocurre?", "What's happening?"))
-                    .font(.headline).padding(.bottom, 8)
-                ForEach(["works", "closure", "detour"], id: \.self) { value in
-                    Button {
-                        reason = value
-                        AppHaptics.selection()
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text(reasonTitle(value))
+    private var selectorRuta: some View {
+        if cargandoRutas {
+            ProgressView(L.t("Cargando rutas…", "Loading routes…"))
+        } else if let errorCargaRutas {
+            Text(L.aviso(errorCargaRutas)).foregroundStyle(.secondary)
+            Button(L.t("Reintentar", "Retry")) { revisionCatalogo += 1 }
+        } else if routes.isEmpty {
+            Text(TransporteApp.rutasUTPPendientes ? TransporteApp.mensajePendiente
+                 : L.t("El catálogo no contiene rutas.", "The catalog contains no routes."))
+                .foregroundStyle(.secondary)
+        } else {
+            NavigationLink {
+                SelectorLineaCambio(routes: routes,
+                                    seleccion: Binding(get: { routeID }, set: cambiarRuta))
+            } label: {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "bus")
+                        .font(.title3)
+                        .foregroundStyle(acento)
+                        .frame(width: 44, height: 44)
+                        .background(acento.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L.t("Línea y ramal", "Line and branch"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if let route {
+                            Text(route.lineaConLetra)
+                                .font(.headline)
                                 .foregroundStyle(Color.onSurface)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: "checkmark")
+                            Text(route.recorridoLocalizado)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(L.t("Selecciona una ruta", "Select a route"))
+                                .font(.body)
                                 .foregroundStyle(acento)
-                                .opacity(reason == value ? 1 : 0)
-                                .accessibilityHidden(true)
                         }
-                        .font(.body)
-                        .padding(.vertical, 10)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(reason == value ? .isSelected : [])
-                    if value != "detour" { Divider() }
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    private func cambiarRuta(_ value: String) {
+        guard routeID != value else { return }
+        referenciaMapa.cancelar(limpiar: true)
+        errorReferencia = false
+        routeID = value
+        // Al cambiar de línea el punto anterior ya no
+        // significa nada: pertenecía a otro recorrido.
+        // Se suelta para que `colocarAutomaticamente` lo
+        // reponga en la nueva ruta, si procede.
+        point = nil
+        puntoEditadoAMano = false
+        place = ""
+        camera = .automatic
+        colocarAutomaticamenteSiProcede()
+        AppHaptics.selection()
+    }
+
+    private var selectorMotivo: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L.t("¿Qué ocurre?", "What's happening?"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            if dynamicTypeSize >= .xxLarge {
+                motivosVerticales
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(MotivoCambioRuta.allCases) { motivo in
+                            botonMotivo(motivo, compacto: true)
+                        }
+                    }
+                    motivosVerticales
                 }
             }
-        } else {
-            Picker(L.t("¿Qué ocurre?", "What's happening?"), selection: $reason) {
-                Text(L.t("Obras", "Roadworks")).tag("works")
-                Text(L.t("Cierre", "Closure")).tag("closure")
-                Text(L.t("Desvío", "Detour")).tag("detour")
-            }
-            .pickerStyle(.segmented)
-            .frame(minHeight: 44)
         }
+        .padding(.vertical, 4)
+        .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.82), value: reason)
+    }
+
+    private var motivosVerticales: some View {
+        VStack(spacing: 8) {
+            ForEach(MotivoCambioRuta.allCases) { motivo in
+                botonMotivo(motivo, compacto: false)
+            }
+        }
+    }
+
+    private func botonMotivo(_ motivo: MotivoCambioRuta, compacto: Bool) -> some View {
+        let seleccionado = reason == motivo.rawValue
+        return Button {
+            guard !seleccionado else { return }
+            AppHaptics.selection()
+            reason = motivo.rawValue
+        } label: {
+            Group {
+                if compacto {
+                    VStack(spacing: 8) {
+                        Image(systemName: motivo.icono).font(.title3)
+                        Text(motivo.titulo).fixedSize(horizontal: true, vertical: false)
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        Image(systemName: motivo.icono).font(.title3)
+                        Text(motivo.titulo)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 4)
+                        Image(systemName: seleccionado ? "checkmark.circle.fill" : "circle")
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(seleccionado ? motivo.tinta : Color(uiColor: .secondaryLabel))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: compacto ? 82 : 52)
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(seleccionado ? motivo.tinta.opacity(0.12)
+                          : Color(uiColor: .tertiarySystemGroupedBackground))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(seleccionado ? motivo.tinta.opacity(0.6) : Color(uiColor: .separator).opacity(0.3))
+            }
+            .overlay(alignment: .topTrailing) {
+                if compacto && seleccionado {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(motivo.tinta)
+                        .padding(6)
+                        .transition(.opacity.combined(with: .scale))
+                        .accessibilityHidden(true)
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(motivo.titulo)
+        .accessibilityAddTraits(seleccionado ? .isSelected : [])
+    }
+
+    private func seccionUbicacion(_ route: RutaGTFS) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 14) {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 8) {
+                        indicacionMapa
+                        botonMiUbicacion
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        indicacionMapa
+                        Spacer(minLength: 0)
+                        botonMiUbicacion
+                    }
+                }
+                RouteIncidentMap(route: route, point: $point, camera: $camera,
+                                 markerTint: MotivoCambioRuta(rawValue: reason)?.tinta ?? acento,
+                                 onPointChange: {
+                                     puntoEditadoAMano = true
+                                     completarReferenciaDesdeMapa()
+                                 })
+                    .frame(height: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(alignment: .topTrailing) {
+                        if !dynamicTypeSize.isAccessibilitySize {
+                            Button { showExpandedMap = true } label: {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Color.onSurface)
+                                    .frame(width: 44, height: 44)
+                                    .background(.regularMaterial, in: Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L.t("Ampliar mapa", "Expand map"))
+                            .padding(10)
+                        }
+                    }
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: reason)
+                if dynamicTypeSize.isAccessibilitySize {
+                    Button { showExpandedMap = true } label: {
+                        Label(L.t("Ampliar mapa", "Expand map"),
+                              systemImage: "arrow.up.left.and.arrow.down.right")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                AvisoCoherencia(evaluacion: coherencia, route: route)
+            }
+            .padding(12)
+            .background(Color(uiColor: .secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            campoReferencia
+                .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 0, trailing: 0))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        } header: {
+            tituloSeccion(L.t("Ubicación", "Location"))
+        }
+    }
+
+    private var indicacionMapa: some View {
+        // El rótulo cambia con el estado: si el pin ya
+        // está puesto (suelo o a mano), decir "toca"
+        // sería una instrucción que ya no aplica.
+        Text(point == nil
+             ? L.t("Toca el lugar afectado en el mapa", "Tap the affected location on the map")
+             : L.t("Lugar afectado", "Affected location"))
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var campoReferencia: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(L.t("Calle o referencia", "Street or landmark"))
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 8)
+                Text("\(place.count)/120")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(L.f("{0} caracteres restantes", "{0} characters left", ["\(120 - place.count)"]))
+            }
+            TextField(L.t("Calle o referencia (obligatorio)", "Street or landmark (required)"),
+                      text: Binding(get: { place }, set: { value in
+                          // Una edición explícita invalida cualquier respuesta pendiente.
+                          referenciaMapa.cancelar(limpiar: true)
+                          errorReferencia = false
+                          place = String(value.prefix(120))
+                      }), axis: .vertical)
+                .font(.body)
+                .lineLimit(1...3)
+                .textInputAutocapitalization(.sentences)
+                .accessibilityLabel(L.t("Calle o referencia (obligatorio)", "Street or landmark (required)"))
+                .accessibilityHint(L.t("Puedes editar la referencia.", "You can edit the landmark."))
+            if referenciaMapa.buscando {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small).accessibilityHidden(true)
+                    Text(L.t("Buscando dirección…", "Looking up address…"))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            } else {
+                Text(errorReferencia
+                     ? L.t("No se pudo identificar la calle. Escribe una referencia.",
+                           "Couldn't identify the street. Enter a landmark.")
+                     : point == nil
+                        ? L.t("Marca un punto para completar la referencia.", "Mark a point to fill in the landmark.")
+                        : L.t("Puedes editar la referencia.", "You can edit the landmark."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if errorReferencia {
+                    Button(L.t("Reintentar", "Retry"), action: completarReferenciaDesdeMapa)
+                        .font(.subheadline)
+                        .buttonStyle(.borderless)
+                        .frame(minHeight: 44)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(uiColor: .secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func completarReferenciaDesdeMapa() {
+        guard let coordenada = point else { return }
+        let rutaSolicitada = routeID
+        // El texto anterior pertenece a otro punto. Nunca permite enviar una
+        // referencia antigua mientras se resuelve la nueva selección.
+        place = ""
+        errorReferencia = false
+        referenciaMapa.buscar(coordenada, demora: .milliseconds(400)) { direccion in
+            guard routeID == rutaSolicitada,
+                  point?.latitude == coordenada.latitude,
+                  point?.longitude == coordenada.longitude,
+                  place.isEmpty, !service.sending else { return }
+            let texto = direccion?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            place = String(texto.prefix(120))
+            errorReferencia = texto.isEmpty
+        }
+    }
+
+    @ViewBuilder
+    private var botonMiUbicacion: some View {
+        if puntoEnMiUbicacion != nil {
+            Button(action: usarMiUbicacion) {
+                Label(L.t("Mi ubicación", "My location"), systemImage: "location.fill")
+                    .font(.subheadline)
+                    .frame(minHeight: 44)
+                    .padding(.horizontal, 12)
+                    .background(acento.opacity(0.1), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(L.t("Coloca el marcador donde estás ahora", "Places the marker where you are now"))
+        }
+    }
+
+    private func cambiosConfirmados(scroll: ScrollViewProxy) -> some View {
+        Section {
+            if service.alerts.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: service.ready ? "checkmark.shield" : "wifi.slash")
+                        .font(.title2)
+                        .accessibilityHidden(true)
+                    Text(service.ready
+                         ? L.t("No hay cambios confirmados recientes.", "No recent confirmed changes.")
+                         : L.t("Sin información actualizada.", "No up-to-date information."))
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .listRowBackground(Color.clear)
+            }
+            ForEach(service.alerts) { alert in
+                let rutaDisponible = routes.contains { $0.id == alert.routeId }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(routeTitle(alert.routeId)).font(.headline)
+                    Label(reasonTitle(alert.reason), systemImage: "arrow.triangle.branch")
+                        .font(.subheadline)
+                    Text(alert.place)
+                    Text(L.f("{0} cuentas · vigente hasta ", "{0} accounts · valid until ", ["\(alert.confirmations)"])
+                         + Date(timeIntervalSince1970: alert.expiresAt).formatted(
+                            Date.FormatStyle(date: .omitted, time: .shortened).locale(FormatoFecha.localeActivo)))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Button(L.t("Ver lugar y confirmar", "View location and confirm")) {
+                        guard rutaDisponible, !service.sending else { return }
+                        referenciaMapa.cancelar(limpiar: true)
+                        errorReferencia = false
+                        routeID = alert.routeId
+                        reason = alert.reason
+                        place = alert.place
+                        let coordinate = CLLocationCoordinate2D(latitude: alert.lat, longitude: alert.lon)
+                        point = coordinate
+                        puntoEditadoAMano = true
+                        camera = .region(Self.vecindad(alrededorDe: coordinate))
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                            scroll.scrollTo("report-form", anchor: .top)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.subheadline)
+                    .frame(minHeight: 44)
+                    .disabled(!rutaDisponible || service.sending)
+                    if !rutaDisponible {
+                        Text(L.t("Esta ruta no está disponible en el catálogo actual.",
+                                 "This route isn't available in the current catalog."))
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+        } header: {
+            tituloSeccion(L.t("Cambios confirmados", "Confirmed changes"))
+        }
+    }
+
+    private var ayudaEnvio: String? {
+        if service.sending { return nil }
+        if !service.ready { return L.t("Alertas sin conexión", "Route alerts offline") }
+        if route == nil { return L.t("Selecciona una ruta", "Select a route") }
+        if point == nil { return L.t("Falta marcar el punto afectado.", "Mark the affected point to continue.") }
+        if !coherenciaValida {
+            return L.t("Ajusta el marcador sobre el recorrido de la línea.", "Move the marker onto the line's route.")
+        }
+        if place.trimmingCharacters(in: .whitespacesAndNewlines).count < 3 {
+            return L.t("Escribe al menos 3 caracteres en la referencia.", "Enter at least 3 characters for the landmark.")
+        }
+        return nil
     }
 
     private var botonReportarCambio: some View {
         Button {
-            guard let point else { return }
+            guard canSend, let point else { return }
             service.send(routeID: routeID, reason: reason, lat: point.latitude, lon: point.longitude,
                          place: place.trimmingCharacters(in: .whitespacesAndNewlines))
         } label: {
@@ -366,15 +681,43 @@ struct RouteChangesSheet: View {
         guard let aqui = ubicacion.puntoAutomatico(
             para: route, puntoActual: point, editadoAMano: puntoEditadoAMano,
             mapaAmpliadoAbierto: showExpandedMap) else { return }
-        withAnimation(.easeInOut(duration: 0.25)) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
             point = aqui
             camera = .region(Self.vecindad(alrededorDe: aqui))
         }
+        completarReferenciaDesdeMapa()
     }
 
     private func routeTitle(_ id: String) -> String {
         guard let route = routes.first(where: { $0.id == id }) else { return L.t("Ruta ", "Route ") + id }
-        return "\(route.linea) · \(route.variante) · \(route.empresa)"
+        return [route.lineaConLetra, route.empresa].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+}
+
+private enum MotivoCambioRuta: String, CaseIterable, Identifiable {
+    case obras = "works", cierre = "closure", desvio = "detour"
+
+    var id: String { rawValue }
+    var titulo: String {
+        switch self {
+        case .obras: return L.t("Obras", "Roadworks")
+        case .cierre: return L.t("Cierre", "Closure")
+        case .desvio: return L.t("Desvío", "Detour")
+        }
+    }
+    var icono: String {
+        switch self {
+        case .obras: return "cone.fill"
+        case .cierre: return "xmark.octagon.fill"
+        case .desvio: return "arrow.triangle.branch"
+        }
+    }
+    var tinta: Color {
+        switch self {
+        case .obras: return Color(light: "#854A0E", dark: "#FFC078")
+        case .cierre: return Color(light: "#B42330", dark: "#FF9A9F")
+        case .desvio: return Color(light: "#075DB5", dark: "#8EC8FF")
+        }
     }
 }
 

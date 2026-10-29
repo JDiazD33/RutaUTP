@@ -1,4 +1,137 @@
 {
+  "Elige la línea y el ramal del cambio.": {
+    "en": "Choose the line and branch affected by the change.",
+    "fr": "Choisissez la ligne et la branche concernées par le changement.",
+    "pt-BR": "Escolha a linha e o ramal afetados pela alteração.",
+    "de": "Wähle die von der Änderung betroffene Linie und ihren Zweig.",
+    "zh-Hans": "请选择受变更影响的线路和支线。"
+  },
+  "Línea seleccionada": {
+    "en": "Selected line",
+    "fr": "Ligne sélectionnée",
+    "pt-BR": "Linha selecionada",
+    "de": "Ausgewählte Linie",
+    "zh-Hans": "已选线路"
+  },
+  "Rutas disponibles": {
+    "en": "Available routes",
+    "fr": "Lignes disponibles",
+    "pt-BR": "Rotas disponíveis",
+    "de": "Verfügbare Routen",
+    "zh-Hans": "可用路线"
+  },
+  "Quitar selección": {
+    "en": "Clear selection",
+    "fr": "Effacer la sélection",
+    "pt-BR": "Limpar seleção",
+    "de": "Auswahl aufheben",
+    "zh-Hans": "清除选择"
+  },
+  "Código, letra, calle o empresa": {
+    "en": "Code, letter, street or operator",
+    "fr": "Code, lettre, rue ou opérateur",
+    "pt-BR": "Código, letra, rua ou empresa",
+    "de": "Code, Buchstabe, Straße oder Unternehmen",
+    "zh-Hans": "编号、字母、街道或运营公司"
+  },
+  "Prueba con el código, la letra, una calle o la empresa.": {
+    "en": "Try the code, letter, a street or the operator.",
+    "fr": "Essayez le code, la lettre, une rue ou l’opérateur.",
+    "pt-BR": "Tente o código, a letra, uma rua ou a empresa.",
+    "de": "Versuche es mit dem Code, dem Buchstaben, einer Straße oder dem Unternehmen.",
+    "zh-Hans": "请尝试输入编号、字母、街道或运营公司。"
+  },
+  "Ver todas las rutas": {
+    "en": "Show all routes",
+    "fr": "Afficher toutes les lignes",
+    "pt-BR": "Ver todas as rotas",
+    "de": "Alle Routen anzeigen",
+    "zh-Hans": "显示所有路线"
+  },
+  "Ramal circular": {
+    "en": "Circular branch",
+    "fr": "Branche circulaire",
+    "pt-BR": "Ramal circular",
+    "de": "Ringzweig",
+    "zh-Hans": "环形支线"
+  },
+  "Buscar línea o destino": {
+    "en": "Search line or destination",
+    "fr": "Rechercher une ligne ou une destination",
+    "pt-BR": "Buscar linha ou destino",
+    "de": "Linie oder Ziel suchen",
+    "zh-Hans": "搜索线路或目的地"
+  },
+  "No se encontraron rutas.": {
+    "en": "No routes found.",
+    "fr": "Aucune ligne trouvée.",
+    "pt-BR": "Nenhuma rota encontrada.",
+    "de": "Keine Routen gefunden.",
+    "zh-Hans": "未找到路线。"
+  },
+  "Puedes editar la referencia.": {
+    "en": "You can edit the landmark.",
+    "fr": "Vous pouvez modifier le point de repère.",
+    "pt-BR": "Você pode editar a referência.",
+    "de": "Du kannst den Orientierungspunkt bearbeiten.",
+    "zh-Hans": "你可以编辑地标说明。"
+  },
+  "No se pudo identificar la calle. Escribe una referencia.": {
+    "en": "Couldn't identify the street. Enter a landmark.",
+    "fr": "Impossible d’identifier la rue. Saisissez un point de repère.",
+    "pt-BR": "Não foi possível identificar a rua. Digite uma referência.",
+    "de": "Die Straße konnte nicht ermittelt werden. Gib einen Orientierungspunkt ein.",
+    "zh-Hans": "无法识别街道。请输入地标说明。"
+  },
+  "Marca un punto para completar la referencia.": {
+    "en": "Mark a point to fill in the landmark.",
+    "fr": "Marquez un point pour renseigner le point de repère.",
+    "pt-BR": "Marque um ponto para preencher a referência.",
+    "de": "Markiere einen Punkt, um den Orientierungspunkt auszufüllen.",
+    "zh-Hans": "标记一个地点以自动填写地标说明。"
+  },
+  "Confirma solo si lo has visto.": {
+    "en": "Confirm only what you've seen.",
+    "fr": "Confirmez uniquement ce que vous avez vu.",
+    "pt-BR": "Confirme apenas o que você viu.",
+    "de": "Bestätige nur, was du selbst gesehen hast.",
+    "zh-Hans": "请仅确认你亲眼看到的情况。"
+  },
+  "Cómo se confirman los cambios": {
+    "en": "How changes are confirmed",
+    "fr": "Comment les changements sont confirmés",
+    "pt-BR": "Como as alterações são confirmadas",
+    "de": "So werden Änderungen bestätigt",
+    "zh-Hans": "如何确认路线变更"
+  },
+  "Esta ruta no está disponible en el catálogo actual.": {
+    "en": "This route isn't available in the current catalog.",
+    "fr": "Cette ligne n’est pas disponible dans le catalogue actuel.",
+    "pt-BR": "Esta rota não está disponível no catálogo atual.",
+    "de": "Diese Route ist im aktuellen Katalog nicht verfügbar.",
+    "zh-Hans": "当前目录中没有这条路线。"
+  },
+  "Ajusta el marcador sobre el recorrido de la línea.": {
+    "en": "Move the marker onto the line's route.",
+    "fr": "Déplacez le repère sur le tracé de la ligne.",
+    "pt-BR": "Mova o marcador para o trajeto da linha.",
+    "de": "Verschiebe die Markierung auf den Verlauf der Linie.",
+    "zh-Hans": "请将标记移到该线路的路线上。"
+  },
+  "Escribe al menos 3 caracteres en la referencia.": {
+    "en": "Enter at least 3 characters for the landmark.",
+    "fr": "Saisissez au moins 3 caractères pour le point de repère.",
+    "pt-BR": "Digite pelo menos 3 caracteres para a referência.",
+    "de": "Gib mindestens 3 Zeichen für den Orientierungspunkt ein.",
+    "zh-Hans": "地标说明至少需要输入 3 个字符。"
+  },
+  "Este punto está a {0} m de la ruta {1}. No corresponde a esta línea: toca el recorrido de la línea.": {
+    "en": "This point is {0} m from route {1}. It doesn't belong to this line: tap the line's route.",
+    "fr": "Ce point se trouve à {0} m de la ligne {1}. Il ne correspond pas à cette ligne : touchez son tracé.",
+    "pt-BR": "Este ponto está a {0} m da rota {1}. Não corresponde a esta linha: toque no trajeto da linha.",
+    "de": "Dieser Punkt liegt {0} m von der Route {1} entfernt. Er gehört nicht zu dieser Linie: Tippe auf ihren Verlauf.",
+    "zh-Hans": "该点距离 {1} 线路 {0} 米，不属于此线路。请点击该线路的路线。"
+  },
   "1 guardado": {
     "en": "1 saved",
     "fr": "1 élément enregistré",
