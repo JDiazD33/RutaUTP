@@ -172,13 +172,23 @@ final class RouteTrackingViewModel {
         return valor
     }
 
+    private func guardar(_ valor: Double, para preferencia: Preferencia) {
+        let clave = preferencia.rawValue
+        // UserDefaults puede considerar iguales true y 1 al comparar NSNumber.
+        // Retirar el booleano evita conservar su tipo al confirmar un número.
+        if PreferenciasApp.boolGuardado(para: clave, defaults: defaults) != nil {
+            defaults.removeObject(forKey: clave)
+        }
+        defaults.set(valor, forKey: clave)
+    }
+
     /// Multiplicador del modo demo (1× / 3× / 10×). Persistido.
     private var velocidadPreferida: Double
     var velocidadDemo: Double {
         get { velocidadPreferida }
         set {
             guard newValue.isFinite, Preferencia.velocidad.valoresPermitidos.contains(newValue) else { return }
-            defaults.set(newValue, forKey: Preferencia.velocidad.rawValue)
+            guardar(newValue, para: .velocidad)
             velocidadPreferida = newValue
         }
     }
@@ -201,7 +211,7 @@ final class RouteTrackingViewModel {
         get { radioPreferido }
         set {
             guard newValue.isFinite, Preferencia.radio.valoresPermitidos.contains(newValue) else { return }
-            defaults.set(newValue, forKey: Preferencia.radio.rawValue)
+            guardar(newValue, para: .radio)
             radioPreferido = newValue
         }
     }

@@ -2189,13 +2189,15 @@ final class MapaPanelLineasTests: XCTestCase {
         XCTAssertEqual(vm.busesDelPanel.count, 2)
         XCTAssertEqual(vm.cantidadLineasDelPanel, 1)
         XCTAssertEqual(vm.rutasCercanas.count, 2, "Una ruta sin vehículos no cuenta como observada")
-        XCTAssertEqual(vm.textoEstadoLineas, L.t("1 línea cerca del campus", "1 line near campus"))
+        XCTAssertEqual(vm.textoEstadoLineas,
+                       L.f("1 línea cerca de {0}", "1 line near {0}",
+                           [L.t("Campus UTP Trujillo", "UTP Trujillo campus")]))
         proveedor.emitir([])
         await esperar("caducidad de vehículos") { vm.busesAnimados.isEmpty }
         XCTAssertEqual(vm.cantidadLineasDelPanel, 0)
         XCTAssertEqual(vm.rutasCercanas.count, 2)
         XCTAssertEqual(vm.textoEstadoLineas,
-                       L.t("Aún no hay buses confirmados para estas líneas", "There are no confirmed buses for these lines yet"))
+                       L.t("Aún no hay posiciones recientes para estas líneas", "There are no recent positions for these lines yet"))
         XCTAssertFalse(vm.hayPosicionesRealesRecientes)
     }
 
@@ -2210,7 +2212,7 @@ final class MapaPanelLineasTests: XCTestCase {
         XCTAssertEqual(vm.cantidadLineasDelPanel, 2)
         XCTAssertEqual(Set(vm.busesDelPanel.map(\.variante)), ["A", "B"])
         XCTAssertEqual(vm.textoEstadoLineas,
-                       String(format: L.t("%d líneas pasan por %@", "%d lines pass by %@"), 2, "Destino"))
+                       L.f("{0} líneas pasan por {1}", "{0} lines pass by {1}", ["2", "Destino"]))
     }
 
     func testRutasLejanasYDesconocidasSiguenEnMapaPeroNoEnElPanel() async throws {
@@ -2259,7 +2261,7 @@ final class MapaPanelLineasTests: XCTestCase {
         XCTAssertFalse(vm.rutasCercanas.isEmpty)
         XCTAssertEqual(vm.cantidadLineasDelPanel, 0)
         XCTAssertEqual(vm.mensajePanelSinBuses,
-                       L.t("Aún no hay buses confirmados para estas líneas", "There are no confirmed buses for these lines yet"))
+                       L.t("Aún no hay posiciones recientes para estas líneas", "There are no recent positions for these lines yet"))
         XCTAssertTrue(vm.hayPosicionesRealesRecientes)
     }
 
@@ -2378,7 +2380,9 @@ final class MapaPanelLineasTests: XCTestCase {
         XCTAssertEqual(vm.rutasCercanas.map(\.id), ["cercana"])
         XCTAssertEqual(vm.cantidadLineasDelPanel, 1)
         XCTAssertEqual(vm.busesDelPanel.map(\.id), ["simulated-cercana"])
-        XCTAssertEqual(vm.textoEstadoLineas, L.t("1 línea cerca del campus", "1 line near campus"))
+        XCTAssertEqual(vm.textoEstadoLineas,
+                       L.f("1 línea cerca de {0}", "1 line near {0}",
+                           [L.t("Campus UTP Trujillo", "UTP Trujillo campus")]))
     }
 
     func testDemoSinRutasCercanasTerminaLaBusquedaYExplicaElResultado() async {
@@ -2623,12 +2627,14 @@ final class PreferenciasSimplesTests: XCTestCase {
 
     func testIdiomaDesconocidoSeConservaHastaUnaEleccionValida() throws {
         try conPreferencias { defaults in
-            defaults.set("fr", forKey: "idioma.app")
+            let desconocido = "idioma-futuro"
+            XCTAssertNil(IdiomaApp(rawValue: desconocido))
+            defaults.set(desconocido, forKey: "idioma.app")
             let store = IdiomaManager(defaults: defaults, argumentos: [])
             XCTAssertEqual(store.codigo, "es")
-            XCTAssertEqual(defaults.string(forKey: "idioma.app"), "fr")
+            XCTAssertEqual(defaults.string(forKey: "idioma.app"), desconocido)
             store.seleccionar(codigo: "desconocido")
-            XCTAssertEqual(defaults.string(forKey: "idioma.app"), "fr")
+            XCTAssertEqual(defaults.string(forKey: "idioma.app"), desconocido)
             store.seleccionar(codigo: "es")
             XCTAssertEqual(defaults.string(forKey: "idioma.app"), "es")
             store.alternar()

@@ -89,7 +89,7 @@ final class SeniasPlayerTests: XCTestCase {
         XCTAssertEqual(finales, 0)
     }
 
-    func testConsultaNormalSigueEnBucleYNoLlamaAlCierreAutomatico() throws {
+    func testConsultaNormalSigueEnBucleYNoLlamaAlCierreAutomatico() async throws {
         let vista = SeniasPlayerUIView()
         defer { vista.limpiar() }
         var finales = 0
@@ -98,9 +98,15 @@ final class SeniasPlayerTests: XCTestCase {
                          alFinalizar: { finales += 1 })
         let capa = try XCTUnwrap(vista.layer.sublayers?.first as? AVPlayerLayer)
         XCTAssertEqual(capa.videoGravity, .resizeAspect)
-        let item = try XCTUnwrap(try player(vista).currentItem)
+        let cola = try player(vista)
+        // AVPlayerLooper prepara las réplicas cuando conoce la duración del clip.
+        let preparada = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            cola.currentItem != nil && cola.items().count > 1
+        }, object: nil)
+        await fulfillment(of: [preparada], timeout: 5)
+        let item = try XCTUnwrap(cola.currentItem)
         NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: item)
-        XCTAssertGreaterThan(try player(vista).items().count, 1)
+        XCTAssertGreaterThan(cola.items().count, 1)
         XCTAssertEqual(finales, 0)
     }
 
