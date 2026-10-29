@@ -16,6 +16,8 @@ struct TripSelectionSheet: View {
     let locationService: LocationServiceProtocol
     let suggestedRouteID: String?
     let itinerary: TransitItinerary?
+    private let embeddedInNavigation: Bool
+    private let onClose: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var colorScheme
@@ -35,11 +37,14 @@ struct TripSelectionSheet: View {
     @State private var tareaDireccion: Task<Void, Never>?
 
     init(coordinator: PassiveTrackingCoordinator, locationService: LocationServiceProtocol,
-         suggestedRouteID: String? = nil, itinerary: TransitItinerary? = nil) {
+         suggestedRouteID: String? = nil, itinerary: TransitItinerary? = nil,
+         embeddedInNavigation: Bool = false, onClose: (() -> Void)? = nil) {
         self.coordinator = coordinator
         self.locationService = locationService
         self.suggestedRouteID = suggestedRouteID
         self.itinerary = itinerary
+        self.embeddedInNavigation = embeddedInNavigation
+        self.onClose = onClose
         let previstas = itinerary.map { [$0.route] + ($0.transfer.map { [$0.route] } ?? []) } ?? []
         _selected = State(initialValue: previstas.first { $0.id == suggestedRouteID } ?? previstas.first)
         _loading = State(initialValue: itinerary == nil)
@@ -101,79 +106,91 @@ struct TripSelectionSheet: View {
                               boardingPlace: boardingPlace, boardingPoint: boardingPoint)
         // El coordinador puede rechazar el inicio si cambian las preferencias.
         guard coordinator.selectedTripRoute?.id == route.id else { return }
-        dismiss()
+        cerrar()
+    }
+
+    private func cerrar() {
+        if let onClose { onClose() } else { dismiss() }
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let route = selected {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            encabezado
-                            recorrido(route)
-                            puntoDeSubida
-                            ocupacion
-                            estadoContribucion
-                        }
-                        .padding(20)
-                    }
-                    .scrollDismissesKeyboard(.interactively)
-                    .safeAreaInset(edge: .bottom, spacing: 0) { accionPrincipal }
-                } else {
-                    catalogo
-                }
-            }
-            .background(Color.appBackground.ignoresSafeArea())
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("Cancelar", "Cancel")) { dismiss() }
-                        .frame(minHeight: 44)
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(L.t("Listo", "Done")) { referenciaEnfocada = false }
-                }
-            }
-            .fullScreenCover(isPresented: $showBoardingMap) {
-                if let route = selected {
-                    BoardingPointMap(route: route, initialPoint: boardingPoint,
-                                     currentLocation: coordinator.latestLocation,
-                                     locationService: locationService) { nuevo in
-                        boardingPoint = nuevo
-                        escribirDireccion(para: nuevo)
-                    }
-                    .seguirTemaForzado()
-                }
-            }
-            .confirmationDialog(L.t("Ayudar con ubicaciones en tiempo real", "Help with real-time locations"),
-                                isPresented: $showConsent, titleVisibility: .visible) {
-                Button(L.t("Aceptar y activar", "Accept and turn on")) {
-                    comenzarAlEstarListo = true
-                    coordinator.setContributionEnabled(true)
-                    if coordinator.isRunning { comenzarViaje() }
-                }
-                Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
-            } message: {
-                Text(TextoConsentimientoContribucion.confirmacion)
-            }
-            .task(id: revisionCatalogo) { await cargarCatalogo() }
-            .onChange(of: coordinator.isRunning) { _, listo in
-                if listo, comenzarAlEstarListo { comenzarViaje() }
-            }
-            .onChange(of: coordinator.isEnabled) { _, activo in
-                if !activo { comenzarAlEstarListo = false }
-            }
-            .onDisappear {
-                // El mapa actualiza el formulario aunque lo cubra por completo.
-                if !showBoardingMap { tareaDireccion?.cancel() }
-                comenzarAlEstarListo = false
+        Group {
+            if embeddedInNavigation {
+                contenido
+            } else {
+                NavigationStack { contenido }
             }
         }
         .tint(acento)
         .presentationDetents([.large])
+    }
+
+    private var contenido: some View {
+        Group {
+            if let route = selected {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        encabezado
+                        recorrido(route)
+                        puntoDeSubida
+                        ocupacion
+                        estadoContribucion
+                    }
+                    .padding(20)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .safeAreaInset(edge: .bottom, spacing: 0) { accionPrincipal }
+            } else {
+                catalogo
+            }
+        }
+        .background(Color.appBackground.ignoresSafeArea())
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(L.t("Cancelar", "Cancel")) { cerrar() }
+                    .frame(minHeight: 44)
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(L.t("Listo", "Done")) { referenciaEnfocada = false }
+            }
+        }
+        .fullScreenCover(isPresented: $showBoardingMap) {
+            if let route = selected {
+                BoardingPointMap(route: route, initialPoint: boardingPoint,
+                                 currentLocation: coordinator.latestLocation,
+                                 locationService: locationService) { nuevo in
+                    boardingPoint = nuevo
+                    escribirDireccion(para: nuevo)
+                }
+                .seguirTemaForzado()
+            }
+        }
+        .confirmationDialog(L.t("Ayudar con ubicaciones en tiempo real", "Help with real-time locations"),
+                            isPresented: $showConsent, titleVisibility: .visible) {
+            Button(L.t("Aceptar y activar", "Accept and turn on")) {
+                comenzarAlEstarListo = true
+                coordinator.setContributionEnabled(true)
+                if coordinator.isRunning { comenzarViaje() }
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(TextoConsentimientoContribucion.confirmacion)
+        }
+        .task(id: revisionCatalogo) { await cargarCatalogo() }
+        .onChange(of: coordinator.isRunning) { _, listo in
+            if listo, comenzarAlEstarListo { comenzarViaje() }
+        }
+        .onChange(of: coordinator.isEnabled) { _, activo in
+            if !activo { comenzarAlEstarListo = false }
+        }
+        .onDisappear {
+            // El mapa actualiza el formulario aunque lo cubra por completo.
+            if !showBoardingMap { tareaDireccion?.cancel() }
+            comenzarAlEstarListo = false
+        }
     }
 
     private var encabezado: some View {

@@ -62,6 +62,8 @@ final class OccupancyService: ObservableObject {
     @Published private(set) var sending = false
     @Published private(set) var result: String?
     @Published private(set) var configured = false
+    /// Elección de la persona en este viaje, independiente del estado comunitario.
+    @Published private(set) var tripSelection: BusOccupancyState?
 
     private var tripReport: (routeID: String, state: BusOccupancyState, at: TimeInterval)?
     private var lastTripAttempt: TimeInterval = -.infinity
@@ -70,6 +72,7 @@ final class OccupancyService: ObservableObject {
     /// Conserva solo la elección actual; nunca renueva automáticamente su edad.
     func prepareTripReport(routeID: String, state: BusOccupancyState) {
         tripReport = (routeID, state, clock())
+        tripSelection = state
         pendingID = nil
         sending = false
         result = L.t("Se enviará al detectar tu viaje y tener conexión.",
@@ -79,6 +82,7 @@ final class OccupancyService: ObservableObject {
 
     func clearTripReport() {
         tripReport = nil
+        tripSelection = nil
         pendingID = nil
         sending = false
         result = nil

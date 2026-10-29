@@ -17,49 +17,64 @@ struct BoardingConfirmationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var confirmingLine = false
     @State private var alturaConfirmacion: CGFloat = 220
+    @State private var alturaSeleccionada: PresentationDetent = .height(220)
 
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
     var body: some View {
-        Group {
-            if confirmingLine {
-                TripSelectionSheet(coordinator: coordinator, locationService: locationService,
-                                   itinerary: itinerary)
-            } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        pregunta
-                        VStack(spacing: 8) {
-                            confirmarSubida
-                            accionesSecundarias
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity)
-                    .background {
-                        GeometryReader { geometry in
-                            Color.clear.preference(key: BoardingConfirmationHeightKey.self,
-                                                   value: geometry.size.height.rounded(.up))
-                        }
-                        .allowsHitTesting(false)
-                    }
+        NavigationStack {
+            contenidoPregunta
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(isPresented: $confirmingLine) {
+                    TripSelectionSheet(coordinator: coordinator, locationService: locationService,
+                                       itinerary: itinerary, embeddedInNavigation: true,
+                                       onClose: { dismiss() })
+                        .toolbar(.visible, for: .navigationBar)
+                        .navigationBarBackButtonHidden(true)
                 }
-                .background(Color.appBackground)
-                .scrollBounceBehavior(.basedOnSize)
-                .onPreferenceChange(BoardingConfirmationHeightKey.self) { altura in
-                    guard altura.isFinite, altura > 0, abs(altura - alturaConfirmacion) > 0.5 else { return }
-                    alturaConfirmacion = altura
-                }
-            }
         }
-        .presentationDetents(confirmingLine || textSize.isAccessibilitySize
-                             ? [.large] : [.height(alturaConfirmacion)])
+        .presentationDetents(confirmingLine ? [.large] : [.height(alturaConfirmacion), .large],
+                             selection: $alturaSeleccionada)
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(20)
+        .onChange(of: textSize, initial: true) { _, size in
+            if size.isAccessibilitySize { alturaSeleccionada = .large }
+        }
+    }
+
+    private var contenidoPregunta: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                pregunta
+                VStack(spacing: 8) {
+                    confirmarSubida
+                    accionesSecundarias
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(key: BoardingConfirmationHeightKey.self,
+                                           value: geometry.size.height.rounded(.up))
+                }
+                .allowsHitTesting(false)
+            }
+        }
+        .background(Color.appBackground)
+        .scrollBounceBehavior(.basedOnSize)
+        .onPreferenceChange(BoardingConfirmationHeightKey.self) { altura in
+            guard altura.isFinite, altura > 0, abs(altura - alturaConfirmacion) > 0.5 else { return }
+            alturaConfirmacion = altura
+            if !confirmingLine, alturaSeleccionada != .large {
+                alturaSeleccionada = .height(altura)
+            }
+        }
     }
 
     private var pregunta: some View {
@@ -77,7 +92,15 @@ struct BoardingConfirmationSheet: View {
     }
 
     private var confirmarSubida: some View {
-        Button { confirmingLine = true } label: {
+        Button {
+            AppHaptics.selection()
+            var transicion = Transaction(animation: reduceMotion ? nil : .smooth(duration: 0.4))
+            transicion.disablesAnimations = reduceMotion
+            withTransaction(transicion) {
+                alturaSeleccionada = .large
+                confirmingLine = true
+            }
+        } label: {
             Text(L.t("Sí, ya subí", "Yes, I'm on board"))
                 .font(.headline)
                 .multilineTextAlignment(.center)

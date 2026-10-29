@@ -18,6 +18,8 @@ struct TripContributionPanel: View {
     var statusMessage: String? = nil
     var statusColor: Color = .secondary
     var onEndTrip: () -> Void = {}
+    @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showDetails = false
     @State private var choosingLine = false
     @State private var confirmEndTrip = false
@@ -32,18 +34,17 @@ struct TripContributionPanel: View {
 
     var body: some View {
         if let route = coordinator.selectedTripRoute {
-            Button { showDetails = true } label: {
+            Button {
+                AppHaptics.selection()
+                showDetails = true
+            } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "bus.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.onPrimaryFill)
-                        .frame(width: 36, height: 36)
-                        .background(Color.primaryFill, in: RoundedRectangle(cornerRadius: 10))
+                    distintivoLetra(route.letraTransporte, destacado: false)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(L.t("Tu transporte público", "Your public transport"))
                             .font(.caption)
                             .foregroundStyle(Color.onSurfaceVariant)
-                        Text(L.t("Línea ", "Line ") + route.lineaConLetra)
+                        Text(L.t("Línea ", "Line ") + codigoLinea(route))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.onSurface)
                             .fixedSize(horizontal: false, vertical: true)
@@ -67,18 +68,22 @@ struct TripContributionPanel: View {
             .accessibilityHint(L.t("Abre la ocupación y las opciones para cambiar de línea o finalizar el viaje.",
                                   "Opens occupancy and options to change line or end the trip."))
             .sheet(isPresented: $showDetails, onDismiss: { choosingLine = false }) {
-                Group {
+                ZStack(alignment: .top) {
                     if choosingLine {
                         TripSelectionSheet(coordinator: coordinator,
                                            locationService: locationService,
                                            suggestedRouteID: siguienteTramo?.id,
                                            itinerary: itinerary)
+                            .transition(.opacity)
                     } else {
                         tripDetails
+                            .transition(.opacity)
                     }
                 }
-                .presentationDetents(choosingLine ? [.large] : [.medium, .large])
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: choosingLine)
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+                .seguirTemaForzado()
             }
         }
     }
@@ -87,12 +92,8 @@ struct TripContributionPanel: View {
         NavigationStack {
             Form {
                 if let route = coordinator.selectedTripRoute {
-                    Section(L.t("Tu transporte público", "Your public transport")) {
-                        LabeledContent(L.t("Línea", "Line"), value: route.linea)
-                        LabeledContent(L.t("Letra del transporte", "Transport letter"),
-                                       value: route.letraTransporte.isEmpty
-                                        ? L.t("No especificada", "Not specified")
-                                        : route.letraTransporte)
+                    Section {
+                        identidadViaje(route)
                         if let place = coordinator.boardingPlace {
                             Label(L.t("Subiste en: ", "Boarded at: ") + place, systemImage: "mappin")
                         }
@@ -123,23 +124,33 @@ struct TripContributionPanel: View {
                             }
                         }
                     }
-                    Section(L.t("Ocupación del micro", "Bus occupancy")) {
+                    Section {
                         TripOccupancyControls(service: coordinator.tripOccupancy) {
                             coordinator.updateTripOccupancy($0)
                         }
+                    } header: {
+                        tituloSeccion(L.t("Ocupación del micro", "Bus occupancy"))
                     }
-                    Section(L.t("Estado del viaje", "Trip status")) {
-                        Text(coordinator.confirmedLine != nil
-                             ? L.t("Estás ayudando en esta línea.", "You're helping on this line.")
-                             : L.t("Esperando detectar movimiento compatible con tu línea.",
-                                   "Waiting for movement matching your line."))
-                        if let statusMessage {
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
                             Label {
-                                Text(L.aviso(statusMessage))
+                                Text(coordinator.confirmedLine != nil
+                                     ? L.t("Estás ayudando en esta línea.", "You're helping on this line.")
+                                     : L.t("Esperando detectar movimiento compatible con tu línea.",
+                                           "Waiting for movement matching your line."))
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color.onSurface)
                             } icon: {
-                                Circle().fill(statusColor).frame(width: 8, height: 8)
+                                Image(systemName: coordinator.confirmedLine != nil ? "checkmark.circle.fill" : "waveform.path")
+                                    .foregroundStyle(statusColor)
+                            }
+                            if let statusMessage {
+                                Text(L.aviso(statusMessage))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                             }
                         }
+                        .fixedSize(horizontal: false, vertical: true)
                         if coordinator.isEnabled, !coordinator.isRunning,
                            let fallo = coordinator.errorCargaRutas {
                             Text(fallo.mensajeUsuario)
@@ -147,25 +158,32 @@ struct TripContributionPanel: View {
                                 coordinator.setContributionEnabled(true)
                             }
                         }
+                    } header: {
+                        tituloSeccion(L.t("Estado del viaje", "Trip status"))
                     }
-                    Section {
-                        if let siguienteTramo {
-                            Button {
-                                choosingLine = true
-                            } label: {
-                                Label(L.t("Tomar transbordo", "Take the transfer") + " · " + siguienteTramo.lineaConLetra,
-                                      systemImage: "arrow.triangle.branch")
+                    if siguienteTramo != nil || itinerary == nil {
+                        Section {
+                            if let siguienteTramo {
+                                Button {
+                                    cambiarDeLinea()
+                                } label: {
+                                    Label(L.t("Tomar transbordo", "Take the transfer") + " · " + siguienteTramo.lineaConLetra,
+                                          systemImage: "arrow.triangle.branch")
+                                        .frame(minHeight: 44)
+                                }
+                            } else {
+                                Button(L.t("Cambiar de línea", "Change line"), action: cambiarDeLinea)
                                     .frame(minHeight: 44)
                             }
-                        } else if itinerary == nil {
-                            Button(L.t("Cambiar de línea", "Change line")) { choosingLine = true }
-                                .frame(minHeight: 44)
-                        }
-                        Button(L.t("Finalizar viaje", "End trip"), role: .destructive) {
-                            confirmEndTrip = true
                         }
                     }
                 }
+            }
+            .listSectionSpacing(20)
+            .scrollContentBackground(.hidden)
+            .background(Color.appBackground.ignoresSafeArea())
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if coordinator.selectedTripRoute != nil { botonFinalizar }
             }
             .navigationTitle(L.t("Tu viaje", "Your trip"))
             .navigationBarTitleDisplayMode(.inline)
@@ -205,36 +223,223 @@ struct TripContributionPanel: View {
                 Text(L.t("Se dejará de compartir la ubicación de este micro y volverás al mapa principal.",
                          "Sharing this bus's location will stop and you'll return to the main map."))
             }
+            .tint(Color.appAccent)
         }
+    }
+
+    private func codigoLinea(_ route: DetectionRouteGeometry) -> String {
+        GTFSNombreParser.identificacionTransporte(linea: route.linea, variante: route.variante).codigo
+    }
+
+    private func distintivoLetra(_ letra: String, destacado: Bool) -> some View {
+        VStack(spacing: 2) {
+            if destacado && !letra.isEmpty {
+                Text(L.t("LETRA", "LETTER"))
+                    .font(.caption2.weight(.semibold))
+            }
+            if letra.isEmpty {
+                Image(systemName: "bus.fill")
+                    .font(destacado ? .largeTitle : .title3)
+            } else {
+                Text(letra)
+                    .font(destacado ? .largeTitle.weight(.bold) : .title3.weight(.bold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .foregroundStyle(Color.onPrimaryFill)
+        .padding(destacado ? 12 : 8)
+        .frame(minWidth: destacado ? 76 : 44, minHeight: destacado ? 76 : 44)
+        .background(Color.primaryFill,
+                    in: RoundedRectangle(cornerRadius: destacado ? 20 : 12, style: .continuous))
+        .accessibilityHidden(true)
+    }
+
+    private var empresaDelViaje: String? {
+        guard let itinerary, let id = coordinator.selectedTripRoute?.id else { return nil }
+        let previstas = [itinerary.route] + (itinerary.transfer.map { [$0.route] } ?? [])
+        return previstas.first { $0.id == id }?.empresa
+    }
+
+    private func identidadViaje(_ route: DetectionRouteGeometry) -> some View {
+        let layout = textSize >= .xxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+        return layout {
+            distintivoLetra(route.letraTransporte, destacado: true)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L.t("Tu transporte público", "Your public transport"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(L.t("Línea ", "Line ") + codigoLinea(route))
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(Color.onSurface)
+                if let empresaDelViaje, !empresaDelViaje.isEmpty {
+                    Text(empresaDelViaje)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L.t("Tu transporte público. Línea ", "Your public transport. Line ") + route.lineaConLetra)
+        .accessibilityValue(empresaDelViaje ?? "")
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private func tituloSeccion(_ titulo: String) -> some View {
+        Text(titulo)
+            .font(.headline)
+            .foregroundStyle(Color.onSurface)
+            .textCase(nil)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private func cambiarDeLinea() {
+        AppHaptics.selection()
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { choosingLine = true }
+    }
+
+    private var botonFinalizar: some View {
+        Button(role: .destructive) { confirmEndTrip = true } label: {
+            Label(L.t("Finalizar viaje", "End trip"), systemImage: "stop.circle.fill")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(Color(light: "#FFFFFF", dark: "#3B0007"))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(Color.appError, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color.appSurface)
+        .overlay(alignment: .top) { Divider() }
     }
 }
 
 private struct TripOccupancyControls: View {
     @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var service: OccupancyService
     let onSelect: (BusOccupancyState) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(L.t("¿Qué tan lleno va ahora?", "How full is it now?"))
-                .font(.caption)
+                .font(.subheadline)
             // No comprimir las tres respuestas en una fila con letra grande.
-            (textSize >= .xxxLarge
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-                : AnyLayout(HStackLayout(spacing: 8))) {
-                ForEach(BusOccupancyState.allCases, id: \.self) { state in
-                    Button { onSelect(state) } label: {
-                        Text(state.title)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, minHeight: 44)
+            if textSize >= .xxLarge {
+                opcionesVerticales
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(BusOccupancyState.allCases, id: \.self) { state in
+                            opcion(state, compacta: true)
+                        }
                     }
-                        .buttonStyle(.bordered)
-                        .disabled(service.sending)
+                    opcionesVerticales
                 }
             }
             if let result = service.result {
-                Text(result).font(.caption).foregroundStyle(.secondary)
+                Text(L.aviso(result))
+                    .font(.footnote).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            Text(L.t("Puedes actualizarlo durante el viaje. El reporte vence en 3 minutos y necesita corroboración.",
+                     "You can update it during your trip. The report expires in 3 minutes and needs corroboration."))
+                .font(.footnote).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: service.tripSelection)
+    }
+
+    private var opcionesVerticales: some View {
+        VStack(spacing: 8) {
+            ForEach(BusOccupancyState.allCases, id: \.self) { state in
+                opcion(state, compacta: false)
+            }
+        }
+    }
+
+    private func opcion(_ state: BusOccupancyState, compacta: Bool) -> some View {
+        let elegida = service.tripSelection == state
+        return Button {
+            AppHaptics.selection()
+            // Una corrección sustituye la elección pendiente incluso durante
+            // el envío. El servicio mantiene el plazo y el límite de intentos.
+            onSelect(state)
+        } label: {
+            Group {
+                if compacta {
+                    VStack(spacing: 8) {
+                        Image(systemName: state.iconoViaje).font(.title3)
+                        Text(state.title).fixedSize(horizontal: true, vertical: false)
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        Image(systemName: state.iconoViaje).font(.title3)
+                        Text(state.title)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: elegida ? "checkmark.circle.fill" : "circle")
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(elegida ? state.tintaViaje : Color(uiColor: .secondaryLabel))
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: compacta ? 82 : 52)
+            .background {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(elegida ? state.tintaViaje.opacity(0.12)
+                          : Color(uiColor: .tertiarySystemGroupedBackground))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(elegida ? state.tintaViaje.opacity(0.6)
+                                  : Color(uiColor: .separator).opacity(0.3))
+            }
+            .overlay(alignment: .topTrailing) {
+                if compacta && elegida {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(state.tintaViaje)
+                        .padding(6)
+                        .transition(.opacity.combined(with: .scale))
+                        .accessibilityHidden(true)
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(state.title)
+        .accessibilityAddTraits(elegida ? .isSelected : [])
+    }
+}
+
+private extension BusOccupancyState {
+    var iconoViaje: String {
+        switch self {
+        case .empty: return "person"
+        case .space: return "person.2"
+        case .full: return "person.3"
+        }
+    }
+
+    var tintaViaje: Color {
+        switch self {
+        case .empty: return Color(light: "#1F6F45", dark: "#81DCA6")
+        case .space: return Color(light: "#854A0E", dark: "#FFC078")
+        case .full: return Color(light: "#B42330", dark: "#FF9A9F")
         }
     }
 }
