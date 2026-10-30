@@ -29,7 +29,6 @@ extension Font {
     static let bodyXsMedium     = Font.system(.footnote, weight: .medium)
 
     // Labels UPPERCASE — se combinan con appTracking() para el aire espaciado
-    static let labelCapsLg      = Font.system(.subheadline, weight: .semibold)
     static let labelCapsMd      = Font.system(.caption, weight: .semibold)
     static let labelCapsSm      = Font.system(.caption2, weight: .semibold)
 }
