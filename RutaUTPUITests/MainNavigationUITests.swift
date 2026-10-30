@@ -5,6 +5,78 @@ import CoreLocation
 /// una barra que conserva su estado pero deja de mostrar los botones.
 final class MainNavigationUITests: XCTestCase {
     @MainActor
+    func testSelectorLugarConservaLaFlechaAlCentrarYVerLaCiudad() {
+        continueAfterFailure = false
+        let ubicacionAnterior = XCUIDevice.shared.location
+        XCUIDevice.shared.location = XCUILocation(location: CLLocation(
+            latitude: -8.098247879173792, longitude: -79.03818104755645))
+        defer { XCUIDevice.shared.location = ubicacionAnterior }
+        let app = XCUIApplication()
+        app.launchArguments = ["--pantalla", "guardado", "--idioma", "es"]
+        app.launch()
+        permitirUbicacionSiSeSolicita()
+
+        let anadir = app.buttons["Añadir lugar guardado"]
+        XCTAssertTrue(anadir.waitForExistence(timeout: 10))
+        anadir.tap()
+        permitirUbicacionSiSeSolicita()
+        let ampliar = app.buttons["place-picker.expand"]
+        XCTAssertTrue(ampliar.waitForExistence(timeout: 10))
+        XCTAssertTrue(ampliar.isHittable)
+        XCTAssertLessThanOrEqual(ampliar.frame.width, 44.5)
+        XCTAssertFalse(app.buttons["place-picker.my-location"].exists)
+        XCTAssertFalse(app.buttons["place-picker.city"].exists)
+        adjuntarCaptura(app, nombre: "Lugar-mapa-pequeno-solo-ampliar")
+        ampliar.tap()
+
+        let flecha = app.buttons["place-picker.my-location"]
+        let ciudad = app.buttons["place-picker.city"]
+        XCTAssertTrue(flecha.waitForExistence(timeout: 10))
+        XCTAssertTrue(ciudad.exists && ciudad.isHittable)
+        XCTAssertTrue(flecha.isHittable && flecha.isEnabled)
+        XCTAssertEqual(flecha.frame.midY, ciudad.frame.midY, accuracy: 1)
+        XCTAssertLessThan(flecha.frame.maxX, ciudad.frame.minX)
+        XCTAssertGreaterThan(flecha.frame.minY, app.buttons["Cerrar"].frame.maxY + 4,
+                             "Los controles deben quedar debajo de la cabecera sin tapar Cerrar")
+        XCTAssertFalse(ampliar.isHittable)
+
+        let mapa = app.descendants(matching: .any)["place-picker.full-map"].firstMatch
+        XCTAssertTrue(mapa.waitForExistence(timeout: 5))
+        mapa.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.55)).tap()
+        let pinListo = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (mapa.value as? String)?.contains("Latitud") == true
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [pinListo], timeout: 5), .completed)
+        let pinElegido = mapa.value as? String
+
+        // Alternar vista general y seguimiento verifica el target/action real
+        // y las respuestas de MapKit, sin modificar el punto elegido.
+        for _ in 0..<2 {
+            ciudad.tap()
+            let vistaCiudad = XCTNSPredicateExpectation(predicate: NSPredicate(format: "selected == false"), object: flecha)
+            XCTAssertEqual(XCTWaiter.wait(for: [vistaCiudad], timeout: 5), .completed)
+            XCTAssertTrue(flecha.exists && flecha.isHittable && flecha.isEnabled)
+            flecha.tap()
+            let seguimiento = XCTNSPredicateExpectation(predicate: NSPredicate(format: "selected == true"), object: flecha)
+            XCTAssertEqual(XCTWaiter.wait(for: [seguimiento], timeout: 10), .completed)
+            XCTAssertEqual(mapa.value as? String, pinElegido)
+        }
+        XCUIDevice.shared.location = XCUILocation(location: CLLocation(
+            latitude: -8.1002, longitude: -79.0361))
+        let desaparece = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !flecha.exists || !flecha.isHittable || !flecha.isEnabled
+        }, object: nil)
+        desaparece.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [desaparece], timeout: 3), .completed,
+                       "La flecha debe seguir visible y recibir toques tras actualizar el GPS")
+        adjuntarCaptura(app, nombre: "Lugar-flecha-y-ciudad-tras-centrar")
+        app.buttons["Cerrar"].tap()
+        XCTAssertTrue(ampliar.waitForExistence(timeout: 5))
+        XCTAssertFalse(flecha.exists)
+        XCTAssertFalse(ciudad.exists)
+    }
+
+    @MainActor
     func testElegirHuanchacoOcultaLaBarraSinReservarUnPieVacio() {
         continueAfterFailure = false
         let ubicacionAnterior = XCUIDevice.shared.location
