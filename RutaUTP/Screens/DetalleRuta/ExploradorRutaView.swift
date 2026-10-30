@@ -44,6 +44,19 @@ private final class PuntoParaderoExploradorView: MKAnnotationView {
     }
 }
 
+/// El encuadre espera al tamaño real del mapa y se adapta a sus cambios.
+private final class MapaExploradorView: MKMapView {
+    var alCambiarTamano: ((MKMapView) -> Void)?
+    private var ultimoTamano: CGSize = .zero
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width > 0, bounds.height > 0, bounds.size != ultimoTamano else { return }
+        ultimoTamano = bounds.size
+        alCambiarTamano?(self)
+    }
+}
+
 // MARK: - Mapa interactivo
 struct MapaExploradorRepresentable: UIViewRepresentable {
     let coordenadas: [CLLocationCoordinate2D]
@@ -51,7 +64,9 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     let colorSimbolo: UIColor
     let paraderos: [ParaderoGTFS]
     let nombreInicio: String
+    let limitesRecorrido: MKMapRect
     var margenes: UIEdgeInsets
+    var encuadreListo: Bool
     var ubicacionAutorizada: Bool
     var reducirMovimiento: Bool
     /// Cambia este valor para re-encuadrar el mapa al recorrido completo.
@@ -65,19 +80,23 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> MKMapView {
-        let mapView = MKMapView()
+        let mapView = MapaExploradorView()
         mapView.delegate = context.coordinator
         mapView.pointOfInterestFilter = .excludingAll
         mapView.showsUserLocation = ubicacionAutorizada
         mapView.showsCompass = false
         mapView.showsScale = false
-        mapView.layoutMargins = margenes
+        // Los márgenes de UIKit conservan la atribución de Apple en su lugar
+        // natural. Los márgenes del recorrido solo se aplican a la cámara.
+        mapView.alCambiarTamano = { [weak coordinator = context.coordinator] mapView in
+            guard let coordinator, coordinator.muestraRecorrido else { return }
+            coordinator.solicitarEncuadre(mapView, animated: false)
+        }
 
         // Trazo del recorrido
         if coordenadas.count >= 2 {
             let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
             mapView.addOverlay(polyline)
-            context.coordinator.encuadrar(mapView, polyline: polyline, animated: false)
         }
 
         // Paraderos (decimados para no saturar; inicio y fin siempre)
@@ -104,9 +123,8 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
+        let cambiaronMargenes = context.coordinator.parent.margenes != margenes
         context.coordinator.parent = self
-        let cambiaronMargenes = mapView.layoutMargins != margenes
-        mapView.layoutMargins = margenes
         mapView.showsUserLocation = ubicacionAutorizada
         if !ubicacionAutorizada {
             mapView.setUserTrackingMode(.none, animated: false)
@@ -115,24 +133,26 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
             context.coordinator.ultimoAjuste = ajustarTrigger
             context.coordinator.muestraRecorrido = true
             mapView.setUserTrackingMode(.none, animated: false)
-            if coordenadas.count >= 2 {
-                let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
-                context.coordinator.encuadrar(mapView, polyline: polyline, animated: !reducirMovimiento)
-            }
-        } else if cambiaronMargenes, context.coordinator.muestraRecorrido, coordenadas.count >= 2 {
-            let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
-            context.coordinator.encuadrar(mapView, polyline: polyline, animated: false)
+            context.coordinator.solicitarEncuadre(mapView, animated: !reducirMovimiento)
+        } else if cambiaronMargenes, context.coordinator.muestraRecorrido {
+            context.coordinator.solicitarEncuadre(mapView, animated: false)
         }
         if context.coordinator.ultimaUbicacion != ubicacionTrigger {
             context.coordinator.ultimaUbicacion = ubicacionTrigger
             guard ubicacionAutorizada else { return }
             context.coordinator.muestraRecorrido = false
+            context.coordinator.encuadrePendiente = nil
             mapView.setUserTrackingMode(.follow, animated: !reducirMovimiento)
+        }
+        if context.coordinator.encuadrePendiente != nil {
+            context.coordinator.solicitarEncuadre(mapView, animated: false)
         }
     }
 
     static func dismantleUIView(_ mapView: MKMapView, coordinator: Coordinator) {
         mapView.delegate = nil
+        (mapView as? MapaExploradorView)?.alCambiarTamano = nil
+        coordinator.encuadrePendiente = nil
         mapView.setUserTrackingMode(.none, animated: false)
         mapView.showsUserLocation = false
     }
@@ -162,16 +182,37 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
         var ultimoAjuste: Int = 0
         var ultimaUbicacion: Int = 0
         var muestraRecorrido = true
+        var encuadrePendiente: Bool? = false
+        private var encuadreProgramado = false
 
         init(_ parent: MapaExploradorRepresentable) {
             self.parent = parent
         }
 
-        func encuadrar(_ mapView: MKMapView, polyline: MKPolyline, animated: Bool) {
+        func solicitarEncuadre(_ mapView: MKMapView, animated: Bool) {
+            // Agrupar la medición del panel y la orden del botón evita que un
+            // ajuste sin animación interrumpa la transición pedida por el usuario.
+            encuadrePendiente = (encuadrePendiente ?? false) || animated
+            guard !encuadreProgramado else { return }
+            encuadreProgramado = true
+            DispatchQueue.main.async { [weak self, weak mapView] in
+                guard let self, let mapView else { return }
+                self.encuadreProgramado = false
+                self.aplicarEncuadre(mapView)
+            }
+        }
+
+        private func aplicarEncuadre(_ mapView: MKMapView) {
+            guard muestraRecorrido, parent.encuadreListo,
+                  let animated = encuadrePendiente,
+                  !parent.limitesRecorrido.isNull,
+                  mapView.bounds.width > parent.margenes.left + parent.margenes.right,
+                  mapView.bounds.height > parent.margenes.top + parent.margenes.bottom else { return }
+            encuadrePendiente = nil
             mapView.setVisibleMapRect(
-                polyline.boundingMapRect,
+                parent.limitesRecorrido,
                 edgePadding: parent.margenes,
-                animated: animated
+                animated: animated && !parent.reducirMovimiento
             )
         }
 
@@ -180,6 +221,7 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
             let gestosInternos = mapView.subviews.flatMap { $0.gestureRecognizers ?? [] }
             if (gestos + gestosInternos).contains(where: { $0.state == .began || $0.state == .changed }) {
                 muestraRecorrido = false
+                encuadrePendiente = nil
             }
         }
 
@@ -293,6 +335,17 @@ struct ExploradorRutaView: View {
         PolylineMatching.decimate(ruta.shape, maxPoints: 300)
     }
 
+    /// El encuadre usa todos los puntos, aunque el dibujo esté simplificado.
+    private var limitesRecorrido: MKMapRect {
+        var limites = MKMapRect.null
+        for coordenada in ruta.shape + ruta.paraderos.map(\.coordinate)
+        where CLLocationCoordinate2DIsValid(coordenada) {
+            let punto = MKMapPoint(coordenada)
+            limites = limites.union(MKMapRect(x: punto.x, y: punto.y, width: 1, height: 1))
+        }
+        return limites
+    }
+
     private var identificacion: (codigo: String, letra: String) {
         GTFSNombreParser.identificacionTransporte(linea: ruta.linea, variante: ruta.variante)
     }
@@ -305,6 +358,8 @@ struct ExploradorRutaView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let alturaMaximaPanel = geometry.size.height * 0.42
+            let alturaPanel = min(alturas["contenidoPanel"] ?? 220, alturaMaximaPanel)
             ZStack {
                 MapaExploradorRepresentable(
                     coordenadas: trazado,
@@ -312,12 +367,14 @@ struct ExploradorRutaView: View {
                     colorSimbolo: UIColor(colorTextoLetra),
                     paraderos: ruta.paraderos,
                     nombreInicio: ruta.paradaInicioVisible,
+                    limitesRecorrido: limitesRecorrido,
                     margenes: UIEdgeInsets(
-                        top: geometry.safeAreaInsets.top + (alturas["cabecera"] ?? 76) + 24,
-                        left: 40,
-                        bottom: geometry.safeAreaInsets.bottom + (alturas["panel"] ?? 240) + 28,
-                        right: 76
+                        top: geometry.safeAreaInsets.top + (alturas["cabecera"] ?? 52) + 72,
+                        left: 32,
+                        bottom: geometry.safeAreaInsets.bottom + alturaPanel + 68,
+                        right: 80
                     ),
+                    encuadreListo: alturas["cabecera"] != nil && alturas["contenidoPanel"] != nil,
                     ubicacionAutorizada: ubicacionAutorizada,
                     reducirMovimiento: reducirMovimiento,
                     ajustarTrigger: ajustarTrigger,
@@ -332,17 +389,19 @@ struct ExploradorRutaView: View {
                         .background(medirAltura("cabecera"))
                     Spacer(minLength: 0)
                     controlesMapa
-                    ViewThatFits(in: .vertical) {
+                    ScrollView {
                         leyenda
-                        ScrollView { leyenda }
-                            .scrollBounceBehavior(.basedOnSize)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .background(medirAltura("contenidoPanel"))
                     }
-                    .frame(maxHeight: geometry.size.height * 0.46)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .background(medirAltura("panel"))
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(height: alturaPanel)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.top, 8)
+                // Deja libre el pie nativo de Apple Maps y su aviso legal.
+                .padding(.bottom, 32)
             }
             .onPreferenceChange(AlturaExploradorKey.self) { alturas = $0 }
         }
@@ -421,28 +480,29 @@ struct ExploradorRutaView: View {
             HStack(spacing: 10) {
                 if !identificacion.letra.isEmpty {
                     Text(identificacion.letra)
-                        .font(.system(.title2, design: .rounded).weight(.bold))
+                        .font(.system(.headline, design: .rounded).weight(.bold))
                         .foregroundStyle(colorTextoLetra)
-                        .padding(.horizontal, 10)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .background(ruta.colorLinea, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.horizontal, 8)
+                        .frame(minWidth: 36, minHeight: 36)
+                        .background(ruta.colorLinea, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L.t("Línea ", "Line ") + identificacion.codigo)
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.onSurface)
                     Text(ruta.empresa)
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(Color.onSurfaceVariant)
                 }
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(12)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L.t("Línea ", "Line ") + ruta.lineaConLetra + ". " + ruta.empresa)
+            Spacer(minLength: 0)
         }
     }
 
@@ -480,6 +540,7 @@ struct ExploradorRutaView: View {
                     Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.onSurface)
+                        .symbolEffect(.bounce, value: reducirMovimiento ? 0 : ajustarTrigger)
                         .frame(minWidth: 48, minHeight: 48)
                 }
                 .accessibilityLabel(L.t("Ver recorrido completo", "Show entire route"))
@@ -491,7 +552,7 @@ struct ExploradorRutaView: View {
 
     // MARK: - Leyenda con datos del feed
     private var leyenda: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline) {
                     tituloRecorrido
@@ -538,7 +599,7 @@ struct ExploradorRutaView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(20)
+        .padding(16)
     }
 
     private var tituloRecorrido: some View {
