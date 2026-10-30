@@ -51,11 +51,13 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     let colorSimbolo: UIColor
     let paraderos: [ParaderoGTFS]
     let nombreInicio: String
+    var margenes: UIEdgeInsets
+    var reducirMovimiento: Bool
     /// Cambia este valor para re-encuadrar el mapa al recorrido completo.
     var ajustarTrigger: Int = 0
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(color: colorLinea, colorSimbolo: colorSimbolo)
+        Coordinator(self)
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -65,12 +67,13 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
         mapView.showsUserLocation = true
         mapView.showsCompass = false
         mapView.showsScale = false
+        mapView.layoutMargins = margenes
 
         // Trazo del recorrido
         if coordenadas.count >= 2 {
             let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
             mapView.addOverlay(polyline)
-            context.coordinator.encuadrar(mapView, polyline: polyline)
+            context.coordinator.encuadrar(mapView, polyline: polyline, animated: false)
         }
 
         // Paraderos (decimados para no saturar; inicio y fin siempre)
@@ -97,12 +100,19 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
+        context.coordinator.parent = self
+        let cambiaronMargenes = mapView.layoutMargins != margenes
+        mapView.layoutMargins = margenes
         if context.coordinator.ultimoAjuste != ajustarTrigger {
             context.coordinator.ultimoAjuste = ajustarTrigger
+            context.coordinator.muestraRecorrido = true
             if coordenadas.count >= 2 {
                 let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
-                context.coordinator.encuadrar(mapView, polyline: polyline)
+                context.coordinator.encuadrar(mapView, polyline: polyline, animated: !reducirMovimiento)
             }
+        } else if cambiaronMargenes, context.coordinator.muestraRecorrido, coordenadas.count >= 2 {
+            let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
+            context.coordinator.encuadrar(mapView, polyline: polyline, animated: false)
         }
     }
 
@@ -127,27 +137,34 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject, MKMapViewDelegate {
-        let color: UIColor
-        let colorSimbolo: UIColor
+        var parent: MapaExploradorRepresentable
         var ultimoAjuste: Int = 0
+        var muestraRecorrido = true
 
-        init(color: UIColor, colorSimbolo: UIColor) {
-            self.color = color
-            self.colorSimbolo = colorSimbolo
+        init(_ parent: MapaExploradorRepresentable) {
+            self.parent = parent
         }
 
-        func encuadrar(_ mapView: MKMapView, polyline: MKPolyline) {
+        func encuadrar(_ mapView: MKMapView, polyline: MKPolyline, animated: Bool) {
             mapView.setVisibleMapRect(
                 polyline.boundingMapRect,
-                edgePadding: UIEdgeInsets(top: 120, left: 40, bottom: 320, right: 40),
-                animated: true
+                edgePadding: parent.margenes,
+                animated: animated
             )
+        }
+
+        func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
+            let gestos = mapView.gestureRecognizers ?? []
+            let gestosInternos = mapView.subviews.flatMap { $0.gestureRecognizers ?? [] }
+            if (gestos + gestosInternos).contains(where: { $0.state == .began || $0.state == .changed }) {
+                muestraRecorrido = false
+            }
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polyline = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = color
+                renderer.strokeColor = parent.colorLinea
                 renderer.lineWidth = 5
                 renderer.lineCap = .round
                 renderer.lineJoin = .round
@@ -167,8 +184,8 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
                             as? MKMarkerAnnotationView)
                             ?? MKMarkerAnnotationView(annotation: nil, reuseIdentifier: id)
                 view.annotation = paradero
-                view.markerTintColor = paradero.esInicio ? color : .systemRed
-                view.glyphTintColor = paradero.esInicio ? colorSimbolo : .white
+                view.markerTintColor = paradero.esInicio ? parent.colorLinea : .systemRed
+                view.glyphTintColor = paradero.esInicio ? parent.colorSimbolo : .white
                 view.glyphImage = UIImage(systemName: paradero.esInicio ? "bus.fill" : "flag.fill")
                 view.titleVisibility = .visible
                 view.subtitleVisibility = .hidden
@@ -204,13 +221,24 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
 }
 
 // MARK: - Vista
+private struct AlturaExploradorKey: PreferenceKey {
+    static let defaultValue: [String: CGFloat] = [:]
+
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, nueva in nueva })
+    }
+}
+
 struct ExploradorRutaView: View {
     let ruta: RutaOpcion
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.self) private var entorno
-    @State private var ajustarTrigger: Int = 0
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
+    @State private var ajustarTrigger = 0
     @State private var mostrarListaParaderos = false
+    @State private var alturas: [String: CGFloat] = [:]
 
     /// Trazado para DIBUJAR, decimado.
     ///
@@ -222,6 +250,10 @@ struct ExploradorRutaView: View {
         PolylineMatching.decimate(ruta.shape, maxPoints: 300)
     }
 
+    private var identificacion: (codigo: String, letra: String) {
+        GTFSNombreParser.identificacionTransporte(linea: ruta.linea, variante: ruta.variante)
+    }
+
     private var colorTextoLetra: Color {
         let color = ruta.colorLinea.resolve(in: entorno)
         let luminancia = 0.2126 * color.linearRed + 0.7152 * color.linearGreen + 0.0722 * color.linearBlue
@@ -229,75 +261,43 @@ struct ExploradorRutaView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            MapaExploradorRepresentable(
-                coordenadas: trazado,
-                colorLinea: UIColor(ruta.colorLinea),
-                colorSimbolo: UIColor(colorTextoLetra),
-                paraderos: ruta.paraderos,
-                nombreInicio: ruta.paradaInicioVisible,
-                ajustarTrigger: ajustarTrigger
-            )
-            .ignoresSafeArea()
-
-            // Chrome superior
-            HStack(alignment: .center, spacing: 10) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.onSurface)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.appSurface))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Cerrar", "Close"))
-
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(ruta.colorLinea)
-                        .frame(width: 4, height: 22)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(L.t("Línea ", "Line ") + ruta.linea)
-                            .font(.system(size: 14, weight: .heavy))
-                            .foregroundStyle(.onSurface)
-                        Text(ruta.empresa)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.onSurfaceVariant)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(
-                    Capsule().fill(Color.appSurface)
-                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
+        GeometryReader { geometry in
+            ZStack {
+                MapaExploradorRepresentable(
+                    coordenadas: trazado,
+                    colorLinea: UIColor(ruta.colorLinea),
+                    colorSimbolo: UIColor(colorTextoLetra),
+                    paraderos: ruta.paraderos,
+                    nombreInicio: ruta.paradaInicioVisible,
+                    margenes: UIEdgeInsets(
+                        top: geometry.safeAreaInsets.top + (alturas["cabecera"] ?? 76) + 24,
+                        left: 40,
+                        bottom: geometry.safeAreaInsets.bottom + (alturas["panel"] ?? 240) + 28,
+                        right: 76
+                    ),
+                    reducirMovimiento: reducirMovimiento,
+                    ajustarTrigger: ajustarTrigger
                 )
+                .ignoresSafeArea()
 
-                Spacer()
-
-                Button {
-                    ajustarTrigger += 1
-                } label: {
-                    Image(systemName: "scope")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.onSurface)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.appSurface))
+                VStack(spacing: 12) {
+                    cabecera
+                        .background(medirAltura("cabecera"))
+                    Spacer(minLength: 0)
+                    controlesMapa
+                    ViewThatFits(in: .vertical) {
+                        leyenda
+                        ScrollView { leyenda }
+                            .scrollBounceBehavior(.basedOnSize)
+                    }
+                    .frame(maxHeight: geometry.size.height * 0.46)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .background(medirAltura("panel"))
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Encuadrar recorrido", "Fit route"))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-
-            // Leyenda inferior
-            VStack {
-                Spacer()
-                leyenda
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-            }
+            .onPreferenceChange(AlturaExploradorKey.self) { alturas = $0 }
         }
         .accessibilityAction(.escape) { dismiss() }
         .sheet(isPresented: $mostrarListaParaderos) {
@@ -326,77 +326,156 @@ struct ExploradorRutaView: View {
         }
     }
 
-    // MARK: - Leyenda con datos del feed
-    private var leyenda: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button { mostrarListaParaderos = true } label: {
-                Label(L.t("Ver lista de paraderos", "View stop list"), systemImage: "list.bullet")
-                    .frame(minHeight: 44)
+    private var cabecera: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.onSurface)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .background(.regularMaterial, in: Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(L.t("Cerrar recorrido", "Close route"))
+
             HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(ruta.colorLinea)
-                    .frame(width: 5, height: 40)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(ruta.linea) · \(ruta.empresa)")
-                        .font(.headlineSm)
-                        .foregroundStyle(.onSurface)
-                    Text(ruta.recorridoLocalizado)
-                        .font(.bodySm)
-                        .foregroundStyle(.onSurfaceVariant)
-                        .lineLimit(1)
+                if !identificacion.letra.isEmpty {
+                    Text(identificacion.letra)
+                        .font(.system(.title2, design: .rounded).weight(.bold))
+                        .foregroundStyle(colorTextoLetra)
+                        .padding(.horizontal, 10)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .background(ruta.colorLinea, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .accessibilityHidden(true)
                 }
-                Spacer()
-                Text(ruta.frecuenciaTexto)
-                    .font(.labelCapsSm)
-                    .foregroundStyle(ruta.colorLinea)
-                    .appTracking(AppTracking.wideLabel)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(ruta.colorLinea.opacity(0.12)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L.t("Línea ", "Line ") + identificacion.codigo)
+                        .font(.headline)
+                        .foregroundStyle(Color.onSurface)
+                    Text(ruta.empresa)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.onSurfaceVariant)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L.t("Línea ", "Line ") + ruta.lineaConLetra + ". " + ruta.empresa)
+        }
+    }
+
+    private var controlesMapa: some View {
+        HStack {
+            Spacer()
+            VStack(spacing: 0) {
+                Button {
+                    ajustarTrigger += 1
+                } label: {
+                    Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
+                        .frame(minWidth: 48, minHeight: 48)
+                }
+                .accessibilityLabel(L.t("Ver recorrido completo", "Show entire route"))
+            }
+            .buttonStyle(.plain)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+    }
+
+    // MARK: - Leyenda con datos del feed
+    private var leyenda: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    tituloRecorrido
+                    Spacer(minLength: 12)
+                    frecuencia
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    tituloRecorrido
+                    frecuencia
+                }
             }
 
-            HStack(spacing: 0) {
-                datoLeyenda(icono: "clock.fill", valor: ruta.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
-                divisor
-                datoLeyenda(icono: "creditcard.fill", valor: ruta.costo, etiqueta: L.t("Tarifa", "Fare"))
-                divisor
+            Text(ruta.recorridoLocalizado)
+                .font(.subheadline)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading),
+                                     count: dynamicTypeSize.isAccessibilitySize ? 2 : 4),
+                      alignment: .leading, spacing: 16) {
+                datoLeyenda(icono: "clock", valor: ruta.tiempoTexto, etiqueta: L.t("Viaje", "Trip"))
+                datoLeyenda(icono: "creditcard", valor: ruta.costo, etiqueta: L.t("Tarifa", "Fare"))
                 datoLeyenda(icono: "mappin.and.ellipse", valor: "\(ruta.numParaderos)", etiqueta: L.t("Paraderos", "Stops"))
-                divisor
                 datoLeyenda(icono: "point.topleft.down.curvedto.point.bottomright.up",
                             valor: FormatoNumero.decimal(ruta.distanciaKm) + " km", etiqueta: L.t("Longitud", "Length"))
             }
+
+            Divider()
+
+            Button { mostrarListaParaderos = true } label: {
+                HStack(spacing: 10) {
+                    Label(L.t("Ver lista de paraderos", "View stop list"), systemImage: "list.bullet")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.onSurfaceVariant)
+                        .accessibilityHidden(true)
+                }
+                .font(.body)
+                .foregroundStyle(Color.onSurface)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 6)
-        )
+        .padding(20)
     }
 
-    private var divisor: some View {
-        Rectangle()
-            .fill(Color.outlineVariant.opacity(0.35))
-            .frame(width: 1, height: 34)
+    private var tituloRecorrido: some View {
+        Text(L.t("Recorrido", "Route"))
+            .font(.headline)
+            .foregroundStyle(Color.onSurface)
+    }
+
+    private var frecuencia: some View {
+        Text(ruta.frecuenciaTexto)
+            .font(.subheadline)
+            .foregroundStyle(Color.onSurfaceVariant)
+            .fixedSize()
     }
 
     private func datoLeyenda(icono: String, valor: String, etiqueta: String) -> some View {
-        VStack(spacing: 3) {
+        VStack(alignment: .leading, spacing: 5) {
             Image(systemName: icono)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.appAccent)
+                .font(.subheadline)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .accessibilityHidden(true)
             Text(valor)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.onSurface)
-            Text(etiqueta.uppercased())
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.onSurface)
+            Text(etiqueta)
+                .font(.caption)
+                .foregroundStyle(Color.onSurfaceVariant)
         }
-        .frame(maxWidth: .infinity)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(etiqueta + ": " + valor)
     }
+
+    private func medirAltura(_ clave: String) -> some View {
+        GeometryReader { geometry in
+            Color.clear.preference(key: AlturaExploradorKey.self, value: [clave: geometry.size.height])
+        }
+    }
+
 }
 
 #Preview {
@@ -406,6 +485,6 @@ struct ExploradorRutaView: View {
         frecuenciaMin: 4, duracionMin: 77, costo: "S/ 2.50",
         numParaderos: 247, distanciaKm: 21.3, colorLinea: Color(hex: "#00CC00"),
         shape: [], paraderos: [],
-        paradaInicio: "Av. Miguel Grau", paradaFin: "Av. Miguel Grau"
+        paradaInicio: "Av. Miguel Grau", paradaFin: "Av. Miguel Grau", variante: "B"
     ))
 }
