@@ -13,6 +13,10 @@ import MapKit
 import CoreLocation
 import UIKit
 
+enum ControlesMapaLugar {
+    case ninguno, ampliar, ubicacionYCiudad
+}
+
 // MARK: - Mapa para elegir ubicación (tocable para mover el pin)
 /// Mapa para elegir un punto con un tap. Compartido por Guardado (elegir
 /// ubicación del lugar) y Mapa (elegir destino en el mapa).
@@ -32,8 +36,10 @@ struct MapaElegirLugar: UIViewRepresentable {
     var centroCamara: CLLocationCoordinate2D?
     var recentrarCamaraTrigger: Int = 0
     var onInteraccion: () -> Void = {}
-    var mostrarControles = false
+    var controles: ControlesMapaLugar = .ninguno
+    var espacioSuperiorControles: CGFloat = 0
     var onExpandir: (() -> Void)?
+    var onUbicar: () -> Void = {}
     @Environment(\.colorScheme) private var colorScheme
 
     private var acento: UIColor { UIColor(colorScheme == .dark ? .primaryFixed : .appPrimary) }
@@ -41,7 +47,7 @@ struct MapaElegirLugar: UIViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator(onTocar: onTocar, colorPin: UIColor(colorPin), iconoPin: iconoPin,
                     ultimoRecentradoCamara: recentrarCamaraTrigger, onInteraccion: onInteraccion,
-                    onExpandir: onExpandir)
+                    onExpandir: onExpandir, onUbicar: onUbicar)
     }
 
     func makeUIView(context: Context) -> ContenedorMapaLugar {
@@ -49,6 +55,7 @@ struct MapaElegirLugar: UIViewRepresentable {
         let mapView = contenedor.mapa
         mapView.delegate = context.coordinator
         context.coordinator.mapa = mapView
+        context.coordinator.contenedor = contenedor
         mapView.pointOfInterestFilter = .excludingAll
         mapView.showsUserLocation = true
         mapView.setRegion(
@@ -61,8 +68,8 @@ struct MapaElegirLugar: UIViewRepresentable {
                                          action: #selector(Coordinator.mapaTocado(_:)))
         mapView.addGestureRecognizer(tap)
         context.coordinator.configurarAccesibilidad(mapView, seleccion: coordenada)
-        contenedor.configurarControles(mostrar: mostrarControles,
-                                       expandir: onExpandir != nil, acento: acento)
+        contenedor.configurarControles(tipo: controles, acento: acento,
+                                       espacioSuperior: espacioSuperiorControles)
         return contenedor
     }
 
@@ -74,8 +81,9 @@ struct MapaElegirLugar: UIViewRepresentable {
         coordinator.onTocar = onTocar
         coordinator.onInteraccion = onInteraccion
         coordinator.onExpandir = onExpandir
-        contenedor.configurarControles(mostrar: mostrarControles,
-                                       expandir: onExpandir != nil, acento: acento)
+        coordinator.onUbicar = onUbicar
+        contenedor.configurarControles(tipo: controles, acento: acento,
+                                       espacioSuperior: espacioSuperiorControles)
 
         // Pin
         if let coordenada {
@@ -112,7 +120,7 @@ struct MapaElegirLugar: UIViewRepresentable {
         // La flecha mueve únicamente la cámara; nunca sustituye el pin.
         if coordinator.ultimoRecentradoCamara != recentrarCamaraTrigger {
             coordinator.ultimoRecentradoCamara = recentrarCamaraTrigger
-            if let centroCamara {
+            if let centroCamara, mapView.userTrackingMode == .none {
                 mapView.setRegion(MKCoordinateRegion(center: centroCamara, span: spanRecentrado),
                                   animated: !UIAccessibility.isReduceMotionEnabled)
             }
@@ -122,6 +130,7 @@ struct MapaElegirLugar: UIViewRepresentable {
 
     final class Coordinator: NSObject, MKMapViewDelegate {
         weak var mapa: MKMapView?
+        weak var contenedor: ContenedorMapaLugar?
         var pin: MKPointAnnotation?
         var ultimoRecentrado = 0
         var onTocar: (CLLocationCoordinate2D) -> Void
@@ -130,22 +139,32 @@ struct MapaElegirLugar: UIViewRepresentable {
         var ultimoRecentradoCamara: Int
         var onInteraccion: () -> Void
         var onExpandir: (() -> Void)?
+        var onUbicar: () -> Void
 
         init(onTocar: @escaping (CLLocationCoordinate2D) -> Void, colorPin: UIColor, iconoPin: String,
              ultimoRecentradoCamara: Int, onInteraccion: @escaping () -> Void,
-             onExpandir: (() -> Void)?) {
+             onExpandir: (() -> Void)?, onUbicar: @escaping () -> Void) {
             self.onTocar = onTocar
             self.colorPin = colorPin
             self.iconoPin = iconoPin
             self.ultimoRecentradoCamara = ultimoRecentradoCamara
             self.onInteraccion = onInteraccion
             self.onExpandir = onExpandir
+            self.onUbicar = onUbicar
         }
 
         func mapView(_ mapView: MKMapView, didChange mode: MKUserTrackingMode, animated: Bool) {
-            // La flecha nativa sigue el punto azul sin esperar al lector puntual.
+            contenedor?.actualizarSeguimiento(mode)
+        }
+
+        @objc func centrarUsuario() {
+            guard let mapa else { return }
+            // La flecha sigue el punto azul sin esperar al lector puntual.
             // Cancela el centrado automático para que no deshaga esta acción.
-            if mode != .none { onInteraccion() }
+            onInteraccion()
+            AppHaptics.impact(.light)
+            mapa.setUserTrackingMode(.follow, animated: !UIAccessibility.isReduceMotionEnabled)
+            onUbicar()
         }
 
         @objc func verCiudad() {
@@ -194,23 +213,23 @@ struct MapaElegirLugar: UIViewRepresentable {
     }
 }
 
-/// Cada selector conserva su propio control nativo y su propio mapa, también
+/// Cada selector conserva sus propios controles y su propio mapa, también
 /// cuando el formulario queda debajo del selector a pantalla completa.
 final class ContenedorMapaLugar: UIView {
     let mapa: MKMapView
     private let controles = UIStackView()
-    private let botonUbicacion: MKUserTrackingButton
+    private let botonUbicacion = UIButton(type: .system)
     private let botonCiudad = UIButton(type: .system)
     private let botonExpandir = UIButton(type: .system)
+    private lazy var anclajeSuperior = controles.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor)
 
     init(coordinator: MapaElegirLugar.Coordinator) {
         let nuevoMapa = MKMapView()
         mapa = nuevoMapa
-        botonUbicacion = MKUserTrackingButton(mapView: nuevoMapa)
         super.init(frame: .zero)
         mapa.translatesAutoresizingMaskIntoConstraints = false
         addSubview(mapa)
-        controles.axis = .vertical
+        controles.axis = .horizontal
         controles.spacing = 8
         controles.translatesAutoresizingMaskIntoConstraints = false
         addSubview(controles)
@@ -218,43 +237,67 @@ final class ContenedorMapaLugar: UIView {
             controles.addArrangedSubview(control)
             control.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                control.widthAnchor.constraint(equalToConstant: 48),
-                control.heightAnchor.constraint(equalToConstant: 48)
+                control.widthAnchor.constraint(equalToConstant: 44),
+                control.heightAnchor.constraint(equalToConstant: 44)
             ])
         }
+        configurar(botonUbicacion, simbolo: "location.fill")
         configurar(botonCiudad, simbolo: "map")
-        configurar(botonExpandir, simbolo: "arrow.up.left.and.arrow.down.right")
+        configurar(botonExpandir, simbolo: "arrow.up.left.and.arrow.down.right", compacto: true)
+        botonUbicacion.addTarget(coordinator, action: #selector(MapaElegirLugar.Coordinator.centrarUsuario), for: .touchUpInside)
         botonCiudad.addTarget(coordinator, action: #selector(MapaElegirLugar.Coordinator.verCiudad), for: .touchUpInside)
         botonExpandir.addTarget(coordinator, action: #selector(MapaElegirLugar.Coordinator.expandirMapa), for: .touchUpInside)
+        botonUbicacion.accessibilityIdentifier = "place-picker.my-location"
+        botonCiudad.accessibilityIdentifier = "place-picker.city"
+        botonExpandir.accessibilityIdentifier = "place-picker.expand"
         NSLayoutConstraint.activate([
             mapa.topAnchor.constraint(equalTo: topAnchor),
             mapa.bottomAnchor.constraint(equalTo: bottomAnchor),
             mapa.leadingAnchor.constraint(equalTo: leadingAnchor),
             mapa.trailingAnchor.constraint(equalTo: trailingAnchor),
-            controles.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 12),
+            anclajeSuperior,
             controles.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -12)
         ])
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    private func configurar(_ boton: UIButton, simbolo: String) {
+    private func configurar(_ boton: UIButton, simbolo: String, compacto: Bool = false) {
         var configuracion = UIButton.Configuration.plain()
         configuracion.image = UIImage(systemName: simbolo)
-        configuracion.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
+        configuracion.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: compacto ? 15 : 18, weight: .semibold)
         configuracion.background.backgroundColor = .secondarySystemGroupedBackground
-        configuracion.background.cornerRadius = 24
+        configuracion.background.cornerRadius = compacto ? 18 : 22
+        if compacto {
+            // Fondo visible de 36 puntos; el área táctil conserva 44 puntos.
+            configuracion.background.backgroundInsets = NSDirectionalEdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)
+        }
         boton.configuration = configuracion
     }
 
-    func configurarControles(mostrar: Bool, expandir: Bool, acento: UIColor) {
-        controles.isHidden = !mostrar
-        botonExpandir.isHidden = !expandir
+    func configurarControles(tipo: ControlesMapaLugar, acento: UIColor, espacioSuperior: CGFloat) {
+        anclajeSuperior.constant = 12 + max(0, espacioSuperior)
+        mapa.accessibilityIdentifier = tipo == .ampliar ? "place-picker.compact-map"
+            : tipo == .ubicacionYCiudad ? "place-picker.full-map" : "place-picker.map"
+        controles.isHidden = tipo == .ninguno
+        botonExpandir.isHidden = tipo != .ampliar
+        botonUbicacion.isHidden = tipo != .ubicacionYCiudad
+        botonCiudad.isHidden = tipo != .ubicacionYCiudad
         controles.tintColor = acento
+        // El GPS puede tardar o no tener permiso; la flecha sigue visible y
+        // recibe toques. MapKit gestiona la cámara, no la visibilidad del botón.
+        for boton in [botonUbicacion, botonCiudad, botonExpandir] {
+            boton.configuration?.baseForegroundColor = acento
+        }
+        actualizarSeguimiento(mapa.userTrackingMode)
         botonUbicacion.accessibilityLabel = L.t("Mi ubicación", "My location")
         botonUbicacion.accessibilityHint = L.t("Centra el mapa sin cambiar el lugar marcado", "Centers the map without changing the marked place")
         botonCiudad.accessibilityLabel = L.t("Ver la ciudad", "Show city")
         botonCiudad.accessibilityHint = L.t("Muestra la mayor parte de Trujillo sin cambiar el lugar marcado", "Shows most of Trujillo without changing the marked place")
         botonExpandir.accessibilityLabel = L.t("Expandir mapa", "Expand map")
+    }
+
+    func actualizarSeguimiento(_ modo: MKUserTrackingMode) {
+        botonUbicacion.isSelected = modo != .none
     }
 }

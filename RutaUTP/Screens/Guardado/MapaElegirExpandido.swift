@@ -15,8 +15,10 @@ import CoreLocation
 struct MapaElegirExpandido: View {
     @Binding var coordenada: CLLocationCoordinate2D?
     @ObservedObject var ubicacion: UbicacionMapaLugar
+    let locationService: LocationServiceProtocol
     var iconoPin: String = "mappin.circle.fill"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var alturaCabecera: CGFloat = 52
     /// Se dispara en cada toque del mapa, después de actualizar la coordenada.
     /// Recibe la coordenada tocada para poder geocodificarla.
     var onTocar: (CLLocationCoordinate2D) -> Void
@@ -38,10 +40,19 @@ struct MapaElegirExpandido: View {
             centroCamara: ubicacion.centro,
             recentrarCamaraTrigger: ubicacion.revisionCamara,
             onInteraccion: { ubicacion.interactuar() },
-            mostrarControles: true
+            controles: .ubicacionYCiudad,
+            espacioSuperiorControles: alturaCabecera,
+            onUbicar: { ubicacion.buscar(desde: locationService) }
         )
             .ignoresSafeArea()
-            .safeAreaInset(edge: .top, spacing: 0) { barraSuperior }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                barraSuperior.background {
+                    GeometryReader { geometria in
+                        Color.clear.preference(key: AlturaCabecera.self, value: geometria.size.height)
+                    }
+                }
+            }
+            .onPreferenceChange(AlturaCabecera.self) { alturaCabecera = $0 }
             .overlay(alignment: .bottom) {
                 VStack(spacing: 8) {
                     if let aviso = ubicacion.aviso {
@@ -56,6 +67,11 @@ struct MapaElegirExpandido: View {
                 }
             }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: coordenada == nil)
+    }
+
+    private struct AlturaCabecera: PreferenceKey {
+        static let defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
     }
 
     private var barraSuperior: some View {

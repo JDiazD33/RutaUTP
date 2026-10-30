@@ -239,7 +239,7 @@ struct AddLugarSheet: View {
             centroCamara: ubicacion.centro,
             recentrarCamaraTrigger: ubicacion.revisionCamara,
             onInteraccion: { ubicacion.interactuar() },
-            mostrarControles: true,
+            controles: .ampliar,
             onExpandir: {
                 // Abre el mismo selector de ubicación a pantalla completa.
                 AppHaptics.impact(.light)
@@ -253,6 +253,7 @@ struct AddLugarSheet: View {
             MapaElegirExpandido(
                 coordenada: $coordElegida,
                 ubicacion: ubicacion,
+                locationService: locationService,
                 iconoPin: iconoElegido,
                 onTocar: { nueva in
                     ubicacion.interactuar()
