@@ -52,9 +52,13 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     let paraderos: [ParaderoGTFS]
     let nombreInicio: String
     var margenes: UIEdgeInsets
+    var ubicacionAutorizada: Bool
     var reducirMovimiento: Bool
     /// Cambia este valor para re-encuadrar el mapa al recorrido completo.
     var ajustarTrigger: Int = 0
+    var ubicacionTrigger: Int = 0
+    var alCambiarSeguimiento: (Bool) -> Void
+    var alFallarUbicacion: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -64,7 +68,7 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
         let mapView = MKMapView()
         mapView.delegate = context.coordinator
         mapView.pointOfInterestFilter = .excludingAll
-        mapView.showsUserLocation = true
+        mapView.showsUserLocation = ubicacionAutorizada
         mapView.showsCompass = false
         mapView.showsScale = false
         mapView.layoutMargins = margenes
@@ -103,9 +107,14 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
         context.coordinator.parent = self
         let cambiaronMargenes = mapView.layoutMargins != margenes
         mapView.layoutMargins = margenes
+        mapView.showsUserLocation = ubicacionAutorizada
+        if !ubicacionAutorizada {
+            mapView.setUserTrackingMode(.none, animated: false)
+        }
         if context.coordinator.ultimoAjuste != ajustarTrigger {
             context.coordinator.ultimoAjuste = ajustarTrigger
             context.coordinator.muestraRecorrido = true
+            mapView.setUserTrackingMode(.none, animated: false)
             if coordenadas.count >= 2 {
                 let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
                 context.coordinator.encuadrar(mapView, polyline: polyline, animated: !reducirMovimiento)
@@ -114,6 +123,18 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
             let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
             context.coordinator.encuadrar(mapView, polyline: polyline, animated: false)
         }
+        if context.coordinator.ultimaUbicacion != ubicacionTrigger {
+            context.coordinator.ultimaUbicacion = ubicacionTrigger
+            guard ubicacionAutorizada else { return }
+            context.coordinator.muestraRecorrido = false
+            mapView.setUserTrackingMode(.follow, animated: !reducirMovimiento)
+        }
+    }
+
+    static func dismantleUIView(_ mapView: MKMapView, coordinator: Coordinator) {
+        mapView.delegate = nil
+        mapView.setUserTrackingMode(.none, animated: false)
+        mapView.showsUserLocation = false
     }
 
     private static func terminalesCercanos(_ paraderos: [ParaderoGTFS]) -> Bool {
@@ -139,6 +160,7 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MapaExploradorRepresentable
         var ultimoAjuste: Int = 0
+        var ultimaUbicacion: Int = 0
         var muestraRecorrido = true
 
         init(_ parent: MapaExploradorRepresentable) {
@@ -159,6 +181,18 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
             if (gestos + gestosInternos).contains(where: { $0.state == .began || $0.state == .changed }) {
                 muestraRecorrido = false
             }
+        }
+
+        func mapView(_ mapView: MKMapView, didChange mode: MKUserTrackingMode, animated: Bool) {
+            let notificar = parent.alCambiarSeguimiento
+            DispatchQueue.main.async { notificar(mode != .none) }
+        }
+
+        func mapView(_ mapView: MKMapView, didFailToLocateUserWithError error: Error) {
+            guard mapView.userTrackingMode != .none else { return }
+            mapView.setUserTrackingMode(.none, animated: false)
+            let notificar = parent.alFallarUbicacion
+            DispatchQueue.main.async { notificar() }
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -231,12 +265,21 @@ private struct AlturaExploradorKey: PreferenceKey {
 
 struct ExploradorRutaView: View {
     let ruta: RutaOpcion
+    let locationService: LocationServiceProtocol
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @Environment(\.self) private var entorno
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
+    @Environment(\.scenePhase) private var scenePhase
     @State private var ajustarTrigger = 0
+    @State private var ubicacionTrigger = 0
+    @State private var solicitudUbicacion = 0
+    @State private var solicitandoUbicacion = false
+    @State private var siguiendoUsuario = false
+    @State private var ubicacionAutorizada = false
+    @State private var mostrarErrorUbicacion = false
     @State private var mostrarListaParaderos = false
     @State private var alturas: [String: CGFloat] = [:]
 
@@ -275,8 +318,12 @@ struct ExploradorRutaView: View {
                         bottom: geometry.safeAreaInsets.bottom + (alturas["panel"] ?? 240) + 28,
                         right: 76
                     ),
+                    ubicacionAutorizada: ubicacionAutorizada,
                     reducirMovimiento: reducirMovimiento,
-                    ajustarTrigger: ajustarTrigger
+                    ajustarTrigger: ajustarTrigger,
+                    ubicacionTrigger: ubicacionTrigger,
+                    alCambiarSeguimiento: { siguiendoUsuario = $0 },
+                    alFallarUbicacion: { mostrarErrorUbicacion = true }
                 )
                 .ignoresSafeArea()
 
@@ -300,6 +347,36 @@ struct ExploradorRutaView: View {
             .onPreferenceChange(AlturaExploradorKey.self) { alturas = $0 }
         }
         .accessibilityAction(.escape) { dismiss() }
+        .onReceive(locationService.authorizationPublisher) { estado in
+            ubicacionAutorizada = estado.isAuthorized
+            if !estado.isAuthorized { siguiendoUsuario = false }
+        }
+        .task(id: solicitudUbicacion) {
+            guard solicitandoUbicacion else { return }
+            let solicitud = solicitudUbicacion
+            let permiso = await locationService.requestPermission()
+            guard !Task.isCancelled, solicitud == solicitudUbicacion else { return }
+            solicitandoUbicacion = false
+            ubicacionAutorizada = permiso.isAuthorized
+            if permiso.isAuthorized {
+                ubicacionTrigger += 1
+            } else {
+                mostrarErrorUbicacion = true
+            }
+        }
+        .onChange(of: scenePhase) { _, fase in
+            if fase == .background { cancelarSolicitudUbicacion() }
+        }
+        .alert(L.t("Tu ubicación", "Your location"), isPresented: $mostrarErrorUbicacion) {
+            if locationService.authorizationStatus == .denied {
+                Button(L.t("Abrir Ajustes", "Open Settings")) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+            }
+            Button(L.t("Aceptar", "OK"), role: .cancel) {}
+        } message: {
+            Text(mensajeErrorUbicacion)
+        }
         .sheet(isPresented: $mostrarListaParaderos) {
             NavigationStack {
                 List(Array(ruta.paraderos.enumerated()), id: \.offset) { indice, paradero in
@@ -329,6 +406,7 @@ struct ExploradorRutaView: View {
     private var cabecera: some View {
         HStack(alignment: .top, spacing: 12) {
             Button {
+                cancelarSolicitudUbicacion()
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
@@ -373,6 +451,30 @@ struct ExploradorRutaView: View {
             Spacer()
             VStack(spacing: 0) {
                 Button {
+                    solicitandoUbicacion = true
+                    solicitudUbicacion += 1
+                } label: {
+                    Image(systemName: siguiendoUsuario ? "location.fill" : "location")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.onSurface)
+                        .frame(minWidth: 48, minHeight: 48)
+                        .overlay {
+                            if solicitandoUbicacion {
+                                ProgressView()
+                                    .padding(10)
+                                    .background(.regularMaterial, in: Circle())
+                            }
+                        }
+                }
+                .disabled(solicitandoUbicacion)
+                .accessibilityLabel(L.t("Ir a mi ubicación", "Go to my location"))
+                .accessibilityValue(solicitandoUbicacion ? L.t("Buscando ubicación", "Finding location")
+                                    : siguiendoUsuario ? L.t("Siguiendo tu ubicación", "Following your location") : "")
+
+                Divider().frame(width: 28)
+
+                Button {
+                    cancelarSolicitudUbicacion()
                     ajustarTrigger += 1
                 } label: {
                     Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
@@ -476,6 +578,24 @@ struct ExploradorRutaView: View {
         }
     }
 
+    private func cancelarSolicitudUbicacion() {
+        solicitandoUbicacion = false
+        solicitudUbicacion += 1
+    }
+
+    private var mensajeErrorUbicacion: String {
+        switch locationService.authorizationStatus {
+        case .denied:
+            return L.t("Activa la ubicación para RutaUTP en Ajustes para centrar el mapa en tu posición.",
+                       "Enable location for RutaUTP in Settings to center the map on your position.")
+        case .restricted:
+            return L.t("Este dispositivo restringe el acceso a la ubicación.",
+                       "This device restricts location access.")
+        default:
+            return L.t("No pudimos obtener tu ubicación. Vuelve a intentarlo.",
+                       "Couldn't get your location. Try again.")
+        }
+    }
 }
 
 #Preview {
@@ -486,5 +606,5 @@ struct ExploradorRutaView: View {
         numParaderos: 247, distanciaKm: 21.3, colorLinea: Color(hex: "#00CC00"),
         shape: [], paraderos: [],
         paradaInicio: "Av. Miguel Grau", paradaFin: "Av. Miguel Grau", variante: "B"
-    ))
+    ), locationService: LocationService())
 }

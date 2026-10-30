@@ -72,7 +72,7 @@ struct RutasView: View {
         }
         #if DEBUG
         .fullScreenCover(isPresented: $debugExplorador) {
-            if let ruta = rutaSeleccionada { ExploradorRutaView(ruta: ruta) }
+            if let ruta = rutaSeleccionada { ExploradorRutaView(ruta: ruta, locationService: locationService) }
         }
         .fullScreenCover(isPresented: $debugNavegacion) {
             if let ruta = rutaSeleccionada {

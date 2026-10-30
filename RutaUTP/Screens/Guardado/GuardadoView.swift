@@ -126,7 +126,7 @@ struct GuardadoView: View {
             .presentationDragIndicator(.visible)
         }
         .fullScreenCover(item: $rutaParaExplorar) { linea in
-            ExploradorRutaView(ruta: linea)
+            ExploradorRutaView(ruta: linea, locationService: locationService)
         }
         .fullScreenCover(isPresented: $showParaderosMap, onDismiss: { vm.cargar() }) {
             ParaderosIluminadosView(paraderos: [], locationService: locationService)

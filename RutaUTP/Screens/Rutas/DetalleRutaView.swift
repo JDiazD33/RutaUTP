@@ -48,7 +48,7 @@ struct DetalleRutaView: View {
         .background(Color.appBackground.ignoresSafeArea())
         // Explorador del recorrido (se abre tocando el mapa)
         .fullScreenCover(isPresented: $showExplorador) {
-            ExploradorRutaView(ruta: ruta)
+            ExploradorRutaView(ruta: ruta, locationService: locationService)
         }
         // Navegación activa sobre el recorrido GTFS
         .fullScreenCover(isPresented: $showCarPlay) {
