@@ -117,6 +117,12 @@ struct PanelTransporte3D: View {
     @State private var estado: EstadoTransporte3D = .cargando
     @State private var intento = 0
     @State private var orden: OrdenTransporte3D?
+    /// RealityKit crea el `ARView` (y su sesión gráfica) dentro del `init` de
+    /// la vista UIKit. Montarlo cuando la sección entra en pantalla durante la
+    /// transición del detalle costaba fotogramas en las líneas con modelo y no
+    /// en las que muestran «próximamente». Se espera a que la transición
+    /// termine para que todas las rutas respondan igual.
+    @State private var visorListo = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -162,7 +168,7 @@ struct PanelTransporte3D: View {
     private var visor: some View {
         ZStack {
             Color.white
-            if scenePhase == .active && activo {
+            if scenePhase == .active && activo && visorListo {
                 VisorTransporte3D(tipo: tipo, variante: variante, color: UIColor(PaletasEmpresa.actual.colorMarca),
                                  intento: intento, orden: orden, identificacion: identificacion, estado: $estado)
                     .accessibilityElement(children: .ignore)
@@ -198,6 +204,11 @@ struct PanelTransporte3D: View {
         }
         .frame(height: 340)
         .clipShape(RoundedRectangle(cornerRadius: 24))
+        .task {
+            guard !visorListo else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+            visorListo = true
+        }
     }
 
     private func enviar(_ accion: AccionTransporte3D) {
