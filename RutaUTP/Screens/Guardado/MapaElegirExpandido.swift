@@ -52,7 +52,7 @@ struct MapaElegirExpandido: View {
                             .padding(.horizontal, 20)
                     }
                     pie
-                        .padding(.bottom, 12)
+                        .padding(.bottom, 4)
                 }
             }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: coordenada == nil)
