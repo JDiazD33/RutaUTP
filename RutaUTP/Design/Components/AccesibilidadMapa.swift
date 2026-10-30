@@ -94,6 +94,7 @@ extension MapaElegirLugar.Coordinator {
     }
 
     private func elegirPuntoAccesible(_ punto: CLLocationCoordinate2D) {
+        mapa?.setUserTrackingMode(.none, animated: false)
         onTocar(punto)
         if UIAccessibility.isVoiceOverRunning {
             AccesibilidadIdioma.anunciar(MovimientoPuntoMapa.texto(punto))

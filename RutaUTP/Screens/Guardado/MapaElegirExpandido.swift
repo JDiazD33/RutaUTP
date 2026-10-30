@@ -15,7 +15,6 @@ import CoreLocation
 struct MapaElegirExpandido: View {
     @Binding var coordenada: CLLocationCoordinate2D?
     @ObservedObject var ubicacion: UbicacionMapaLugar
-    let locationService: LocationServiceProtocol
     var iconoPin: String = "mappin.circle.fill"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Se dispara en cada toque del mapa, después de actualizar la coordenada.
@@ -24,45 +23,39 @@ struct MapaElegirExpandido: View {
     var onCerrar: () -> Void
 
     var body: some View {
-        ZStack(alignment: .top) {
-            MapaElegirLugar(
-                colorPin: .appPrimary,
-                coordenada: coordenada,
-                onTocar: { coord in
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
-                        coordenada = coord
-                    }
-                    onTocar(coord)
-                },
-                spanInicial: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006),
-                spanRecentrado: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006),
-                iconoPin: iconoPin,
-                centroCamara: ubicacion.centro,
-                recentrarCamaraTrigger: ubicacion.revisionCamara,
-                onInteraccion: { ubicacion.interactuar() }
-            )
+        MapaElegirLugar(
+            colorPin: .appPrimary,
+            coordenada: coordenada,
+            onTocar: { coord in
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                    coordenada = coord
+                }
+                onTocar(coord)
+            },
+            spanInicial: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006),
+            spanRecentrado: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006),
+            iconoPin: iconoPin,
+            centroCamara: ubicacion.centro,
+            recentrarCamaraTrigger: ubicacion.revisionCamara,
+            onInteraccion: { ubicacion.interactuar() },
+            mostrarControles: true
+        )
             .ignoresSafeArea()
-
-            VStack {
-                barraSuperior
-                Spacer()
-                HStack {
-                    Spacer()
-                    BotonUbicacionLugar(ubicacion: ubicacion, locationService: locationService)
+            .safeAreaInset(edge: .top, spacing: 0) { barraSuperior }
+            .overlay(alignment: .bottom) {
+                VStack(spacing: 8) {
+                    if let aviso = ubicacion.aviso {
+                        Text(aviso)
+                            .font(.footnote)
+                            .padding(12)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                            .padding(.horizontal, 20)
+                    }
+                    pie
+                        .padding(.bottom, 12)
                 }
-                .padding(.horizontal, 20)
-                if let aviso = ubicacion.aviso {
-                    Text(aviso)
-                        .font(.footnote)
-                        .padding(12)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-                        .padding(.horizontal, 20)
-                }
-                pie
-                    .padding(.bottom, 12)
             }
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: coordenada == nil)
-        }
     }
 
     private var barraSuperior: some View {

@@ -78,35 +78,3 @@ final class UbicacionMapaLugar: ObservableObject {
         if buscando { buscando = false }
     }
 }
-
-struct BotonUbicacionLugar: View {
-    @ObservedObject var ubicacion: UbicacionMapaLugar
-    let locationService: LocationServiceProtocol
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
-
-    var body: some View {
-        Button {
-            AppHaptics.impact(.light)
-            ubicacion.buscar(desde: locationService)
-        } label: {
-            Group {
-                if ubicacion.buscando {
-                    ProgressView().tint(acento)
-                } else {
-                    Image(systemName: "location.fill").font(.body.weight(.semibold))
-                }
-            }
-            .foregroundStyle(acento)
-            .frame(minWidth: 44, minHeight: 44)
-            .background(.regularMaterial, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(ubicacion.buscando)
-        .accessibilityLabel(ubicacion.buscando
-                            ? L.t("Buscando tu ubicación…", "Finding your location…")
-                            : L.t("Mi ubicación", "My location"))
-        .accessibilityHint(L.t("Centra el mapa sin cambiar el lugar marcado", "Centers the map without changing the marked place"))
-    }
-}

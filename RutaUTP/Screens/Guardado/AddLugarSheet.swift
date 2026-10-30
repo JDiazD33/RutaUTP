@@ -238,22 +238,21 @@ struct AddLugarSheet: View {
             iconoPin: iconoElegido,
             centroCamara: ubicacion.centro,
             recentrarCamaraTrigger: ubicacion.revisionCamara,
-            onInteraccion: { ubicacion.interactuar() }
+            onInteraccion: { ubicacion.interactuar() },
+            mostrarControles: true,
+            onExpandir: {
+                // Abre el mismo selector de ubicación a pantalla completa.
+                AppHaptics.impact(.light)
+                campoActivo = nil
+                mapaExpandido = true
+            }
         )
         .frame(height: 280)
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20, style: .continuous))
-        .overlay(alignment: .topTrailing) {
-            VStack(spacing: 8) {
-                botonExpandirMapa
-                BotonUbicacionLugar(ubicacion: ubicacion, locationService: locationService)
-            }
-            .padding(12)
-        }
         .fullScreenCover(isPresented: $mapaExpandido) {
             MapaElegirExpandido(
                 coordenada: $coordElegida,
                 ubicacion: ubicacion,
-                locationService: locationService,
                 iconoPin: iconoElegido,
                 onTocar: { nueva in
                     ubicacion.interactuar()
@@ -264,23 +263,6 @@ struct AddLugarSheet: View {
                 onCerrar: { mapaExpandido = false }
             )
         }
-    }
-
-    /// Abre el mismo selector de ubicación a pantalla completa.
-    private var botonExpandirMapa: some View {
-        Button {
-            AppHaptics.impact(.light)
-            campoActivo = nil
-            mapaExpandido = true
-        } label: {
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(acento)
-                .frame(minWidth: 44, minHeight: 44)
-                .background(.regularMaterial, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(L.t("Expandir mapa", "Expand map"))
     }
 
     private var selectorCategoria: some View {
