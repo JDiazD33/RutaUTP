@@ -342,11 +342,28 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         locationTask?.cancel()
         locationTask = nil
         if vehicleProvider?.keepsConnectionWhileMapHidden != true {
-            detenerSimulacionBuses()
+            if fuenteFlota == .real {
+                detenerSimulacionBuses()
+            } else {
+                pausarSimulacionBuses()
+            }
         }
         invalidarSeleccionAnterior()
         // Al volver, el primer fix recalcula el destino que siga seleccionado.
         userRealCoordinate = nil
+    }
+
+    /// Pausa la flota simulada sin borrar el catálogo ni las posiciones.
+    ///
+    /// Si al volver al mapa el ancla sigue siendo la misma, `recargarLineas`
+    /// no vuelve a consultar y la simulación reanuda donde quedó. Así el
+    /// panel conserva sus tarjetas y los buses no saltan a posiciones nuevas
+    /// durante la entrada a la pestaña.
+    private func pausarSimulacionBuses() {
+        simulacionBusesIniciada = false
+        busSimulationTask?.cancel()
+        busSimulationTask = nil
+        ultimoTickBuses = nil
     }
 
     // MARK: - Ubicación GPS Real

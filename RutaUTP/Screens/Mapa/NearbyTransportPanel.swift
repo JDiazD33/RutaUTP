@@ -17,7 +17,9 @@ struct NearbyTransportPanel<MapControls: View>: View {
                 }
                 .frame(height: 112)
             } else {
-                // Un aviso ocupa su altura real, sin reservar una fila de buses vacia.
+                // El aviso reserva la misma fila que las tarjetas: si el
+                // panel encogiera al volver al mapa, los controles de arriba
+                // (Reportar, marcador y ubicación) saltarían de sitio.
                 tarjetas
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -56,7 +58,7 @@ struct NearbyTransportPanel<MapControls: View>: View {
                     Button(L.t("Reintentar", "Try again")) { vm.reintentarCatalogo() }
                 }
                 .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
             } else if vm.tarjetasDelPanel.isEmpty {
                 HStack(spacing: 8) {
@@ -69,7 +71,7 @@ struct NearbyTransportPanel<MapControls: View>: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color.surfaceContainerLow)

@@ -14,6 +14,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 @main
 struct RutaUTPApp: App {
@@ -35,6 +36,12 @@ struct RutaUTPApp: App {
     @StateObject private var trackingCoordinator: PassiveTrackingCoordinator
 
     init() {
+        // RutaUTP dibuja su propia barra inferior. La barra nativa de TabView
+        // se oculta al crearse para que, al volver a Mapa, iOS no la inserte
+        // durante un fotograma: ese cambio de área útil movía el panel y los
+        // controles inferiores del mapa.
+        UITabBar.appearance().isHidden = true
+
         // Versionado del esquema de datos locales. Va aquí, antes de que
         // exista ninguna vista, para que las migraciones se apliquen una sola
         // vez y de forma determinista, y ningún almacén lea datos a medio
