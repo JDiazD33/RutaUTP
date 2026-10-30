@@ -11,6 +11,7 @@
 
 import SwiftUI
 import MapKit
+import UIKit
 
 // MARK: - Anotaciones
 final class ParaderoExploraAnnotation: NSObject, MKAnnotation {
@@ -19,7 +20,12 @@ final class ParaderoExploraAnnotation: NSObject, MKAnnotation {
     let esInicio: Bool
     let esFin: Bool
 
-    var title: String? { nombre }
+    var title: String? {
+        if esInicio { return L.t("Inicio del recorrido", "Route start") }
+        if esFin { return L.t("Fin del recorrido", "Route end") }
+        return nombre
+    }
+    var subtitle: String? { esInicio || esFin ? nombre : nil }
 
     init(coordinate: CLLocationCoordinate2D, nombre: String,
          esInicio: Bool = false, esFin: Bool = false) {
@@ -30,16 +36,26 @@ final class ParaderoExploraAnnotation: NSObject, MKAnnotation {
     }
 }
 
+/// Conserva el punto pequeño y amplía su área táctil sin tapar el trazado.
+private final class PuntoParaderoExploradorView: MKAnnotationView {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        bounds.insetBy(dx: -max(0, (44 - bounds.width) / 2),
+                       dy: -max(0, (44 - bounds.height) / 2)).contains(point)
+    }
+}
+
 // MARK: - Mapa interactivo
 struct MapaExploradorRepresentable: UIViewRepresentable {
     let coordenadas: [CLLocationCoordinate2D]
     let colorLinea: UIColor
+    let colorSimbolo: UIColor
     let paraderos: [ParaderoGTFS]
+    let nombreInicio: String
     /// Cambia este valor para re-encuadrar el mapa al recorrido completo.
     var ajustarTrigger: Int = 0
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(color: colorLinea)
+        Coordinator(color: colorLinea, colorSimbolo: colorSimbolo)
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -47,8 +63,8 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
         mapView.delegate = context.coordinator
         mapView.pointOfInterestFilter = .excludingAll
         mapView.showsUserLocation = true
-        mapView.showsCompass = true
-        mapView.showsScale = true
+        mapView.showsCompass = false
+        mapView.showsScale = false
 
         // Trazo del recorrido
         if coordenadas.count >= 2 {
@@ -59,12 +75,21 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
 
         // Paraderos (decimados para no saturar; inicio y fin siempre)
         let visibles = Self.paraderosVisibles(paraderos)
+        let terminalesCercanos = Self.terminalesCercanos(visibles)
         for (i, p) in visibles.enumerated() {
             mapView.addAnnotation(ParaderoExploraAnnotation(
                 coordinate: p.coordinate,
                 nombre: p.nombreVisible,
                 esInicio: i == 0,
-                esFin: i == visibles.count - 1
+                // En recorridos circulares el marcador final no tapa el inicio.
+                esFin: i == visibles.count - 1 && i > 0 && !terminalesCercanos
+            ))
+        }
+        // Algunos feeds traen geometría sin paraderos. Su primer punto sigue
+        // identificando el inicio; no se inventa una ubicación de transporte.
+        if visibles.isEmpty, let inicio = coordenadas.first {
+            mapView.addAnnotation(ParaderoExploraAnnotation(
+                coordinate: inicio, nombre: nombreInicio, esInicio: true
             ))
         }
 
@@ -79,6 +104,12 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
                 context.coordinator.encuadrar(mapView, polyline: polyline)
             }
         }
+    }
+
+    private static func terminalesCercanos(_ paraderos: [ParaderoGTFS]) -> Bool {
+        guard let primero = paraderos.first, let ultimo = paraderos.last else { return false }
+        return CLLocation(latitude: primero.lat, longitude: primero.lon)
+            .distance(from: CLLocation(latitude: ultimo.lat, longitude: ultimo.lon)) < 40
     }
 
     /// Máximo ~70 paraderos en el mapa para que sea legible.
@@ -97,10 +128,12 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
 
     final class Coordinator: NSObject, MKMapViewDelegate {
         let color: UIColor
+        let colorSimbolo: UIColor
         var ultimoAjuste: Int = 0
 
-        init(color: UIColor) {
+        init(color: UIColor, colorSimbolo: UIColor) {
             self.color = color
+            self.colorSimbolo = colorSimbolo
         }
 
         func encuadrar(_ mapView: MKMapView, polyline: MKPolyline) {
@@ -135,10 +168,15 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
                             ?? MKMarkerAnnotationView(annotation: nil, reuseIdentifier: id)
                 view.annotation = paradero
                 view.markerTintColor = paradero.esInicio ? color : .systemRed
-                view.glyphTintColor = .white
-                view.glyphImage = UIImage(systemName: paradero.esInicio ? "play.fill" : "flag.fill")
+                view.glyphTintColor = paradero.esInicio ? colorSimbolo : .white
+                view.glyphImage = UIImage(systemName: paradero.esInicio ? "bus.fill" : "flag.fill")
                 view.titleVisibility = .visible
+                view.subtitleVisibility = .hidden
                 view.canShowCallout = true
+                view.displayPriority = paradero.esInicio ? .required : .defaultHigh
+                view.zPriority = paradero.esInicio ? .max : .defaultUnselected
+                view.selectedZPriority = .max
+                view.animatesWhenAdded = false
                 view.isAccessibilityElement = true
                 view.accessibilityLabel = (paradero.esInicio ? L.t("Paradero inicial: ", "First stop: ") : L.t("Paradero final: ", "Last stop: ")) + paradero.nombre
                 return view
@@ -147,11 +185,15 @@ struct MapaExploradorRepresentable: UIViewRepresentable {
             // Paraderos intermedios: punto pequeño
             let id = "paradero"
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
-                        ?? MKAnnotationView(annotation: nil, reuseIdentifier: id)
+                        ?? PuntoParaderoExploradorView(annotation: nil, reuseIdentifier: id)
             view.annotation = paradero
             let config = UIImage.SymbolConfiguration(pointSize: 9, weight: .bold)
             view.image = UIImage(systemName: "circle.fill", withConfiguration: config)?
-                .withTintColor(.darkGray, renderingMode: .alwaysOriginal)
+                .withTintColor(.black, renderingMode: .alwaysOriginal)
+            view.layer.shadowColor = UIColor.white.cgColor
+            view.layer.shadowOpacity = 1
+            view.layer.shadowRadius = 1
+            view.layer.shadowOffset = .zero
             view.canShowCallout = true
             view.displayPriority = .defaultLow
             view.isAccessibilityElement = true
@@ -166,6 +208,7 @@ struct ExploradorRutaView: View {
     let ruta: RutaOpcion
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.self) private var entorno
     @State private var ajustarTrigger: Int = 0
     @State private var mostrarListaParaderos = false
 
@@ -179,12 +222,20 @@ struct ExploradorRutaView: View {
         PolylineMatching.decimate(ruta.shape, maxPoints: 300)
     }
 
+    private var colorTextoLetra: Color {
+        let color = ruta.colorLinea.resolve(in: entorno)
+        let luminancia = 0.2126 * color.linearRed + 0.7152 * color.linearGreen + 0.0722 * color.linearBlue
+        return (luminancia + 0.05) / 0.05 >= 1.05 / (luminancia + 0.05) ? .black : .white
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             MapaExploradorRepresentable(
                 coordenadas: trazado,
                 colorLinea: UIColor(ruta.colorLinea),
+                colorSimbolo: UIColor(colorTextoLetra),
                 paraderos: ruta.paraderos,
+                nombreInicio: ruta.paradaInicioVisible,
                 ajustarTrigger: ajustarTrigger
             )
             .ignoresSafeArea()
@@ -252,8 +303,17 @@ struct ExploradorRutaView: View {
         .sheet(isPresented: $mostrarListaParaderos) {
             NavigationStack {
                 List(Array(ruta.paraderos.enumerated()), id: \.offset) { indice, paradero in
-                    Text(paradero.nombreVisible)
-                        .accessibilityLabel(L.f("Paradero {0}: ", "Stop {0}: ", ["\(indice + 1)"]) + paradero.nombreVisible)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if indice == 0 {
+                            Label(L.t("Inicio del recorrido", "Route start"), systemImage: "bus.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(paradero.nombreVisible)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(L.f("Paradero {0}: ", "Stop {0}: ", ["\(indice + 1)"]) + paradero.nombreVisible
+                                        + (indice == 0 ? L.t(". Inicio del recorrido", ". Route start") : ""))
                 }
                 .navigationTitle(L.t("Paraderos de ", "Stops for ") + ruta.linea)
                 .toolbar {
