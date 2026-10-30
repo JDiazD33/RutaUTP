@@ -32,7 +32,8 @@ final class UbicacionMapaLugar: ObservableObject {
         inicioSolicitado = true
         if service.authorizationStatus.isAuthorized,
            let lectura = (service as? LocationService)?.lastKnownLocation,
-           UbicacionPuntual.esValida(lectura, ahora: Date(), antiguedadMaxima: 10) {
+           UbicacionPuntual.esValida(lectura, ahora: Date(), antiguedadMaxima: 30,
+                                   precisionMaxima: 3_000) {
             centro = lectura.coordinate
             revisionCamara &+= 1
         }
@@ -46,7 +47,10 @@ final class UbicacionMapaLugar: ObservableObject {
         aviso = nil
         let solicitud = revision
         tarea = Task { @MainActor [weak self] in
-            let lectura = await UbicacionPuntual.obtener(desde: service, antiguedadMaxima: 10)
+            // Centrar admite la ubicación aproximada de iOS, como los otros
+            // selectores. Esta lectura nunca guarda ni reemplaza el pin.
+            let lectura = await UbicacionPuntual.obtener(desde: service, antiguedadMaxima: 30,
+                                                       precisionMaxima: 3_000)
             guard let self, !Task.isCancelled, self.revision == solicitud else { return }
             self.tarea = nil
             self.buscando = false
@@ -64,6 +68,7 @@ final class UbicacionMapaLugar: ObservableObject {
     func interactuar() {
         huboInteraccion = true
         cancelar()
+        aviso = nil
     }
 
     func cancelar() {
