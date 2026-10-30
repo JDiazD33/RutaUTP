@@ -22,7 +22,7 @@ struct TripContributionPanel: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showDetails = false
     @State private var choosingLine = false
-    @State private var confirmEndTrip = false
+    @State private var confirmandoFinalizacion = false
     @State private var confirmarReinicioSubidas = false
     @State private var errorRecuperacionSubidas = false
     @State private var respaldoSubidas: URL?
@@ -183,7 +183,13 @@ struct TripContributionPanel: View {
             .scrollContentBackground(.hidden)
             .background(Color.appBackground.ignoresSafeArea())
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if coordinator.selectedTripRoute != nil { botonFinalizar }
+                if coordinator.selectedTripRoute != nil {
+                    if confirmandoFinalizacion {
+                        confirmacionFinalizar
+                    } else {
+                        botonFinalizar
+                    }
+                }
             }
             .navigationTitle(L.t("Tu viaje", "Your trip"))
             .navigationBarTitleDisplayMode(.inline)
@@ -210,18 +216,6 @@ struct TripContributionPanel: View {
             } message: {
                 Text(L.t("No se reiniciaron los datos. Reintenta la lectura y comprueba el espacio disponible.",
                          "The data was not reset. Retry reading and check available storage."))
-            }
-            .confirmationDialog(L.t("¿Finalizar este viaje?", "End this trip?"),
-                                isPresented: $confirmEndTrip, titleVisibility: .visible) {
-                Button(L.t("Finalizar viaje", "End trip"), role: .destructive) {
-                    coordinator.endTrip()
-                    showDetails = false
-                    onEndTrip()
-                }
-                Button(L.t("Cancelar", "Cancel"), role: .cancel) { }
-            } message: {
-                Text(L.t("Se dejará de compartir la ubicación de este micro y volverás al mapa principal.",
-                         "Sharing this bus's location will stop and you'll return to the main map."))
             }
             .tint(Color.appAccent)
         }
@@ -302,8 +296,78 @@ struct TripContributionPanel: View {
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { choosingLine = true }
     }
 
+    /// La confirmación vive dentro de la hoja: un diálogo del sistema
+    /// presentado por esta hoja se volvía a mostrar al cerrarla.
+    private var confirmacionFinalizar: some View {
+        let acciones = textSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 10))
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(L.t("¿Finalizar este viaje?", "End this trip?"))
+                .font(.headline)
+                .foregroundStyle(Color.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text(L.t("Se dejará de compartir la ubicación de este micro y volverás al mapa principal.",
+                     "Sharing this bus's location will stop and you'll return to the main map."))
+                .font(.footnote)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+            acciones {
+                Button {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                        confirmandoFinalizacion = false
+                    }
+                } label: {
+                    Text(L.t("Cancelar", "Cancel"))
+                        .font(.headline)
+                        .foregroundStyle(Color.onSurface)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(Color.surfaceContainerLow,
+                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Button(role: .destructive) { finalizarViaje() } label: {
+                    Text(L.t("Finalizar viaje", "End trip"))
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(Color(light: "#FFFFFF", dark: "#3B0007"))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(Color.appError,
+                                    in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(Color.appSurface)
+        .overlay(alignment: .top) { Divider() }
+        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private func finalizarViaje() {
+        guard coordinator.selectedTripRoute != nil else { return }
+        AppHaptics.impact(.medium)
+        // Sin diálogo modal en curso, cerrar la hoja y limpiar el viaje no
+        // compite con otra presentación que iOS pueda repetir.
+        showDetails = false
+        coordinator.endTrip()
+        onEndTrip()
+    }
+
     private var botonFinalizar: some View {
-        Button(role: .destructive) { confirmEndTrip = true } label: {
+        Button(role: .destructive) {
+            AppHaptics.selection()
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                confirmandoFinalizacion = true
+            }
+        } label: {
             Label(L.t("Finalizar viaje", "End trip"), systemImage: "stop.circle.fill")
                 .font(.headline)
                 .multilineTextAlignment(.center)

@@ -60,10 +60,12 @@ struct BoardingPointMap: View {
         let center = lectura?.coordinate ?? initialPoint?.coordinate ?? TransporteApp.referenciaInicio
         regionInicial = lectura.map(Self.regionUbicacion) ?? Self.regionCercana(center)
         _ubicacionActual = State(initialValue: lectura)
-        // La caché solo es el respaldo inicial. MapKit conserva el seguimiento
-        // del punto azul incluso cuando ya había una lectura al abrir la vista.
-        _camera = State(initialValue:
-            .userLocation(followsHeading: false, fallback: .region(regionInicial)))
+        // Con una lectura validada la cámara se fija en esa coordenada. Si se
+        // usa `.userLocation`, MapKit puede resolverla con su propia caché (otra
+        // ubicación) y no volver a centrar cuando llega el fix real; la flecha
+        // sí funciona porque vuelve a pedir la posición.
+        _camera = State(initialValue: lectura.map { MapCameraPosition.region(Self.regionUbicacion($0)) }
+            ?? .userLocation(followsHeading: false, fallback: .region(regionInicial)))
     }
 
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
@@ -132,15 +134,47 @@ struct BoardingPointMap: View {
 
     @MainActor
     private func centrarEnUsuario() {
-        let respaldo = lecturaDisponible.map(Self.regionUbicacion) ?? regionVisible ?? regionInicial
-        moverCamara(.userLocation(followsHeading: false, fallback: .region(respaldo)))
+        // Centrar en la misma lectura que se marcaría: `.userLocation` puede
+        // quedarse en una caché de MapKit distinta a la del servicio.
+        if let lectura = lecturaDisponible {
+            moverCamara(.region(Self.regionUbicacion(lectura)))
+        } else {
+            moverCamara(.userLocation(followsHeading: false,
+                                      fallback: .region(regionVisible ?? regionInicial)))
+        }
     }
 
     @MainActor
     private func prepararUbicacion() async {
+        let revisionAlAbrir = revisionPunto
         let permiso = await locationService.requestPermission()
         guard !Task.isCancelled else { return }
-        if permiso.isDenied { informarFalloUbicacion() }
+        guard permiso.isAuthorized else {
+            if permiso.isDenied { informarFalloUbicacion() }
+            return
+        }
+        if let lectura = lecturaDisponible {
+            ubicacionActual = lectura
+            centrarAlAbrir(lectura, revisionAlAbrir: revisionAlAbrir)
+            return
+        }
+        // La caché puede faltar cuando la lámina se abre después de varios
+        // pasos. Pedir un fix evita quedarse en el respaldo (punto anterior o
+        // referencia de la universidad) hasta que alguien pulse la flecha.
+        let location = await UbicacionPuntual.obtener(desde: locationService, timeout: 8,
+            antiguedadMaxima: Self.antiguedadMaximaUbicacion,
+            precisionMaxima: Self.precisionMaximaUbicacion)
+        guard !Task.isCancelled, let location else { return }
+        ubicacionActual = location
+        centrarAlAbrir(location, revisionAlAbrir: revisionAlAbrir)
+    }
+
+    /// Un solo centrado automático al abrir: si la persona ya eligió un punto
+    /// (o lo hizo mientras llegaba el fix), su cámara no se mueve.
+    @MainActor
+    private func centrarAlAbrir(_ location: CLLocation, revisionAlAbrir: Int) {
+        guard revisionPunto == revisionAlAbrir else { return }
+        moverCamara(.region(Self.regionUbicacion(location)))
     }
 
     private func informarFalloUbicacion() {
