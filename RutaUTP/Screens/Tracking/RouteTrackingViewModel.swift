@@ -305,9 +305,7 @@ final class RouteTrackingViewModel {
     @ObservationIgnored private var ultimoFraccionPolyline: Double = 0
     /// Ritmo real de simulación en m/s (de la línea GTFS o del ETA de MapKit).
     private var velocidadSimMs: Double = 6.0
-    @ObservationIgnored private var snapshotVehiculosAnterior:
-        [String: (coord: CLLocationCoordinate2D, t: TimeInterval, identity: VehiclePresentationIdentity)] = [:]
-    @ObservationIgnored private var vehiclePresentationGate = VehiclePresentationUpdateGate()
+    @ObservationIgnored private var presentacionFlota = PresentacionFlotaTracking()
 
     @ObservationIgnored private var authCancellable: AnyCancellable?
     /// Cerrar o volver a entrar invalida permisos y catálogos todavía pendientes.
@@ -803,36 +801,15 @@ final class RouteTrackingViewModel {
         // Consumir el estado autorizado actual, no el valor que AsyncStream
         // pudo entregar antes de una revocación o de volver a primer plano.
         let current = vehicleProvider.positionsForPresentation()
-        let visibles = TransporteApp.busesUTPActivos
-            ? current.filter { idsRutasDisponibles.contains($0.routeId) } : current
-        let publish = vehiclePresentationGate.shouldPublish(visibles, at: ProcessInfo.processInfo.systemUptime)
-        guard force || publish else { return }
-        if let selected = vehiculoSeleccionado,
-           !visibles.contains(where: { $0.presentationIdentity == selected.presentationIdentity }) {
-            vehiculoSeleccionadoID = nil
-        } else if vehiculoSeleccionadoID != nil && vehiculoSeleccionado == nil {
+        guard let visibles = presentacionFlota.preparar(current,
+            rutasPermitidas: TransporteApp.busesUTPActivos ? idsRutasDisponibles : nil,
+            force: force) else { return }
+        if presentacionFlota.debeLimpiarSeleccion(vehiculoSeleccionado,
+            id: vehiculoSeleccionadoID, en: visibles) {
             vehiculoSeleccionadoID = nil
         }
-        let ids = Set(visibles.map(\.id))
-        var speeds = velocidadesVehiculos.filter { ids.contains($0.key) }
-        snapshotVehiculosAnterior = snapshotVehiculosAnterior.filter { ids.contains($0.key) }
-        for vehicle in visibles {
-            if fuenteVehiculos == .real {
-                // Ruido GPS no significa movimiento ni velocidad desconocida.
-                // En MQTT usar el valor recibido; nil conserva su ausencia.
-                speeds[vehicle.id] = vehicle.reportedSpeedForPresentation
-            } else if let previous = snapshotVehiculosAnterior[vehicle.id],
-                      previous.identity == vehicle.presentationIdentity {
-                let delta = vehicle.timestamp - previous.t
-                if delta > 0.2 {
-                    speeds[vehicle.id] = max(0, PolylineMatching.distanceMeters(previous.coord, vehicle.coordinate) / delta)
-                }
-            } else {
-                speeds[vehicle.id] = nil
-            }
-            snapshotVehiculosAnterior[vehicle.id] = (vehicle.coordinate, vehicle.timestamp, vehicle.presentationIdentity)
-        }
-        velocidadesVehiculos = speeds
+        velocidadesVehiculos = presentacionFlota.velocidades(para: visibles,
+            fuente: fuenteVehiculos, anteriores: velocidadesVehiculos)
         vehiculos = visibles
     }
 
@@ -964,8 +941,69 @@ final class RouteTrackingViewModel {
         vehicleProvider.stop()
         vehiculos = []
         velocidadesVehiculos = [:]
-        snapshotVehiculosAnterior = [:]
+        presentacionFlota.limpiarHistorial()
         vehiculoSeleccionadoID = nil
-        vehiclePresentationGate = VehiclePresentationUpdateGate()
+        presentacionFlota.reiniciarPublicacion()
+    }
+}
+
+/// Estado privado de presentación, sin lectores ni acceso al viaje o al proveedor.
+/// Recibe snapshots ya autorizados. RouteTrackingViewModel conserva la única
+/// copia observable y publica primero selección, luego velocidades y flota.
+@MainActor
+private struct PresentacionFlotaTracking {
+    private var snapshotAnterior:
+        [String: (coord: CLLocationCoordinate2D, t: TimeInterval, identity: VehiclePresentationIdentity)] = [:]
+    private var publicationGate = VehiclePresentationUpdateGate()
+
+    mutating func preparar(_ current: [VehiclePosition], rutasPermitidas: Set<String>?,
+                          force: Bool) -> [VehiclePosition]? {
+        // nil no restringe rutas; un catálogo vacío retira toda la flota UTP.
+        let visibles = rutasPermitidas.map { ids in current.filter { ids.contains($0.routeId) } } ?? current
+        // Incluso un refresco forzado actualiza la política antes de publicar.
+        let publish = publicationGate.shouldPublish(visibles, at: ProcessInfo.processInfo.systemUptime)
+        return force || publish ? visibles : nil
+    }
+
+    func debeLimpiarSeleccion(_ seleccionado: VehiclePosition?, id: String?,
+                             en visibles: [VehiclePosition]) -> Bool {
+        if let seleccionado {
+            return !visibles.contains { $0.presentationIdentity == seleccionado.presentationIdentity }
+        }
+        return id != nil
+    }
+
+    mutating func velocidades(para visibles: [VehiclePosition], fuente: VehicleTrackingSource,
+                             anteriores: [String: Double]) -> [String: Double] {
+        let ids = Set(visibles.map(\.id))
+        var speeds = anteriores.filter { ids.contains($0.key) }
+        snapshotAnterior = snapshotAnterior.filter { ids.contains($0.key) }
+        for vehicle in visibles {
+            if fuente == .real {
+                // Ruido GPS no significa movimiento ni velocidad desconocida.
+                // En MQTT usar el valor recibido; nil conserva su ausencia.
+                speeds[vehicle.id] = vehicle.reportedSpeedForPresentation
+            } else if let previous = snapshotAnterior[vehicle.id],
+                      previous.identity == vehicle.presentationIdentity {
+                let delta = vehicle.timestamp - previous.t
+                if delta > 0.2 {
+                    speeds[vehicle.id] = max(0, PolylineMatching.distanceMeters(previous.coord, vehicle.coordinate) / delta)
+                }
+            } else {
+                speeds[vehicle.id] = nil
+            }
+            snapshotAnterior[vehicle.id] = (vehicle.coordinate, vehicle.timestamp, vehicle.presentationIdentity)
+        }
+        return speeds
+    }
+
+    // Se mantienen separados para conservar el orden de liberación respecto
+    // de las escrituras observables de velocidades y selección del modelo.
+    mutating func limpiarHistorial() {
+        snapshotAnterior = [:]
+    }
+
+    mutating func reiniciarPublicacion() {
+        publicationGate = VehiclePresentationUpdateGate()
     }
 }
