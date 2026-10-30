@@ -1,5 +1,5 @@
 // Tracking Demo: tema persistido, transporte GTFS y tramos a pie diferenciados.
-// El usuario puede buscar un destino y escoger un radio de 200, 500 u 800 metros.
+// El usuario puede buscar un destino y escoger uno de los radios de Preferencia.radio.
 // Los comercios son datos demo, distribuidos según el área visible del mapa.
 
 import SwiftUI
