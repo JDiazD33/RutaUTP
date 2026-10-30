@@ -530,20 +530,7 @@ final class RouteTrackingViewModel {
         calculandoRuta = true
         defer { calculandoRuta = false }
         await calcularRuta(desde: origen, hacia: destino.coordinate)
-
-        if let plan = itinerary, routePolyline != nil {
-            tripRecorder = TripRecorder(sesion: TripSession(linea: plan.lineDescription, empresa: plan.route.empresa,
-                origen: TrackingPoint(lat: origen.latitude, lon: origen.longitude),
-                destino: TrackingPoint(lat: destino.coordinate.latitude, lon: destino.coordinate.longitude),
-                estado: .inProgress, startedAt: Date().timeIntervalSince1970))
-            tripInProgress = true
-            estado = .enRuta
-            distanciaRestanteM = distanciaTotalM
-        } else {
-            tripInProgress = false
-            destinoSeleccionado = nil
-            estado = .listo
-        }
+        completarInicioDeViaje(desde: origen, hacia: destino.coordinate)
     }
 
     /// Recalcular desde la posición actual hacia el destino guardado.
@@ -556,10 +543,7 @@ final class RouteTrackingViewModel {
         tripRecorder?.actualizarEstado(.recalculating)
 
         await calcularRuta(desde: origen, hacia: destino.coordinate)
-
-        recalculando = false
-        consecutiveOffRoute = 0
-        if tripRecorder?.estado == .recalculating { tripRecorder?.actualizarEstado(.inProgress) }
+        completarRecalculo()
     }
 
     /// Solo itinerarios de transporte del feed: nunca sustituye un micro por una ruta de auto.
@@ -619,6 +603,16 @@ final class RouteTrackingViewModel {
             errorMessage = L.f("No encontramos una ruta directa ni con un transbordo con paraderos a menos de {0} m de ambos extremos. ", "No direct or one-transfer route has stops within {0} m of both ends. ", ["\(Int(radio))"]) + sugerencia
             return
         }
+        // La revisión ya fue comprobada. Instalar no suspende ni abre otro
+        // cálculo; el cierre de inicio o recálculo pertenece a su llamador.
+        instalarItinerario(installed)
+    }
+
+    // MARK: - Aplicación síncrona del itinerario y continuidad del viaje
+
+    /// Publica el plan aceptado, su geometría y los efectos asociados juntos.
+    /// Solo calcularRuta decide si una revisión todavía puede instalarse.
+    private func instalarItinerario(_ installed: InstalledTransitItinerary) {
         errorMessage = nil
         installedItinerary = installed
         let plan = installed.plan
@@ -632,6 +626,33 @@ final class RouteTrackingViewModel {
         distanciaRestanteM = distanciaTotalM
         (vehicleProvider as? SimulatedTrackingProvider)?.follow(routeID: plan.route.id, near: plan.board.coordinate)
         tripRecorder?.actualizarEstado(.inProgress)
+    }
+
+    /// Conserva el cierre del inicio según el estado instalado, incluso cuando
+    /// calcularRuta retorna sin instalar. El defer de calculandoRuta sigue en iniciar.
+    private func completarInicioDeViaje(desde origen: CLLocationCoordinate2D,
+                                       hacia destino: CLLocationCoordinate2D) {
+        if let plan = itinerary, routePolyline != nil {
+            tripRecorder = TripRecorder(sesion: TripSession(linea: plan.lineDescription, empresa: plan.route.empresa,
+                origen: TrackingPoint(lat: origen.latitude, lon: origen.longitude),
+                destino: TrackingPoint(lat: destino.latitude, lon: destino.longitude),
+                estado: .inProgress, startedAt: Date().timeIntervalSince1970))
+            tripInProgress = true
+            estado = .enRuta
+            distanciaRestanteM = distanciaTotalM
+        } else {
+            tripInProgress = false
+            destinoSeleccionado = nil
+            estado = .listo
+        }
+    }
+
+    /// Cierra la fase de recálculo sin sustituir la sesión existente. Mantiene
+    /// los efectos que el llamador ya aplicaba al retornar calcularRuta.
+    private func completarRecalculo() {
+        recalculando = false
+        consecutiveOffRoute = 0
+        if tripRecorder?.estado == .recalculating { tripRecorder?.actualizarEstado(.inProgress) }
     }
 
     private func instalarShape(_ coords: [CLLocationCoordinate2D]) {
