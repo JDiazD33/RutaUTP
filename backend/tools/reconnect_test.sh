@@ -239,19 +239,32 @@ echo "== 1. backend arrancado SIN broker =="
 ) &
 BACKEND_PID=$!
 
-sleep 5
+# Un tiempo fijo no distingue un arranque lento de uno fallido. Se espera la
+# señal positiva del backend, su primer aviso sin broker, o que termine.
+AVISO_SIN_BROKER=0
+for _ in $(seq 1 20); do
+    sleep 0.5
+    kill -0 "$BACKEND_PID" 2>/dev/null || break
+    if grep -q "sin conexión con el broker" "$WORK_DIR/backend.log"; then
+        AVISO_SIN_BROKER=1
+        break
+    fi
+done
 
-if kill -0 "$BACKEND_PID" 2>/dev/null; then
+if [ "$AVISO_SIN_BROKER" -eq 1 ]; then
+    ok "avisa de la falta de conexión y reintenta"
+    # Debe seguir vivo después de reintentar, no solo tras el primer aviso.
+    sleep 2
+fi
+
+if kill -0 "$BACKEND_PID" 2>/dev/null && [ "$AVISO_SIN_BROKER" -eq 1 ]; then
     ok "el proceso sigue vivo sin broker (no muere al no poder conectar)"
+elif kill -0 "$BACKEND_PID" 2>/dev/null; then
+    fail "no registra la falta de conexión"
+    echo "--- registro ---"; cat "$WORK_DIR/backend.log"; exit 1
 else
     fail "el proceso terminó al no encontrar el broker"
     echo "--- registro ---"; cat "$WORK_DIR/backend.log"; exit 1
-fi
-
-if grep -q "sin conexión con el broker" "$WORK_DIR/backend.log"; then
-    ok "avisa de la falta de conexión y reintenta"
-else
-    fail "no registra la falta de conexión"
 fi
 
 echo ""
