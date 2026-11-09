@@ -19,12 +19,17 @@ _SYNTHETIC_PRINCIPAL = re.compile(r"sim-[0-9]{3}\Z")
 
 def is_reserved_principal(principal: str) -> bool:
     # Toda la familia se reserva, también nombres mal formados: no degradarlos
-    # a observados por no figurar todavía en el manifiesto de un run.
-    return principal.casefold().startswith("sim-")
+    # a observados por no figurar todavía en el manifiesto de un run. Los
+    # espacios marginales no sacan un nombre de la familia.
+    return principal.strip().casefold().startswith("sim-")
 
 
 def _topic_identifier(value: str) -> bool:
-    return bool(value) and value == value.strip() and len(value) <= 128 and not any(
+    # Se rechazan identificadores vacíos o formados solo por espacios. Los
+    # espacios marginales se conservan: el principal se usa exactamente como
+    # llega y la sesión acolchada la rechaza el validador como
+    # `non_canonical_identifier`, según el contrato del README.
+    return bool(value.strip()) and len(value) <= 128 and not any(
         char in value for char in ("+", "#", "\x00")
     )
 

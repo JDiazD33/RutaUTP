@@ -82,7 +82,24 @@ class SourceContext:
         elif self.run_id is not None:
             raise ValueError("solo simulated puede pertenecer a un run")
         if self.principal is not None:
-            canonical_text(self.principal, "principal")
+            if self.origin is DataOrigin.OBSERVED:
+                observed_principal(self.principal)
+            else:
+                canonical_text(self.principal, "principal")
+
+
+def observed_principal(value: str, limit: int = 128) -> str:
+    """Principal MQTT autenticado de la rama observada, usado tal como llega.
+
+    A diferencia de los identificadores sintéticos, no se exige forma canónica:
+    los espacios marginales distinguen cuentas y no se recortan (README, E17).
+    Solo se rechaza el principal vacío, formado por espacios o inválido.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("principal vacío")
+    if len(value) > limit or "\x00" in value:
+        raise ValueError("principal demasiado largo o inválido")
+    return value
 
 
 OBSERVED_SOURCE = SourceContext(DataOrigin.OBSERVED)

@@ -248,7 +248,9 @@ La sesión del cuerpo debe coincidir exactamente con la del tópico; una
 discrepancia se rechaza como `session_mismatch`. Sesiones vacías o demasiado
 largas mantienen `empty_session`, y los tipos incorrectos su rechazo existente.
 El principal autenticado se usa exactamente como llega en el tópico, sin
-normalizarlo ni confundir cuentas distintas.
+normalizarlo ni confundir cuentas distintas. Un tópico con principal o sesión
+vacíos, formados solo por espacios o con comodines se rechaza como
+`session_mismatch` antes de leer el JSON.
 
 **Salida** — `rutautp/vehiculos/{vehicleId}/posicion`, QoS 1, sin retención.
 Corresponde a `VehiclePositionMessage`:
