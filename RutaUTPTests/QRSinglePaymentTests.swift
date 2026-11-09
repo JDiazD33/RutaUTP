@@ -623,14 +623,64 @@ final class QRSinglePaymentTests: XCTestCase {
 
 @MainActor
 final class QRIdentidadCallbackTests: XCTestCase {
-    func testCallbackSinCapturaVigenteNoReemplazaLecturaDelModelo() async {
+    func testCallbackSinCapturaVigenteNoReemplazaLecturaDelModelo() async throws {
         let modelo = EscanerQRModel()
+        defer { modelo.camara.alLeer = nil }
+        let callback = try XCTUnwrap(modelo.camara.alLeer)
+        let fin = FinalizacionCallbackQR.SenalFin()
+        let texto = PagoQR.cargaUtil(importe: nil)
+        let capturaAnterior = UUID()
         // Simula un aviso ya entregado por el delegado con una identidad anterior.
         // No configura ni arranca la cámara, ni solicita permiso.
-        modelo.camara.alLeer?(PagoQR.cargaUtil(importe: nil), UUID())
-        for _ in 0..<20 { await Task.yield() }
+        FinalizacionCallbackQR.$marca.withValue(FinalizacionCallbackQR.Marca(fin: fin)) {
+            callback(texto, capturaAnterior)
+        }
+        // Sin suspender MainActor, la tarea real todavía debe retener la marca.
+        guard !fin.finalizada else {
+            XCTFail("La señal no quedó vinculada a la tarea del callback")
+            return
+        }
+        let espera = await XCTWaiter.fulfillment(of: [fin.expectativa], timeout: 2)
+        guard espera == .completed else {
+            XCTFail("No se observó el fin de la tarea del callback antiguo")
+            return
+        }
         XCTAssertNil(modelo.resultado)
         modelo.simularLectura()
         XCTAssertNotNil(modelo.resultado)
+    }
+}
+
+/// Solo la tarea creada por el callback real hereda esta marca de la invocación.
+/// Al salir de withValue, el test conserva la señal, pero no la marca.
+private enum FinalizacionCallbackQR {
+    @TaskLocal static var marca: Marca?
+
+    final class Marca: Sendable {
+        private let fin: SenalFin
+
+        init(fin: SenalFin) { self.fin = fin }
+        deinit { fin.terminar() }
+    }
+
+    /// El lock protege el estado leído por el test y escrito al liberar la marca.
+    /// La expectativa es Sendable y fulfill ocurre fuera del lock.
+    final class SenalFin: @unchecked Sendable {
+        let expectativa = XCTestExpectation(description: "fin del callback QR antiguo")
+        private let candado = NSLock()
+        private var termino = false
+
+        var finalizada: Bool {
+            candado.lock()
+            defer { candado.unlock() }
+            return termino
+        }
+
+        func terminar() {
+            candado.lock()
+            termino = true
+            candado.unlock()
+            expectativa.fulfill()
+        }
     }
 }

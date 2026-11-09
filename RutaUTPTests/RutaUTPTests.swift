@@ -511,13 +511,20 @@ final class TransitItineraryTests: XCTestCase {
         _ = try await service.calculateRoute(from: points[0], to: points[5], transportType: .automobile)
         let secondCount = await probe.calls
         XCTAssertEqual(secondCount, 3)
+        let iniciada = expectation(description: "El loader de la petición pendiente empezó")
+        let cancelada = expectation(description: "El loader registró su cancelación")
+        await probe.observar(inicio: iniciada, cancelacion: cancelada)
         let pending = Task { try await service.calculateRoute(from: points[1], to: points[8], transportType: .walking) }
-        try await Task.sleep(for: .milliseconds(10))
+        // E1: esperar el inicio real del loader; un sleep de 10 ms no lo garantiza.
+        await fulfillment(of: [iniciada], timeout: 5)
         pending.cancel()
         do {
             _ = try await pending.value
             XCTFail("La cancelación debe llegar a la petición de caminata")
         } catch is CancellationError {} catch { XCTFail("Cancelación inesperada: \(error)") }
+        // El consumidor puede terminar antes que la tarea compartida del loader.
+        // Leer el contador solo cuando el productor ya registró su cancelación.
+        await fulfillment(of: [cancelada], timeout: 5)
         let cancelled = await probe.cancelled
         XCTAssertEqual(cancelled, 1)
     }
@@ -559,6 +566,7 @@ final class TransitItineraryTests: XCTestCase {
     @MainActor
     func testPlazoDeDirectionsCancelaYDescartaRespuestaTardia() async throws {
         var callback: PendingDirections.Completion?
+        defer { callback = nil }
         var cancellations = 0
         let pending = PendingDirections(start: { callback = $0 }, cancel: { cancellations += 1 })
         let start = Date()
@@ -570,8 +578,21 @@ final class TransitItineraryTests: XCTestCase {
         }
         XCTAssertLessThan(Date().timeIntervalSince(start), 2)
         XCTAssertEqual(cancellations, 1)
-        callback?(.failure(RouteCalculationError.noRoutesAvailable))
-        await Task.yield()
+        let callbackTardio = try XCTUnwrap(callback)
+        let fin = FinalizacionCallbackDirections.SenalFin()
+        FinalizacionCallbackDirections.$marca.withValue(FinalizacionCallbackDirections.Marca(fin: fin)) {
+            callbackTardio(.failure(RouteCalculationError.noRoutesAvailable))
+        }
+        // Sin suspender MainActor, solo la tarea real debe retener la marca.
+        guard !fin.finalizada else {
+            XCTFail("La señal no quedó vinculada a la tarea del callback tardío")
+            return
+        }
+        let espera = await XCTWaiter.fulfillment(of: [fin.expectativa], timeout: 2)
+        guard espera == .completed else {
+            XCTFail("No se observó el fin de la tarea del callback tardío")
+            return
+        }
         XCTAssertEqual(cancellations, 1, "El callback tardío no debe finalizar dos veces")
     }
 
@@ -1288,18 +1309,66 @@ final class LineasPorParaderoTests: XCTestCase {
     }
 }
 
+/// La marca se hereda solo por la tarea creada durante el callback real.
+/// El test conserva la señal, pero suelta el binding al salir de withValue.
+private enum FinalizacionCallbackDirections {
+    @TaskLocal static var marca: Marca?
+
+    final class Marca: Sendable {
+        private let fin: SenalFin
+
+        init(fin: SenalFin) { self.fin = fin }
+        deinit { fin.terminar() }
+    }
+
+    /// La liberación de la marca puede ocurrir fuera del actor del test.
+    /// El lock protege el bool; fulfill no se ejecuta bajo el lock.
+    final class SenalFin: @unchecked Sendable {
+        let expectativa = XCTestExpectation(description: "fin del callback Directions tardío")
+        private let candado = NSLock()
+        private var termino = false
+
+        var finalizada: Bool {
+            candado.lock()
+            defer { candado.unlock() }
+            return termino
+        }
+
+        func terminar() {
+            candado.lock()
+            termino = true
+            candado.unlock()
+            expectativa.fulfill()
+        }
+    }
+}
+
 private actor DirectionsProbe {
     var calls = 0
     var active = 0
     var maximumConcurrent = 0
     var cancelled = 0
+    /// Señales del caso E1: inicio real del loader y cancelación ya registrada.
+    private var alIniciar: XCTestExpectation?
+    private var alCancelar: XCTestExpectation?
+    func observar(inicio: XCTestExpectation, cancelacion: XCTestExpectation) {
+        alIniciar = inicio
+        alCancelar = cancelacion
+    }
     func load(_ request: MKDirections.Request, fail: Bool) async throws -> CalculatedRoute {
         calls += 1
         active += 1
         maximumConcurrent = max(maximumConcurrent, active)
         defer { active -= 1 }
+        alIniciar?.fulfill()
+        alIniciar = nil
         do { try await Task.sleep(for: .milliseconds(100)) }
-        catch { cancelled += 1; throw error }
+        catch {
+            cancelled += 1
+            alCancelar?.fulfill()
+            alCancelar = nil
+            throw error
+        }
         if fail { throw RouteCalculationError.noRoutesAvailable }
         let points = [request.source!.placemark.coordinate, request.destination!.placemark.coordinate]
         return CalculatedRoute(polyline: MKPolyline(coordinates: points, count: 2),
@@ -1650,6 +1719,214 @@ final class LugaresStoreRecuperacionTests: XCTestCase {
         XCTAssertEqual(almacen.cargar(), inicial)
         XCTAssertEqual(defaults.data(forKey: LugaresStore.key), original)
         XCTAssertFalse(almacen.datosLocalesInvalidos)
+    }
+
+    func testFijoPersistidoAlFinalSeNormalizaAlCargar() throws {
+        let noFijo = lugar("Casa")
+        let campus = lugar("UTP", fijo: true)
+        let original = try JSONEncoder().encode([noFijo, campus])
+        defaults.set(original, forKey: LugaresStore.key)
+
+        let cargados = almacen.cargar()
+
+        XCTAssertEqual(cargados, [campus, noFijo])
+        XCTAssertEqual(cargados.map(\.id), [campus.id, noFijo.id])
+        let primero = try XCTUnwrap(cargados.first)
+        XCTAssertTrue(primero.esFijo)
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), original)
+
+        let principales = try XCTUnwrap(defaults.data(forKey: LugaresStore.key))
+        let normalizados = try JSONDecoder().decode([LugarGuardado].self, from: principales)
+        XCTAssertEqual(normalizados, [campus, noFijo])
+
+        XCTAssertEqual(almacen.cargar(), [campus, noFijo])
+        let desdeOtra = AlmacenLugares(defaults: defaults)
+        XCTAssertEqual(desdeOtra.cargar(), [campus, noFijo])
+        XCTAssertEqual(desdeOtra.cargar().map(\.id), [campus.id, noFijo.id])
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), principales)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), original)
+    }
+
+    func testListaNoVaciaSinCampusConservaSusLugaresEInsertaUno() throws {
+        let primero = lugar("Primero")
+        let segundo = lugar("Segundo")
+        let original = try JSONEncoder().encode([primero, segundo])
+        defaults.set(original, forKey: LugaresStore.key)
+
+        let cargados = almacen.cargar()
+
+        XCTAssertEqual(cargados.count, 3)
+        XCTAssertEqual(cargados.filter { $0.esFijo }.count, 1)
+        let campus = try XCTUnwrap(cargados.first)
+        XCTAssertTrue(campus.esFijo)
+        XCTAssertEqual(campus.nombre, "UTP")
+        XCTAssertNotEqual(campus.id, primero.id)
+        XCTAssertNotEqual(campus.id, segundo.id)
+        XCTAssertEqual(Array(cargados.dropFirst()), [primero, segundo])
+        XCTAssertFalse(almacen.datosLocalesInvalidos)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), original)
+
+        let principales = try XCTUnwrap(defaults.data(forKey: LugaresStore.key))
+        let normalizados = try JSONDecoder().decode([LugarGuardado].self, from: principales)
+        XCTAssertEqual(normalizados, cargados)
+
+        let recargados = almacen.cargar()
+        let desdeOtra = AlmacenLugares(defaults: defaults).cargar()
+        XCTAssertEqual(recargados, cargados)
+        XCTAssertEqual(desdeOtra, cargados)
+        XCTAssertEqual(desdeOtra.first?.id, campus.id)
+        XCTAssertEqual(desdeOtra.filter { $0.esFijo }.count, 1)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.key), principales)
+        XCTAssertEqual(defaults.data(forKey: LugaresStore.respaldoKey), original)
+    }
+}
+
+@MainActor
+final class LugarGuardadoCodecTests: XCTestCase {
+    private static let id = "12345678-1234-1234-1234-123456789ABC"
+    private static let obligatorias: Set<String> = ["id", "nombre", "direccion", "categoria"]
+    private static let tolerantes: Set<String> = [
+        "esFrecuente", "esFijo", "lat", "lon", "paraderoID", "iconoPersonalizado"
+    ]
+    private static let clavesDefaults: Set<String> = [
+        "id", "nombre", "direccion", "categoria", "esFrecuente", "esFijo"
+    ]
+    private static let todasLasClaves: Set<String> = [
+        "id", "nombre", "direccion", "categoria", "esFrecuente", "esFijo",
+        "lat", "lon", "paraderoID", "iconoPersonalizado"
+    ]
+
+    private func objetoJSON(_ data: Data) throws -> [String: Any] {
+        try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    func testDecodificaAusenciaDeCamposTolerantesConDefaults() throws {
+        let data = Data("""
+        {
+          "id": "12345678-1234-1234-1234-123456789ABC",
+          "nombre": "Casa",
+          "direccion": "Av. Primavera 123",
+          "categoria": "Otro"
+        }
+        """.utf8)
+        let objeto = try objetoJSON(data)
+        XCTAssertEqual(Set(objeto.keys), Self.obligatorias)
+
+        let lugar = try JSONDecoder().decode(LugarGuardado.self, from: data)
+
+        XCTAssertEqual(lugar.id, try XCTUnwrap(UUID(uuidString: Self.id)))
+        XCTAssertEqual(lugar.nombre, "Casa")
+        XCTAssertEqual(lugar.direccion, "Av. Primavera 123")
+        XCTAssertEqual(lugar.categoria, .otro)
+        XCTAssertFalse(lugar.esFrecuente)
+        XCTAssertFalse(lugar.esFijo)
+        XCTAssertNil(lugar.lat)
+        XCTAssertNil(lugar.lon)
+        XCTAssertNil(lugar.paraderoID)
+        XCTAssertNil(lugar.iconoPersonalizado)
+    }
+
+    func testDecodificaNulosYOmiteOpcionalesNilAlCodificar() throws {
+        let data = Data("""
+        {
+          "id": "12345678-1234-1234-1234-123456789ABC",
+          "nombre": "Casa",
+          "direccion": "Av. Primavera 123",
+          "categoria": "Otro",
+          "esFrecuente": null,
+          "esFijo": null,
+          "lat": null,
+          "lon": null,
+          "paraderoID": null,
+          "iconoPersonalizado": null
+        }
+        """.utf8)
+        let objeto = try objetoJSON(data)
+        XCTAssertEqual(Set(objeto.keys), Self.todasLasClaves)
+        for clave in Self.tolerantes {
+            XCTAssertTrue(objeto[clave] is NSNull, "La clave \(clave) debe contener null explícito")
+        }
+
+        let lugar = try JSONDecoder().decode(LugarGuardado.self, from: data)
+
+        XCTAssertEqual(lugar.id, try XCTUnwrap(UUID(uuidString: Self.id)))
+        XCTAssertEqual(lugar.nombre, "Casa")
+        XCTAssertEqual(lugar.direccion, "Av. Primavera 123")
+        XCTAssertEqual(lugar.categoria, .otro)
+        XCTAssertFalse(lugar.esFrecuente)
+        XCTAssertFalse(lugar.esFijo)
+        XCTAssertNil(lugar.lat)
+        XCTAssertNil(lugar.lon)
+        XCTAssertNil(lugar.paraderoID)
+        XCTAssertNil(lugar.iconoPersonalizado)
+
+        let bytes = try JSONEncoder().encode(lugar)
+        let codificado = try objetoJSON(bytes)
+        XCTAssertEqual(Set(codificado.keys), Self.clavesDefaults)
+        XCTAssertEqual(codificado["id"] as? String, Self.id)
+        XCTAssertEqual(codificado["nombre"] as? String, "Casa")
+        XCTAssertEqual(codificado["direccion"] as? String, "Av. Primavera 123")
+        XCTAssertEqual(codificado["categoria"] as? String, "Otro")
+        XCTAssertEqual(codificado["esFrecuente"] as? Bool, false)
+        XCTAssertEqual(codificado["esFijo"] as? Bool, false)
+        XCTAssertNil(codificado["lat"])
+        XCTAssertNil(codificado["lon"])
+        XCTAssertNil(codificado["paraderoID"])
+        XCTAssertNil(codificado["iconoPersonalizado"])
+
+        let decodificado = try JSONDecoder().decode(LugarGuardado.self, from: bytes)
+        XCTAssertEqual(decodificado, lugar)
+    }
+
+    func testDecodificaValoresPresentesYConservaRoundTrip() throws {
+        let data = Data("""
+        {
+          "id": "12345678-1234-1234-1234-123456789ABC",
+          "nombre": "Casa",
+          "direccion": "Av. Primavera 123",
+          "categoria": "Otro",
+          "esFrecuente": true,
+          "esFijo": true,
+          "lat": -12.0464,
+          "lon": -77.0428,
+          "paraderoID": "PAR-001",
+          "iconoPersonalizado": "heart.fill"
+        }
+        """.utf8)
+        let objeto = try objetoJSON(data)
+        XCTAssertEqual(Set(objeto.keys), Self.todasLasClaves)
+
+        let lugar = try JSONDecoder().decode(LugarGuardado.self, from: data)
+
+        XCTAssertEqual(lugar.id, try XCTUnwrap(UUID(uuidString: Self.id)))
+        XCTAssertEqual(lugar.nombre, "Casa")
+        XCTAssertEqual(lugar.direccion, "Av. Primavera 123")
+        XCTAssertEqual(lugar.categoria, .otro)
+        XCTAssertTrue(lugar.esFrecuente)
+        XCTAssertTrue(lugar.esFijo)
+        XCTAssertEqual(lugar.lat, -12.0464)
+        XCTAssertEqual(lugar.lon, -77.0428)
+        XCTAssertEqual(lugar.paraderoID, "PAR-001")
+        XCTAssertEqual(lugar.iconoPersonalizado, "heart.fill")
+
+        let bytes = try JSONEncoder().encode(lugar)
+        let codificado = try objetoJSON(bytes)
+        XCTAssertEqual(Set(codificado.keys), Self.todasLasClaves)
+        XCTAssertEqual(codificado["id"] as? String, Self.id)
+        XCTAssertEqual(codificado["nombre"] as? String, "Casa")
+        XCTAssertEqual(codificado["direccion"] as? String, "Av. Primavera 123")
+        XCTAssertEqual(codificado["categoria"] as? String, "Otro")
+        XCTAssertEqual(codificado["esFrecuente"] as? Bool, true)
+        XCTAssertEqual(codificado["esFijo"] as? Bool, true)
+        XCTAssertEqual(codificado["lat"] as? Double, -12.0464)
+        XCTAssertEqual(codificado["lon"] as? Double, -77.0428)
+        XCTAssertEqual(codificado["paraderoID"] as? String, "PAR-001")
+        XCTAssertEqual(codificado["iconoPersonalizado"] as? String, "heart.fill")
+
+        let decodificado = try JSONDecoder().decode(LugarGuardado.self, from: bytes)
+        XCTAssertEqual(decodificado, lugar)
+        XCTAssertEqual(decodificado.id, try XCTUnwrap(UUID(uuidString: Self.id)))
     }
 }
 

@@ -446,6 +446,416 @@ final class RouteTrackingSharedLocationTests: XCTestCase {
                  colorHex: color, color: .green, shape: [], paraderos: [], duracionMin: 1,
                  headwayMin: 1, precio: 1, distanciaKm: 1, distanciaUTPMetros: 0)
     }
+
+    // MARK: - B02: vigencia de las continuaciones entre viajes
+
+    func testB02InicioCanceladoAntesDeEntrarNoConsultaNiActivaElViaje() async throws {
+        try await conEscenarioB02 { escenario in
+            let vm = escenario.vm
+            let datos = datosB02()
+            try await escenario.prepararGPS(consulta: 0)
+            let consultasIniciales = await escenario.catalogo.consultas
+            XCTAssertEqual(consultasIniciales, 1)
+
+            // Sin ceder el MainActor, la tarea cancelada no debe entrar a iniciar.
+            let tarea = escenario.tarea { await vm.iniciar(destino: datos.destinoA) }
+            tarea.cancel()
+            await tarea.value
+
+            let consultasFinales = await escenario.catalogo.consultas
+            XCTAssertEqual(consultasFinales, 1, "Un inicio cancelado no consulta el catálogo")
+            XCTAssertFalse(vm.calculandoRuta)
+            XCTAssertNil(vm.installedItinerary)
+            XCTAssertNil(vm.destinoSeleccionado)
+            XCTAssertNil(vm.sesion)
+            XCTAssertFalse(vm.tripInProgress)
+            XCTAssertEqual(vm.estado, .listo)
+        }
+    }
+
+    func testB02InicioAntiguoNoCierraElInicioNuevo() async throws {
+        try await conEscenarioB02 { escenario in
+            let vm = escenario.vm
+            let datos = datosB02()
+            try await escenario.prepararGPS(consulta: 0)
+
+            let inicioA = escenario.tarea { await vm.iniciar(destino: datos.destinoA) }
+            try await escenario.esperarConsulta(1)
+            XCTAssertTrue(vm.calculandoRuta)
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoA)
+
+            vm.cancelTrip()
+            XCTAssertFalse(vm.calculandoRuta)
+            XCTAssertNil(vm.destinoSeleccionado)
+            XCTAssertNil(vm.installedItinerary)
+            XCTAssertFalse(vm.tripInProgress)
+
+            let inicioB = escenario.tarea { await vm.iniciar(destino: datos.destinoB) }
+            try await escenario.esperarConsulta(2)
+            XCTAssertTrue(vm.calculandoRuta)
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoB)
+
+            await escenario.catalogo.resolver(1, con: [])
+            await inicioA.value
+
+            XCTAssertTrue(vm.calculandoRuta, "El cierre del inicio antiguo no libera el nuevo")
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoB)
+            XCTAssertNil(vm.sesion)
+            XCTAssertNil(vm.installedItinerary)
+            XCTAssertFalse(vm.tripInProgress)
+
+            await escenario.catalogo.resolver(2, con: [])
+            await inicioB.value
+
+            XCTAssertFalse(vm.calculandoRuta)
+            XCTAssertNil(vm.destinoSeleccionado)
+            XCTAssertNil(vm.sesion)
+            XCTAssertNil(vm.installedItinerary)
+            XCTAssertFalse(vm.tripInProgress)
+            XCTAssertNotNil(vm.errorMessage)
+            XCTAssertEqual(vm.estado, .listo)
+        }
+    }
+
+    func testB02CancelarLaTareaVigenteLimpiaElInicioSinViaje() async throws {
+        try await conEscenarioB02 { escenario in
+            let vm = escenario.vm
+            let datos = datosB02()
+            try await escenario.prepararGPS(consulta: 0)
+
+            let inicio = escenario.tarea { await vm.iniciar(destino: datos.destinoA) }
+            try await escenario.esperarConsulta(1)
+            XCTAssertTrue(vm.calculandoRuta)
+
+            inicio.cancel()
+            await escenario.catalogo.resolver(1, con: [])
+            await inicio.value
+
+            XCTAssertFalse(vm.calculandoRuta)
+            XCTAssertNil(vm.destinoSeleccionado)
+            XCTAssertNil(vm.installedItinerary)
+            XCTAssertNil(vm.sesion)
+            XCTAssertFalse(vm.tripInProgress)
+            XCTAssertEqual(vm.estado, .listo)
+
+            let gpsLiberado = expectation(description: "GPS liberado tras stop")
+            let busesLiberados = expectation(description: "flota liberada tras stop")
+            escenario.gps.alLiberar = { gpsLiberado.fulfill() }
+            escenario.provider.alLiberar = { busesLiberados.fulfill() }
+            vm.stop()
+            try await escenario.esperar([gpsLiberado, busesLiberados])
+            XCTAssertEqual(escenario.gps.lectoresActivos, 0)
+            XCTAssertEqual(escenario.provider.lectoresActivos, 0)
+        }
+    }
+
+    func testB02CierreSinCandidatosConservaElErrorYElReintentoInstalaLaRuta() async throws {
+        try await conEscenarioB02 { escenario in
+            let vm = escenario.vm
+            let datos = datosB02()
+            try await escenario.prepararGPS(consulta: 0)
+
+            let primerInicio = escenario.tarea { await vm.iniciar(destino: datos.destinoA) }
+            try await escenario.esperarConsulta(1)
+            await escenario.catalogo.resolver(1, con: [])
+            await primerInicio.value
+
+            XCTAssertNotNil(vm.errorMessage, "El cierre sin candidatos debe informar la ausencia de ruta")
+            XCTAssertFalse(vm.calculandoRuta)
+            XCTAssertNil(vm.destinoSeleccionado)
+            XCTAssertNil(vm.installedItinerary)
+            XCTAssertNil(vm.sesion)
+            XCTAssertFalse(vm.tripInProgress)
+            XCTAssertEqual(vm.estado, .listo)
+
+            let reintento = escenario.tarea { await vm.iniciar(destino: datos.destinoA) }
+            try await escenario.esperarConsulta(2)
+            XCTAssertNil(vm.errorMessage, "El reintento descarta el error del intento cerrado")
+            await escenario.catalogo.resolver(2, con: [datos.ruta])
+            await reintento.value
+
+            XCTAssertNil(vm.errorMessage)
+            XCTAssertFalse(vm.calculandoRuta)
+            XCTAssertNotNil(vm.installedItinerary)
+            XCTAssertEqual(vm.rutaGTFS?.id, datos.ruta.id)
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoA)
+            XCTAssertNotNil(vm.sesion)
+            XCTAssertEqual(vm.sesion?.estado, .inProgress)
+            XCTAssertTrue(vm.tripInProgress)
+            XCTAssertEqual(vm.estado, .enRuta)
+        }
+    }
+
+    func testB02RecalculoAntiguoNoCierraElRecalculoDelViajeNuevo() async throws {
+        try await conEscenarioB02 { escenario in
+            let vm = escenario.vm
+            let datos = datosB02()
+            let contextoA = try await escenario.prepararGPS(consulta: 0)
+
+            let inicioA = escenario.tarea { await vm.iniciar(destino: datos.destinoA) }
+            try await escenario.esperarConsulta(1)
+            await escenario.catalogo.resolver(1, con: [datos.ruta])
+            await inicioA.value
+            XCTAssertTrue(vm.tripInProgress)
+            let sesionA = try XCTUnwrap(vm.sesion)
+            XCTAssertEqual(sesionA.estado, .inProgress)
+
+            for _ in 0..<3 { escenario.gps.emitir(lectura(-8.102)) }
+            try await escenario.esperarConsulta(2, contexto: contextoA.id)
+            XCTAssertTrue(vm.recalculando)
+
+            vm.cancelTrip()
+            XCTAssertFalse(vm.recalculando)
+            XCTAssertNil(vm.destinoSeleccionado)
+            XCTAssertNil(vm.sesion)
+            XCTAssertFalse(vm.tripInProgress)
+
+            // Retirar los lectores de A permite que solo sus continuaciones
+            // pendientes retengan su marcador. B recibe un contexto distinto.
+            vm.suspenderPantalla()
+            let contextoB = try await escenario.prepararGPS(consulta: 3, latitud: -8.102)
+            XCTAssertNotEqual(contextoA.id, contextoB.id)
+            let inicioB = escenario.tarea { await vm.iniciar(destino: datos.destinoB) }
+            try await escenario.esperarConsulta(4)
+            await escenario.catalogo.resolver(4, con: [datos.ruta])
+            await inicioB.value
+            XCTAssertTrue(vm.tripInProgress)
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoB)
+            let sesionB = try XCTUnwrap(vm.sesion)
+            XCTAssertEqual(sesionB.estado, .inProgress)
+            XCTAssertNotEqual(sesionB.id, sesionA.id)
+
+            for _ in 0..<3 { escenario.gps.emitir(lectura(-8.104)) }
+            try await escenario.esperarConsulta(5, contexto: contextoB.id)
+            XCTAssertTrue(vm.recalculando)
+            XCTAssertEqual(vm.sesion?.id, sesionB.id)
+            XCTAssertEqual(vm.sesion?.estado, .recalculating)
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoB)
+            XCTAssertFalse(contextoA.fin.finalizada, "R1 pendiente conserva su contexto")
+
+            await escenario.catalogo.resolver(2, con: [datos.ruta])
+            // La última liberación del TaskLocal exige que R1 haya retornado,
+            // incluido su defer. No depende del orden de ejecución del actor.
+            try await escenario.esperar([contextoA.fin.expectativa()])
+            let pendientes = await escenario.catalogo.indicesPendientes
+            XCTAssertEqual(pendientes, [5], "R2 sigue retenido tras finalizar R1")
+
+            XCTAssertTrue(vm.recalculando, "El recálculo antiguo no cierra el recálculo de B")
+            XCTAssertEqual(vm.sesion?.id, sesionB.id)
+            XCTAssertEqual(vm.sesion?.estado, .recalculating)
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoB)
+
+            await escenario.catalogo.resolver(5, con: [datos.ruta])
+            try await escenario.esperarEstado("recálculo de B cerrado") { !vm.recalculando }
+
+            XCTAssertEqual(vm.sesion?.id, sesionB.id)
+            XCTAssertEqual(vm.sesion?.estado, .inProgress)
+            XCTAssertTrue(vm.tripInProgress)
+            XCTAssertEqual(vm.destinoSeleccionado, datos.destinoB)
+            XCTAssertFalse(vm.calculandoRuta)
+        }
+    }
+
+    private func conEscenarioB02(_ comprobar: (EscenarioContinuacionesB02) async throws -> Void) async throws {
+        let escenario = try EscenarioContinuacionesB02()
+        do {
+            try await comprobar(escenario)
+        } catch {
+            await escenario.cerrar()
+            throw error
+        }
+        await escenario.cerrar()
+    }
+
+    private func datosB02() -> (ruta: RutaGTFS,
+                                destinoA: RouteTrackingViewModel.DestinoDemo,
+                                destinoB: RouteTrackingViewModel.DestinoDemo) {
+        let origen = CLLocationCoordinate2D(latitude: -8.10, longitude: -79.03)
+        let fin = CLLocationCoordinate2D(latitude: -8.10, longitude: -79.02)
+        let ruta = RutaGTFS(id: "B02-R1", linea: "B02", variante: "", recorrido: "Origen → Destino",
+                            empresa: "Prueba", colorHex: "00AA00", color: .green,
+                            shape: [origen, fin],
+                            paraderos: [
+                                ParaderoGTFS(id: "B02-P0", nombre: "Origen B02",
+                                             lat: origen.latitude, lon: origen.longitude),
+                                ParaderoGTFS(id: "B02-P1", nombre: "Destino B02",
+                                             lat: fin.latitude, lon: fin.longitude)
+                            ],
+                            duracionMin: 3, headwayMin: 5, precio: 1,
+                            distanciaKm: 1.11, distanciaUTPMetros: 0)
+        return (ruta,
+                RouteTrackingViewModel.DestinoDemo(id: 9101, label: "Destino B02 A",
+                                                   icon: "mappin.circle.fill", coordinate: fin),
+                RouteTrackingViewModel.DestinoDemo(id: 9102, label: "Destino B02 B",
+                                                   icon: "mappin.circle.fill", coordinate: fin))
+    }
+}
+
+/// El marcador se crea dentro de withValue y nunca se guarda en el escenario.
+/// Task.init copia sus bindings a GPS/flota y de GPS a cada recálculo. Su última
+/// liberación prueba que esas tareas retornaron, incluidos sus defer (SE-0311).
+private enum ContextoContinuacionesB02 {
+    @TaskLocal static var marca: Marca?
+    // Otro binding sigue los descendientes de cada operación controlada sin
+    // confundir su cierre con la identidad de los lectores de A o B.
+    @TaskLocal static var operacion: Marca?
+
+    final class Marca: Sendable {
+        let id: UUID
+        let fin: SenalFin
+        init(id: UUID, fin: SenalFin) { self.id = id; self.fin = fin }
+        deinit { fin.terminar() }
+    }
+
+    /// El lock protege finalización y suscriptores. fulfill ocurre fuera del
+    /// lock. Cada espera tiene su expectativa, también después de un timeout.
+    final class SenalFin: @unchecked Sendable {
+        private let candado = NSLock()
+        private var termino = false
+        private var esperas: [XCTestExpectation] = []
+
+        var finalizada: Bool {
+            candado.lock()
+            defer { candado.unlock() }
+            return termino
+        }
+
+        func expectativa() -> XCTestExpectation {
+            let espera = XCTestExpectation(description: "fin del contexto heredado B02")
+            candado.lock()
+            let terminada = termino
+            if !terminada { esperas.append(espera) }
+            candado.unlock()
+            if terminada { espera.fulfill() }
+            return espera
+        }
+
+        func terminar() {
+            candado.lock()
+            termino = true
+            let pendientes = esperas
+            esperas.removeAll()
+            candado.unlock()
+            pendientes.forEach { $0.fulfill() }
+        }
+    }
+
+    struct Contexto: Sendable {
+        let id = UUID()
+        let fin = SenalFin()
+    }
+}
+
+/// Posee preferencias, consultas y tareas del escenario. El mismo cierre se
+/// espera en éxito y error; cerrar el catálogo desbloquea también consultas
+/// que una tarea encolada pudiera iniciar después de comenzar la limpieza.
+@MainActor
+private final class EscenarioContinuacionesB02 {
+    private enum Fallo: Error { case espera, contexto }
+    let gps = TrackingGPSMock()
+    let provider = TrackingVehiculosMock()
+    let catalogo: TrackingCatalogoMock
+    let vm: RouteTrackingViewModel
+    private let suite: String
+    private let defaults: UserDefaults
+    private let consultas: [XCTestExpectation]
+    private var tareas: [Task<Void, Never>] = []
+    private var contextos: [ContextoContinuacionesB02.Contexto] = []
+    private var finesOperaciones: [ContextoContinuacionesB02.SenalFin] = []
+
+    init() throws {
+        suite = "RutaUTPTests.TrackingB02.\(UUID().uuidString)"
+        defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        let consultas = (0...5).map { XCTestExpectation(description: "consulta B02 \($0)") }
+        self.consultas = consultas
+        catalogo = TrackingCatalogoMock(bloquear: true) { indice in
+            if consultas.indices.contains(indice) { consultas[indice].fulfill() }
+        }
+        // El loader falla de inmediato: conserva el respaldo geométrico y evita red.
+        let routeService = RouteCalculationService(loader: { _ -> CalculatedRoute in
+            throw RouteCalculationError.timedOut
+        })
+        vm = RouteTrackingViewModel(locationService: gps, routeService: routeService,
+                                    vehicleProvider: provider, repositorioGTFS: catalogo,
+                                    defaults: defaults,
+                                    mapVehiclePreferences: MapVehiclePreferences(defaults: defaults))
+    }
+
+    func tarea(_ operacion: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+        let fin = ContextoContinuacionesB02.SenalFin()
+        finesOperaciones.append(fin)
+        let tarea = Task {
+            await ContextoContinuacionesB02.$operacion.withValue(
+                ContextoContinuacionesB02.Marca(id: UUID(), fin: fin)
+            ) {
+                await operacion()
+            }
+        }
+        tareas.append(tarea)
+        return tarea
+    }
+
+    @discardableResult
+    func prepararGPS(consulta: Int, latitud: Double = -8.10) async throws -> ContextoContinuacionesB02.Contexto {
+        gps.primeraLectura = CLLocation(coordinate: CLLocationCoordinate2D(latitude: latitud, longitude: -79.03),
+                                       altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5,
+                                       timestamp: Date())
+        let contexto = ContextoContinuacionesB02.Contexto()
+        contextos.append(contexto)
+        let arranque = tarea {
+            await ContextoContinuacionesB02.$marca.withValue(
+                ContextoContinuacionesB02.Marca(id: contexto.id, fin: contexto.fin)
+            ) {
+                await self.vm.requestPermissionAndStart()
+            }
+        }
+        try await esperarConsulta(consulta, contexto: contexto.id)
+        await catalogo.resolver(consulta, con: [])
+        await arranque.value
+        try await esperarEstado("GPS listo B02") {
+            self.vm.posicion?.latitude == latitud && self.vm.estado == .listo
+        }
+        return contexto
+    }
+
+    func esperarConsulta(_ indice: Int, contexto: UUID? = nil,
+                         archivo: StaticString = #filePath, linea: UInt = #line) async throws {
+        try await esperar([consultas[indice]], archivo: archivo, linea: linea)
+        let recibido = await catalogo.contextosDeConsulta[indice]
+        XCTAssertEqual(recibido, contexto, "La consulta debe pertenecer a la tarea esperada", file: archivo, line: linea)
+        guard recibido == contexto else { throw Fallo.contexto }
+    }
+
+    func esperar(_ expectativas: [XCTestExpectation],
+                 archivo: StaticString = #filePath, linea: UInt = #line) async throws {
+        let resultado = await XCTWaiter.fulfillment(of: expectativas, timeout: 2)
+        XCTAssertEqual(resultado, .completed, "Faltó una señal del escenario B02", file: archivo, line: linea)
+        guard resultado == .completed else { throw Fallo.espera }
+    }
+
+    func esperarEstado(_ descripcion: String, condicion: @escaping @MainActor () -> Bool) async throws {
+        let espera = XCTestExpectation(description: descripcion)
+        let observador = ExpectativaObservada(espera, condicion: condicion)
+        try await esperar([espera])
+        withExtendedLifetime(observador) {}
+    }
+
+    func cerrar() async {
+        vm.stop()
+        tareas.forEach { $0.cancel() }
+        await catalogo.finalizar()
+        for tarea in tareas { await tarea.value }
+        tareas.removeAll()
+        let fines = contextos.map(\.fin) + finesOperaciones
+        let resultado = await XCTWaiter.fulfillment(of: fines.map { $0.expectativa() }, timeout: 2)
+        XCTAssertEqual(resultado, .completed, "La limpieza espera también los recálculos sin handle público")
+        let pendientes = await catalogo.indicesPendientes
+        XCTAssertTrue(pendientes.isEmpty)
+        XCTAssertEqual(gps.lectoresActivos, 0)
+        XCTAssertEqual(provider.lectoresActivos, 0)
+        defaults.removePersistentDomain(forName: suite)
+    }
 }
 
 /// Observation notifica antes de la escritura. El salto a MainActor comprueba
@@ -886,6 +1296,9 @@ private actor TrackingCatalogoMock: RutasGTFSProviding {
     private let alConsultar: (Int) -> Void
     private var pendientes: [Int: CheckedContinuation<[RutaGTFS], Never>] = [:]
     private(set) var consultas = 0
+    private var finalizado = false
+    private(set) var contextosDeConsulta: [Int: UUID] = [:]
+    var indicesPendientes: Set<Int> { Set(pendientes.keys) }
 
     init(bloquear: Bool = false, alConsultar: @escaping (Int) -> Void = { _ in }) {
         self.bloquear = bloquear
@@ -894,7 +1307,8 @@ private actor TrackingCatalogoMock: RutasGTFSProviding {
     func rutas() async -> [RutaGTFS] {
         let indice = consultas
         consultas += 1
-        guard bloquear else { return [] }
+        contextosDeConsulta[indice] = ContextoContinuacionesB02.marca?.id
+        guard bloquear, !finalizado else { return [] }
         return await withCheckedContinuation { continuation in
             pendientes[indice] = continuation
             alConsultar(indice)
@@ -902,6 +1316,14 @@ private actor TrackingCatalogoMock: RutasGTFSProviding {
     }
     func resolver(_ indice: Int, con rutas: [RutaGTFS]) {
         pendientes.removeValue(forKey: indice)?.resume(returning: rutas)
+    }
+    /// Se usa solo al cerrar B02. Las pruebas anteriores conservan el modo
+    /// que ignora cancelación hasta resolver cada consulta expresamente.
+    func finalizar() {
+        finalizado = true
+        let continuaciones = Array(pendientes.values)
+        pendientes.removeAll()
+        continuaciones.forEach { $0.resume(returning: []) }
     }
     func rutasQuePasanPor(_ punto: CLLocationCoordinate2D, radioMetros: Double) async -> [RutaGTFS] { [] }
 }

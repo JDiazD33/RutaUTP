@@ -450,6 +450,122 @@ final class GTFSFeedValidationTests: XCTestCase {
                 .distance(from: CLLocation(latitude: campus.latitude, longitude: campus.longitude)), 400)
         }
     }
+
+    func testRutaSinViajePropioNoHeredaDatosDelViajeHomonimoDeOtraRuta() throws {
+        let tablas = tablasConViajeHomonimo(rutaDelViaje: "ruta-b", incluirShapeDeA: true)
+        let rutas = try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })
+        XCTAssertEqual(rutas.count, 2)
+        XCTAssertEqual(Set(rutas.map(\.id)), Set(["ruta-a", "ruta-b"]))
+        let a = try XCTUnwrap(rutas.first { $0.id == "ruta-a" })
+        let b = try XCTUnwrap(rutas.first { $0.id == "ruta-b" })
+
+        XCTAssertEqual(a.shape.map(\.latitude), [-8.11, -8.12])
+        XCTAssertEqual(a.shape.map(\.longitude), [-79.11, -79.12])
+        XCTAssertTrue(a.paraderos.isEmpty)
+        XCTAssertEqual(a.duracionMin, 0)
+        XCTAssertEqual(a.headwayMin, 0)
+        XCTAssertEqual(a.linea, "A")
+        XCTAssertEqual(a.empresa, "Empresa local")
+        XCTAssertEqual(a.colorHex, "445566")
+        XCTAssertEqual(a.precio, 1.25)
+
+        XCTAssertEqual(b.shape.map(\.latitude), [-8.31, -8.32])
+        XCTAssertEqual(b.shape.map(\.longitude), [-79.31, -79.32])
+        XCTAssertEqual(b.paraderos.map(\.id), ["parada-inicio", "parada-fin"])
+        XCTAssertEqual(b.paraderos.map(\.nombre), ["Inicio del viaje", "Fin del viaje"])
+        XCTAssertEqual(b.duracionMin, 27)
+        XCTAssertEqual(b.headwayMin, 7)
+        XCTAssertEqual(b.linea, "B")
+        XCTAssertEqual(b.empresa, "Empresa local")
+        XCTAssertEqual(b.colorHex, "112233")
+        XCTAssertEqual(b.precio, 3.75)
+    }
+
+    func testRutaSinViajeNiShapePropiosNoAdoptaGeometriaDelViajeHomonimo() throws {
+        let tablas = tablasConViajeHomonimo(rutaDelViaje: "ruta-b", incluirShapeDeA: false)
+        let rutas = try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })
+        XCTAssertEqual(rutas.count, 2)
+        let a = try XCTUnwrap(rutas.first { $0.id == "ruta-a" })
+        let b = try XCTUnwrap(rutas.first { $0.id == "ruta-b" })
+
+        XCTAssertTrue(a.shape.isEmpty)
+        XCTAssertTrue(a.paraderos.isEmpty)
+        XCTAssertEqual(a.duracionMin, 0)
+        XCTAssertEqual(a.headwayMin, 0)
+        XCTAssertEqual(a.distanciaKm, 0)
+        XCTAssertEqual(a.distanciaUTPMetros, .infinity)
+        XCTAssertEqual(a.linea, "A")
+        XCTAssertEqual(a.precio, 1.25)
+
+        XCTAssertEqual(b.shape.map(\.latitude), [-8.31, -8.32])
+        XCTAssertEqual(b.shape.map(\.longitude), [-79.31, -79.32])
+        XCTAssertEqual(b.paraderos.map(\.id), ["parada-inicio", "parada-fin"])
+        XCTAssertEqual(b.duracionMin, 27)
+        XCTAssertEqual(b.headwayMin, 7)
+        XCTAssertEqual(b.precio, 3.75)
+    }
+
+    func testViajePropioHomonimoConservaGeometriaDeclaradaParadasYFrecuencia() throws {
+        let tablas = tablasConViajeHomonimo(rutaDelViaje: "ruta-a", incluirShapeDeA: true)
+        let rutas = try GTFSRepository.parsearFeed(tabla: { tablas[$0]! })
+        XCTAssertEqual(rutas.count, 2)
+        let a = try XCTUnwrap(rutas.first { $0.id == "ruta-a" })
+        let b = try XCTUnwrap(rutas.first { $0.id == "ruta-b" })
+
+        XCTAssertEqual(a.shape.map(\.latitude), [-8.31, -8.32])
+        XCTAssertEqual(a.shape.map(\.longitude), [-79.31, -79.32])
+        XCTAssertEqual(a.paraderos.map(\.id), ["parada-inicio", "parada-fin"])
+        XCTAssertEqual(a.paraderos.map(\.nombre), ["Inicio del viaje", "Fin del viaje"])
+        XCTAssertEqual(a.duracionMin, 27)
+        XCTAssertEqual(a.headwayMin, 7)
+        XCTAssertEqual(a.linea, "A")
+        XCTAssertEqual(a.precio, 1.25)
+
+        XCTAssertEqual(b.shape.map(\.latitude), [-8.21, -8.22])
+        XCTAssertEqual(b.shape.map(\.longitude), [-79.21, -79.22])
+        XCTAssertTrue(b.paraderos.isEmpty)
+        XCTAssertEqual(b.duracionMin, 0)
+        XCTAssertEqual(b.headwayMin, 0)
+        XCTAssertEqual(b.linea, "B")
+        XCTAssertEqual(b.precio, 3.75)
+    }
+
+    /// Datos locales con shape de respaldo y shape de viaje distinguibles.
+    /// El trip_id es siempre ruta-a; su pertenencia se fija explícitamente.
+    private func tablasConViajeHomonimo(rutaDelViaje: String, incluirShapeDeA: Bool) -> [String: GTFSTable] {
+        var textos = GTFSFixtureE10.textos
+        textos["routes"] = """
+        route_id,agency_id,route_short_name,route_long_name,route_color
+        ruta-b,agencia-1,B,Recorrido de B,112233
+        ruta-a,agencia-1,A,Recorrido de A,445566
+        """
+        textos["trips"] = "trip_id,route_id,shape_id\nruta-a,\(rutaDelViaje),shape-del-viaje\n"
+        var shapes = """
+        shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence
+        ruta-b,-8.22,-79.22,20
+        ruta-b,-8.21,-79.21,10
+        shape-del-viaje,-8.32,-79.32,20
+        shape-del-viaje,-8.31,-79.31,10
+        """
+        if incluirShapeDeA {
+            shapes += "\nruta-a,-8.12,-79.12,20\nruta-a,-8.11,-79.11,10"
+        }
+        textos["shapes"] = shapes
+        textos["stops"] = """
+        stop_id,stop_name,stop_lat,stop_lon
+        parada-fin,Fin del viaje,-8.32,-79.32
+        parada-inicio,Inicio del viaje,-8.31,-79.31
+        """
+        textos["stop_times"] = """
+        trip_id,stop_id,stop_sequence,departure_time
+        ruta-a,parada-fin,20,26:32:00
+        ruta-a,parada-inicio,10,26:05:00
+        """
+        textos["frequencies"] = "trip_id,headway_secs\nruta-a,420\n"
+        textos["fare_rules"] = "route_id,fare_id\nruta-a,tarifa-a\nruta-b,tarifa-b\n"
+        textos["fare_attributes"] = "fare_id,price\ntarifa-a,1.25\ntarifa-b,3.75\n"
+        return textos.mapValues { GTFSCSV.parsear(texto: $0) }
+    }
 }
 
 @MainActor
