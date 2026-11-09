@@ -39,7 +39,8 @@ struct IdentificacionRuta3DView: View {
             }
             datos
             if let tipo = identificacion.tipoModelo {
-                PanelTransporte3D(tipo: tipo, identificacion: identificacion, activo: activo && !ampliar)
+                PanelTransporte3D(tipo: tipo, identificacion: identificacion, activo: activo && !ampliar,
+                                  esperarVisibilidad: true)
                     .id(identificacion.claveModelo)
             } else {
                 Label(L.t("Modelo de esta categoría próximamente", "Model for this category coming soon"), systemImage: "cube.transparent")

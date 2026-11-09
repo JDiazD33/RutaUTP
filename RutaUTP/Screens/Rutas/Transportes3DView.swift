@@ -112,6 +112,10 @@ struct PanelTransporte3D: View {
     let tipo: TipoTransporte3D
     var identificacion: IdentificacionRuta3D? = nil
     var activo = true
+    /// En el detalle de ruta el panel queda bajo el mapa, casi siempre fuera
+    /// de la pantalla al entrar. Con `true`, el visor espera a que el panel se
+    /// vea dentro del scroll (iOS 18 o posterior) antes de crear RealityKit.
+    var esperarVisibilidad = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("transportes3d.variante") private var variante: VarianteTransporte3D = .original
     @State private var estado: EstadoTransporte3D = .cargando
@@ -122,7 +126,19 @@ struct PanelTransporte3D: View {
     /// transición del detalle costaba fotogramas en las líneas con modelo y no
     /// en las que muestran «próximamente». Se espera a que la transición
     /// termine para que todas las rutas respondan igual.
+    ///
+    /// Aun diferido, crear el `ARView` sigue siendo la parte más cara de la
+    /// primera entrada, y ocurría aunque el panel estuviera fuera de la
+    /// pantalla. En el detalle se monta cuando el panel ya se ve y el scroll
+    /// se detuvo un momento; una vez montado se conserva.
     @State private var visorListo = false
+    @State private var visibleEnScroll = false
+
+    private var puedeMontarVisor: Bool {
+        guard esperarVisibilidad else { return true }
+        if #available(iOS 18.0, *) { return visibleEnScroll }
+        return true
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -204,9 +220,11 @@ struct PanelTransporte3D: View {
         }
         .frame(height: 340)
         .clipShape(RoundedRectangle(cornerRadius: 24))
-        .task {
-            guard !visorListo else { return }
-            try? await Task.sleep(for: .milliseconds(500))
+        .modifier(VisibilidadEnScroll(activa: esperarVisibilidad, visible: $visibleEnScroll))
+        .task(id: puedeMontarVisor) {
+            guard puedeMontarVisor, !visorListo else { return }
+            try? await Task.sleep(for: .milliseconds(esperarVisibilidad ? 350 : 500))
+            guard !Task.isCancelled, puedeMontarVisor else { return }
             visorListo = true
         }
     }
@@ -269,5 +287,20 @@ private struct SelectorTransporte3D<Opcion: Hashable & RawRepresentable>: View w
         .accessibilityElement(children: .contain)
         .accessibilityLabel(titulo)
         .accessibilityIdentifier(identificador)
+    }
+}
+
+/// Informa si el panel se ve dentro del scroll que lo contiene. Solo existe en
+/// iOS 18; en versiones anteriores el panel conserva el retraso fijo.
+private struct VisibilidadEnScroll: ViewModifier {
+    let activa: Bool
+    @Binding var visible: Bool
+
+    func body(content: Content) -> some View {
+        if activa, #available(iOS 18.0, *) {
+            content.onScrollVisibilityChange(threshold: 0.25) { visible = $0 }
+        } else {
+            content
+        }
     }
 }
