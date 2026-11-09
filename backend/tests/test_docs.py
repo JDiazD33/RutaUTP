@@ -36,6 +36,10 @@ VARIABLES: dict[str, str] = {
     "gtfs_dir": "GTFS_DIR",
     "observations_topic": "BACKEND_OBSERVATIONS_TOPIC",
     "vehicles_topic_prefix": "BACKEND_VEHICLES_TOPIC_PREFIX",
+    "vehicle_position_schema_version": "BACKEND_VEHICLE_POSITION_SCHEMA_VERSION",
+    "simulation_ingress_enabled": "BACKEND_SIMULATION_INGRESS_ENABLED",
+    "simulation_occupancy_enabled": "BACKEND_SIMULATION_OCCUPANCY_ENABLED",
+    "simulation_control_path": "BACKEND_SIMULATION_CONTROL_PATH",
     "database_path": "BACKEND_DB_PATH",
     "retention_days": "BACKEND_DB_RETENTION_DAYS",
     "health_file": "BACKEND_HEALTH_FILE",
@@ -71,6 +75,7 @@ SIN_VALOR_FIJO = {
     "MQTT_CA_CERT",
     "MQTT_CLIENT_ID",
     "BACKEND_VEHICLE_NAMESPACE",
+    "BACKEND_SIMULATION_CONTROL_PATH",
 }
 
 #: Campos que el código guarda **resueltos** (ruta absoluta) y el README

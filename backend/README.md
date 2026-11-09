@@ -163,6 +163,19 @@ acotada a estos dos.
 | `BACKEND_OBSERVATIONS_TOPIC` | `rutautp/observaciones/+/+/posicion` |
 | `BACKEND_VEHICLES_TOPIC_PREFIX` | `rutautp/vehiculos` |
 
+### Simulación
+
+Cerrada por defecto. La entrada sintética exige salida v2 y un quorum mínimo de 2; la
+autorización de cada ensayo la da el controlador interno, no estas variables. Ver
+`simulation/README.md` y `simulation/CONTROL.md`.
+
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `BACKEND_VEHICLE_POSITION_SCHEMA_VERSION` | `1` | Versión del mensaje de posición publicado: `1` o `2`. La rama sintética exige `2` |
+| `BACKEND_SIMULATION_INGRESS_ENABLED` | `0` | `1` prepara la rama sintética. Requiere esquema `2` y `BACKEND_MIN_PUBLISH_PRINCIPALS` de al menos `2` |
+| `BACKEND_SIMULATION_OCCUPANCY_ENABLED` | `0` | `1` publica la ocupación de escenario. Requiere la entrada sintética habilitada |
+| `BACKEND_SIMULATION_CONTROL_PATH` | — | Base SQLite privada del controlador de simulación, separada del histórico. Vacío: no se abre el controlador |
+
 ### Persistencia
 
 | Variable | Por defecto | Descripción |
