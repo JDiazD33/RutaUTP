@@ -156,11 +156,7 @@ struct DetalleRutaView: View {
     }
 
     private var colorTextoLetra: Color {
-        let color = ruta.colorLinea.resolve(in: entorno)
-        let luminancia = 0.2126 * color.linearRed + 0.7152 * color.linearGreen + 0.0722 * color.linearBlue
-        let contrasteNegro = (luminancia + 0.05) / 0.05
-        let contrasteBlanco = 1.05 / (luminancia + 0.05)
-        return contrasteNegro >= contrasteBlanco ? .black : .white
+        ruta.colorLinea.textoContrastante(in: entorno)
     }
 
     private var tituloFrecuencia: some View {

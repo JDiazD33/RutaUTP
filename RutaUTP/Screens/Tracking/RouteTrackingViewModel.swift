@@ -470,7 +470,10 @@ final class RouteTrackingViewModel {
                                               consecutiveOffRouteCount: consecutiveOffRoute,
                                               thresholdCount: 3),
            !recalculando {
-            Task { await recalcular(desde: coordenada) }
+            // El fix pertenece a esta revisión aunque la tarea empiece después
+            // de cancelar el viaje o de instalar un destino nuevo.
+            let revisionEsperada = routeRevision
+            Task { await recalcular(desde: coordenada, revisionEsperada: revisionEsperada) }
         }
 
         let destinationDistance = destinoSeleccionado.map {
@@ -502,7 +505,7 @@ final class RouteTrackingViewModel {
     // MARK: - Inicio de viaje
 
     func iniciar(destino: DestinoDemo) async {
-        guard !calculandoRuta else { return }
+        guard !Task.isCancelled, !calculandoRuta else { return }
         guard !TransporteApp.rutasUTPPendientes else {
             errorMessage = TransporteApp.mensajePendiente
             return
@@ -518,6 +521,11 @@ final class RouteTrackingViewModel {
             return
         }
 
+        // Un inicio reemplaza cualquier recálculo todavía pendiente. Cerrar
+        // esa fase aquí evita que su tarea antigua tenga que tocar el viaje nuevo.
+        if recalculando { completarRecalculo() }
+        let revision = UUID()
+        routeRevision = revision
         errorMessage = nil
         destinoSeleccionado = destino
         tripInProgress = false
@@ -528,33 +536,49 @@ final class RouteTrackingViewModel {
         resumen = nil
 
         calculandoRuta = true
-        defer { calculandoRuta = false }
-        await calcularRuta(desde: origen, hacia: destino.coordinate)
+        defer {
+            // cancelTrip puede liberar el indicador y permitir otro inicio
+            // antes de que termine esta espera. Solo su dueño puede cerrarlo.
+            if revision == routeRevision { calculandoRuta = false }
+        }
+        await calcularRuta(desde: origen, hacia: destino.coordinate, revision: revision)
+        guard revision == routeRevision else { return }
+        guard !Task.isCancelled else {
+            cancelTrip()
+            return
+        }
         completarInicioDeViaje(desde: origen, hacia: destino.coordinate)
     }
 
     /// Recalcular desde la posición actual hacia el destino guardado.
-    private func recalcular(desde origen: CLLocationCoordinate2D) async {
-        guard let destino = destinoSeleccionado else { return }
+    private func recalcular(desde origen: CLLocationCoordinate2D, revisionEsperada: UUID) async {
+        guard !Task.isCancelled, revisionEsperada == routeRevision,
+              let destino = destinoSeleccionado else { return }
         guard !recalculando, !calculandoRuta,
               Date().timeIntervalSince(lastRecalculation) >= 20 else { return }
+        let revision = UUID()
+        routeRevision = revision
         lastRecalculation = Date()
         recalculando = true
         tripRecorder?.actualizarEstado(.recalculating)
 
-        await calcularRuta(desde: origen, hacia: destino.coordinate)
-        completarRecalculo()
+        defer {
+            // También una cancelación de la tarea vigente debe limpiar su
+            // indicador y devolver su recorder al estado de seguimiento.
+            if revision == routeRevision { completarRecalculo() }
+        }
+        await calcularRuta(desde: origen, hacia: destino.coordinate, revision: revision)
     }
 
     /// Solo itinerarios de transporte del feed: nunca sustituye un micro por una ruta de auto.
     private func calcularRuta(desde origen: CLLocationCoordinate2D,
-                              hacia destino: CLLocationCoordinate2D) async {
+                              hacia destino: CLLocationCoordinate2D,
+                              revision: UUID) async {
+        guard revision == routeRevision, !Task.isCancelled else { return }
         guard !TransporteApp.rutasUTPPendientes else {
             errorMessage = TransporteApp.mensajePendiente
             return
         }
-        let revision = UUID()
-        routeRevision = revision
         let radio = radioParadero
         let catalog: GTFSRouteCatalog
         do {
@@ -629,7 +653,8 @@ final class RouteTrackingViewModel {
     }
 
     /// Conserva el cierre del inicio según el estado instalado, incluso cuando
-    /// calcularRuta retorna sin instalar. El defer de calculandoRuta sigue en iniciar.
+    /// un cálculo vigente retorna sin instalar. iniciar valida la revisión antes
+    /// de llamar y conserva la propiedad de calculandoRuta hasta su defer.
     private func completarInicioDeViaje(desde origen: CLLocationCoordinate2D,
                                        hacia destino: CLLocationCoordinate2D) {
         if let plan = itinerary, routePolyline != nil {
@@ -647,8 +672,8 @@ final class RouteTrackingViewModel {
         }
     }
 
-    /// Cierra la fase de recálculo sin sustituir la sesión existente. Mantiene
-    /// los efectos que el llamador ya aplicaba al retornar calcularRuta.
+    /// Cierra la fase de recálculo sin sustituir la sesión existente. Se llama
+    /// al reemplazarla sin suspender o desde el defer de su revisión vigente.
     private func completarRecalculo() {
         recalculando = false
         consecutiveOffRoute = 0
@@ -929,6 +954,7 @@ final class RouteTrackingViewModel {
         progreso = 0
         distanciaRestanteM = 0
         consecutiveOffRoute = 0
+        calculandoRuta = false
         recalculando = false
         resumen = nil
         rutaRecorrida = nil

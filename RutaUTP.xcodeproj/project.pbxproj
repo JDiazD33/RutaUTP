@@ -1689,7 +1689,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
-				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para tomar tu foto de perfil y escanear códigos QR.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP usa la actividad física para distinguir cuándo caminas y cuándo viajas en transporte público.";
@@ -1731,7 +1731,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RutaUTP/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Ruta UTP";
-				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para que puedas tomar tu foto de perfil.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "RutaUTP necesita acceso a la cámara para tomar tu foto de perfil y escanear códigos QR.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "RutaUTP necesita la red local para hablar con el broker MQTT durante las pruebas.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "RutaUTP necesita tu ubicación para mostrarte el mapa, calcular rutas hacia el campus UTP y seguir tu progreso durante el viaje.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "RutaUTP usa la actividad física para distinguir cuándo caminas y cuándo viajas en transporte público.";

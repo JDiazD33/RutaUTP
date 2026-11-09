@@ -152,9 +152,7 @@ enum ProgramadorAvisosDiarios {
         // fechas cuando el silencio cubre toda la franja elegida.
         let minutosPermitidos = (config.inicio..<config.fin).filter { minuto in
             guard silencios.silencioHorario else { return true }
-            let inicio = silencios.inicioSilencio, fin = silencios.finSilencio
-            if inicio == fin { return false }
-            return inicio < fin ? minuto < inicio || minuto >= fin : minuto >= fin && minuto < inicio
+            return silencios.estaFueraDeFranjaSilenciosa(minuto: minuto)
         }
         guard !minutosPermitidos.isEmpty else { return [] }
         for _ in 0..<366 {

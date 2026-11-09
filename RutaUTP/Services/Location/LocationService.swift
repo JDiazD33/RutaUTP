@@ -51,11 +51,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     // MARK: - Internos
     private let manager: CLLocationManager
     private let esperasPermiso = EsperasPermisoUbicacion()
-    private struct Consumer {
-        let continuation: AsyncStream<CLLocation>.Continuation
-        let requirement: LocationRequirement
-    }
-    private var continuations: [UUID: Consumer] = [:]
+    private var lectores = RegistroLectoresUbicacion()
     private(set) var lastKnownLocation: CLLocation?
 
     private var appliedRequirement: LocationRequirement = .navigation
@@ -101,7 +97,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
                         return
                     }
 
-                    self.continuations.removeValue(forKey: id)
+                    self.lectores.retirar(id)
                     self.applyActiveRequirements()
 
                     // El GPS solo se apaga cuando terminó el último consumidor.
@@ -119,7 +115,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
     private func register(_ continuation: AsyncStream<CLLocation>.Continuation,
                           id: UUID, requirement: LocationRequirement) {
-        continuations[id] = Consumer(continuation: continuation, requirement: requirement)
+        lectores.registrar(continuation, id: id, requirement: requirement)
         applyActiveRequirements()
 
         // Conservar el replay de la última lectura, sin esperar un nuevo fix.
@@ -132,9 +128,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     /// Solo los lectores de mapa pueden bajar la exigencia. La API anterior
     /// y cualquier consumidor de navegación mantienen Best/5m.
     private func applyActiveRequirements() {
-        let requirement: LocationRequirement = continuations.isEmpty
-            || continuations.values.contains { $0.requirement == .navigation }
-            ? .navigation : .mapDisplay
+        let requirement: LocationRequirement = lectores.requisitoActivo
 
         guard requirement != appliedRequirement else { return }
         manager.desiredAccuracy = requirement.desiredAccuracy
@@ -171,7 +165,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
     /// Instantánea de las continuaciones vivas en MainActor.
     private var activeContinuations: [AsyncStream<CLLocation>.Continuation] {
-        return continuations.values.map(\.continuation)
+        return lectores.activas
     }
 
     /// Detiene CLLocationManager únicamente cuando ningún componente mantiene
@@ -217,8 +211,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         manager.stopUpdatingLocation()
         isUpdating = false
 
-        let activos = continuations.values.map(\.continuation)
-        continuations.removeAll()
+        let activos = lectores.retirarTodos()
         applyActiveRequirements()
 
         // finish puede disparar onTermination, que vuelve al actor por una tarea.
@@ -282,6 +275,44 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         #if DEBUG
         print("[LocationService] didFailWithError: \(error.localizedDescription)")
         #endif
+    }
+}
+
+/// Contabilidad de lectores y su precisión agregada, sin controlar el gestor.
+/// LocationService conserva el replay, la publicación y el cierre de streams.
+@MainActor
+private struct RegistroLectoresUbicacion {
+    private struct Consumer {
+        let continuation: AsyncStream<CLLocation>.Continuation
+        let requirement: LocationRequirement
+    }
+    private var continuations: [UUID: Consumer] = [:]
+
+    var activas: [AsyncStream<CLLocation>.Continuation] {
+        continuations.values.map(\.continuation)
+    }
+
+    var requisitoActivo: LocationRequirement {
+        continuations.isEmpty
+            || continuations.values.contains { $0.requirement == .navigation }
+            ? .navigation : .mapDisplay
+    }
+
+    mutating func registrar(_ continuation: AsyncStream<CLLocation>.Continuation,
+                            id: UUID, requirement: LocationRequirement) {
+        continuations[id] = Consumer(continuation: continuation, requirement: requirement)
+    }
+
+    mutating func retirar(_ id: UUID) {
+        continuations.removeValue(forKey: id)
+    }
+
+    /// Captura las continuaciones antes de retirarlas; el servicio decide
+    /// cuándo finalizarlas, después de aplicar los efectos sobre el gestor.
+    mutating func retirarTodos() -> [AsyncStream<CLLocation>.Continuation] {
+        let activos = activas
+        continuations.removeAll()
+        return activos
     }
 }
 

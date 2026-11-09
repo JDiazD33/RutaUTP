@@ -34,6 +34,10 @@ struct ConfiguracionNotificaciones: Codable, Equatable {
               !diasSilencio.contains(calendario.component(.weekday, from: fecha)) else { return false }
         guard silencioHorario else { return true }
         let minuto = calendario.component(.hour, from: fecha) * 60 + calendario.component(.minute, from: fecha)
+        return estaFueraDeFranjaSilenciosa(minuto: minuto)
+    }
+
+    func estaFueraDeFranjaSilenciosa(minuto: Int) -> Bool {
         // Una franja con extremos iguales silencia el dia completo.
         if inicioSilencio == finSilencio { return false }
         if inicioSilencio < finSilencio {

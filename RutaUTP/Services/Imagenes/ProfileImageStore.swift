@@ -119,14 +119,7 @@ enum ProfileImageStore {
             }
             let result = await request.task.value
             guard requestedRevision == revision else { continue }
-            // Una carga anterior nunca retira el registro de otra más reciente.
-            if pending?.id == request.id {
-                pending = nil
-                if case .loaded(let loaded) = result, let stamp = loaded.stamp,
-                   loaded.cost <= byteBudget, request.cacheEpoch == cacheEpoch {
-                    cache.setObject(CacheEntry(loaded, stamp: stamp), forKey: cacheKey, cost: loaded.cost)
-                }
-            }
+            finalizarCargaCompartida(request, resultado: result)
             guard !Task.isCancelled else { return nil }
             switch result {
             case .loaded(let loaded): return loaded.image
@@ -135,6 +128,19 @@ enum ProfileImageStore {
             }
         }
         return nil
+    }
+
+    /// Se llama tras validar revision, antes de decidir la entrega al lector.
+    /// Su cancelación individual no cambia la finalización de la carga compartida.
+    private static func finalizarCargaCompartida(_ request: PendingLoad, resultado result: ReadResult) {
+        // Una carga anterior nunca retira el registro de otra más reciente.
+        if pending?.id == request.id {
+            pending = nil
+            if case .loaded(let loaded) = result, let stamp = loaded.stamp,
+               loaded.cost <= byteBudget, request.cacheEpoch == cacheEpoch {
+                cache.setObject(CacheEntry(loaded, stamp: stamp), forKey: cacheKey, cost: loaded.cost)
+            }
+        }
     }
 
     private static func inBackground<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {

@@ -197,4 +197,13 @@ extension Color {
             return Color(hex: hex)
         }
     }
+
+    /// Elige negro o blanco para el primer plano con mayor contraste sobre este color.
+    func textoContrastante(in entorno: EnvironmentValues) -> Color {
+        let color = self.resolve(in: entorno)
+        let luminancia = 0.2126 * color.linearRed + 0.7152 * color.linearGreen + 0.0722 * color.linearBlue
+        let contrasteNegro = (luminancia + 0.05) / 0.05
+        let contrasteBlanco = 1.05 / (luminancia + 0.05)
+        return contrasteNegro >= contrasteBlanco ? .black : .white
+    }
 }

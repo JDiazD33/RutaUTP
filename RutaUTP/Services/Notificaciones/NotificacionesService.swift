@@ -367,29 +367,37 @@ final class NotificacionesService {
             if version != revision { continue }
             let aceptadas = await centro.pendingNotificationRequests()
             if version != revision { continue }
-            fechasProgramadas = aceptadas.compactMap { solicitud in
-                guard solicitud.identifier.hasPrefix(Self.prefijo),
-                      solicitud.content.userInfo["recordatorioID"] as? String == recordatorio?.id.uuidString,
-                      let trigger = solicitud.trigger as? UNCalendarNotificationTrigger,
-                      let fecha = trigger.nextTriggerDate(), fecha > Date() else { return nil }
-                return fecha
-            }.sorted()
-            fechasDiarias = aceptadas.compactMap { solicitud in
-                guard solicitud.identifier.hasPrefix(Self.prefijoDiarios),
-                      solicitud.content.userInfo["avisosDiariosID"] as? String == diario.id.uuidString,
-                      let fecha = (solicitud.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate(), fecha > Date() else { return nil }
-                return fecha
-            }.sorted()
-            if preferencias.datosInvalidos {
-                errorMensaje = L.t("No pudimos leer tus ajustes de notificaciones. Tus datos se conservan.", "We could not read your notification settings. Your data has been preserved.")
-            } else if avisosDiarios.datosInvalidos || avisosDiarios.registroInvalido {
-                errorMensaje = L.t("No pudimos leer los ajustes o la agenda de avisos diarios. Tus datos se conservan.", "We could not read daily notification settings or the schedule. Your data has been preserved.")
-            } else if falloPermiso && errorMensaje == nil {
-                errorMensaje = L.t("No pudimos consultar el permiso de notificaciones. Intenta de nuevo.", "We could not request notification permission. Try again.")
-            } else if errorMensaje == nil && (fechasProgramadas.count != fechas.filter({ $0 > Date() }).count
-                                            || fechasDiarias.count != planesDiarios.filter({ $0.fecha > Date() }).count) {
-                errorMensaje = L.t("No se pudieron programar todos los avisos. Vuelve a intentarlo.", "Not all notifications could be scheduled. Try again.")
-            }
+            publicarResultadoAgenda(aceptadas, recordatorio: recordatorio, diario: diario,
+                                   fechas: fechas, planesDiarios: planesDiarios)
+        }
+    }
+
+    private func publicarResultadoAgenda(_ aceptadas: [UNNotificationRequest],
+                                         recordatorio: RecordatorioViaje?,
+                                         diario: ConfiguracionAvisosDiarios,
+                                         fechas: [Date], planesDiarios: [PlanAvisoDiario]) {
+        fechasProgramadas = aceptadas.compactMap { solicitud in
+            guard solicitud.identifier.hasPrefix(Self.prefijo),
+                  solicitud.content.userInfo["recordatorioID"] as? String == recordatorio?.id.uuidString,
+                  let trigger = solicitud.trigger as? UNCalendarNotificationTrigger,
+                  let fecha = trigger.nextTriggerDate(), fecha > Date() else { return nil }
+            return fecha
+        }.sorted()
+        fechasDiarias = aceptadas.compactMap { solicitud in
+            guard solicitud.identifier.hasPrefix(Self.prefijoDiarios),
+                  solicitud.content.userInfo["avisosDiariosID"] as? String == diario.id.uuidString,
+                  let fecha = (solicitud.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate(), fecha > Date() else { return nil }
+            return fecha
+        }.sorted()
+        if preferencias.datosInvalidos {
+            errorMensaje = L.t("No pudimos leer tus ajustes de notificaciones. Tus datos se conservan.", "We could not read your notification settings. Your data has been preserved.")
+        } else if avisosDiarios.datosInvalidos || avisosDiarios.registroInvalido {
+            errorMensaje = L.t("No pudimos leer los ajustes o la agenda de avisos diarios. Tus datos se conservan.", "We could not read daily notification settings or the schedule. Your data has been preserved.")
+        } else if falloPermiso && errorMensaje == nil {
+            errorMensaje = L.t("No pudimos consultar el permiso de notificaciones. Intenta de nuevo.", "We could not request notification permission. Try again.")
+        } else if errorMensaje == nil && (fechasProgramadas.count != fechas.filter({ $0 > Date() }).count
+                                        || fechasDiarias.count != planesDiarios.filter({ $0.fecha > Date() }).count) {
+            errorMensaje = L.t("No se pudieron programar todos los avisos. Vuelve a intentarlo.", "Not all notifications could be scheduled. Try again.")
         }
     }
 

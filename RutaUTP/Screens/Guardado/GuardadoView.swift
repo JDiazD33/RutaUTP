@@ -307,12 +307,8 @@ struct GuardadoView: View {
     private var lugaresSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             if vm.datosLugaresInvalidos {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(L.t("No se pudieron leer tus lugares. Los datos originales se conservaron; no se guardarán cambios hasta poder leerlos.",
-                             "Your places could not be read. The original data was preserved; changes will not be saved until it can be read."))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                avisoRecuperacion(L.t("No se pudieron leer tus lugares. Los datos originales se conservaron; no se guardarán cambios hasta poder leerlos.",
+                                      "Your places could not be read. The original data was preserved; changes will not be saved until it can be read.")) {
                     Button(L.t("Reintentar lectura", "Retry reading")) {
                         vm.reintentarLecturaLugares()
                     }
@@ -375,11 +371,7 @@ struct GuardadoView: View {
                         .tint(acento)
                         .padding(16)
                 } else if let error = vm.errorCatalogo {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(error.mensajeUsuario)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                    avisoRecuperacion(error.mensajeUsuario) {
                         Button(L.t("Reintentar", "Try again")) {
                             Task { await vm.cargarCatalogo(reintentar: true) }
                         }
@@ -499,12 +491,8 @@ struct GuardadoView: View {
                 .background(superficie, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
             if vm.datosLineasInvalidos {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(L.t("No se pudieron leer tus líneas guardadas. Los datos originales se conservan y los cambios están bloqueados.",
-                             "Your saved lines could not be read. The original data has been preserved and changes are blocked."))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                avisoRecuperacion(L.t("No se pudieron leer tus líneas guardadas. Los datos originales se conservan y los cambios están bloqueados.",
+                                      "Your saved lines could not be read. The original data has been preserved and changes are blocked.")) {
                     Button(L.t("Reintentar lectura", "Retry reading")) { vm.cargarLineas() }
                         .buttonStyle(.bordered)
                         .tint(acento)
@@ -523,11 +511,7 @@ struct GuardadoView: View {
                     .frame(maxWidth: .infinity)
                     .padding(24)
             } else if let error = vm.errorCatalogo {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(error.mensajeUsuario)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                avisoRecuperacion(error.mensajeUsuario) {
                     Button(L.t("Reintentar", "Try again")) {
                         Task { await vm.cargarCatalogo(reintentar: true) }
                     }
@@ -600,6 +584,20 @@ struct GuardadoView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.t("Línea ", "Line ") + linea.lineaConLetra + ", " + linea.empresa)
         .accessibilityValue(linea.recorridoLocalizado + ". " + L.t("frecuencia", "frequency") + ": " + linea.frecuenciaTexto)
+    }
+
+    // MARK: - Avisos de recuperación
+    private func avisoRecuperacion<Acciones: View>(
+        _ mensaje: String,
+        @ViewBuilder acciones: () -> Acciones
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(mensaje)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            acciones()
+        }
     }
 
     // MARK: - Estados vacíos

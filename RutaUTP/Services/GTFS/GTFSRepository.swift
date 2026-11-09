@@ -396,8 +396,10 @@ extension GTFSRepository {
             let shortName = routeShort[i]
             let (linea, variante) = GTFSNombreParser.lineaYVariante(shortName: shortName)
 
-            let tripId = routeTrip[routeId] ?? routeId
-            let declarado = tripShape[tripId] ?? ""
+            // Sin viaje propio, route_id solo identifica el shape de respaldo,
+            // nunca un trip homónimo que pertenezca a otra ruta.
+            let tripId = routeTrip[routeId]
+            let declarado = tripId.flatMap { tripShape[$0] } ?? ""
             // Conservar el fallback a route_id que admite el backend cuando
             // no se declara shape o no existe el declarado.
             let shapeId = declarado.isEmpty || shapesPorId[declarado] == nil ? routeId : declarado
@@ -405,7 +407,7 @@ extension GTFSRepository {
                 .sorted { $0.key < $1.key }
                 .map(\.value)
 
-            let paradas = (paradasPorTrip[tripId] ?? [])
+            let paradas = (tripId.flatMap { paradasPorTrip[$0] } ?? [])
                 .sorted { $0.seq < $1.seq }
             let paraderos = paradas.compactMap { paraderosPorId[$0.stopId] }
 
@@ -416,7 +418,7 @@ extension GTFSRepository {
                 duracionMin = Int((ultima - primera) / 60)
             }
 
-            let headwayMin = (headwayPorTrip[tripId] ?? 0) / 60
+            let headwayMin = (tripId.flatMap { headwayPorTrip[$0] } ?? 0) / 60
 
             let colorHex = routeColor[i].isEmpty ? "00CC00" : routeColor[i]
             let recorrido = GTFSNombreParser.recorrido(longName: routeLong[i], shortName: shortName)

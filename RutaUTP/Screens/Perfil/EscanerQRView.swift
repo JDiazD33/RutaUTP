@@ -169,46 +169,46 @@ struct EscanerQRView: View {
     @ViewBuilder
     private var panelInferior: some View {
         VStack(spacing: 14) {
-            switch modelo.estado {
-            case .comprobando:
-                ProgressView()
-                    .tint(.white)
-                texto(L.t("Preparando la cámara…", "Preparing the camera…"))
+            if let resultado = modelo.resultado {
+                tarjetaResultado(resultado)
+            } else {
+                switch modelo.estado {
+                case .comprobando:
+                    ProgressView()
+                        .tint(.white)
+                    texto(L.t("Preparando la cámara…", "Preparing the camera…"))
 
-            case .denegado:
-                tarjetaAviso(
-                    icono: "camera.fill",
-                    titulo: L.t("Sin permiso de cámara", "No camera permission"),
-                    detalle: L.t("Activa el acceso a la cámara en Ajustes para escanear un QR.",
-                                 "Turn on camera access in Settings to scan a QR.")
-                ) {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        Link(destination: url) {
-                            Text(L.t("Abrir Ajustes", "Open Settings"))
-                                .font(.bodySmMedium)
-                                .foregroundStyle(.onPrimaryFill)
-                                .frame(maxWidth: .infinity, minHeight: 46)
-                                .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color.primaryFill))
+                case .denegado:
+                    tarjetaAviso(
+                        icono: "camera.fill",
+                        titulo: L.t("Sin permiso de cámara", "No camera permission"),
+                        detalle: L.t("Activa el acceso a la cámara en Ajustes para escanear un QR.",
+                                     "Turn on camera access in Settings to scan a QR.")
+                    ) {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            Link(destination: url) {
+                                Text(L.t("Abrir Ajustes", "Open Settings"))
+                                    .font(.bodySmMedium)
+                                    .foregroundStyle(.onPrimaryFill)
+                                    .frame(maxWidth: .infinity, minHeight: 46)
+                                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.primaryFill))
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
-                }
 
-            case .sinCamara:
-                tarjetaAviso(
-                    icono: "camera.metering.unknown",
-                    titulo: L.t("Cámara no disponible", "Camera unavailable"),
-                    detalle: L.t("Este dispositivo no puede escanear. En el simulador no hay cámara; puedes probar con un código de ejemplo.",
-                                 "This device can't scan. The simulator has no camera; you can try with a sample code.")
-                ) {
-                    EmptyView()
-                }
+                case .sinCamara:
+                    tarjetaAviso(
+                        icono: "camera.metering.unknown",
+                        titulo: L.t("Cámara no disponible", "Camera unavailable"),
+                        detalle: L.t("Este dispositivo no puede escanear. En el simulador no hay cámara; puedes probar con un código de ejemplo.",
+                                     "This device can't scan. The simulator has no camera; you can try with a sample code.")
+                    ) {
+                        EmptyView()
+                    }
 
-            case .listo:
-                if let resultado = modelo.resultado {
-                    tarjetaResultado(resultado)
-                } else {
+                case .listo:
                     texto(L.t("Apunta al QR del cobrador", "Point at the collector's QR"))
                 }
             }

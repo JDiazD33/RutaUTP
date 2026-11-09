@@ -2,6 +2,10 @@ import Foundation
 import CoreLocation
 import MapKit
 
+private func transitBusSpeed(for route: RutaGTFS) -> Double {
+    min(14, max(3, route.distanciaKm * 1000 / Double(max(1, route.duracionMin) * 60)))
+}
+
 struct TransitRouteOptions {
     let candidates: [TransitItinerary]
     let alternatives: [TransitItinerary]
@@ -55,7 +59,7 @@ struct TransitItinerary {
         self.bus = bus
         self.walkToDestination = walkToDestination
         self.firstBusMeters = PolylineMatching.totalLengthMeters(bus)
-        self.busSpeed = min(14, max(3, route.distanciaKm * 1000 / Double(max(1, route.duracionMin) * 60)))
+        self.busSpeed = transitBusSpeed(for: route)
         self.busDibujo = PolylineMatching.decimate(bus, maxPoints: 250)
     }
 
@@ -560,7 +564,7 @@ private struct PreparedTransitRoute {
         stopPoints = geometry.stopPoints
         self.startWalk = startWalk
         self.endWalk = endWalk
-        speed = min(14, max(3, route.distanciaKm * 1000 / Double(max(1, route.duracionMin) * 60)))
+        speed = transitBusSpeed(for: route)
         boarding = route.paraderos.indices.filter { startWalk[$0] + geometry.connectorMeters[$0] <= radius }
         arriving = route.paraderos.indices.filter { endWalk[$0] + geometry.connectorMeters[$0] <= radius }
     }
@@ -651,10 +655,7 @@ actor TransitPlanner {
     /// aunque se repitan IDs. La posición distingue las entradas duplicadas.
     func candidates(in catalog: GTFSRouteCatalog, origin: CLLocationCoordinate2D,
                     destination: CLLocationCoordinate2D, radius: Double) -> [TransitItinerary] {
-        if self.catalog?.sharesRevision(with: catalog) != true {
-            geometry.removeAll(keepingCapacity: true)
-            self.catalog = catalog
-        }
+        activarCatalogo(catalog)
         return TransitItinerary.search(in: catalog.routes, origin: origin, destination: destination,
                                        radius: radius, geometry: &geometry, trustedCatalog: true).candidates
     }
@@ -663,10 +664,7 @@ actor TransitPlanner {
     /// Solo resuelve geometría local; las caminatas se consultan al elegir.
     func options(in catalog: GTFSRouteCatalog, origin: CLLocationCoordinate2D,
                  destination: CLLocationCoordinate2D, radius: Double) -> TransitRouteOptions {
-        if self.catalog?.sharesRevision(with: catalog) != true {
-            geometry.removeAll(keepingCapacity: true)
-            self.catalog = catalog
-        }
+        activarCatalogo(catalog)
         return TransitItinerary.search(in: catalog.routes, origin: origin, destination: destination,
                                        radius: radius, geometry: &geometry, trustedCatalog: true,
                                        includeLineAlternatives: true)
@@ -676,12 +674,16 @@ actor TransitPlanner {
     func candidates(for routeIDs: [String], in catalog: GTFSRouteCatalog,
                     origin: CLLocationCoordinate2D, destination: CLLocationCoordinate2D,
                     radius: Double) -> [TransitItinerary] {
+        activarCatalogo(catalog)
+        return TransitItinerary.search(in: catalog.routes, origin: origin, destination: destination,
+                                       radius: radius, geometry: &geometry, trustedCatalog: true,
+                                       requiredRouteIDs: routeIDs).candidates
+    }
+
+    private func activarCatalogo(_ catalog: GTFSRouteCatalog) {
         if self.catalog?.sharesRevision(with: catalog) != true {
             geometry.removeAll(keepingCapacity: true)
             self.catalog = catalog
         }
-        return TransitItinerary.search(in: catalog.routes, origin: origin, destination: destination,
-                                       radius: radius, geometry: &geometry, trustedCatalog: true,
-                                       requiredRouteIDs: routeIDs).candidates
     }
 }

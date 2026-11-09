@@ -486,9 +486,9 @@ struct SeguridadView: View {
             HStack(spacing: 8) {
                 Image(systemName: "bus")
                     .foregroundStyle(acento)
-                Text(L.signable("seguridad.rutas_seguras", "Paraderos", "Stops"))
+                Text(L.signable("rutas.paraderos", "Paraderos", "Stops"))
                     .font(.headlineSm)
-                    .seniable("seguridad.rutas_seguras", distintivoDx: 10)
+                    .seniable("rutas.paraderos", distintivoDx: 10)
             }
 
             if cargandoParaderos {

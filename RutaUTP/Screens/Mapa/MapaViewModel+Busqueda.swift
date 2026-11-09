@@ -49,13 +49,7 @@ extension MapaViewModel {
         busquedaResultado = (titulo: destino.label, coordenada: destCoord)
         textoBusqueda = destino.label
 
-        region = MKCoordinateRegion(
-            center: destCoord,
-            span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
-        )
-        destinoFocusTick += 1
-        calcularRutaHacia(destCoord)
-        recargarLineas(cercaDe: destCoord)
+        aplicarEfectosDeDestino(destCoord)
     }
 
     func seleccionarSugerencia(_ completion: MKLocalSearchCompletion) {
@@ -128,6 +122,10 @@ extension MapaViewModel {
         destinoSeleccionado = nil
         busquedaResultado = (titulo: titulo, coordenada: coordenada)
 
+        aplicarEfectosDeDestino(coordenada)
+    }
+
+    private func aplicarEfectosDeDestino(_ coordenada: CLLocationCoordinate2D) {
         region = MKCoordinateRegion(
             center: coordenada,
             span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
