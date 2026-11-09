@@ -14,6 +14,7 @@ validar explícitamente (el lector anterior ignora las claves adicionales).
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -232,3 +233,19 @@ OBSERVATION_FIELDS: dict[str, type] = {
 def is_number(value: Any) -> bool:
     """Número real, excluyendo booleanos."""
     return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def is_finite_real(value: Any) -> bool:
+    """`int` o `float` exacto, sin booleanos, que cabe en un `float` finito.
+
+    `json.loads` convierte un literal entero largo en un `int` de precisión
+    arbitraria. `math.isfinite` lo convierte a `double` y lanza `OverflowError`
+    si no cabe. Un mensaje MQTT con ese literal hacía escapar la excepción del
+    callback y detenía el bucle de Bridge. Aquí ese valor cuenta como inválido.
+    """
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False

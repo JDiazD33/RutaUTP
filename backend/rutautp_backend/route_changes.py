@@ -7,11 +7,11 @@ Estado efímero: tras reiniciar se requieren reportes nuevos.
 from __future__ import annotations
 
 import json
-import math
 import re
 import uuid
 
 from .geo import haversine_m, match_point_to_polyline
+from .models import is_finite_real
 
 REPORT_TOPIC = "rutautp/cambios/+/reporte"
 SNAPSHOT_TOPIC = "rutautp/cambios/estado"
@@ -51,7 +51,7 @@ class RouteChanges:
             if (type(body.get("schemaVersion")) is not int or body.get("schemaVersion") != 1 or route is None
                 or reason not in ("works", "closure", "detour")
                 or not isinstance(place, str) or not 3 <= len(place.strip()) <= 120
-                or any(type(v) not in (int, float) or not math.isfinite(v) for v in (lat, lon, timestamp))
+                or not all(is_finite_real(v) for v in (lat, lon, timestamp))
                 or not -90 <= lat <= 90 or not -180 <= lon <= 180
                 or not -10 <= now - timestamp <= 120):
                 return (principal, receipt)

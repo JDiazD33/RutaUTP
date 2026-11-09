@@ -340,25 +340,28 @@ class ObservationValidator:
                     RejectReason.BAD_FIELD_TYPE, f"{field_name}={value!r}"
                 )
 
-            if expected_type is float:
+            if expected_type is float or expected_type is int:
                 # `1e309` se decodifica como infinito: es un número válido para
                 # el decodificador pero no para el contrato.
-                if not math.isfinite(value):
+                try:
+                    finite = math.isfinite(value)
+                except OverflowError:
                     return ValidationResult.reject(
-                        RejectReason.NON_FINITE_NUMBER, f"{field_name}={value!r}"
+                        RejectReason.NON_FINITE_NUMBER,
+                        f"{field_name}: fuera de rango numérico",
                     )
-            elif expected_type is int:
-                if not math.isfinite(value):
+                if not finite:
                     return ValidationResult.reject(
                         RejectReason.NON_FINITE_NUMBER, f"{field_name}={value!r}"
                     )
 
-                # La comprobación de finitud va antes: `int(NaN)` y
-                # `int(inf)` lanzan excepción en vez de devolver un valor.
-                if float(value) != int(value):
-                    return ValidationResult.reject(
-                        RejectReason.BAD_FIELD_TYPE, f"{field_name}={value!r}"
-                    )
+                if expected_type is int:
+                    # La comprobación de finitud va antes: `int(NaN)` y
+                    # `int(inf)` lanzan excepción en vez de devolver un valor.
+                    if float(value) != int(value):
+                        return ValidationResult.reject(
+                            RejectReason.BAD_FIELD_TYPE, f"{field_name}={value!r}"
+                        )
             elif not isinstance(value, expected_type):
                 return ValidationResult.reject(
                     RejectReason.BAD_FIELD_TYPE, f"{field_name}={value!r}"
@@ -508,6 +511,9 @@ class ObservationValidator:
             return ValidationResult.reject(
                 RejectReason.SPEED_OUT_OF_RANGE, f"{speed:.1f} m/s"
             )
+
+        if heading < 0:
+            payload["_headingDiffDeg"] = 0.0
 
         payload["_distanceToRouteM"] = match.distance_m
         payload["_progress"] = match.progress

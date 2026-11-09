@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import re
 import sqlite3
 import threading
@@ -18,6 +17,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .config import ConfigError
+from .models import is_finite_real
 from .push_config import PushConfig
 
 REGISTER_TOPIC = "rutautp/notificaciones/+/registro"
@@ -59,6 +59,11 @@ class APNsProvider:
         self.jwt = jwt
         self.key = key
         self.client = httpx.Client(http2=True, timeout=5.0, trust_env=False)
+        # HTTPX registra en INFO la URL de cada petición, y el token APNs viaja
+        # en el path. h2 y hpack pueden volcar cabeceras en DEBUG. Subir su
+        # nivel evita que el token del dispositivo llegue a los logs.
+        for name in ("httpx", "httpcore", "h2", "hpack"):
+            logging.getLogger(name).setLevel(logging.WARNING)
         self.authorization = ""
         self.issued_at = 0
 
@@ -144,6 +149,8 @@ class PushService:
         """)
         self.db.commit()
         self.lock = threading.RLock()
+        # Intentos en curso cuya inscripción todavía permite reencolar.
+        self._retry_claims: set[tuple[str, str, str]] = set()
         self.stop_event = threading.Event()
         self.wake = threading.Event()
         self.thread = None
@@ -177,7 +184,7 @@ class PushService:
             if (request.lower() != body["requestID"].lower() or device.lower() != body["deviceID"].lower()
                 or type(revision) is not int or not 1 <= revision <= 9007199254740991
                 or type(body.get("schemaVersion")) is not int or body["schemaVersion"] != 1
-                or type(body["timestamp"]) not in (int, float) or not math.isfinite(body["timestamp"])
+                or not is_finite_real(body["timestamp"])
                 or not -10 <= now - body["timestamp"] <= 120
                 or any(type(body[k]) is not bool for k in ("enabled", "quietHours", "sound"))
                 or body["language"] not in PUSH_TEXTS
@@ -189,7 +196,7 @@ class PushService:
                 return principal, receipt
             ZoneInfo(zone)
             pause = body["pauseUntil"]
-            if pause is not None and (type(pause) not in (int, float) or not math.isfinite(pause) or not 0 <= pause < 4102444800):
+            if pause is not None and (not is_finite_real(pause) or not 0 <= pause < 4102444800):
                 return principal, receipt
             days, routes = body["mutedDays"], body["routes"]
             if (not isinstance(days, list) or len(days) > 7 or any(type(d) is not int or not 1 <= d <= 7 for d in days)
@@ -222,7 +229,8 @@ class PushService:
                 added_before = json.loads(previous[2]) if previous and old.get("enabled") and clean["enabled"] else {}
                 added = {r: added_before.get(r, now) for r in set(routes)}
                 # Un token nuevo no recibe sucesos que preceden a su registro.
-                if token != old.get("token"):
+                token_changed = token != old.get("token")
+                if token_changed:
                     added = {r: now for r in set(routes)}
                 lease = now + LEASE_SECONDS
                 self.db.execute("INSERT OR REPLACE INTO devices VALUES (?,?,?,?,?,?)",
@@ -233,6 +241,9 @@ class PushService:
                     self.db.execute("UPDATE deliveries SET state='skipped' WHERE principal=? AND device=? AND state='pending'",
                                     (principal, device))
                 self.db.commit()
+                if token_changed:
+                    # Volver al token original no restaura el intento en curso.
+                    self._retry_claims = {key for key in self._retry_claims if key[:2] != (principal, device)}
             receipt.update(accepted=True, code="saved", leaseUntil=lease)
             return principal, receipt
         except (ValueError, TypeError, KeyError, AttributeError, UnicodeDecodeError, RecursionError, ZoneInfoNotFoundError):
@@ -304,10 +315,18 @@ class PushService:
                 return True
             self.db.execute("UPDATE deliveries SET state='sending',attempts=attempts+1 WHERE principal=? AND device=? AND event=?", key)
             self.db.commit()
-        result = self.provider.send(settings["token"], json.loads(raw), settings)
+            self._retry_claims.add(key)
+        try:
+            result = self.provider.send(settings["token"], json.loads(raw), settings)
+        except BaseException:
+            with self.lock:
+                self._retry_claims.discard(key)
+            raise
         with self.lock:
+            can_requeue = key in self._retry_claims
+            self._retry_claims.discard(key)
             # Solo se reintentan rechazos explicitos temporales de Apple.
-            retry = result == "retry" and attempts < 3 and expires > time.time() + 30
+            retry = can_requeue and result == "retry" and attempts < 3 and expires > time.time() + 30
             self.db.execute("UPDATE deliveries SET state=?,due=? WHERE principal=? AND device=? AND event=?",
                             ("pending" if retry else result, time.time() + 30 * 2 ** attempts, *key))
             if result == "invalid_token":

@@ -402,7 +402,7 @@ class Bridge:
         """
         try:
             body = json.loads(payload)
-        except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+        except (ValueError, RecursionError, TypeError):
             return None
 
         if not isinstance(body, dict):
@@ -736,6 +736,21 @@ class Bridge:
                 self.simulation_control.acknowledge(mid, time.time())
         client.on_publish = on_publish
 
+        def on_report(service: Any, branch: str, message: Any) -> None:
+            # Los reportes no admiten retained: una reentrega del broker no debe
+            # renovar votos. Solo el control publica retained (ver arriba).
+            if message.retain:
+                return
+            try:
+                receipt = service.handle(message.topic, message.payload, time.time())
+                if receipt and self.publisher:
+                    principal, body = receipt
+                    self.publisher(f"rutautp/{branch}/{principal}/recibo", json.dumps(body))
+            except Exception:
+                # Un reporte no debe detener el bucle MQTT de toda la instancia.
+                # No incluir payload ni excepciones con datos privados.
+                logger.error("no se pudo procesar un reporte de %s", branch)
+
         def on_message(_client: Any, _userdata: Any, message: Any) -> None:
             if message.topic.startswith("rutautp/notificaciones/"):
                 if self.push and self.config.use_tls and not message.retain:
@@ -749,16 +764,10 @@ class Bridge:
                         logger.error("no se pudo guardar el registro de avisos")
                 return
             if message.topic.startswith("rutautp/ocupacion/"):
-                receipt = self.occupancy.handle(message.topic, message.payload, time.time())
-                if receipt and self.publisher:
-                    principal, body = receipt
-                    self.publisher(f"rutautp/ocupacion/{principal}/recibo", json.dumps(body))
+                on_report(self.occupancy, "ocupacion", message)
                 return
             if message.topic.startswith("rutautp/cambios/"):
-                receipt = self.route_changes.handle(message.topic, message.payload, time.time())
-                if receipt and self.publisher:
-                    principal, body = receipt
-                    self.publisher(f"rutautp/cambios/{principal}/recibo", json.dumps(body))
+                on_report(self.route_changes, "cambios", message)
                 return
             self.handle_message(message.topic, message.payload, retained=bool(message.retain))
 

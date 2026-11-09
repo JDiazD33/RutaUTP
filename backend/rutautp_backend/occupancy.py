@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import json
-import math
 import re
+
+from .models import is_finite_real
 
 REPORT_TOPIC = "rutautp/ocupacion/+/reporte"
 SNAPSHOT_TOPIC = "rutautp/ocupacion/estado"
@@ -64,7 +65,7 @@ class Occupancy:
                 or not isinstance(target, str) or not 1 <= len(target) <= 200
                 or (by_route and vehicle_id is not None)
                 or state not in ("empty", "space", "full")
-                or type(timestamp) not in (int, float) or not math.isfinite(timestamp)
+                or not is_finite_real(timestamp)
                 or not (-10 <= now - timestamp < WINDOW if by_route else -10 <= now - timestamp <= 60)):
                 return principal, receipt
             if by_route:
