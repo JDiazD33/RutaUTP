@@ -404,6 +404,7 @@ struct NavegacionRutaView: View {
     }
 }
 
+
 #Preview {
     NavegacionRutaView(
         ruta: RutaOpcion(
