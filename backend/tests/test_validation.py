@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import replace
 
 import pytest
 
 from rutautp_backend.config import Config
 from rutautp_backend.geo import segment_bearing_deg
 from rutautp_backend.gtfs import GtfsFeed
+from rutautp_backend.gtfs import RouteGeometry
 from rutautp_backend.models import RejectReason
 from rutautp_backend.validation import ObservationValidator
 
@@ -370,3 +372,319 @@ class TestLimpieza:
 
         assert validator.rate_limiter.tracked_sessions == 0
         assert validator.deduplicator.tracked_keys == 0
+
+
+def _json_with_numeric_token(payload: dict, field_name: str, token: str) -> str:
+    """Inserta un literal numérico textual sin convertirlo a int o float."""
+    assert field_name in payload
+    fields = [
+        json.dumps(name) + ":" + (token if name == field_name else json.dumps(value))
+        for name, value in payload.items()
+    ]
+    return "{" + ",".join(fields) + "}"
+
+
+class TestRepresentabilidadNumerica:
+    @pytest.mark.parametrize(
+        "field_name",
+        ["schemaVersion", "lat", "lon", "speed", "heading", "accuracy", "timestamp"],
+    )
+    @pytest.mark.parametrize("sign", ["", "-"], ids=["positivo", "negativo"])
+    @pytest.mark.parametrize("as_bytes", [False, True], ids=["texto", "bytes"])
+    def test_entero_extremo_no_consume_estado(
+        self, validator, sample_route, field_name, sign, as_bytes
+    ):
+        config = replace(validator.config, max_message_bytes=8192)
+        validator = ObservationValidator(validator.feed, config)
+        raw = _json_with_numeric_token(
+            on_route_payload(sample_route), field_name, sign + "9" * 400
+        )
+        if as_bytes:
+            raw = raw.encode("utf-8")
+        assert len(raw) <= validator.config.max_message_bytes
+
+        result = validator.validate(raw, NOW)
+
+        assert result.ok is False
+        assert result.observation is None
+        assert result.reason is RejectReason.NON_FINITE_NUMBER
+        assert result.detail == f"{field_name}: fuera de rango numérico"
+        assert len(result.detail) < 80
+        assert validator.rate_limiter.tracked_sessions == 0
+        assert validator.global_limiter.tracked_sessions == 0
+        assert validator.deduplicator.tracked_keys == 0
+        assert validator.tracked_continuity_sessions == 0
+
+    def test_campo_ausente_anterior_tiene_prioridad(self, validator, sample_route):
+        payload = on_route_payload(sample_route)
+        del payload["sessionId"]
+        raw = _json_with_numeric_token(payload, "lat", "9" * 400)
+
+        result = validator.validate(raw, NOW)
+
+        assert result.reason is RejectReason.MISSING_FIELD
+        assert result.detail == "sessionId"
+        assert result.observation is None
+
+    def test_representabilidad_precede_a_version_no_soportada(
+        self, validator, sample_route
+    ):
+        raw = _json_with_numeric_token(
+            on_route_payload(sample_route, schemaVersion=99), "lat", "9" * 400
+        )
+
+        result = validator.validate(raw, NOW)
+
+        assert result.reason is RejectReason.NON_FINITE_NUMBER
+        assert result.detail == "lat: fuera de rango numérico"
+        assert result.observation is None
+
+    def test_limite_de_tamano_precede_a_representabilidad(
+        self, validator, sample_route
+    ):
+        config = replace(validator.config, max_message_bytes=256)
+        validator = ObservationValidator(validator.feed, config)
+        raw = _json_with_numeric_token(
+            on_route_payload(sample_route), "schemaVersion", "9" * 400
+        )
+        assert len(raw) > 256
+
+        result = validator.validate(raw, NOW)
+
+        assert result.reason is RejectReason.MESSAGE_TOO_LARGE
+        assert result.detail == f"{len(raw)} bytes > 256"
+        assert result.observation is None
+
+    def test_conserva_esquema_integral_y_enteros_representables(
+        self, validator, sample_route
+    ):
+        result = validate(
+            validator,
+            on_route_payload(
+                sample_route,
+                schemaVersion=1.0,
+                speed=8,
+                heading=-1,
+                accuracy=8,
+                timestamp=1_700_000_000,
+            ),
+        )
+
+        assert result.ok is True
+        assert result.observation is not None
+        assert result.observation.route_id == SAMPLE_ROUTE_ID
+        assert result.observation.speed == 8.0
+        assert result.observation.heading == -1.0
+        assert result.observation.accuracy == 8.0
+        assert result.observation.timestamp == 1_700_000_000.0
+
+    @pytest.mark.parametrize(
+        "field_name,value,detail",
+        [
+            ("schemaVersion", 1.5, "schemaVersion=1.5"),
+            ("schemaVersion", True, "schemaVersion=True"),
+            ("schemaVersion", "1", "schemaVersion='1'"),
+            ("schemaVersion", None, "schemaVersion=None"),
+            ("lat", True, "lat=True"),
+            ("lat", "-8.0", "lat='-8.0'"),
+            ("lat", None, "lat=None"),
+        ],
+    )
+    def test_conserva_rechazos_de_tipo_e_integralidad(
+        self, validator, sample_route, field_name, value, detail
+    ):
+        result = validate(
+            validator, on_route_payload(sample_route, **{field_name: value})
+        )
+
+        assert result.reason is RejectReason.BAD_FIELD_TYPE
+        assert result.detail == detail
+        assert result.observation is None
+
+    @pytest.mark.parametrize("field_name", ["schemaVersion", "lat"])
+    @pytest.mark.parametrize("token,expected", [("1e309", "inf"), ("-1e309", "-inf")])
+    def test_conserva_rechazo_y_detalle_de_no_finitos(
+        self, validator, sample_route, field_name, token, expected
+    ):
+        raw = _json_with_numeric_token(on_route_payload(sample_route), field_name, token)
+
+        result = validator.validate(raw, NOW)
+
+        assert result.reason is RejectReason.NON_FINITE_NUMBER
+        assert result.detail == f"{field_name}={expected}"
+        assert result.observation is None
+
+
+@pytest.fixture
+def _n2_validator(config: Config) -> ObservationValidator:
+    route = RouteGeometry(
+        route_id="n2-norte",
+        linea="N2",
+        variante="",
+        empresa="Prueba N2",
+        shape=((0.0, 0.0), (0.01, 0.0)),
+    )
+    return ObservationValidator(GtfsFeed(routes={route.route_id: route}), config)
+
+
+def _n2_payload(**overrides) -> dict:
+    # Mitad del tramo norte; 11.132 m al este en el plano local del ecuador.
+    body = {
+        "schemaVersion": 1,
+        "sessionId": "n2-session",
+        "routeId": "n2-norte",
+        "linea": "N2",
+        "lat": 0.005,
+        "lon": 0.0001,
+        "speed": 8.0,
+        "heading": -1.0,
+        "accuracy": 8.0,
+        "motionActivity": "automotive",
+        "timestamp": NOW,
+    }
+    body.update(overrides)
+    return body
+
+
+def _n2_observe_semantics(validator: ObservationValidator, monkeypatch) -> list[dict]:
+    """Observa el dict real tras semántica, sin sustituir su resultado o cálculos."""
+    snapshots = []
+    check = validator._check_semantics
+
+    def observed(payload, now):
+        result = check(payload, now)
+        snapshots.append(dict(payload))
+        return result
+
+    monkeypatch.setattr(validator, "_check_semantics", observed)
+    return snapshots
+
+
+class TestMetadatosInternosN2:
+    @pytest.mark.parametrize("heading", [-1.0, -5.0])
+    @pytest.mark.parametrize(
+        "extra",
+        [
+            pytest.param({}, id="ausente"),
+            pytest.param({"_headingDiffDeg": None}, id="null"),
+            pytest.param({"_headingDiffDeg": "no-numero"}, id="texto"),
+            pytest.param({"_headingDiffDeg": [1]}, id="array"),
+            pytest.param({"_headingDiffDeg": {"x": 1}}, id="objeto"),
+            pytest.param({"_headingDiffDeg": "NaN"}, id="cadena-nan"),
+            pytest.param({"_headingDiffDeg": 135.0}, id="finito-positivo"),
+            pytest.param({"_headingDiffDeg": -75.0}, id="finito-negativo"),
+        ],
+    )
+    def test_rumbo_desconocido_tiene_diferencia_neutral(
+        self, _n2_validator, heading, extra
+    ):
+        result = validate(_n2_validator, _n2_payload(heading=heading, **extra))
+
+        assert result.ok is True
+        assert result.reason is None
+        observation = result.observation
+        assert observation is not None
+        assert observation.heading == -1.0
+        assert observation.heading_diff_deg == 0.0
+        assert math.isfinite(observation.heading_diff_deg)
+        assert observation.speed == 8.0
+        assert observation.route_id == "n2-norte"
+        assert observation.linea == "N2"
+        assert observation.distance_to_route_m == pytest.approx(11.132, abs=1e-6)
+        assert observation.progress == pytest.approx(0.5, abs=1e-9)
+
+    @pytest.mark.parametrize(
+        "heading,canonical,difference",
+        [(-5.0, -1.0, 0.0), (30.0, 30.0, 30.0), (390.0, 30.0, 30.0)],
+    )
+    def test_metadatos_derivados_sobrescriben_extras(
+        self, _n2_validator, monkeypatch, heading, canonical, difference
+    ):
+        snapshots = _n2_observe_semantics(_n2_validator, monkeypatch)
+        result = validate(
+            _n2_validator,
+            _n2_payload(
+                heading=heading,
+                _headingDiffDeg={"inyectado": 1},
+                _distanceToRouteM="falsa",
+                _progress=["falso"],
+                clientTag="conservar",
+            ),
+        )
+
+        assert result.ok is True
+        observation = result.observation
+        assert observation is not None
+        assert observation.heading == pytest.approx(canonical)
+        assert observation.heading_diff_deg == pytest.approx(difference)
+        assert observation.distance_to_route_m == pytest.approx(11.132, abs=1e-6)
+        assert observation.progress == pytest.approx(0.5, abs=1e-9)
+        assert (observation.lat, observation.lon) == (0.005, 0.0001)
+        assert len(snapshots) == 1
+        assert snapshots[0]["clientTag"] == "conservar"
+
+    @pytest.mark.parametrize(
+        "overrides,reason",
+        [
+            ({"lat": 91.0}, RejectReason.INVALID_COORDINATE),
+            ({"accuracy": -1.0}, RejectReason.BAD_ACCURACY),
+            ({"timestamp": NOW + 600}, RejectReason.FUTURE_TIMESTAMP),
+            ({"timestamp": NOW - 300}, RejectReason.STALE_TIMESTAMP),
+            ({"routeId": "no-existe"}, RejectReason.UNKNOWN_ROUTE),
+            ({"linea": "otra"}, RejectReason.LINE_MISMATCH),
+            ({"lon": 0.01}, RejectReason.TOO_FAR_FROM_ROUTE),
+            ({"heading": 180.0, "speed": 31.0}, RejectReason.HEADING_NOT_ALIGNED),
+            ({"heading": -5.0, "speed": 31.0}, RejectReason.SPEED_OUT_OF_RANGE),
+        ],
+    )
+    def test_rechazo_previo_no_escribe_neutral_ni_completa_metadatos(
+        self, _n2_validator, monkeypatch, overrides, reason
+    ):
+        snapshots = _n2_observe_semantics(_n2_validator, monkeypatch)
+        body = _n2_payload(
+            _headingDiffDeg="no-numero",
+            _distanceToRouteM="distancia-del-emisor",
+            _progress="progreso-del-emisor",
+            **overrides,
+        )
+
+        result = validate(_n2_validator, body)
+
+        assert result.ok is False
+        assert result.reason is reason
+        assert result.observation is None
+        assert len(snapshots) == 1
+        snapshot = snapshots[0]
+        assert snapshot["_headingDiffDeg"] == "no-numero"
+        assert snapshot["_distanceToRouteM"] == "distancia-del-emisor"
+        assert snapshot["_progress"] == "progreso-del-emisor"
+        assert snapshot["heading"] == body["heading"]
+        assert snapshot["speed"] == body["speed"]
+        assert _n2_validator.global_limiter.tracked_sessions == 0
+        assert _n2_validator.deduplicator.tracked_keys == 0
+        assert _n2_validator.tracked_continuity_sessions == 0
+
+    def test_rumbo_conocido_conserva_mutacion_parcial_antes_de_rechazar_velocidad(
+        self, _n2_validator, monkeypatch
+    ):
+        snapshots = _n2_observe_semantics(_n2_validator, monkeypatch)
+        result = validate(
+            _n2_validator,
+            _n2_payload(
+                heading=390.0,
+                speed=31.0,
+                _headingDiffDeg="no-numero",
+                _distanceToRouteM="distancia-del-emisor",
+                _progress="progreso-del-emisor",
+            ),
+        )
+
+        assert result.reason is RejectReason.SPEED_OUT_OF_RANGE
+        assert result.observation is None
+        assert len(snapshots) == 1
+        snapshot = snapshots[0]
+        assert snapshot["_headingDiffDeg"] == pytest.approx(30.0)
+        assert snapshot["_distanceToRouteM"] == "distancia-del-emisor"
+        assert snapshot["_progress"] == "progreso-del-emisor"
+        assert snapshot["heading"] == 390.0
+        assert snapshot["speed"] == 31.0

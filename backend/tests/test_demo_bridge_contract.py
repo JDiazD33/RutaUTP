@@ -35,6 +35,9 @@ BRIDGE_SCRIPT = Path(
 SWIFT_PROVIDER = (
     REPO_ROOT / "RutaUTP/Services/Tracking/Providers/MQTTTrackingProvider.swift"
 )
+SWIFT_DECODER = (
+    REPO_ROOT / "RutaUTP/Services/Tracking/Models/VehicleTrackingReception.swift"
+)
 KNOWN_ROUTES = ("17350695", "17419574")
 MISSING_ROUTE = object()
 
@@ -209,15 +212,55 @@ def _position(arguments: list[str]) -> dict:
 
 
 def _swift_message_fields() -> dict[str, str]:
-    source = SWIFT_PROVIDER.read_text(encoding="utf-8")
-    source = re.sub(r"//[^\n]*", "", source)
-    body = re.search(
-        r"\bstruct\s+VehiclePositionMessage\s*:\s*Decodable\s*\{(.*?)^\}",
-        source,
-        flags=re.DOTALL | re.MULTILINE,
+    assert SWIFT_PROVIDER.is_file(), f"falta el proveedor MQTT: {SWIFT_PROVIDER}"
+    assert SWIFT_DECODER.is_file(), f"falta el decoder compartido: {SWIFT_DECODER}"
+    provider = re.sub(
+        r"//[^\n]*", "", SWIFT_PROVIDER.read_text(encoding="utf-8")
     )
-    assert body is not None, "debe existir el DTO real del proveedor MQTT"
-    return dict(re.findall(r"\blet\s+(\w+)\s*:\s*(\w+\??)", body.group(1)))
+    assert re.search(r"\bVehicleTrackingWire\.position\s*\(", provider), (
+        "el proveedor MQTT dejó de llamar a VehicleTrackingWire.position"
+    )
+    source = re.sub(
+        r"//[^\n]*", "", SWIFT_DECODER.read_text(encoding="utf-8")
+    )
+    declarations = list(
+        re.finditer(r"\bstruct\s+VehiclePositionWire\s*:\s*Decodable\s*\{", source)
+    )
+    assert len(declarations) == 1, "debe existir un único VehiclePositionWire: Decodable"
+    opening = declarations[0].end() - 1
+    depth = 0
+    closing = None
+    for index in range(opening, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                closing = index
+                break
+    assert closing is not None, "VehiclePositionWire no tiene llave de cierre"
+    body = source[opening + 1 : closing]
+
+    legacy_declarations = list(
+        re.finditer(r"\blet\s+legacyKeys\s*:\s*Set<String>\s*=\s*\[([^]]*)\]", body)
+    )
+    assert len(legacy_declarations) == 1, "debe existir una única declaración legacyKeys"
+    legacy_keys = re.findall(r'"([^"]+)"', legacy_declarations[0].group(1))
+    assert legacy_keys, "legacyKeys no puede estar vacío"
+    assert len(legacy_keys) == len(set(legacy_keys)), "legacyKeys contiene duplicados"
+
+    decodes = re.findall(
+        r"\bvalues\.decode\(\s*(\w+)\.self\s*,\s*forKey\s*:\s*\.(\w+)\s*\)",
+        body,
+    )
+    fields = {}
+    for key in legacy_keys:
+        matches = [
+            swift_type for swift_type, decode_key in decodes if decode_key == key
+        ]
+        assert len(matches) == 1, f"{key} debe tener exactamente un values.decode obligatorio"
+        fields[key] = matches[0]
+    return fields
 
 
 # 5 cases: refusal must occur before either external MQTT executable is called.

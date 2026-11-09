@@ -109,3 +109,19 @@ def test_failed_snapshot_publish_is_retried(feed):
 @pytest.mark.parametrize("payload", [b"[]", b"null", b"{", b"x"*2049, b'"text"'])
 def test_malformed_payload_does_not_crash(feed, payload):
     assert RouteChanges(feed).handle("rutautp/cambios/device-1/reporte", payload, NOW) is None
+
+
+@pytest.mark.parametrize("field", ["lat", "lon", "timestamp"])
+def test_huge_integer_number_is_invalid_and_keeps_quota(feed, sample_route, field):
+    """F7 B1: un entero JSON que no cabe en float es un número inválido.
+
+    Antes, `math.isfinite` lanzaba `OverflowError` y la excepción detenía el
+    bucle MQTT de Bridge. El rechazo ocurre antes de registrar votos o cuota.
+    """
+    service = RouteChanges(feed)
+    payload = report(sample_route, **{field: 10 ** 400})
+    principal, receipt = service.handle("rutautp/cambios/device-1/reporte", payload, NOW)
+    assert principal == "device-1"
+    assert receipt["accepted"] is False
+    assert receipt["code"] == "invalid"
+    assert send(service, sample_route)[1]["code"] == "pending"

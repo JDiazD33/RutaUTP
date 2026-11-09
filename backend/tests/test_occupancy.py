@@ -204,3 +204,17 @@ def test_route_choice_waits_for_observation_after_choice(setup):
     vehicles[1].route_id = 'route-20'
     assert send(service, vehicle_id=None, routeId='route-10', now=NOW+1)[1]['code'] == 'not_onboard'
     assert not service.votes
+
+
+def test_huge_integer_timestamp_is_invalid_and_keeps_quota(setup):
+    """F7 Alfa-1: un entero JSON que no cabe en float es un timestamp inválido.
+
+    Antes, `math.isfinite` lanzaba `OverflowError` y la excepción detenía el
+    bucle MQTT de Bridge. El rechazo ocurre antes de registrar votos o cuota.
+    """
+    service, _ = setup
+    principal, receipt = send(service, timestamp=10 ** 400)
+    assert principal == "person-1"
+    assert receipt["accepted"] is False
+    assert receipt["code"] == "invalid"
+    assert send(service)[1]["code"] == "pending"

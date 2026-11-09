@@ -9,14 +9,19 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
+from dataclasses import replace
 
 import pytest
 
+import rutautp_backend.bridge as bridge_module
+import rutautp_backend.validation as validation_module
 from rutautp_backend.bridge import Bridge, _sleep_until_reconnect
 from rutautp_backend.config import Config
 from rutautp_backend.geo import segment_bearing_deg
 from rutautp_backend.gtfs import GtfsFeed
 from rutautp_backend.models import RejectReason
+from rutautp_backend.persistence import ObservationStore
 
 from .conftest import SAMPLE_ROUTE_ID, offset_meters, vehicle_id
 
@@ -465,3 +470,288 @@ class TestIdentidadDelVehiculo:
 
         assert publicado == vehicle_id(SAMPLE_ROUTE_ID, 1)
         assert "yo-soy-el-bus-1" not in publicado
+
+
+class TestRepresentabilidadNumerica:
+    @pytest.mark.parametrize("field_name", ["schemaVersion", "lat"])
+    @pytest.mark.parametrize("sign", ["", "-"], ids=["positivo", "negativo"])
+    @pytest.mark.parametrize("as_bytes", [False, True], ids=["texto", "bytes"])
+    def test_rechazo_predecible_permite_entrada_valida_posterior(
+        self, config, feed, publisher, sample_route, tmp_path, field_name, sign, as_bytes
+    ):
+        config = replace(
+            config,
+            database_path="",
+            health_file="",
+            simulation_ingress_enabled=False,
+            max_message_bytes=8192,
+            max_messages_per_minute=1,
+            max_messages_per_minute_global=1,
+        )
+        store = ObservationStore(tmp_path / "n1.sqlite3")
+        try:
+            local_bridge = Bridge(
+                config=config, feed=feed, publisher=publisher, store=store
+            )
+            assert store.enabled
+            marker = "__entero_extremo_n1__"
+            raw = payload_for(sample_route, **{field_name: marker})
+            assert raw.count(marker) == 1
+            raw = raw.replace('"__entero_extremo_n1__"', sign + "9" * 400)
+            if as_bytes:
+                raw = raw.encode("utf-8")
+            assert len(raw) <= 8192
+
+            rejected = local_bridge.handle_message(TOPIC, raw, NOW)
+
+            assert rejected.accepted is False
+            assert rejected.reason is RejectReason.NON_FINITE_NUMBER
+            assert rejected.detail == f"{field_name}: fuera de rango numérico"
+            assert len(rejected.detail) < 80
+            assert local_bridge.metrics.received == 1
+            assert local_bridge.metrics.accepted == 0
+            assert local_bridge.metrics.internal_errors == 0
+            assert local_bridge.metrics.rejected == {"non_finite_number": 1}
+            assert local_bridge.metrics.publish_attempts == 0
+            assert local_bridge.metrics.vehicles_created == 0
+            assert local_bridge.aggregator.vehicle_count == 0
+            assert publisher.messages == []
+            assert local_bridge.validator.rate_limiter.tracked_sessions == 0
+            assert local_bridge.validator.global_limiter.tracked_sessions == 0
+            assert local_bridge.validator.deduplicator.tracked_keys == 0
+            assert local_bridge.validator.tracked_continuity_sessions == 0
+            assert store.query("SELECT COUNT(*) FROM observations") == [(0,)]
+            assert store.query("SELECT COUNT(*) FROM vehicle_positions") == [(0,)]
+            assert store.query("SELECT reason, detail FROM rejections") == [
+                ("non_finite_number", f"{field_name}: fuera de rango numérico")
+            ]
+
+            # Mismo principal, sesión y reloj; ambos cupos son de un solo mensaje.
+            accepted = local_bridge.handle_message(
+                TOPIC, payload_for(sample_route), NOW
+            )
+
+            assert accepted.accepted is True
+            assert accepted.reason is None
+            assert accepted.created_vehicle is True
+            assert accepted.published is True
+            assert accepted.vehicle_id == vehicle_id(SAMPLE_ROUTE_ID, 1)
+            assert local_bridge.metrics.received == 2
+            assert local_bridge.metrics.accepted == 1
+            assert local_bridge.metrics.internal_errors == 0
+            assert local_bridge.metrics.rejected == {"non_finite_number": 1}
+            assert local_bridge.aggregator.vehicle_count == 1
+            assert publisher.count == 1
+            assert local_bridge.validator.rate_limiter.tracked_sessions == 1
+            assert local_bridge.validator.global_limiter.tracked_sessions == 1
+            assert local_bridge.validator.deduplicator.tracked_keys == 1
+            assert local_bridge.validator.tracked_continuity_sessions == 1
+            assert store.query("SELECT session_id, route_id FROM observations") == [
+                ("session-0001", SAMPLE_ROUTE_ID)
+            ]
+            assert store.query("SELECT COUNT(*) FROM vehicle_positions") == [(1,)]
+            assert store.query("SELECT COUNT(*) FROM rejections") == [(1,)]
+            assert store.counts.write_errors == 0
+        finally:
+            store.close()
+        assert store.enabled is False
+
+
+class _JSONPrelecturaProxy:
+    """Falla solo para un centinela y conserva el JSON estándar sin modificarlo."""
+
+    def __init__(self, sentinel: bytes | str, error_type: type[Exception]):
+        self._original = json
+        self._sentinel = sentinel
+        self._error_type = error_type
+        self.loads_calls = []
+
+    def loads(self, raw, *args, **kwargs):
+        self.loads_calls.append((raw, args, dict(kwargs)))
+        if raw == self._sentinel:
+            raise self._error_type("error de prelectura controlado P10")
+        return self._original.loads(raw, *args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._original, name)
+
+
+class _RegistroPrelecturaEnMemoria:
+    """Espía de llamadas del Bridge, sin conexión o archivos que cerrar."""
+
+    def __init__(self):
+        self.rejections = []
+        self.observations = []
+        self.vehicles = []
+
+    def record_rejection(self, reason, detail, now, *, source):
+        self.rejections.append((reason, detail, now, source))
+
+    def record_observation(self, observation, vehicle_id, now, *, source):
+        self.observations.append((observation, vehicle_id, now, source))
+
+    def record_vehicle(self, vehicle, now, *, source):
+        self.vehicles.append((vehicle, now, source))
+
+
+def _bridge_para_prelectura(config, feed, publisher):
+    isolated_config = replace(
+        config,
+        database_path="",
+        health_file="",
+        simulation_ingress_enabled=False,
+        simulation_occupancy_enabled=False,
+        simulation_control_path="",
+        vehicle_position_schema_version=1,
+        max_message_bytes=8192,
+        max_messages_per_minute=1,
+        max_messages_per_minute_global=1,
+        min_publish_principals=1,
+    )
+    store = _RegistroPrelecturaEnMemoria()
+    bridge = Bridge(isolated_config, feed, publisher, store=store)
+    return bridge, store
+
+
+def _comprobar_rechazo_prelectura_y_recuperacion(
+    bridge, store, publisher, sample_route, raw, reason, *, expected_detail=None
+):
+    """Observa rechazo y dato válido posterior por la entrada pública real."""
+    assert type(bridge.validator) is validation_module.ObservationValidator
+    assert len(raw) <= bridge.config.max_message_bytes
+    rejected = bridge.handle_message(TOPIC, raw, NOW)
+
+    assert rejected.accepted is False
+    assert rejected.reason is reason
+    assert rejected.vehicle_id is None
+    assert rejected.created_vehicle is False
+    assert rejected.published is False
+    assert rejected.detail and len(rejected.detail) <= 120
+    if expected_detail is not None:
+        assert rejected.detail == expected_detail
+    assert bridge.metrics.received == 1
+    assert bridge.metrics.accepted == 0
+    assert bridge.metrics.internal_errors == 0
+    assert bridge.metrics.rejected == {reason.value: 1}
+    assert bridge.metrics.vehicles_created == 0
+    assert bridge.metrics.publish_attempts == 0
+    assert bridge.metrics.publish_failures == 0
+    assert bridge.metrics.published == 0
+    assert bridge.aggregator.vehicle_count == 0
+    assert publisher.messages == []
+    assert bridge.validator.rate_limiter.tracked_sessions == 0
+    assert bridge.validator.global_limiter.tracked_sessions == 0
+    assert bridge.validator.deduplicator.tracked_keys == 0
+    assert bridge.validator.tracked_continuity_sessions == 0
+    assert store.observations == []
+    assert store.vehicles == []
+    assert len(store.rejections) == 1
+    recorded_reason, detail, at, source = store.rejections[0]
+    assert recorded_reason is reason
+    assert detail == rejected.detail
+    assert at == NOW
+    assert source.origin.value == "observed"
+    assert source.run_id is None
+    assert source.principal == "device-001"
+
+    valid = payload_for(sample_route)
+    accepted = bridge.handle_message(TOPIC, valid, NOW)
+
+    assert accepted.accepted is True
+    assert accepted.reason is None
+    assert accepted.created_vehicle is True
+    assert accepted.published is True
+    assert accepted.vehicle_id == vehicle_id(SAMPLE_ROUTE_ID, 1)
+    assert bridge.metrics.received == 2
+    assert bridge.metrics.accepted == 1
+    assert bridge.metrics.internal_errors == 0
+    assert bridge.metrics.rejected == {reason.value: 1}
+    assert bridge.metrics.vehicles_created == 1
+    assert bridge.metrics.publish_attempts == 1
+    assert bridge.metrics.publish_failures == 0
+    assert bridge.metrics.published == 1
+    assert bridge.aggregator.vehicle_count == 1
+    assert bridge.validator.rate_limiter.tracked_sessions == 1
+    assert bridge.validator.global_limiter.tracked_sessions == 1
+    assert bridge.validator.deduplicator.tracked_keys == 1
+    assert bridge.validator.tracked_continuity_sessions == 1
+    assert publisher.count == 1
+    assert publisher.last()["vehicleId"] == vehicle_id(SAMPLE_ROUTE_ID, 1)
+    assert publisher.last()["timestamp"] == NOW
+    assert len(store.rejections) == 1
+    assert len(store.observations) == 1
+    observation, recorded_id, at, recorded_source = store.observations[0]
+    assert observation.session_id == "session-0001"
+    assert observation.route_id == SAMPLE_ROUTE_ID
+    assert observation.timestamp == NOW
+    assert recorded_id == accepted.vehicle_id
+    assert at == NOW and recorded_source == source
+    assert len(store.vehicles) == 1
+    vehicle, at, recorded_source = store.vehicles[0]
+    assert vehicle.vehicle_id == accepted.vehicle_id
+    assert vehicle.last_published_at == NOW
+    assert at == NOW and recorded_source == source
+    return valid
+
+
+class TestErroresDePrelectura:
+    @pytest.mark.parametrize(
+        "error_type,reason,detail",
+        [
+            (ValueError, RejectReason.NON_FINITE_NUMBER, "error de prelectura controlado P10"),
+            (RecursionError, RejectReason.TOO_DEEPLY_NESTED, "anidamiento excesivo"),
+        ],
+        ids=["valor", "recursion"],
+    )
+    @pytest.mark.parametrize("as_bytes", [False, True], ids=["texto", "bytes"])
+    def test_errores_de_prelectura_llegan_al_validador_y_permiten_recuperacion(
+        self, config, feed, publisher, sample_route, monkeypatch,
+        error_type, reason, detail, as_bytes,
+    ):
+        bridge, store = _bridge_para_prelectura(config, feed, publisher)
+        sentinel = '{"sessionId":"session-0001","centinela":"P10"}'
+        raw = sentinel.encode("ascii") if as_bytes else sentinel
+        proxy = _JSONPrelecturaProxy(raw, error_type)
+        original_bridge_json = bridge_module.json
+        original_validation_json = validation_module.json
+        original_loads = json.loads
+
+        with monkeypatch.context() as patch:
+            patch.setattr(bridge_module, "json", proxy)
+            patch.setattr(validation_module, "json", proxy)
+            valid = _comprobar_rechazo_prelectura_y_recuperacion(
+                bridge, store, publisher, sample_route, raw, reason,
+                expected_detail=detail,
+            )
+            assert len(proxy.loads_calls) == 4
+            assert proxy.loads_calls[0] == (raw, (), {})
+            assert proxy.loads_calls[1] == (
+                raw, (), {"parse_constant": validation_module._reject_json_constant}
+            )
+            assert proxy.loads_calls[2] == (valid, (), {})
+            assert proxy.loads_calls[3] == (
+                valid, (), {"parse_constant": validation_module._reject_json_constant}
+            )
+            assert json.loads is original_loads
+
+        assert bridge_module.json is original_bridge_json
+        assert validation_module.json is original_validation_json
+        assert json.loads is original_loads
+
+    @pytest.mark.parametrize("as_bytes", [False, True], ids=["texto", "bytes"])
+    def test_decimal_real_se_difiere_con_limite_activo_4300(
+        self, config, feed, publisher, sample_route, as_bytes
+    ):
+        if sys.implementation.name != "cpython":
+            pytest.skip("requiere CPython con API de límite decimal y valor activo 4300")
+        get_limit = getattr(sys, "get_int_max_str_digits", None)
+        if get_limit is None or get_limit() != 4300:
+            pytest.skip("requiere API de límite decimal disponible y valor activo 4300")
+
+        bridge, store = _bridge_para_prelectura(config, feed, publisher)
+        raw = "9" * 5000
+        if as_bytes:
+            raw = raw.encode("ascii")
+        _comprobar_rechazo_prelectura_y_recuperacion(
+            bridge, store, publisher, sample_route, raw, RejectReason.NON_FINITE_NUMBER,
+        )
