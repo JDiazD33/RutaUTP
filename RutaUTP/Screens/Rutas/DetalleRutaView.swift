@@ -9,6 +9,11 @@ struct DetalleRutaView: View {
 
     @State private var showCarPlay: Bool = false
     @State private var showExplorador: Bool = false
+    /// MapKit crea su vista y pide teselas en el mismo fotograma en que se
+    /// monta. Hacerlo dentro de la animación de entrada la entrecortaba, sobre
+    /// todo la primera vez. El mapa aparece cuando la entrada termina.
+    @State private var mapaListo = false
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -46,6 +51,12 @@ struct DetalleRutaView: View {
         }
         .padding(.bottom, tabBarHeight)
         .background(Color.appBackground.ignoresSafeArea())
+        .task {
+            guard !mapaListo else { return }
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            withAnimation(reducirMovimiento ? nil : .easeOut(duration: 0.2)) { mapaListo = true }
+        }
         // Explorador del recorrido (se abre tocando el mapa)
         .fullScreenCover(isPresented: $showExplorador) {
             ExploradorRutaView(ruta: ruta, locationService: locationService)
@@ -208,9 +219,17 @@ struct DetalleRutaView: View {
                         .background(superficie, in: Circle())
                 }
 
-                RutaMapKitView(ruta: ruta)
-                    .frame(height: 240)
-                    .allowsHitTesting(false)
+                Group {
+                    if mapaListo {
+                        RutaMapKitView(ruta: ruta)
+                            .transition(.opacity)
+                    } else {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(Color.surfaceContainerLow)
+                    }
+                }
+                .frame(height: 240)
+                .allowsHitTesting(false)
             }
             .contentShape(Rectangle())
         }
