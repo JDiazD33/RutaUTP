@@ -43,7 +43,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     private(set) var sedeTrabajo = TransporteApp.sedeVisible
 
     /// La sede elegida es la referencia; sin ella se usa GPS o Trujillo.
-    private var coordenadaInicio: CLLocationCoordinate2D {
+    var coordenadaInicio: CLLocationCoordinate2D {
         if utpComoReferencia { return GTFSRepository.coordenadaUTP }
         return sedeTrabajo?.coordinate ?? userRealCoordinate ?? DestinosFijos.centroTrujillo
     }
@@ -68,8 +68,8 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     var destinoSeleccionado: DestinoChip? = nil
     var destinoFocusTick = 0
     @ObservationIgnored var selectionRevision = UUID()
-    @ObservationIgnored private var routeRevision = UUID()
-    @ObservationIgnored private var routeTask: Task<Void, Never>?
+    @ObservationIgnored var routeRevision = UUID()
+    @ObservationIgnored var routeTask: Task<Void, Never>?
     @ObservationIgnored var activeSearch: MKLocalSearch?
 
     func invalidarSeleccionAnterior() {
@@ -105,10 +105,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
     // Tracking & Ruteo Real (igual a RouteTrackingDemoView)
     var routePolyline: MKPolyline? = nil
-    private(set) var itinerarioInstalado: InstalledTransitItinerary?
+    var itinerarioInstalado: InstalledTransitItinerary?
     var itinerario: TransitItinerary? { itinerarioInstalado?.plan }
-    private(set) var alternativasItinerario: [TransitItinerary] = []
-    private(set) var rutasDestacadas: [TransitRouteHighlight] = []
+    var alternativasItinerario: [TransitItinerary] = []
+    var rutasDestacadas: [TransitRouteHighlight] = []
     /// Hasta tres tarjetas; una elección desde la lista ocupa una de ellas.
     var opcionesResumen: [TransitItinerary] {
         guard let installed = itinerario else { return [] }
@@ -119,20 +119,20 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     func categorias(de plan: TransitItinerary) -> [TransitRouteCategory] {
         rutasDestacadas.first { $0.plan.optionID == plan.optionID }?.categories ?? []
     }
-    private(set) var seleccionandoAlternativa: [String]?
-    private(set) var mensajeAlternativa: String?
-    @ObservationIgnored private var catalogoAlternativas: GTFSRouteCatalog?
-    private(set) var calculandoItinerario = false
+    var seleccionandoAlternativa: [String]?
+    var mensajeAlternativa: String?
+    @ObservationIgnored var catalogoAlternativas: GTFSRouteCatalog?
+    var calculandoItinerario = false
     var buscandoItinerarioInicial: Bool { calculandoItinerario && seleccionandoAlternativa == nil }
-    private(set) var mensajeRuta: String?
-    private(set) var itinerarioFocusTick = 0
+    var mensajeRuta: String?
+    var itinerarioFocusTick = 0
     var etaMinutos: Int? = nil
 
     // Buses Animados en Tiempo Real
     /// Estado VIVO de la simulación: avanza en cada tick (10 Hz) y NO se
     /// publica. La instantánea para la UI se actualiza solo cuando el avance
     /// acumulado supera el umbral o el bus cambia de sentido.
-    @ObservationIgnored private var flotaBuses: [BusAnimado] = []
+    @ObservationIgnored var flotaBuses: [BusAnimado] = []
     /// Instantánea publicada para la UI. Se refresca solo cuando algún bus se
     /// ha movido lo suficiente para que se note.
     var busesAnimados: [BusAnimado] = [] {
@@ -156,7 +156,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     }
     /// Catálogo del ancla vigente. La flota global permanece disponible en
     /// el mapa; el panel solo puede atribuirle unidades de estas rutas.
-    private(set) var rutasCercanas: [RutaGTFS] = [] {
+    var rutasCercanas: [RutaGTFS] = [] {
         didSet { refrescarPresentacionFlota() }
     }
 
@@ -221,7 +221,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     var busSeleccionado: BusAnimado? = nil
-    private(set) var fuenteFlota: VehicleTrackingSource = .simulated
+    var fuenteFlota: VehicleTrackingSource = .simulated
 
     var hayPosicionesRealesRecientes: Bool {
         fuenteFlota == .real && hayDatosRecientesDeFlota
@@ -231,41 +231,41 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// menores al umbral desde la última instantánea visible. Los cambios
     /// de sentido también se publican. Observation y los componentes
     /// delimitan quién lee cada cambio.
-    private static let metrosMinimosParaPublicar: Double = 1.5
+    static let metrosMinimosParaPublicar: Double = 1.5
     /// True mientras se consulta el feed por las líneas del punto actual.
-    private(set) var cargandoLineas: Bool = false
-    private(set) var errorLineas: FalloCargaGTFS?
-    @ObservationIgnored private var busSimulationTask: Task<Void, Never>?
-    @ObservationIgnored private var actividadVisual = true
-    @ObservationIgnored private var simulacionBusesIniciada = false
-    @ObservationIgnored private var lineasTask: Task<Void, Never>?
-    @ObservationIgnored private var lineasRevision = UUID()
-    @ObservationIgnored private var flotaRevision = UUID()
+    var cargandoLineas: Bool = false
+    var errorLineas: FalloCargaGTFS?
+    @ObservationIgnored var busSimulationTask: Task<Void, Never>?
+    @ObservationIgnored var actividadVisual = true
+    @ObservationIgnored var simulacionBusesIniciada = false
+    @ObservationIgnored var lineasTask: Task<Void, Never>?
+    @ObservationIgnored var lineasRevision = UUID()
+    @ObservationIgnored var flotaRevision = UUID()
 
     /// Proveedor de posiciones vehiculares reales. Solo se crea cuando hay
     /// configuración de broker; sin ella el mapa sigue con su propia flota.
-    @ObservationIgnored private var vehicleProvider: VehicleTrackingProviding?
+    @ObservationIgnored var vehicleProvider: VehicleTrackingProviding?
 
     /// Consumo del stream de posiciones del proveedor.
-    @ObservationIgnored private var vehicleTrackingTask: Task<Void, Never>?
+    @ObservationIgnored var vehicleTrackingTask: Task<Void, Never>?
 
     /// Catálogo GTFS indexado por `route_id`, para resolver empresa, color y
     /// variante de un vehículo real. `VehiclePosition` viaja con `routeId`,
     /// que es único; `linea` no lo es (dos ramales la comparten).
-    @ObservationIgnored private var etaRealCache = VehicleETACache()
-    private var rutasPorId: [String: RutaGTFS] = [:] {
+    @ObservationIgnored var etaRealCache = VehicleETACache()
+    var rutasPorId: [String: RutaGTFS] = [:] {
         didSet { etaRealCache.install(catalog: rutasPorId) }
     }
     /// nil mientras esperamos el primer snapshot; [] es un snapshot vacío.
     /// Cambiar de destino recalcula ETA sin inventar unidades ni reiniciar MQTT.
-    private var ultimasPosicionesReales: [VehiclePosition]?
+    var ultimasPosicionesReales: [VehiclePosition]?
     /// Último tick del timer: para mover los buses por tiempo transcurrido
     /// real (metros = velocidad × dt) y no por pasos fijos de segmento.
-    @ObservationIgnored private var ultimoTickBuses: Date?
+    @ObservationIgnored var ultimoTickBuses: Date?
     /// Punto de interés actual del panel (destino, sede o ubicación disponible).
     /// Evita relanzar la consulta GTFS si el ancla no cambió y permite
     /// descartar resultados obsoletos si el usuario cambió de destino.
-    private var anclaLineas: (lat: Double, lon: Double)? = nil
+    var anclaLineas: (lat: Double, lon: Double)? = nil
 
     /// Se incrementa cada vez que el usuario pide recentrar; la vista lo
     /// observa para mover la cámara aunque la región no haya cambiado de
@@ -278,9 +278,9 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// cambios de ruta lo usa para colocar el pin en la posición actual).
     var sharedLocationService: LocationServiceProtocol { locationService }
 
-    private let routeService: RouteCalculationService
-    private let repositorioGTFS: RutasGTFSProviding
-    private let crearProveedorReal: @MainActor () -> VehicleTrackingProviding?
+    let routeService: RouteCalculationService
+    let repositorioGTFS: RutasGTFSProviding
+    let crearProveedorReal: @MainActor () -> VehicleTrackingProviding?
     let completer = MKLocalSearchCompleter()
     @ObservationIgnored private var locationTask: Task<Void, Never>?
 
@@ -404,371 +404,6 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         iniciarSimulacionBuses()
     }
 
-    // MARK: - Simulación de Buses Animados
-    //
-    // Los recorridos (shapes) son REALES del feed GTFS embebido; las
-    // posiciones son SIMULADAS porque el feed estático no incluye GPS.
-    // La simulación imita una flota real: vehículos repartidos por sus
-    // corredores, con dirección y velocidad propias (25–43 km/h), que
-    // avanzan metros reales sobre el shape según el tiempo transcurrido.
-    func iniciarSimulacionBuses() {
-        // Con broker configurado, el mapa muestra vehículos OBSERVADOS; sin él,
-        // la flota que el propio mapa anima. Nunca las dos a la vez: cada línea
-        // aparecería duplicada en el mapa.
-        //
-        // Cada consulta también verifica su fuente al completar: una tarea
-        // iniciada antes de conectar MQTT no puede sustituir la flota real.
-        if iniciarFlotaReal() { return }
-
-        if fuenteFlota != .simulated {
-            invalidarConsultaLineas()
-            flotaBuses = []
-            busesAnimados = []
-            busSeleccionado = nil
-            ultimasPosicionesReales = nil
-        }
-        fuenteFlota = .simulated
-
-        // Al volver a la pantalla, conservar el destino elegido si lo hay.
-        recargarLineas(cercaDe: busquedaResultado?.coordenada)
-
-        simulacionBusesIniciada = true
-        reanudarSimulacionBuses()
-    }
-
-    /// Pausa solo la simulación; no toca GPS, consultas ni el canal real.
-    func actualizarActividadVisual(_ activa: Bool) {
-        actividadVisual = activa
-        if fuenteFlota == .real, vehicleProvider != nil { aplicarFlotaReal() }
-        if activa {
-            reanudarSimulacionBuses()
-        } else {
-            busSimulationTask?.cancel()
-            busSimulationTask = nil
-            ultimoTickBuses = nil
-        }
-    }
-
-    private func reanudarSimulacionBuses() {
-        guard actividadVisual, simulacionBusesIniciada,
-              !TransporteApp.rutasUTPPendientes,
-              fuenteFlota == .simulated, busSimulationTask == nil else { return }
-        ultimoTickBuses = nil
-        // Bucle de simulación aislado al hilo principal. Antes era un `Timer`
-        // que despachaba un bloque a la cola principal en cada tick — veinte
-        // por segundo — sin aislamiento verificable ni cancelación estructurada.
-        busSimulationTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                guard !Task.isCancelled, let self, self.actividadVisual else { return }
-                self.actualizarPosicionBuses()
-            }
-        }
-    }
-
-    /// Recarga las líneas del panel según un punto de interés: el destino
-    /// seleccionado (chip, Guardado, búsqueda) o la referencia de inicio.
-    /// Solo la demo genera unidades desde el feed. En modo real el catálogo
-    /// describe recorridos, y las posiciones provienen exclusivamente del canal.
-    func recargarLineas(cercaDe ancla: CLLocationCoordinate2D?, reintentar: Bool = false) {
-        let punto = ancla ?? coordenadaInicio
-        let clave = (lat: punto.latitude, lon: punto.longitude)
-        if !reintentar, let previa = anclaLineas,
-           abs(previa.lat - clave.lat) < 1e-9,
-           abs(previa.lon - clave.lon) < 1e-9 { return }
-        anclaLineas = clave
-
-        lineasTask?.cancel()
-        lineasTask = nil
-        let revision = UUID()
-        lineasRevision = revision
-        // Retirar el filtro anterior mientras se consulta el nuevo destino.
-        // Un snapshot recibido durante esta espera solo actualiza la flota.
-        rutasCercanas = []
-        if fuenteFlota == .real {
-            if ultimasPosicionesReales != nil {
-                aplicarFlotaReal()
-            }
-        }
-
-        let fuenteConsulta = fuenteFlota
-        let repositorio = repositorioGTFS
-        cargandoLineas = true
-        errorLineas = nil
-        lineasTask = Task { @MainActor [weak self] in
-            // 400 m cubre "pasa por la puerta"; si el punto quedó algo
-            // alejado del recorrido se amplía a 800 m antes de declarar
-            // que no pasa ninguna línea.
-            //
-            // OJO: este 800 NO es `radioBusquedaRuta`. Aquí se pregunta qué
-            // líneas pasan por el punto (la lista de transportes cercanos);
-            // allí se pregunta qué paraderos sirven para un viaje concreto.
-            // Subir este valor sí tendría efecto, pero llenaría el panel de
-            // líneas cercanas con rutas que no pasan por donde está la persona.
-            let feed: [RutaGTFS]
-            var catalogoRecuperado: [RutaGTFS]?
-            do {
-                feed = try await repositorio.consultarRutasQuePasanPorConAmpliacion(
-                    punto, reintentar: reintentar)
-                guard !Task.isCancelled else { return }
-                if reintentar, fuenteConsulta == .real {
-                    catalogoRecuperado = try await repositorio.cargarRutas()
-                }
-            } catch {
-                guard !Task.isCancelled, let self, self.lineasRevision == revision,
-                      self.fuenteFlota == fuenteConsulta, self.anclaLineas?.lat == clave.lat,
-                      self.anclaLineas?.lon == clave.lon else { return }
-                self.errorLineas = (error as? FalloCargaGTFS) ?? FalloCargaGTFS(detalle: error.localizedDescription)
-                self.cargandoLineas = false
-                self.lineasTask = nil
-                return
-            }
-            // El usuario pudo cambiar de destino mientras consultaba.
-            guard !Task.isCancelled, let self, self.lineasRevision == revision,
-                  self.fuenteFlota == fuenteConsulta, self.anclaLineas?.lat == clave.lat,
-                  self.anclaLineas?.lon == clave.lon else { return }
-
-            var ids = Set<String>()
-            self.rutasCercanas = feed.filter { !$0.id.isEmpty && $0.shape.count >= 2 && ids.insert($0.id).inserted }
-            if let catalogo = catalogoRecuperado {
-                self.rutasPorId = Dictionary(catalogo.map { ($0.id, $0) },
-                                            uniquingKeysWith: { primera, _ in primera })
-                if self.ultimasPosicionesReales != nil { self.aplicarFlotaReal() }
-            }
-            if fuenteConsulta == .simulated {
-                self.flotaBuses = Self.busesDesde(self.rutasCercanas, ancla: punto)
-                self.busesAnimados = self.flotaBuses
-                self.busSeleccionado = nil
-            }
-            self.cargandoLineas = false
-            self.lineasTask = nil
-        }
-    }
-
-    func reintentarCatalogo() {
-        let ancla = anclaLineas.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
-        recargarLineas(cercaDe: ancla, reintentar: true)
-    }
-
-    private func invalidarConsultaLineas() {
-        lineasRevision = UUID()
-        lineasTask?.cancel()
-        lineasTask = nil
-        anclaLineas = nil
-        rutasCercanas = []
-        cargandoLineas = false
-        errorLineas = nil
-    }
-
-    func detenerSimulacionBuses() {
-        simulacionBusesIniciada = false
-        invalidarConsultaLineas()
-        flotaRevision = UUID()
-        busSimulationTask?.cancel()
-        busSimulationTask = nil
-        ultimoTickBuses = nil
-
-        // El canal real se cierra con la pantalla. Sin esto, salir del mapa
-        // dejaría la suscripción MQTT viva consumiendo batería y red.
-        vehicleTrackingTask?.cancel()
-        vehicleTrackingTask = nil
-        vehicleProvider?.stop()
-        vehicleProvider = nil
-        ultimasPosicionesReales = nil
-        if fuenteFlota == .real {
-            flotaBuses = []
-            busesAnimados = []
-            busSeleccionado = nil
-        }
-    }
-
-    // MARK: - Flota real (canal MQTT)
-
-    /// Arranca el consumo de posiciones observadas si hay broker configurado.
-    ///
-    /// Devuelve `true` si tomó el control de la flota, en cuyo caso el mapa no
-    /// debe animar su propia simulación. Sin `MQTT_HOST`, `MQTT_USERNAME` y
-    /// `MQTT_PASSWORD` no hay canal, y el mapa se comporta exactamente como
-    /// antes: su flota animada sobre los shapes del feed.
-    private func iniciarFlotaReal() -> Bool {
-        guard vehicleProvider == nil else { return true }
-        guard let provider = crearProveedorReal(), provider.source == .real else { return false }
-
-        invalidarConsultaLineas()
-        busSimulationTask?.cancel()
-        busSimulationTask = nil
-        ultimoTickBuses = nil
-        let revision = UUID()
-        flotaRevision = revision
-        vehicleProvider = provider
-        fuenteFlota = .real
-        ultimasPosicionesReales = nil
-        flotaBuses = []
-        busesAnimados = []
-        busSeleccionado = nil
-        cargandoLineas = true
-        recargarLineas(cercaDe: busquedaResultado?.coordenada)
-
-        let repositorio = repositorioGTFS
-        let revisionConsultaCatalogo = lineasRevision
-        vehicleTrackingTask = Task { @MainActor [weak self] in
-            // El catálogo completo, no solo las líneas cercanas al ancla: un
-            // vehículo observado puede venir de cualquiera de las 102 rutas.
-            let feed: [RutaGTFS]?
-            do {
-                feed = try await repositorio.cargarRutas()
-            } catch {
-                guard !Task.isCancelled, let self, self.flotaRevision == revision,
-                      self.fuenteFlota == .real else { return }
-                if self.lineasRevision == revisionConsultaCatalogo {
-                    self.errorLineas = (error as? FalloCargaGTFS) ?? FalloCargaGTFS(detalle: error.localizedDescription)
-                }
-                // Las posiciones observadas conservan su canal incluso si
-                // no tenemos metadatos; no sustituirlas por una flota demo.
-                feed = nil
-            }
-            guard !Task.isCancelled, self?.flotaRevision == revision,
-                  self?.fuenteFlota == .real else { return }
-
-            if let feed {
-                self?.rutasPorId = Dictionary(
-                    feed.map { ($0.id, $0) },
-                    uniquingKeysWith: { primera, _ in primera }
-                )
-            }
-
-            guard !Task.isCancelled else { return }
-            provider.start()
-
-            for await _ in provider.positions() {
-                guard !Task.isCancelled, let self, self.flotaRevision == revision,
-                      self.fuenteFlota == .real else { break }
-                // Conservar recepción en las otras pestañas sin redibujar el
-                // mapa oculto. Una retirada sí debe limpiar también su caché.
-                if self.actividadVisual || !provider.keepsConnectionWhileMapHidden
-                    || provider.currentPositions.isEmpty {
-                    self.aplicarFlotaReal()
-                }
-            }
-        }
-
-        return true
-    }
-
-    /// Sustituye la flota del mapa por las posiciones que llegan del broker.
-    ///
-    /// Conserva procedencia, run y revisión además de los datos de presentación.
-    /// La geometría va vacía: la posición MQTT la fija cada mensaje, sin avanzar
-    /// mediante la animación local.
-    private func aplicarFlotaReal() {
-        guard fuenteFlota == .real else { return }
-        // El stream puede haber entregado un valor que una revocación posterior
-        // ya retiró. Lo mismo ocurre con la caché al cambiar destino/catálogo.
-        let posiciones = vehicleProvider?.positionsForPresentation() ?? []
-        ultimasPosicionesReales = posiciones
-        let anclaETA: CLLocationCoordinate2D = {
-            if let anclaLineas {
-                return CLLocationCoordinate2D(
-                    latitude: anclaLineas.lat,
-                    longitude: anclaLineas.lon
-                )
-            }
-            return busquedaResultado?.coordenada ?? coordenadaInicio
-        }()
-
-        // UTP solo muestra unidades vinculadas a su catálogo institucional.
-        let visibles = busesUTPActivos ? posiciones.filter { rutasPorId[$0.routeId] != nil } : posiciones
-        flotaBuses = visibles.map { posicion in
-            let ruta = rutasPorId[posicion.routeId]
-            let eta = etaRealCache.minutes(position: posicion, target: anclaETA)
-
-            return BusAnimado(
-                id: "real-\(posicion.id)",
-                linea: posicion.linea,
-                rutaId: posicion.routeId,
-                empresa: ruta?.empresa ?? L.t("Empresa no disponible", "Carrier unavailable"),
-                tipo: "Bus",
-                variante: ruta?.variante ?? "",
-                minutosLlegada: eta,
-                colorDeRuta: ruta?.color,
-                lat: posicion.lat,
-                lon: posicion.lon,
-                heading: posicion.heading,
-                rutaCoordenadas: [],
-                acumulados: [],
-                velocidadMS: posicion.speed >= 0 ? posicion.speed : 0,
-                fuente: .real,
-                dataOrigin: posicion.dataOrigin,
-                simulationRunId: posicion.simulationRunId,
-                controlRevision: posicion.controlRevision,
-                backendVehicleID: posicion.id,
-                scenarioOccupancy: posicion.scenarioOccupancy
-            )
-        }
-
-        busesAnimados = flotaBuses
-
-        // Si el vehículo abierto en el popup sigue existiendo, refrescarlo.
-        if let seleccionado = busSeleccionado {
-            busSeleccionado = flotaBuses.first { $0.presentationIdentity == seleccionado.presentationIdentity }
-        }
-        MQTTConfiguration.trialLog("map", ["received": posiciones.count,
-            "fleet": flotaBuses.count, "selected": busSeleccionado == nil ? 0 : 1,
-            "occupancyEmpty": flotaBuses.filter { $0.displayedScenarioOccupancy == .empty }.count,
-            "occupancySpace": flotaBuses.filter { $0.displayedScenarioOccupancy == .space }.count,
-            "occupancyFull": flotaBuses.filter { $0.displayedScenarioOccupancy == .full }.count])
-    }
-
-    private func actualizarPosicionBuses() {
-        guard fuenteFlota == .simulated else { return }
-        // dt real entre ticks: la velocidad no depende de la cadencia del
-        // timer ni de eventuales tirones del hilo principal.
-        let ahora = Date()
-        let dt: Double = ultimoTickBuses.map { min(ahora.timeIntervalSince($0), 1.0) } ?? 0
-        ultimoTickBuses = ahora
-
-        var huboCambioVisible = false
-
-        for i in flotaBuses.indices {
-            var bus = flotaBuses[i]
-            let totalM = bus.longitudRutaM
-            guard totalM > 10 else { continue }
-
-            // Avance en METROS reales: velocidad crucero propia × tiempo.
-            let avance = bus.velocidadMS * dt
-            var d = bus.distanciaM + (bus.isMovingForward ? avance : -avance)
-
-            // Extremo del recorrido: el vehículo regresa por el mismo
-            // corredor (ida y vuelta), sin saltos en el mapa.
-            if d >= totalM {
-                d = totalM
-                bus.isMovingForward = false
-            } else if d <= 0 {
-                d = 0
-                bus.isMovingForward = true
-            }
-            // Medir desde la última instantánea visible, no desde el tick
-            // anterior: los pasos menores de 1,5 m también deben acumularse.
-            if busesAnimados.indices.contains(i), busesAnimados[i].rutaId == bus.rutaId {
-                let publicado = busesAnimados[i]
-                if abs(d - publicado.distanciaM) >= Self.metrosMinimosParaPublicar
-                    || bus.isMovingForward != publicado.isMovingForward {
-                    huboCambioVisible = true
-                }
-            } else {
-                huboCambioVisible = true
-            }
-            bus.distanciaM = d
-            bus.actualizarPosicion()
-            flotaBuses[i] = bus
-        }
-
-        // La simulación avanza siempre; el estado publicado —y con él el
-        // redibujado del mapa— solo cuando el movimiento acumulado se nota.
-        guard huboCambioVisible else { return }
-        busesAnimados = flotaBuses
-    }
-
     func recenterOnUser() {
         if let userCoord = userRealCoordinate {
             // Token: garantiza que la vista mueva la cámara aunque la
@@ -788,189 +423,4 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// Observation permite que refrescar la lista actualice sus chips.
     var lugaresParaChips: [LugarGuardado] = []
 
-    // MARK: - Caminata + recorrido GTFS + caminata al destino
-    func calcularRutaHacia(_ destinoCoord: CLLocationCoordinate2D) {
-        routeTask?.cancel()
-        let revision = UUID()
-        routeRevision = revision
-        itinerarioInstalado = nil
-        alternativasItinerario = []
-        rutasDestacadas = []
-        catalogoAlternativas = nil
-        seleccionandoAlternativa = nil
-        mensajeAlternativa = nil
-        routePolyline = nil
-        etaMinutos = nil
-        mensajeRuta = nil
-        calculandoItinerario = false
-        guard !TransporteApp.rutasUTPPendientes else {
-            mensajeRuta = TransporteApp.mensajePendiente
-            return
-        }
-        guard let origen = userRealCoordinate else {
-            mensajeRuta = L.t("Necesitamos tu ubicación para encontrar dónde subir. Activa el GPS y permite el acceso a la ubicación.",
-                              "We need your location to find a boarding stop. Enable GPS and allow location access.")
-            return
-        }
-
-        calculandoItinerario = true
-        let repositorioGTFS = repositorioGTFS
-        routeTask = Task { @MainActor [weak self] in
-            let catalog: GTFSRouteCatalog
-            do {
-                catalog = try await repositorioGTFS.cargarCatalogo(reintentar: true)
-            } catch {
-                guard !Task.isCancelled, let self, self.routeRevision == revision else { return }
-                self.mensajeRuta = ((error as? FalloCargaGTFS)
-                    ?? FalloCargaGTFS(detalle: error.localizedDescription)).mensajeUsuario
-                self.calculandoItinerario = false
-                return
-            }
-            guard let self, !Task.isCancelled, self.routeRevision == revision else { return }
-            defer {
-                if self.routeRevision == revision { self.calculandoItinerario = false }
-            }
-            // Misma política del Tracking: hasta `radioBusquedaRuta` a pie en
-            // cada extremo.
-            let radio = Self.radioBusquedaRuta
-            let options = await TransitPlanner.shared.options(in: catalog, origin: origen,
-                destination: destinoCoord, radius: radio)
-            guard !Task.isCancelled, self.routeRevision == revision else { return }
-            self.catalogoAlternativas = catalog
-            self.alternativasItinerario = options.alternatives
-            self.rutasDestacadas = options.highlights
-            let nearest = options.alternatives.map { plan in
-                (plan: plan, walk: plan.walkToBoardMeters,
-                 journey: plan.estimatedJourneySeconds, id: plan.optionID)
-            }.sorted { lhs, rhs in
-                if lhs.walk != rhs.walk { return lhs.walk < rhs.walk }
-                if lhs.journey != rhs.journey { return lhs.journey < rhs.journey }
-                return lhs.id.lexicographicallyPrecedes(rhs.id)
-            }.map(\.plan)
-            var checked = Set<[String]>()
-            // Si la subida más cercana no cumple Directions, reintentar por
-            // cercanía; no saltar a la más rápida con una caminata mucho mayor.
-            let recommended = options.highlights.filter { $0.categories.contains(.recommended) }.map(\.plan)
-            for candidate in recommended + nearest {
-                guard checked.insert(candidate.optionID).inserted else { continue }
-                guard checked.count <= 4 else { break }
-                let plan = await candidate.withWalkingDirections(using: self.routeService)
-                guard !Task.isCancelled, self.routeRevision == revision else { return }
-                let installed = InstalledTransitItinerary(plan: plan)
-                let metrics = installed.metrics
-                guard metrics.walkToBoardMeters <= radio, metrics.walkToDestinationMeters <= radio,
-                      metrics.walkingWithinTransferLimit else {
-                    self.alternativasItinerario.removeAll { $0.optionID == candidate.optionID }
-                    self.rutasDestacadas.removeAll { $0.plan.optionID == candidate.optionID }
-                    continue
-                }
-                if !self.rutasDestacadas.contains(where: { $0.categories.contains(.recommended) }) {
-                    let previous = self.categorias(de: plan)
-                    self.rutasDestacadas.removeAll { $0.plan.optionID == plan.optionID }
-                    let categories = TransitRouteCategory.allCases.filter {
-                        $0 == .recommended || $0 == .closestBoarding || previous.contains($0)
-                    }
-                    self.rutasDestacadas.insert(TransitRouteHighlight(plan: plan, categories: categories), at: 0)
-                    self.rutasDestacadas = Array(self.rutasDestacadas.prefix(3))
-                }
-                self.instalarItinerario(installed)
-                return
-            }
-            if !self.alternativasItinerario.isEmpty {
-                self.mensajeRuta = L.t("No pudimos confirmar la ruta recomendada. Revisa Otras rutas para elegir otra línea.",
-                                      "We couldn't confirm the recommended route. Check Other routes to choose another line.")
-            } else {
-                self.mensajeRuta = L.f("No encontramos una ruta directa ni con un transbordo con paraderos a menos de {0} m de ambos extremos. Prueba otro destino.", "No direct or one-transfer route has stops within {0} m of both ends. Try another destination.", ["\(Int(radio))"])
-            }
-        }
-    }
-
-    /// Comprueba las caminatas de la línea elegida sin perder el plan anterior.
-    /// Conserva los paraderos elegidos: una opción cercana no debe cambiar a
-    /// otra subida más lejana al comprobar Directions.
-    func seleccionarAlternativa(_ alternativa: TransitItinerary, diferir: Bool = false) {
-        guard catalogoAlternativas != nil,
-              let candidate = alternativasItinerario.first(where: { $0.optionID == alternativa.optionID }) else { return }
-        if itinerario?.optionID == candidate.optionID {
-            cancelarSeleccionAlternativa()
-            return
-        }
-        routeTask?.cancel()
-        let revision = UUID()
-        routeRevision = revision
-        seleccionandoAlternativa = candidate.optionID
-        mensajeAlternativa = nil
-        calculandoItinerario = true
-        routeTask = Task { @MainActor [weak self] in
-            // Una pasada rápida por varias tarjetas solo resuelve la última.
-            if diferir {
-                do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
-            }
-            guard !Task.isCancelled else { return }
-            let radio = Self.radioBusquedaRuta
-            guard let self, !Task.isCancelled, self.routeRevision == revision else { return }
-            defer {
-                if self.routeRevision == revision {
-                    self.calculandoItinerario = false
-                    self.seleccionandoAlternativa = nil
-                    self.routeTask = nil
-                }
-            }
-            let plan = await candidate.withWalkingDirections(using: self.routeService)
-            guard !Task.isCancelled, self.routeRevision == revision else { return }
-            let installed = InstalledTransitItinerary(plan: plan)
-            let metrics = installed.metrics
-            guard metrics.walkToBoardMeters <= radio, metrics.walkToDestinationMeters <= radio,
-                  metrics.walkingWithinTransferLimit else {
-                self.mensajeAlternativa = L.t(
-                    "La caminata de esta opción supera el límite permitido. Elige otra ruta.",
-                    "This option's walking distance exceeds the allowed limit. Choose another route.")
-                return
-            }
-            self.instalarItinerario(installed)
-        }
-    }
-
-    func cancelarSeleccionAlternativa() {
-        guard seleccionandoAlternativa != nil else { return }
-        routeRevision = UUID()
-        routeTask?.cancel()
-        routeTask = nil
-        seleccionandoAlternativa = nil
-        calculandoItinerario = false
-    }
-
-    private func instalarItinerario(_ installed: InstalledTransitItinerary) {
-        itinerarioInstalado = installed
-        let plan = installed.plan
-        if let index = alternativasItinerario.firstIndex(where: { $0.optionID == plan.optionID }) {
-            alternativasItinerario[index] = plan
-        } else {
-            alternativasItinerario.append(plan)
-        }
-        if let index = rutasDestacadas.firstIndex(where: { $0.plan.optionID == plan.optionID }) {
-            rutasDestacadas[index].plan = plan
-        }
-        let coordinates = plan.coordinates
-        routePolyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
-        etaMinutos = max(1, Int(ceil((installed.metrics.totalSeconds + plan.boardingWaitSeconds) / 60)))
-        mensajeRuta = nil
-        mensajeAlternativa = nil
-        itinerarioFocusTick += 1
-    }
-
-    func limpiar() {
-        invalidarSeleccionAnterior()
-        textoBusqueda = ""
-        destinoSeleccionado = nil
-        busquedaResultado = nil
-        sugerenciasBusqueda = []
-        completer.queryFragment = ""
-        routePolyline = nil
-        etaMinutos = nil
-        // Sin destino: volver a la sede o al punto disponible, sin elegir viaje.
-        recargarLineas(cercaDe: nil)
-
-        region = Self.regionDeReferencia(coordenadaInicio)
-    }
 }

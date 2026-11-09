@@ -132,6 +132,8 @@
 		5A5587299DBBFCF7C6F9E986 /* LugarDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 296B02D8E919E323C6A5867D /* LugarDetailSheet.swift */; };
 		0A800507300AD9FE004E1676 /* MapaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CE300AD9FE004E1676 /* MapaView.swift */; };
 		0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */; };
+		C9E10B000000000000000012 /* MapaViewModel+Flota.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9E10B000000000000000011 /* MapaViewModel+Flota.swift */; };
+		C9E10B000000000000000014 /* MapaViewModel+Itinerario.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9E10B000000000000000013 /* MapaViewModel+Itinerario.swift */; };
 		0A800509300AD9FE004E1676 /* MapMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D0300AD9FE004E1676 /* MapMarkers.swift */; };
 		0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D1300AD9FE004E1676 /* SideDrawer.swift */; };
 		0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */; };
@@ -420,6 +422,8 @@
 		296B02D8E919E323C6A5867D /* LugarDetailSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LugarDetailSheet.swift; sourceTree = "<group>"; };
 		0A8004CE300AD9FE004E1676 /* MapaView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaView.swift; sourceTree = "<group>"; };
 		0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaViewModel.swift; sourceTree = "<group>"; };
+		C9E10B000000000000000011 /* MapaViewModel+Flota.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+Flota.swift"; sourceTree = "<group>"; };
+		C9E10B000000000000000013 /* MapaViewModel+Itinerario.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+Itinerario.swift"; sourceTree = "<group>"; };
 		0A8004D0300AD9FE004E1676 /* MapMarkers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapMarkers.swift; sourceTree = "<group>"; };
 		0A8004D1300AD9FE004E1676 /* SideDrawer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideDrawer.swift; sourceTree = "<group>"; };
 		0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarnetScannerView.swift; sourceTree = "<group>"; };
@@ -843,6 +847,8 @@
 				BC0200000000000000000005 /* BusDetailPopup.swift */,
 				0A8004CE300AD9FE004E1676 /* MapaView.swift */,
 				0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */,
+				C9E10B000000000000000011 /* MapaViewModel+Flota.swift */,
+				C9E10B000000000000000013 /* MapaViewModel+Itinerario.swift */,
 				BA9900000000000000000071 /* MapaViewModel+Busqueda.swift */,
 				BA9900000000000000000073 /* MapaViewModel+SimulacionBuses.swift */,
 				BA9900000000000000000075 /* MapaViewModel+Destinos.swift */,
@@ -1446,6 +1452,8 @@
 				0A80051B300AD9FE004E1676 /* VehicleTrackingProviding.swift in Sources */,
 				0A800520300AD9FE004E1676 /* RutaUTPApp.swift in Sources */,
 				0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */,
+				C9E10B000000000000000012 /* MapaViewModel+Flota.swift in Sources */,
+				C9E10B000000000000000014 /* MapaViewModel+Itinerario.swift in Sources */,
 				0A8004FD300AD9FE004E1676 /* LugarGuardado.swift in Sources */,
 				0A800432300AD9FE004E1676 /* LugaresStore.swift in Sources */,
 				30C8E60E781443809B689068 /* RecuperacionPreferencias.swift in Sources */,
