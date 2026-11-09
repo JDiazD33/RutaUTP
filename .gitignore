@@ -57,3 +57,6 @@ backend/deploy/backend.env
 # Archivos temporales del editor
 *.swp
 *.swo
+
+# Instrucciones locales de agentes: solo apuntan al workspace de esta máquina.
+/AGENTS.md
