@@ -3,62 +3,6 @@ import CoreLocation
 import Combine
 import UIKit
 
-/// Estado de presentación; no cambia valores persistidos ni mensajes MQTT.
-private enum ContributionStatus {
-    case disabled, tripEnded, mqttNotConfigured, feedPending, preparing, needsPermission
-    case catalogFailure(FalloCargaGTFS?), emptyCatalog, analyzing, noNearbyRoutes
-    case waitingForLine(String), probableBoarding(String), detected(String), possibleBoarding(String)
-    case alightingTripEnded, alighting, mqttTest(String), pausedBackground
-    case noTrip, approachingStop, possibleAlighting
-
-    var message: String {
-        switch self {
-        case .disabled:
-            return L.t("Contribución desactivada", "Contribution off")
-        case .waitingForLine(let line):
-            return L.f("Esperando detectar el viaje en la línea {0}", "Waiting to detect a trip on line {0}", ["\(line)"])
-        case .tripEnded:
-            return L.t("Viaje terminado. Indica tu próximo micro para volver a ayudar.", "Trip ended. Select your next bus to contribute again.")
-        case .mqttNotConfigured:
-            return L.t("Canal MQTT no configurado", "MQTT channel not configured")
-        case .feedPending:
-            return TransporteApp.mensajePendiente
-        case .preparing:
-            return L.t("Preparando detección pasiva", "Preparing passive detection")
-        case .needsPermission:
-            return L.t("Se necesita permiso de ubicación", "Location permission is required")
-        case .catalogFailure(let error):
-            return error?.mensajeUsuario ?? L.t("No se pudieron cargar las rutas. Vuelve a intentarlo.", "Couldn't load routes. Try again.")
-        case .emptyCatalog:
-            return L.t("El catálogo GTFS no contiene rutas", "The GTFS catalog contains no routes")
-        case .analyzing:
-            return L.t("Analizando movilidad", "Analysing movement")
-        case .noNearbyRoutes:
-            return L.t("Sin rutas próximas", "No nearby routes")
-        case .probableBoarding(let line):
-            return L.f("Abordaje probable: línea {0}", "Probable boarding: line {0}", [line])
-        case .alightingTripEnded:
-            return L.t("Descenso detectado. Viaje terminado.", "Alighting detected. Trip ended.")
-        case .alighting:
-            return L.t("Descenso detectado", "Alighting detected")
-        case .mqttTest(let line):
-            return L.f("Prueba MQTT activa: línea {0}", "MQTT test active: line {0}", [line])
-        case .pausedBackground:
-            return L.t("Publicación pausada: app en segundo plano", "Uploads paused: app in background")
-        case .detected(let line):
-            return L.f("Viaje detectado en {0}", "Trip detected on {0}", ["\(line)"])
-        case .noTrip:
-            return L.t("Sin viaje detectado", "No trip detected")
-        case .approachingStop:
-            return L.t("Cerca de un paradero", "Near a stop")
-        case .possibleBoarding(let line):
-            return L.f("Posible abordaje en {0}", "Possible boarding on {0}", ["\(line)"])
-        case .possibleAlighting:
-            return L.t("Comprobando posible descenso", "Checking possible alighting")
-        }
-    }
-}
-
 @MainActor
 final class PassiveTrackingCoordinator: ObservableObject {
 
@@ -66,14 +10,14 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var errorCargaRutas: FalloCargaGTFS?
 
-    @Published private(set) var detectionState:
+    @Published var detectionState:
         PassengerDetectionState = .idle
 
     @Published private(set) var motionActivity:
         DetectedMotionActivity = .unknown
 
-    @Published private(set) var confirmedLine: String?
-    @Published private(set) var shouldPublish = false
+    @Published var confirmedLine: String?
+    @Published var shouldPublish = false
 
     /// Estado actual del canal utilizado para publicar observaciones.
     ///
@@ -82,7 +26,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var observationPublisherState:
         ObservationPublisherState = .inactive
 
-    @Published private var contributionStatus: ContributionStatus = .disabled
+    @Published var contributionStatus: ContributionStatus = .disabled
 
     /// Traducir al leer registra el idioma actual sin recrear el viaje.
     var statusMessage: String { contributionStatus.message }
@@ -99,9 +43,9 @@ final class PassiveTrackingCoordinator: ObservableObject {
     @Published private(set) var boardingPlace: String?
     @Published private(set) var falloAlGuardarSubida = false
     @Published private(set) var boardingPoint: BoardingPoint?
-    @Published private(set) var latestLocation: CLLocation?
+    @Published var latestLocation: CLLocation?
     let tripOccupancy: OccupancyService
-    private var waitingForNewTrip = false
+    var waitingForNewTrip = false
 
     /// La declaración orienta el detector; nunca salta sus comprobaciones.
     func beginTrip(route: DetectionRouteGeometry, occupancy: BusOccupancyState?, boardingPlace: String = "", boardingPoint: BoardingPoint? = nil) {
@@ -164,13 +108,12 @@ final class PassiveTrackingCoordinator: ObservableObject {
     ///
     /// Sin configuración la contribución permanece deshabilitada. Durante
     /// las pruebas puede sustituirse por un publicador simulado.
-    private let observationPublisher:
+    let observationPublisher:
         ObservationPublishing?
 
+    var detectionEngine: PassengerDetectionEngine
 
-    private var detectionEngine: PassengerDetectionEngine
-
-    private var routes:
+    var routes:
         [DetectionRouteGeometry] = []
 
     private var locationTask:
@@ -197,28 +140,28 @@ final class PassiveTrackingCoordinator: ObservableObject {
     /// el socket MQTT y el GPS mueren sin despedida. Detectar la
     /// transición permite cerrar la publicación de forma limpia y
     /// reanudarla cuando el usuario vuelve a la app.
-    private var backgroundObserver: NSObjectProtocol?
+    var backgroundObserver: NSObjectProtocol?
 
-    private var foregroundObserver: NSObjectProtocol?
-    private var appEnSegundoPlano = false
+    var foregroundObserver: NSObjectProtocol?
+    var appEnSegundoPlano = false
     /// La sesión sigue siendo del mismo viaje, pero el canal fue detenido.
     /// Si foreground llega durante un posible descenso, una muestra posterior
     /// puede volver a autorizar el envío sin confirmar otro abordaje.
-    private var sesionPausadaPorBackground = false
+    var sesionPausadaPorBackground = false
 
     /// UUID temporal de la sesión de viaje.
     ///
     /// Se crea al confirmar el abordaje y se descarta del estado local al terminar
     /// la sesión. MQTT lo vincula a la cuenta autenticada; rotarlo no impide
     /// correlacionar viajes ni elimina las observaciones ya enviadas al backend.
-    private var observationSessionID: String?
+    var observationSessionID: String?
 
     /// Identificador GTFS fijado al confirmar el abordaje.
     ///
     /// Debe conservarse porque la ruta geométricamente más cercana puede
     /// cambiar entre muestras. Todas las observaciones de una sesión deben
     /// seguir utilizando la ruta con la que se confirmó el viaje.
-    private var confirmedRouteID: String?
+    var confirmedRouteID: String?
 
 #if DEBUG
 /// Permite probar el transporte MQTT sin esperar un viaje real.
@@ -226,7 +169,7 @@ final class PassiveTrackingCoordinator: ObservableObject {
 /// Solo existe en compilaciones DEBUG y requiere explícitamente la variable
 /// `MQTT_FORCE_ONBOARD=1` en el Scheme de Xcode. No puede utilizarse en una
 /// compilación Release y no elimina la necesidad del consentimiento visible.
-private let isForcedOnboardForMQTTTest =
+let isForcedOnboardForMQTTTest =
     ProcessInfo.processInfo.environment[
         "MQTT_FORCE_ONBOARD"
     ] == "1"
@@ -306,8 +249,6 @@ private let isForcedOnboardForMQTTTest =
             "configured": isPublisherConfigured ? 1 : 0, "enabled": isEnabled ? 1 : 0
         ])
     }
-
-
 
     func startIfConsented() async {
         guard isEnabled else {
@@ -517,153 +458,6 @@ private let isForcedOnboardForMQTTTest =
         }
     }
 
-    /// Procesa conjuntamente una lectura GPS y una actividad física.
-    ///
-    /// Este método tiene visibilidad interna para que XCTest pueda verificar
-    /// la orquestación completa con muestras controladas. En producción solo
-    /// es invocado por el stream de ubicación del coordinador.
-    ///
-    /// - Parameters:
-    ///   - location: Lectura GPS con coordenadas, velocidad en m/s, rumbo en
-    ///     grados, precisión horizontal en metros y timestamp.
-    ///   - activity: Actividad detectada por Core Motion para esa muestra.
-    func process(
-        _ location: CLLocation,
-        activity: DetectedMotionActivity
-    ) {
-        latestLocation = location
-        guard isEnabled else { return }
-        guard !waitingForNewTrip else { return }
-        let candidateRoutes = selectedTripRoute.map { [$0] } ?? routes
-        guard let candidate =
-            RouteCandidateMatcher.closestMatch(
-                for: location,
-                routes: candidateRoutes
-            )
-        else {
-                shouldPublish = false
-            contributionStatus =
-                .noNearbyRoutes
-            return
-        }
-
-#if DEBUG
-// Este bypass verifica únicamente conexión, serialización y publicación.
-// Las reglas reales de detección ya están cubiertas por XCTest.
-if isForcedOnboardForMQTTTest {
-    processForcedOnboardForMQTTTest(
-        location: location,
-        candidate: candidate,
-        activity: activity
-    )
-
-    return
-}
-#endif
-
-        let sample = PassengerDetectionSample(
-            timestamp:
-                location.timestamp.timeIntervalSince1970,
-
-            speed:
-                max(0, location.speed),
-
-            horizontalAccuracy:
-                location.horizontalAccuracy,
-
-            distanceToRoute:
-                candidate.distanceToRoute,
-
-            headingDifference:
-                candidate.headingDifference,
-
-            distanceToNearestStop:
-                candidate.distanceToNearestStop,
-
-            motionActivity:
-                activity
-        )
-
-        let decision =
-            detectionEngine.process(sample, routeID: candidate.routeID)
-
-        detectionState = decision.state
-        shouldPublish = decision.shouldPublish && !appEnSegundoPlano
-
-        if decision.didConfirmBoarding {
-            confirmedLine = candidate.linea
-            confirmedRouteID = candidate.routeID
-
-            // Cada abordaje confirmado recibe un UUID de sesión nuevo.
-            // lowercased() solo normaliza el formato enviado al backend.
-            let sessionID =
-                UUID().uuidString.lowercased()
-
-            observationSessionID = sessionID
-            sesionPausadaPorBackground = appEnSegundoPlano
-            if !appEnSegundoPlano {
-                observationPublisher?.start(sessionID: sessionID, linea: candidate.linea)
-            }
-
-            contributionStatus =
-                .probableBoarding(candidate.linea)
-
-        } else if decision.didConfirmAlighting {
-            if selectedTripRoute != nil {
-                endTrip()
-                contributionStatus = .alightingTripEnded
-                return
-            }
-            // El descenso confirmado finaliza inmediatamente la conexión
-            // correspondiente al viaje y descarta sus identificadores locales.
-            stopObservationSession()
-
-            confirmedLine = nil
-
-            contributionStatus =
-                .alighting
-
-        } else {
-            contributionStatus = message(
-                for: decision.state,
-                candidateLine: candidate.linea
-            )
-        }
-
-        // Solo PassengerDetectionEngine puede autorizar una transmisión.
-        // Se utiliza el routeID confirmado al abordar, no la ruta candidata
-        // de la muestra actual, para conservar la identidad del viaje.
-        if
-            decision.shouldPublish,
-            !appEnSegundoPlano,
-            observationSessionID != nil,
-            let confirmedRouteID
-        {
-            reanudarSesionPausadaSiSePuede()
-            observationPublisher?.publish(
-                location: location,
-                routeID: confirmedRouteID,
-                activity: activity
-            )
-            if selectedTripRoute != nil, tripOccupancy.hasPendingTripReport { tripOccupancy.start() }
-        }
-
-        // Copia el estado actualizado del publicador a la propiedad observable.
-        refreshObservationPublisherState()
-
-
-        #if DEBUG
-        print(
-            "[PassiveTracking] Estado: " +
-            "\(decision.state.rawValue), " +
-            "línea: \(candidate.linea), " +
-            "distancia: " +
-            "\(Int(candidate.distanceToRoute)) m, " +
-            "publicar: \(decision.shouldPublish)"
-        )
-        #endif
-    }
-
     func stop() {
         // Invalida cualquier arranque pendiente antes de nada: si se revocó el
         // consentimiento, la continuación del arranque no debe reanudar nada al
@@ -707,74 +501,12 @@ if isForcedOnboardForMQTTTest {
         #endif
     }
 
-
-#if DEBUG
-/// Fuerza temporalmente una sesión `onboard` para una prueba MQTT local.
-///
-/// El método continúa necesitando:
-/// - Consentimiento activado.
-/// - Permiso de ubicación.
-/// - Una ruta GTFS próxima.
-/// - Configuración MQTT en el Scheme.
-///
-/// No modifica el algoritmo Release ni se incluye en el binario final.
-private func processForcedOnboardForMQTTTest(
-    location: CLLocation,
-    candidate: RouteCandidateMatch,
-    activity: DetectedMotionActivity
-) {
-    guard !appEnSegundoPlano else { return }
-    if observationSessionID == nil {
-        let sessionID =
-            UUID().uuidString.lowercased()
-
-        observationSessionID = sessionID
-        confirmedRouteID = candidate.routeID
-        confirmedLine = candidate.linea
-
-        observationPublisher?.start(
-            sessionID: sessionID,
-            linea: candidate.linea
-        )
-
-        print(
-            "[PassiveTracking][DEBUG] " +
-            "Abordaje forzado para probar MQTT. " +
-            "Sesión: \(sessionID), " +
-            "línea: \(candidate.linea)"
-        )
-    }
-
-    detectionState = .onboard
-    shouldPublish = true
-    reanudarSesionPausadaSiSePuede()
-
-    observationPublisher?.publish(
-        location: location,
-        routeID: confirmedRouteID ?? candidate.routeID,
-        activity: activity
-    )
-
-    refreshObservationPublisherState()
-
-    contributionStatus =
-        .mqttTest(candidate.linea)
-
-    print(
-        "[PassiveTracking][DEBUG] " +
-        "Observación entregada al publicador"
-    )
-}
-#endif
-
-
-
     /// Finaliza el envío y descarta los identificadores locales del viaje.
     /// No solicita el borrado de observaciones ya recibidas por el backend.
     ///
     /// Se llama al confirmar el descenso, desactivar la contribución o detener
     /// completamente el coordinador. Ningún UUID se reutiliza entre viajes.
-    private func stopObservationSession() {
+    func stopObservationSession() {
         sesionPausadaPorBackground = false
         tripOccupancy.stop()
         observationPublisher?.stop()
@@ -785,137 +517,17 @@ private func processForcedOnboardForMQTTTest(
         refreshObservationPublisherState()
     }
 
-    // MARK: - Ciclo de vida de la app
-
-    /// Registra los observadores de segundo plano/foreground.
-    private func observeAppLifecycle() {
-        guard backgroundObserver == nil else {
-            return
-        }
-
-        backgroundObserver = NotificationCenter
-            .default
-            .addObserver(
-                forName:
-                    UIApplication.didEnterBackgroundNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                Task { @MainActor in
-                    self?.pauseObservationSessionForBackground()
-                }
-            }
-
-        foregroundObserver = NotificationCenter
-            .default
-            .addObserver(
-                forName:
-                    UIApplication.willEnterForegroundNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                Task { @MainActor in
-                    self?.resumeObservationSessionIfNeeded()
-                }
-            }
-    }
-
-    private func removeAppLifecycleObservers() {
-        if let backgroundObserver {
-            NotificationCenter
-                .default
-                .removeObserver(backgroundObserver)
-
-            self.backgroundObserver = nil
-        }
-
-        if let foregroundObserver {
-            NotificationCenter
-                .default
-                .removeObserver(foregroundObserver)
-
-            self.foregroundObserver = nil
-        }
-    }
-
-    /// Corta la publicación al pasar a segundo plano.
-    ///
-    /// iOS suspende el proceso pocos segundos después: el socket MQTT
-    /// moriría sin desconexión limpia y el GPS se detendría. Se cierra
-    /// la conexión conservando el `sessionID` y la ruta confirmada,
-    /// porque el viaje sigue vigente y debe poder reanudarse.
-    ///
-    /// La existencia de la sesión es la condición suficiente: si no hay
-    /// viaje en curso no hay nada que pausar, con o sin coordinador vivo.
-    ///
-    /// Visibilidad interna para que XCTest verifique la pausa/reanudación
-    /// sin simular el ciclo de vida real de la app.
-    func pauseObservationSessionForBackground() {
-        appEnSegundoPlano = true
-        shouldPublish = false
-        tripOccupancy.stop()
-        guard observationSessionID != nil, !sesionPausadaPorBackground else {
-            return
-        }
-
-        sesionPausadaPorBackground = true
-        observationPublisher?.stop()
-
-        refreshObservationPublisherState()
-
-        contributionStatus =
-            .pausedBackground
-    }
-
-    /// Reanuda la publicación si el viaje detectado sigue vigente.
-    ///
-    /// Se reutiliza el mismo `sessionID`: la reanudación pertenece al
-    /// mismo viaje y cuenta MQTT. La siguiente muestra GPS que apruebe el
-    /// detector vuelve a transmitirse sin esperar un nuevo abordaje.
-    ///
-    /// Un posible descenso no autoriza envío todavía. Se conserva la pausa
-    /// hasta que `process` reciba una decisión que vuelva a autorizarlo.
-    func resumeObservationSessionIfNeeded() {
-        appEnSegundoPlano = false
-        reanudarSesionPausadaSiSePuede()
-    }
-
-    private func reanudarSesionPausadaSiSePuede() {
-        guard
-            isEnabled, !appEnSegundoPlano, sesionPausadaPorBackground,
-            detectionState == .onboard,
-            let sessionID = observationSessionID,
-            let linea = confirmedLine, confirmedRouteID != nil
-        else {
-            return
-        }
-
-        // Consumir la pausa antes de start: ni foreground repetido ni las
-        // siguientes muestras deben duplicar conexiones o forzar un reenvío.
-        sesionPausadaPorBackground = false
-        observationPublisher?.start(
-            sessionID: sessionID,
-            linea: linea
-        )
-
-        refreshObservationPublisherState()
-
-        contributionStatus =
-            .detected(linea)
-    }
-
     /// Actualiza la propiedad observable con el estado real del publicador.
     ///
     /// CocoaMQTT cambia su estado mediante callbacks asíncronos. El coordinador
     /// lo consulta después de cada operación o muestra procesada para que la
     /// interfaz pueda presentar el resultado más reciente.
-    private func refreshObservationPublisherState() {
+    func refreshObservationPublisherState() {
         observationPublisherState =
             observationPublisher?.state ?? .inactive
     }
 
-
-    private func message(
+    func message(
         for state: PassengerDetectionState,
         candidateLine: String
     ) -> ContributionStatus {
@@ -926,83 +538,5 @@ private func processForcedOnboardForMQTTTest(
         case .onboard: return .detected(candidateLine)
         case .alightingCandidate: return .possibleAlighting
         }
-    }
-}
-
-
-/// Referencias declaradas, no paraderos verificados. No se infiere que la
-/// ubicación actual del teléfono sea donde el pasajero subió anteriormente.
-struct BoardingPoint: Codable, Equatable {
-    let latitude: Double
-    let longitude: Double
-
-    init?(coordinate: CLLocationCoordinate2D) {
-        guard coordinate.latitude.isFinite, coordinate.longitude.isFinite,
-              CLLocationCoordinate2DIsValid(coordinate) else { return nil }
-        latitude = coordinate.latitude
-        longitude = coordinate.longitude
-    }
-
-    var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-}
-
-struct BoardingPlaceNote: Codable, Identifiable {
-    let id: UUID
-    let routeID: String
-    let line: String
-    let place: String
-    // Opcional para poder seguir leyendo las referencias anteriores sin mapa.
-    let point: BoardingPoint?
-    let recordedAt: Date
-}
-
-@MainActor
-enum BoardingPlaceStore {
-    static let key = "rutautp.boarding-place-notes.v1"
-
-    nonisolated static func normalized(_ text: String) -> String? {
-        let value = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
-        return value.isEmpty ? nil : value
-    }
-
-    static func notes(defaults: UserDefaults = .standard) -> [BoardingPlaceNote] {
-        readableNotes(defaults: defaults) ?? []
-    }
-
-    static func datosInvalidos(defaults: UserDefaults = .standard) -> Bool {
-        readableNotes(defaults: defaults) == nil
-    }
-
-    @MainActor
-    static func respaldarYReiniciar(defaults: UserDefaults = .standard,
-                                    crearRespaldo: ((Data) throws -> URL)? = nil) throws -> URL? {
-        guard datosInvalidos(defaults: defaults) else { return nil }
-        let vacias = try JSONEncoder().encode([BoardingPlaceNote]())
-        return try RecuperacionPreferencias.reiniciar(claves: [key],
-            valoresNuevos: [key: vacias], nombre: "subidas", defaults: defaults,
-            crearRespaldo: crearRespaldo)
-    }
-
-    /// nil indica almacenamiento ilegible; [] indica ausencia o lista vacía válida.
-    private static func readableNotes(defaults: UserDefaults) -> [BoardingPlaceNote]? {
-        guard let original = defaults.object(forKey: key) else { return [] }
-        guard let data = original as? Data else { return nil }
-        return try? JSONDecoder().decode([BoardingPlaceNote].self, from: data)
-    }
-
-    @discardableResult
-    static func save(routeID: String, line: String, place: String, point: BoardingPoint? = nil,
-                     defaults: UserDefaults = .standard) -> Bool {
-        let place = normalized(place)
-        guard place != nil || point != nil else { return true }
-        guard var records = readableNotes(defaults: defaults) else { return false }
-        records.append(BoardingPlaceNote(id: UUID(), routeID: routeID, line: line,
-                                         place: place ?? "", point: point, recordedAt: Date()))
-        // Historial local acotado para preparar el futuro catálogo de paraderos.
-        guard let data = try? JSONEncoder().encode(Array(records.suffix(200))) else { return false }
-        defaults.set(data, forKey: key)
-        return true
     }
 }
