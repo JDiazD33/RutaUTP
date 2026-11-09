@@ -13697,5 +13697,12 @@
     "pt-BR": "Serviço não configurado",
     "de": "Dienst nicht eingerichtet",
     "zh-Hans": "服务尚未配置"
+  },
+  "Saldo tras la recarga: {0}": {
+    "en": "Balance after top-up: {0}",
+    "fr": "Solde après la recharge : {0}",
+    "pt-BR": "Saldo após a recarga: {0}",
+    "de": "Guthaben nach der Aufladung: {0}",
+    "zh-Hans": "充值后余额：{0}"
   }
 }

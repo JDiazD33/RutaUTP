@@ -7,8 +7,12 @@
 
 import SwiftUI
 
+/// Recarga con la composición de Apple Cash: el saldo es el protagonista y
+/// cada elección se lee en grupos nativos. La acción principal vive al final
+/// del contenido y se desplaza con él, como el resto del formulario.
 struct RecargarSaldoSheet: View {
     @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
 
     private var apilarContenido: Bool { textSize >= .xxxLarge }
 
@@ -27,24 +31,58 @@ struct RecargarSaldoSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    saldoActual
-                    aviso
-                    if store.datosLocalesInvalidos {
+            Form {
+                Section {
+                    encabezado
+                        .listRowBackground(Color.clear)
+                } footer: {
+                    // El aviso va arriba y no escondido: la recarga no mueve dinero.
+                    Text(L.t("Recarga de demostración: no se procesa ningún pago real ni se abre ninguna app de pagos. El saldo se guarda solo en este dispositivo.",
+                             "Demo top-up: no real payment is processed and no payment app is opened. The balance is stored only on this device."))
+                }
+
+                if store.datosLocalesInvalidos {
+                    Section {
                         Text(L.t("No se pudieron recuperar los datos del monedero. Las operaciones están bloqueadas y los datos originales se conservan.",
                                  "Wallet data could not be recovered. Operations are blocked and the original data has been preserved."))
-                            .font(.bodySm)
-                            .foregroundStyle(.onSurfaceVariant)
+                            .font(.subheadline)
+                            .foregroundStyle(EstiloPreferencias.textoSecundario)
+                            .fixedSize(horizontal: false, vertical: true)
                         Button(L.t("Reintentar lectura", "Retry reading")) { store.reintentarLectura() }
                     }
-                    selectorImporte
-                    metodosDePago
-                    if !store.movimientos.isEmpty { movimientos }
                 }
-                .padding(20)
+
+                Section {
+                    selectorImporte
+                } header: {
+                    Text(L.t("¿CUÁNTO QUIERES RECARGAR?", "HOW MUCH DO YOU WANT TO TOP UP?"))
+                }
+
+                Section {
+                    ForEach(BilleteraPago.allCases) { opcion in
+                        filaBilletera(opcion)
+                    }
+                } header: {
+                    Text(L.t("PAGA CON", "PAY WITH"))
+                }
+
+                Section {
+                    botonRecargar
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
+                }
+
+                if !store.movimientos.isEmpty {
+                    Section {
+                        ForEach(store.movimientos.prefix(5)) { movimiento in
+                            filaMovimiento(movimiento)
+                        }
+                    } header: {
+                        Text(L.t("MOVIMIENTOS RECIENTES", "RECENT ACTIVITY"))
+                    }
+                }
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) { botonRecargar }
+            .estiloFormularioPreferencias()
             .navigationTitle(L.t("Recargar saldo", "Top up balance"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -64,76 +102,68 @@ struct RecargarSaldoSheet: View {
         }
     }
 
-    private var saldoActual: some View {
-        VStack(alignment: .leading, spacing: 4) {
+    /// Saldo actual en grande y, debajo, el saldo que quedaría con el importe
+    /// elegido. Es la misma tipografía del monedero del perfil.
+    private var encabezado: some View {
+        VStack(spacing: 6) {
             Text(L.t("SALDO DE DEMOSTRACIÓN", "DEMO BALANCE"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(EstiloPreferencias.textoSecundario)
             Text(store.saldoTexto)
-                .font(.displayNumberMd)
+                .font(.system(.largeTitle, design: .rounded).weight(.semibold))
                 .monospacedDigit()
-                .foregroundStyle(.onSurface)
-        }
-    }
-
-    /// El aviso va arriba y no escondido: la recarga no mueve dinero.
-    private var aviso: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "info.circle.fill")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.appAccent)
-            Text(L.t("Recarga de demostración: no se procesa ningún pago real ni se abre ninguna app de pagos. El saldo se guarda solo en este dispositivo.",
-                     "Demo top-up: no real payment is processed and no payment app is opened. The balance is stored only on this device."))
-                .font(.bodySm)
-                .foregroundStyle(.onSurfaceVariant)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .foregroundStyle(EstiloPreferencias.texto)
+            Text(L.f("Saldo tras la recarga: {0}", "Balance after top-up: {0}",
+                     [FormatoNumero.soles(store.saldo + elegido)]))
+                .font(.subheadline)
+                .monospacedDigit()
+                .foregroundStyle(EstiloPreferencias.textoSecundario)
+                .contentTransition(.numericText())
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.appPrimary.opacity(0.09))
-        )
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
     }
 
+    /// Importes rápidos en cápsulas, como en Apple Cash. El elegido se rellena
+    /// con el color de etiqueta, igual que la acción destacada del monedero.
     private var selectorImporte: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L.t("¿CUÁNTO QUIERES RECARGAR?", "HOW MUCH DO YOU WANT TO TOP UP?"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12),
-                                     count: apilarContenido ? 1 : 2), spacing: 12) {
-                ForEach(importes, id: \.self) { importe in
-                    let seleccionado = elegido == importe
-                    Button {
-                        AppHaptics.selection()
-                        withAnimation(.easeInOut(duration: 0.18)) { elegido = importe }
-                    } label: {
-                        Text(FormatoNumero.soles(importe, decimales: 0))
-                            .font(.system(.headline, weight: .heavy))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 10)
-                            .monospacedDigit()
-                            .foregroundStyle(seleccionado ? Color.onPrimaryContainer : Color.onSurface)
-                            .frame(maxWidth: .infinity, minHeight: 56)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(seleccionado ? Color.primaryContainer : Color.surfaceContainerLow)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(seleccionado ? Color.primaryContainer : Color.outlineVariant.opacity(0.35),
-                                            lineWidth: seleccionado ? 2 : 0.5)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(seleccionado ? .isSelected : [])
-                }
+        let columnas = textSize.isAccessibilitySize ? 1 : (apilarContenido ? 2 : 4)
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: columnas),
+                         spacing: 10) {
+            ForEach(importes, id: \.self) { importe in
+                botonImporte(importe)
             }
         }
+        .padding(.vertical, 6)
+    }
+
+    private func botonImporte(_ importe: Double) -> some View {
+        let seleccionado = elegido == importe
+
+        return Button {
+            guard !seleccionado else { return }
+            AppHaptics.selection()
+            withAnimation(reducirMovimiento ? nil : .snappy(duration: 0.2)) { elegido = importe }
+        } label: {
+            Text(FormatoNumero.soles(importe, decimales: 0))
+                .font(.body.weight(.semibold))
+                .monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(seleccionado ? Color(uiColor: .systemBackground) : EstiloPreferencias.texto)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(seleccionado ? Color(uiColor: .label) : Color(uiColor: .tertiarySystemGroupedBackground),
+                            in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(seleccionado ? .isSelected : [])
     }
 
     /// Billeteras con las que se puede pagar la recarga.
@@ -141,118 +171,44 @@ struct RecargarSaldoSheet: View {
     /// Es lo que se hace en Perú: se paga escaneando un QR. En la vida real eso
     /// es Yape o Plin; aquí se usan marcas propias («Yapo» y «Plun») para no
     /// apoyarse en marcas registradas ajenas. La demostración no abre ninguna
-    /// app de pagos, así que la selección solo decide el aspecto (borde, fondo
-    /// y el texto del botón).
-    private var metodosDePago: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L.t("PAGA CON", "PAY WITH"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-
-            VStack(spacing: 12) {
-                ForEach(BilleteraPago.allCases) { opcion in
-                    tarjetaBilletera(opcion)
-                }
-            }
-
-            Text(L.t("Demostración: no se abre ninguna app de pagos ni se mueve dinero real.",
-                     "Demo: no payment app is opened and no real money moves."))
-                .font(.bodyXs)
-                .foregroundStyle(.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private func tarjetaBilletera(_ opcion: BilleteraPago) -> some View {
+    /// app de pagos, así que la selección solo decide la marca de verificación
+    /// y el texto del botón.
+    private func filaBilletera(_ opcion: BilleteraPago) -> some View {
         let seleccionada = billetera == opcion
 
         return Button {
+            guard !seleccionada else { return }
             AppHaptics.selection()
-            withAnimation(.easeInOut(duration: 0.18)) { billetera = opcion }
+            billetera = opcion
         } label: {
             HStack(spacing: 12) {
-                MarcaBilletera(billetera: opcion, altura: 56)
+                MarcaBilletera(billetera: opcion, altura: 36)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(opcion.nombre)
-                        .font(.headlineSm)
-                        .foregroundStyle(.onSurface)
+                        .font(.body)
+                        .foregroundStyle(EstiloPreferencias.texto)
                     Text(L.t("Billetera digital", "Digital wallet"))
-                        .font(.bodyXs)
-                        .foregroundStyle(.onSurfaceVariant)
+                        .font(.subheadline)
+                        .foregroundStyle(EstiloPreferencias.textoSecundario)
                 }
+                .fixedSize(horizontal: false, vertical: true)
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
 
-                Image(systemName: seleccionada ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(seleccionada ? opcion.colorMarca : Color.outlineVariant)
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .opacity(seleccionada ? 1 : 0)
+                    .accessibilityHidden(true)
             }
-            .frame(maxWidth: .infinity)
-            .padding(12)
-            .frame(minHeight: 84)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(seleccionada
-                          ? opcion.colorMarca.opacity(0.10)
-                          : Color.surfaceContainerLowest)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(seleccionada ? opcion.colorMarca : Color.outlineVariant.opacity(0.35),
-                            lineWidth: seleccionada ? 2 : 0.5)
-            )
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.f("Pagar con {0}", "Pay with {0}", ["\(opcion.nombre)"]))
-        .accessibilityAddTraits(seleccionada ? .isSelected : [])
-    }
-
-    private var movimientos: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L.t("MOVIMIENTOS RECIENTES", "RECENT ACTIVITY"))
-                .font(.labelCapsMd)
-                .foregroundStyle(.onSurfaceVariant)
-                .appTracking(AppTracking.wideLabel)
-
-            VStack(spacing: 0) {
-                ForEach(store.movimientos.prefix(5)) { movimiento in
-                    (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-                                      : AnyLayout(HStackLayout(spacing: 10))) {
-                        Image(systemName: movimiento.esRecarga ? "arrow.down.circle.fill" : "bus.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(movimiento.esRecarga ? Color.appAccent : Color.onSurfaceVariant)
-                            .frame(width: 22)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(movimiento.descripcion)
-                                .font(.bodySm)
-                                .foregroundStyle(.onSurface)
-                            Text(FormatoFecha
-                                    .formateador(patron: "d MMM, HH:mm",
-                                                 locale: FormatoFecha.localeActivo)
-                                    .string(from: movimiento.fecha))
-                                .font(.bodyXs)
-                                .foregroundStyle(.onSurfaceVariant)
-                        }
-                        if !apilarContenido { Spacer() }
-                        Text((movimiento.importe > 0 ? "+" : "−") + FormatoNumero.soles(abs(movimiento.importe)))
-                            .font(.bodySmMedium)
-                            .monospacedDigit()
-                            .foregroundStyle(movimiento.esRecarga ? Color.appAccent : Color.onSurface)
-                    }
-                    .padding(.vertical, 9)
-                    if movimiento.id != store.movimientos.prefix(5).last?.id {
-                        Divider().padding(.leading, 32)
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.surfaceContainerLowest)
-            )
-        }
+        .accessibilityAddTraits(seleccionada ? [.isButton, .isSelected] : .isButton)
     }
 
     private var botonRecargar: some View {
@@ -265,23 +221,42 @@ struct RecargarSaldoSheet: View {
                 errorRecarga = true
             }
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 16, weight: .bold))
-                Text(L.f("Recargar {0} con {1}", "Top up {0} with {1}", ["\(FormatoNumero.soles(elegido, decimales: 0))", "\(billetera.nombre)"]))
-                    .font(.headlineSm)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .foregroundStyle(.onPrimaryFill)
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.primaryContainer)
-            )
+            Label(L.f("Recargar {0} con {1}", "Top up {0} with {1}",
+                      ["\(FormatoNumero.soles(elegido, decimales: 0))", "\(billetera.nombre)"]),
+                  systemImage: "plus.circle.fill")
         }
-        .buttonStyle(PressableCapsuleStyle())
+        .buttonStyle(BotonMonederoStyle(destacado: true))
         .disabled(store.datosLocalesInvalidos)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+    }
+
+    private func filaMovimiento(_ movimiento: MovimientoMonedero) -> some View {
+        (apilarContenido ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                          : AnyLayout(HStackLayout(spacing: 12))) {
+            Image(systemName: movimiento.esRecarga ? "arrow.down.circle.fill" : "bus.fill")
+                .font(.body)
+                .foregroundStyle(movimiento.esRecarga ? AnyShapeStyle(.tint)
+                                                      : AnyShapeStyle(EstiloPreferencias.textoSecundario))
+                .frame(width: 28)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(movimiento.descripcion)
+                    .font(.body)
+                    .foregroundStyle(EstiloPreferencias.texto)
+                Text(FormatoFecha
+                        .formateador(patron: "d MMM, HH:mm",
+                                     locale: FormatoFecha.localeActivo)
+                        .string(from: movimiento.fecha))
+                    .font(.subheadline)
+                    .foregroundStyle(EstiloPreferencias.textoSecundario)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            if !apilarContenido { Spacer(minLength: 8) }
+            Text((movimiento.importe > 0 ? "+" : "−") + FormatoNumero.soles(abs(movimiento.importe)))
+                .font(.body.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(movimiento.esRecarga ? AnyShapeStyle(.tint) : AnyShapeStyle(EstiloPreferencias.texto))
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
     }
 }

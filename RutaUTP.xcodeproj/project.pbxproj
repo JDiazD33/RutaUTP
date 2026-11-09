@@ -112,6 +112,7 @@
 		0A80043C300AD9FE004E1676 /* AvisoRutaAproximada.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */; };
 		0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A80043E300AD9FE004E1676 /* MonederoStore.swift */; };
 		49EADB7EA6F0189AD0228901 /* MonederoCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F92B1C8AFDD6C07D3EAC03 /* MonederoCard.swift */; };
+		C9E10B000000000000000016 /* BotonMonedero.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9E10B000000000000000015 /* BotonMonedero.swift */; };
 		95AC579424A2378971D4EFE4 /* RecargarSaldoSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD097D0F78F1D9AF5B37AAC0 /* RecargarSaldoSheet.swift */; };
 		8C041BDCCE43E6E777572074 /* QRPasajeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B961A9048B5EA8CC7A142693 /* QRPasajeSheet.swift */; };
 		A2AEFC86F801F548324915CB /* MarcaBilletera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F055CA6EC17559193C0C248 /* MarcaBilletera.swift */; };
@@ -403,6 +404,7 @@
 		0A80043B300AD9FE004E1676 /* AvisoRutaAproximada.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AvisoRutaAproximada.swift; sourceTree = "<group>"; };
 		0A80043E300AD9FE004E1676 /* MonederoStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoStore.swift; sourceTree = "<group>"; };
 		24F92B1C8AFDD6C07D3EAC03 /* MonederoCard.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MonederoCard.swift; sourceTree = "<group>"; };
+		C9E10B000000000000000015 /* BotonMonedero.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotonMonedero.swift; sourceTree = "<group>"; };
 		AD097D0F78F1D9AF5B37AAC0 /* RecargarSaldoSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecargarSaldoSheet.swift; sourceTree = "<group>"; };
 		B961A9048B5EA8CC7A142693 /* QRPasajeSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QRPasajeSheet.swift; sourceTree = "<group>"; };
 		7F055CA6EC17559193C0C248 /* MarcaBilletera.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MarcaBilletera.swift; sourceTree = "<group>"; };
@@ -886,6 +888,7 @@
 				0A8004D6300AD9FE004E1676 /* PerfilView.swift */,
 				9DB0A38750064BD18128DFCD /* RespaldosRecuperacionSheet.swift */,
 				24F92B1C8AFDD6C07D3EAC03 /* MonederoCard.swift */,
+				C9E10B000000000000000015 /* BotonMonedero.swift */,
 				AD097D0F78F1D9AF5B37AAC0 /* RecargarSaldoSheet.swift */,
 				B961A9048B5EA8CC7A142693 /* QRPasajeSheet.swift */,
 				7F055CA6EC17559193C0C248 /* MarcaBilletera.swift */,
@@ -1494,6 +1497,7 @@
 				B7E0C5037B014557A9E34CAA /* RespaldosRecuperacionSheet.swift in Sources */,
 				0A80043F300AD9FE004E1676 /* MonederoStore.swift in Sources */,
 				49EADB7EA6F0189AD0228901 /* MonederoCard.swift in Sources */,
+				C9E10B000000000000000016 /* BotonMonedero.swift in Sources */,
 				95AC579424A2378971D4EFE4 /* RecargarSaldoSheet.swift in Sources */,
 				8C041BDCCE43E6E777572074 /* QRPasajeSheet.swift in Sources */,
 				A2AEFC86F801F548324915CB /* MarcaBilletera.swift in Sources */,
