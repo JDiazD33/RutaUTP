@@ -112,16 +112,43 @@ struct CambiosRutaDetalleSheet: View {
     let nombreLinea: (RouteChangeAlert) -> String
     @Environment(\.dismiss) private var dismiss
 
+    /// Avisos de una misma incidencia: mismo motivo, lugar, vía y vigencia. Un
+    /// cierre deja un aviso por línea afectada; se leen juntos, en una sección.
+    private var grupos: [[RouteChangeAlert]] {
+        var claves: [String] = []
+        var porClave: [String: [RouteChangeAlert]] = [:]
+        for aviso in avisos {
+            let clave = [aviso.reason, aviso.place, aviso.via ?? "", aviso.detalleVigencia]
+                .joined(separator: "\u{1F}")
+            if porClave[clave] == nil { claves.append(clave) }
+            porClave[clave, default: []].append(aviso)
+        }
+        return claves.compactMap { porClave[$0] }
+    }
+
+    /// «C-03 «JJ», C-07 «Z1» y M-34 «A»», sin repetir variantes homónimas.
+    private func lineas(de grupo: [RouteChangeAlert]) -> String {
+        var nombres: [String] = []
+        for nombre in grupo.map(nombreLinea) where !nombre.isEmpty && !nombres.contains(nombre) {
+            nombres.append(nombre)
+        }
+        nombres.sort { $0.localizedStandardCompare($1) == .orderedAscending }
+        let formato = ListFormatter()
+        formato.locale = FormatoFecha.localeActivo
+        return formato.string(from: nombres) ?? nombres.joined(separator: ", ")
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                ForEach(avisos) { aviso in
+                ForEach(grupos, id: \.first?.id) { grupo in
+                    let aviso = grupo[0]
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
                             Label(aviso.motivo.tituloAviso, systemImage: aviso.motivo.icono)
                                 .font(.headline)
                                 .foregroundStyle(aviso.motivo.tinta)
-                            let linea = nombreLinea(aviso)
+                            let linea = lineas(de: grupo)
                             if !linea.isEmpty {
                                 Text(aviso.motivo.cambiaRecorrido ? linea
                                      : L.f("Reportado desde {0}. Afecta a las líneas que pasan por aquí.",
@@ -134,7 +161,7 @@ struct CambiosRutaDetalleSheet: View {
                                 Label(via, systemImage: "arrow.triangle.turn.up.right.diamond")
                                     .font(.body.weight(.medium))
                             }
-                            if !aviso.calleNueva.isEmpty {
+                            if grupo.contains(where: { !$0.calleNueva.isEmpty }) {
                                 Text(L.t("La línea continua es la calle por la que va ahora; la punteada, el tramo que deja de recorrer.",
                                          "The solid line is the street it now takes; the dotted one, the stretch it no longer covers."))
                                     .font(.footnote)

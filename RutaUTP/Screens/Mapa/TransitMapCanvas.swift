@@ -193,7 +193,7 @@ struct TransitMapCanvas: View {
                 Annotation(cambio.aviso.motivo.tituloAviso, coordinate: cambio.aviso.coordenada) {
                     Button {
                         campoEnfocado = false
-                        vm.abrirCambios([cambio.aviso])
+                        vm.abrirCambios(vm.cambiosJuntoA(cambio.aviso))
                     } label: {
                         if avisoConIcono(cambio) {
                             MarcadorCambioRuta(motivo: cambio.aviso.motivo)
@@ -204,8 +204,8 @@ struct TransitMapCanvas: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(cambio.aviso.motivo.tituloAviso + ". "
                                         + (cambio.aviso.textoVia ?? cambio.aviso.place))
-                    .accessibilityHint(L.t("Muestra los cambios confirmados en esta ruta.",
-                                           "Shows the confirmed changes on this route."))
+                    .accessibilityHint(L.t("Muestra el cambio en cada línea afectada.",
+                                           "Shows the change on each affected line."))
                 }
                 .annotationTitles(avisoConLineas(cambio) ? .automatic : .hidden)
             }

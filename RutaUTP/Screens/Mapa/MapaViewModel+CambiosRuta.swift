@@ -28,8 +28,16 @@ struct SeleccionCambiosRuta: Identifiable {
 
 extension MapaViewModel {
     /// Sin ruta ni viaje se muestran todos los avisos vigentes, con un tope
-    /// para que una jornada con muchos reportes no cubra el mapa.
-    static let maximoCambiosSinRuta = 40
+    /// para que una jornada con muchos reportes no cubra el mapa. Un cierre
+    /// deja un aviso por cada línea que lo recorre: el tope cuenta líneas, no
+    /// lugares, y deja sitio a varios cierres a la vez.
+    static let maximoCambiosSinRuta = 60
+
+    /// Dos avisos del mismo motivo a esta distancia se dibujan uno sobre otro.
+    static let radioMismoLugar: CLLocationDistance = 60
+    /// Avisos del mismo motivo y lugar a esta distancia son una incidencia: las
+    /// líneas no se desvían todas en la misma esquina.
+    static let radioMismaIncidencia: CLLocationDistance = 500
 
     /// Instala los avisos vigentes y decide cuáles se dibujan.
     ///
@@ -93,6 +101,20 @@ extension MapaViewModel {
         tareaFinDestacados = nil
         cambiosDestacados = Set(avisos.map(\.id))
         cambiosSeleccionados = SeleccionCambiosRuta(avisos: avisos)
+    }
+
+    /// El aviso tocado y los de las demás líneas afectadas por la misma
+    /// incidencia, él primero. Un cierre afecta a todas las líneas que pasan
+    /// por la calle y sus marcadores coinciden: tocar uno los muestra todos.
+    func cambiosJuntoA(_ aviso: RouteChangeAlert) -> [RouteChangeAlert] {
+        let origen = CLLocation(latitude: aviso.lat, longitude: aviso.lon)
+        let vecinos = cambiosEnMapa.map(\.aviso).filter { otro in
+            guard otro.id != aviso.id, otro.reason == aviso.reason else { return false }
+            let distancia = CLLocation(latitude: otro.lat, longitude: otro.lon).distance(from: origen)
+            return distancia <= Self.radioMismoLugar
+                || (otro.place == aviso.place && distancia <= Self.radioMismaIncidencia)
+        }
+        return [aviso] + vecinos
     }
 
     /// Al cerrar la hoja, el aviso sigue a la vista un tiempo para ubicarlo en
