@@ -5,11 +5,12 @@ from __future__ import annotations
 from bisect import bisect_right
 from collections import Counter
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import math
 from pathlib import Path
 
 from rutautp_backend.geo import bearing_deg, closest_point_on_segment, haversine_m, heading_difference_deg, is_valid_coordinate
+from rutautp_backend.desvios import largo_trazo, recorrido_con_desvios
 from rutautp_backend.gtfs import GtfsFeed, load_feed
 from rutautp_backend.simulation_profile import SimulationProfile
 
@@ -254,3 +255,27 @@ def load_trip_geometries(profile: SimulationProfile, gtfs_dir: Path,
     if profile.signatures(gtfs_dir) != profile.verified_signatures:
         raise ValueError("perfil/feed cambiados durante la adaptación")
     return geometries
+
+
+def aplicar_desvios(geometries: dict[str, TripGeometry], desvios) -> dict[str, TripGeometry]:
+    """Mueve cada micro por los desvíos vigentes de su ruta.
+
+    El tramo cerrado se sustituye por el trazo del desvío. Los paraderos de ese
+    tramo se omiten, como en la calle, y los siguientes se desplazan según el
+    largo del desvío. Una ruta sin desvíos conserva su geometría intacta.
+    """
+    resultado = {}
+    for route_id, geometry in geometries.items():
+        propios = desvios.get(route_id, ())
+        if not propios:
+            resultado[route_id] = geometry
+            continue
+        path = RoutePath(recorrido_con_desvios(list(geometry.path.points), propios))
+        stops = []
+        for stop in geometry.stops:
+            if any(d.inicio_m < stop.distance_m < d.fin_m for d in propios):
+                continue
+            corrimiento = sum(largo_trazo(d) - (d.fin_m - d.inicio_m) for d in propios if stop.distance_m >= d.fin_m)
+            stops.append(replace(stop, distance_m=stop.distance_m + corrimiento))
+        resultado[route_id] = replace(geometry, path=path, stops=tuple(stops))
+    return resultado

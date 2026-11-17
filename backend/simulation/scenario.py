@@ -17,7 +17,7 @@ from rutautp_backend.geo import haversine_m
 from rutautp_backend.simulation_models import SimulationActorRecord, canonical_uuid
 from rutautp_backend.simulation_profile import SimulationProfile
 from .clock import Clock, ClockDiscontinuity, ClockGuard, ClockSample, RealtimeClock
-from .geometry import TripGeometry, load_trip_geometries, number
+from .geometry import TripGeometry, aplicar_desvios, load_trip_geometries, number
 
 
 def _seed(seed: int, label: str) -> int:
@@ -266,8 +266,12 @@ class ScenarioEngine:
             raise ValueError('el escenario no coincide con los grupos y whitelist del perfil')
 
     @classmethod
-    def from_profile(cls, profile: SimulationProfile, gtfs_dir: Path, run_id: str, **kwargs):
-        return cls(profile, load_trip_geometries(profile, gtfs_dir), run_id, gtfs_dir, **kwargs)
+    def from_profile(cls, profile: SimulationProfile, gtfs_dir: Path, run_id: str, desvios=None, **kwargs):
+        geometries = load_trip_geometries(profile, gtfs_dir)
+        if desvios:
+            # Los micros siguen los desvíos vigentes de su ruta, como el backend los acepta.
+            geometries = aplicar_desvios(geometries, desvios)
+        return cls(profile, geometries, run_id, gtfs_dir, **kwargs)
 
     def _schedule(self, at: float, kind: str, principal: str, vehicle_id: str):
         self._event_order += 1

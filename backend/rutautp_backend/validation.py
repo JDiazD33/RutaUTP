@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from .config import Config
+from .desvios import Desvio
 from .geo import (
     haversine_m,
     heading_difference_deg,
@@ -183,9 +184,13 @@ class ObservationValidator:
         self, feed: GtfsFeed, config: Config, *,
         rate_limiter: RateLimiter | None = None,
         global_limiter: RateLimiter | None = None,
+        desvios: dict[str, tuple[Desvio, ...]] | None = None,
     ) -> None:
         self.feed = feed
         self.config = config
+        #: Desvíos vigentes por ruta. Una posición lejos de la ruta o con otro
+        #: rumbo se acepta si va sobre el trazo de un desvío de esa misma ruta.
+        self.desvios = desvios or {}
         self.rate_limiter = rate_limiter or RateLimiter(config.max_messages_per_minute)
 
         # Techo de emergencia del servicio entero. El límite primario usa la
@@ -207,7 +212,7 @@ class ObservationValidator:
         """
         return ObservationValidator(
             self.feed, self.config, rate_limiter=self.rate_limiter,
-            global_limiter=self.global_limiter,
+            global_limiter=self.global_limiter, desvios=self.desvios,
         )
 
     def validate(
@@ -475,24 +480,37 @@ class ObservationValidator:
                 RejectReason.UNKNOWN_ROUTE, f"{route_id} sin geometría usable"
             )
 
-        if match.distance_m > self.config.max_distance_to_route_m:
-            return ValidationResult.reject(
-                RejectReason.TOO_FAR_FROM_ROUTE,
-                f"{match.distance_m:.1f} m de {route.linea}",
-            )
-
         # Compara y propaga la misma representación canónica. Restar primero
         # rumbos de varias vueltas podía producir una diferencia negativa y
         # admitir un sentido contrario. Los negativos siguen siendo desconocidos.
         heading = sanitize_heading(float(payload["heading"]))
+        distance_m, progress = match.distance_m, match.progress
+        route_bearing = None
+
+        # Fuera de la ruta o con otro rumbo, puede ir sobre un desvío vigente.
+        # Sin desvíos para esta ruta, la comprobación es la de siempre.
+        if self.desvios.get(route_id) and (
+                distance_m > self.config.max_distance_to_route_m
+                or (heading >= 0 and heading_difference_deg(heading, segment_bearing_deg(
+                    list(route.shape), match.segment_index)) > self.config.max_heading_diff_deg)):
+            on_detour = self._match_detour(route_id, latitude, longitude, heading)
+            if on_detour is not None:
+                distance_m, progress, route_bearing = on_detour
+
+        if distance_m > self.config.max_distance_to_route_m:
+            return ValidationResult.reject(
+                RejectReason.TOO_FAR_FROM_ROUTE,
+                f"{distance_m:.1f} m de {route.linea}",
+            )
 
         # Solo se comprueba el rumbo cuando viene informado. Un `-1` es el valor
         # de "desconocido" del contrato y ocurre de forma legítima con el
         # vehículo parado.
         if heading >= 0:
-            route_bearing = segment_bearing_deg(
-                list(route.shape), match.segment_index
-            )
+            if route_bearing is None:
+                route_bearing = segment_bearing_deg(
+                    list(route.shape), match.segment_index
+                )
             difference = heading_difference_deg(heading, route_bearing)
 
             if difference > self.config.max_heading_diff_deg:
@@ -515,13 +533,35 @@ class ObservationValidator:
         if heading < 0:
             payload["_headingDiffDeg"] = 0.0
 
-        payload["_distanceToRouteM"] = match.distance_m
-        payload["_progress"] = match.progress
+        payload["_distanceToRouteM"] = distance_m
+        payload["_progress"] = progress
 
         # Normaliza al contrato de salida, que es más estricto que el de entrada.
         payload["speed"] = sanitize_speed(speed)
         payload["heading"] = heading
 
+        return None
+
+    def _match_detour(
+        self, route_id: str, latitude: float, longitude: float, heading: float
+    ) -> tuple[float, float, float] | None:
+        """Distancia, avance sobre la ruta y rumbo si la posición va por un desvío.
+
+        Exige la misma distancia máxima y, con rumbo informado, la misma
+        diferencia máxima que la ruta, pero medidas contra el trazo del desvío.
+        """
+        for detour in self.desvios.get(route_id, ()):
+            trazo = list(detour.trazo)
+            match = match_point_to_polyline(
+                latitude, longitude, trazo,
+                threshold_m=self.config.max_distance_to_route_m,
+            )
+            if match is None or match.distance_m > self.config.max_distance_to_route_m:
+                continue
+            bearing = segment_bearing_deg(trazo, match.segment_index)
+            if heading >= 0 and heading_difference_deg(heading, bearing) > self.config.max_heading_diff_deg:
+                continue
+            return match.distance_m, detour.progreso(match.progress), bearing
         return None
 
     # ── Continuidad de la trayectoria ─────────────────────────────────────

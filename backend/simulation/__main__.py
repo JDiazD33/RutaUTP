@@ -20,6 +20,17 @@ from .publisher import load_credentials, MqttTransport
 from .scenario import ScenarioEngine
 
 
+def load_detours(path, gtfs_dir):
+    """Desvíos con trazo de las mismas incidencias que publica el backend."""
+    if path is None:
+        return None
+    from rutautp_backend.desvios import desvios_por_ruta
+    from rutautp_backend.gtfs import load_feed
+    from rutautp_backend.route_changes import load_simulated
+    feed = load_feed(gtfs_dir)
+    return desvios_por_ruta(load_simulated(path, feed), feed)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description='Productor privado de balizas RutaUTP; apagado por defecto')
     parser.add_argument("--control-db", required=True, type=Path)
@@ -28,6 +39,8 @@ def build_parser():
     parser.add_argument("--gtfs-dir", type=Path, default=Path(DEFAULT_GTFS_DIR))
     parser.add_argument("--profile", choices=tuple(PROFILE_SPECS), default="pasajeros-30")
     parser.add_argument("--reference-jsonl", type=Path, help="archivo nuevo explícito; nunca sobrescribe")
+    parser.add_argument("--route-changes", type=Path,
+                        help="incidencias simuladas: los micros siguen el trazo de sus desvíos")
     parser.add_argument("command", choices=["check", "run"], help="check valida archivos; solo run abre MQTT")
     return parser
 
@@ -59,7 +72,8 @@ def main(argv=None):
         lock = ProducerLock(control)
         history = ObservationStore(args.history_db, existing_only=True)
         history.require_simulation_run(state["runId"])
-        engine = ScenarioEngine.from_profile(profile, args.gtfs_dir, state["runId"])
+        engine = ScenarioEngine.from_profile(profile, args.gtfs_dir, state["runId"],
+                                             desvios=load_detours(args.route_changes, args.gtfs_dir))
         instance = new_instance_id()
         transport = MqttTransport(profile.principals, state["runId"], state["revision"], settings, instance)
         if args.reference_jsonl is not None:

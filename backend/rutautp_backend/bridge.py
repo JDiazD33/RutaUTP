@@ -33,7 +33,8 @@ from .simulation_ingress import (
 from .simulation_control import ControlPublisher, SimulationController
 from .simulation_control_store import ControlBusy, ControlStore, ControlUnavailable
 from .validation import ObservationValidator
-from .route_changes import RouteChanges, REPORT_TOPIC
+from .route_changes import RouteChanges, REPORT_TOPIC, load_simulated
+from .desvios import desvios_por_ruta
 from .occupancy import Occupancy, REPORT_TOPIC as OCCUPANCY_REPORT_TOPIC
 
 logger = logging.getLogger(__name__)
@@ -103,10 +104,17 @@ class Bridge:
     ) -> None:
         self.config = config
         self.feed = feed
-        self.route_changes = RouteChanges(feed)
+        # Solo la presentación define incidencias simuladas (exige la entrada
+        # sintética); el backend habitual nunca las publica.
+        simulated = (load_simulated(config.simulation_route_changes_path, feed)
+                     if config.simulation_route_changes_path else ())
+        self.route_changes = RouteChanges(feed, quorum=config.route_changes_quorum, simulated=simulated)
         self.push = None
         self.publisher = publisher
-        self.validator = validator or ObservationValidator(feed, config)
+        # Los desvíos con trazo de esas incidencias son recorridos válidos: un
+        # micro que los sigue no se descarta por alejarse de su ruta.
+        self.validator = validator or ObservationValidator(
+            feed, config, desvios=desvios_por_ruta(simulated, feed))
         # El feed se pasa al agregador para que conozca la longitud de cada
         # recorrido: es lo que convierte una diferencia de `progress` en metros.
         self.aggregator = aggregator or VehicleAggregator(config, feed)
