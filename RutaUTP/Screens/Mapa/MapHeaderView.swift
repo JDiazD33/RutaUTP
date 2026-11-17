@@ -33,7 +33,9 @@ struct MapHeaderView: View {
                          ? L.t("DATOS RECIENTES", "RECENT DATA")
                          : L.t("ESPERANDO DATOS", "WAITING FOR DATA"))
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(hayDatosRecientes ? Color.green : Color(uiColor: .secondaryLabel))
+                        // Gris del sistema en ambos estados: el texto ya los distingue y
+                        // el verde competía con las líneas y los micros del mapa.
+                        .foregroundStyle(Color(uiColor: .secondaryLabel))
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityLabel(hayDatosRecientes
                             ? L.t("Posiciones recientes de vehículos", "Recent vehicle positions")

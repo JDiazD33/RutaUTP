@@ -11,7 +11,7 @@ struct BusCard: View {
     var occupancy: BusOccupancyState? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(linea)
                     .font(.labelCapsMd)
@@ -26,7 +26,7 @@ struct BusCard: View {
                 }
             }
             Text(empresa)
-                .font(.headlineSm)
+                .font(.headlineXs)
                 .foregroundStyle(.onSurface)
                 .lineLimit(1)
             HStack(spacing: 6) {
@@ -35,19 +35,20 @@ struct BusCard: View {
                     .foregroundStyle(colorLinea == .appPrimary ? Color.onPrimaryContainer : Color.onSecondaryContainer)
                     .appTracking(AppTracking.wideLabel)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.vertical, 2)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
                             .fill(colorLinea == .appPrimary ? Color.primaryContainer : Color.secondaryContainer)
                     )
                 Text("\(L.tipoVehiculo(tipo)) • \(placa)")
-                    .font(.bodySm)
+                    .font(.bodyXs)
                     .foregroundStyle(.onSurfaceVariant)
                     .lineLimit(1)
             }
         }
-        .padding(14)
-        .frame(width: 256, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(width: 228, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -60,7 +61,7 @@ struct BusCard: View {
             HStack {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(colorLinea)
-                    .frame(width: 4, height: 56)
+                    .frame(width: 4, height: 44)
                 Spacer()
             }
         )

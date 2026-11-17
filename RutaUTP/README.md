@@ -121,7 +121,7 @@ El proceso Python debe estar en marcha además del broker. Desde la raíz del pr
 
 El interruptor **Ajustes → Ayudar con ubicaciones** solo está disponible cuando existe una cuenta propia para enviar observaciones. La cuenta lectora de presentación se conserva por separado; el publicador puede recuperar la credencial habitual del mismo endpoint desde Keychain. Sin esa cuenta, Ajustes indica «Envío de ubicaciones no configurado». Al activarlo, la app solicita consentimiento antes de iniciar GPS y Core Motion. El mapa muestra el estado de la contribución sobre el buscador. La publicación se pausa al bloquear la pantalla o enviar la app a segundo plano.
 
-Justo debajo, **Micros en el mapa** permite elegir Todos, 5, 10, 15 o 20 y recuerda la selección. Solo limita los marcadores: se conserva la flota para rutas y fichas, y el seleccionado tiene prioridad dentro del límite. El contador distingue visibles y recibidos; el botón encuadra los visibles. Todos es la opción inicial.
+Justo debajo, **Micros en el mapa** permite elegir Todos, 5, 10, 15, 20 o 25 y recuerda la selección. Solo limita los marcadores: se conserva la flota para rutas y fichas, y el seleccionado tiene prioridad dentro del límite. El contador distingue visibles y recibidos; el botón encuadra los visibles. Todos es la opción inicial.
 
 El backend valida cada observación contra el feed GTFS, limita mensajes por principal, agrupa pasajeros que parecen viajar en el mismo vehículo y exige dos principals distintos por defecto antes de publicar una posición.
 

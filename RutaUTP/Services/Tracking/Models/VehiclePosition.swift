@@ -12,7 +12,7 @@ import CoreLocation
 import Observation
 
 enum MapVehicleLimit: Int, CaseIterable, Identifiable, Hashable {
-    case all = 0, five = 5, ten = 10, fifteen = 15, twenty = 20
+    case all = 0, five = 5, ten = 10, fifteen = 15, twenty = 20, twentyFive = 25
     var id: Int { rawValue }
     var title: String {
         self == .all ? L.t("Todos", "All") : String(rawValue)

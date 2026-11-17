@@ -4,6 +4,8 @@ import MapKit
 struct NearbyTransportPanel<MapControls: View>: View {
     let vm: MapaViewModel
     let mapControls: MapControls
+    /// Fila compacta que crece con Dynamic Type en vez de recortar el texto.
+    @ScaledMetric(relativeTo: .headline) private var altoTarjeta: CGFloat = 84
 
     // MARK: - Bottom panel
     var body: some View {
@@ -15,7 +17,7 @@ struct NearbyTransportPanel<MapControls: View>: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     tarjetas
                 }
-                .frame(height: 112)
+                .frame(height: altoTarjeta + 8)
             } else {
                 // El aviso reserva la misma fila que las tarjetas: si el
                 // panel encogiera al volver al mapa, los controles de arriba
@@ -44,7 +46,7 @@ struct NearbyTransportPanel<MapControls: View>: View {
                 ForEach(0..<2, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color.surfaceContainerLow)
-                        .frame(width: 180, height: 100)
+                        .frame(width: 180, height: altoTarjeta)
                         .overlay(
                             ProgressView()
                                 .tint(.onSurfaceVariant)
@@ -58,7 +60,7 @@ struct NearbyTransportPanel<MapControls: View>: View {
                     Button(L.t("Reintentar", "Try again")) { vm.reintentarCatalogo() }
                 }
                 .padding(14)
-                .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: altoTarjeta + 8, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.surfaceContainerLow))
             } else if vm.tarjetasDelPanel.isEmpty {
                 HStack(spacing: 8) {
@@ -71,7 +73,7 @@ struct NearbyTransportPanel<MapControls: View>: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(16)
-                .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: altoTarjeta + 8, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color.surfaceContainerLow)
@@ -92,7 +94,7 @@ struct NearbyTransportPanel<MapControls: View>: View {
                             colorLinea: bus.color,
                             occupancy: bus.displayedScenarioOccupancy
                         )
-                        .frame(height: 100)
+                        .frame(height: altoTarjeta)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

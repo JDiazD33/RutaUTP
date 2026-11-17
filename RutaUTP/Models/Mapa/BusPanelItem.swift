@@ -37,6 +37,12 @@ struct BusPanelItem: Identifiable, Equatable {
         variante.isEmpty ? L.t("S/D", "N/A") : L.f("Ramal {0}", "Branch {0}", ["\(variante)"])
     }
 
+    /// Texto de la llegada para la tarjeta del panel.
+    ///
+    /// Las posiciones MQTT muestran `~` porque su llegada se estima con la
+    /// posición, rumbo y velocidad disponibles sobre el recorrido GTFS. Si el
+    /// vehículo se aleja del punto consultado o faltan datos fiables, se evita
+    /// inventar un valor y se muestra "SIN ETA".
     var etiquetaLlegada: String {
         guard let minutosLlegada else { return L.t("SIN ETA", "NO ETA") }
         let tiempo = L.f("{0} min", "{0} min", ["\(minutosLlegada)"]).uppercased()
