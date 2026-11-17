@@ -1,5 +1,6 @@
 """Ocupación sintética: contrato, procedencia, histórico y migración temporal."""
 from dataclasses import replace
+from datetime import datetime
 import json
 import sqlite3
 from pathlib import Path
@@ -9,7 +10,8 @@ from rutautp_backend.models import EstimatedVehicle
 from rutautp_backend.persistence import ObservationStore, SCHEMA
 from rutautp_backend.persistence_migrations import MIGRATIONS
 from rutautp_backend.simulation_models import DataOrigin, SourceContext
-from rutautp_backend.simulation_occupancy import scenario_occupancy, STATES
+from rutautp_backend.simulation_occupancy import demand_at, demand_label, scenario_occupancy, STATES
+from rutautp_backend.simulation_profile import lima_zone
 from rutautp_backend.simulation_reporting import history_reader, run_report
 from .test_simulation_persistence import RUN, NOW, SOURCE, start_run
 from .test_simulation_control import rig, profile
@@ -21,12 +23,53 @@ def vehicle():
     return EstimatedVehicle(f'sim:{RUN}:bus', 'route', 'T', -8.1, -79, 5, 90, NOW, NOW)
 
 
+def lima(hour,minute=0):
+    return datetime(2026,10,21,hour,minute,tzinfo=lima_zone()).timestamp()
+
+
+def mix(hour,minute=0,count=300):
+    """Proporción de cada estado entre muchos micros sintéticos a esa hora."""
+    states=[scenario_occupancy(SOURCE,f'sim:{RUN}:bus-{i:03d}',lima(hour,minute)) for i in range(count)]
+    return {state:states.count(state)/count for state in STATES}
+
+
 def test_script_deterministic_varies_over_time_and_not_from_beacon_count():
     v=vehicle()
-    values=[scenario_occupancy(SOURCE,v.vehicle_id,NOW+i*300) for i in range(6)]
-    assert set(values)==set(STATES)
-    assert values==[scenario_occupancy(SOURCE,v.vehicle_id,NOW+i*300) for i in range(6)]
+    day=[scenario_occupancy(SOURCE,v.vehicle_id,lima(0)+i*300) for i in range(288)]
+    assert day==[scenario_occupancy(SOURCE,v.vehicle_id,lima(0)+i*300) for i in range(288)]
     assert scenario_occupancy(SOURCE,v.vehicle_id,NOW)==scenario_occupancy(SOURCE,v.vehicle_id,NOW+.001)
+    # De madrugada siempre vacío; en el pico del mediodía nunca vacío.
+    assert day[0]=='empty' and 'empty' not in day[12*13:12*13+6]
+
+
+def test_demand_curve_follows_lima_day_without_sudden_drops():
+    # El desfase fijo UTC−5 del guion coincide con America/Lima.
+    assert demand_at(lima(8))==demand_at(lima(13))==1.0
+    assert demand_at(lima(6))<demand_at(lima(7))<demand_at(lima(8))
+    assert demand_at(lima(10))<demand_at(lima(12))
+    assert demand_at(lima(18))>demand_at(lima(19))>demand_at(lima(20))>demand_at(lima(21))>demand_at(lima(22))
+    steps=[demand_at(lima(0)+i*300) for i in range(289)]
+    assert all(0<=value<=1 for value in steps)
+    assert max(abs(b-a) for a,b in zip(steps,steps[1:]))<=0.04
+    assert (demand_label(lima(13)),demand_label(lima(10,30)),demand_label(lima(21,30)))==('alta','media','baja')
+    with pytest.raises(ValueError): demand_at(float('nan'))
+
+
+def test_mix_tracks_peaks_and_gradual_evening_decline():
+    noon,valley=mix(13),mix(10,30)
+    assert noon['full']>0.6 and noon['empty']==0
+    assert valley['full']<0.15 and valley['space']>0.8
+    evening=[mix(hour) for hour in (18,19,20,21,22)]
+    full=[m['full'] for m in evening]
+    assert full==sorted(full,reverse=True) and full[0]>full[1]>full[2]
+    assert full[3]==full[4]==0
+    assert evening[2]['empty']<evening[3]['empty']<evening[4]['empty']
+
+
+def test_vehicle_never_jumps_between_empty_and_full():
+    for i in range(100):
+        day=[scenario_occupancy(SOURCE,f'sim:{RUN}:bus-{i:03d}',lima(0)+k*300) for k in range(289)]
+        assert all({a,b}!={'empty','full'} for a,b in zip(day,day[1:]))
 
 
 @pytest.mark.parametrize('source,identifier,stamp', [
