@@ -5,6 +5,15 @@ struct MapBusSelectionOverlay: View {
     let vm: MapaViewModel
     @EnvironmentObject private var router: AppRouter
     let tabBarHeight: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// La ficha entra deslizándose desde abajo, entera y opaca, como una hoja de
+    /// iOS. Sin fundido: el material translúcido se ve casi completo con poca
+    /// opacidad y el texto no, así que fundir los dos hacía que las letras
+    /// aparecieran después que la tarjeta. Con Reducir movimiento solo se funde.
+    private var transicionFicha: AnyTransition {
+        reduceMotion ? .opacity : .move(edge: .bottom)
+    }
 
     @ViewBuilder
     var body: some View {
@@ -31,10 +40,13 @@ struct MapBusSelectionOverlay: View {
                         router.navigate(to: .rutas)
                     }
                 )
+                // Resuelve la disposición de la ficha antes de animarla: su
+                // contenido se mueve con ella en vez de colocarse por separado.
+                .geometryGroup()
                 .padding(.horizontal, 16)
                 .padding(.bottom, tabBarHeight + 16)
             }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .transition(transicionFicha)
         }
     }
 }
