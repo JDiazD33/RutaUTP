@@ -456,6 +456,7 @@ struct SeguridadView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L.t("Cerca de ti", "Near you")).font(.title3.weight(.semibold))
                 .foregroundStyle(Color.onSurface)
+                .accessibilityAddTraits(.isHeader)
             let layout = dynamicTypeSize.isAccessibilitySize
                 ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
                 : AnyLayout(HStackLayout(alignment: .top, spacing: 8))
@@ -463,7 +464,9 @@ struct SeguridadView: View {
                 ForEach(CategoriaAyudaCercana.allCases) { categoria in
                     Button { categoriaCercana = categoria } label: {
                         accesoCercano(categoria.titulo, icono: categoria.icono)
-                    }.buttonStyle(.plain)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(categoria.pista)
                 }
             }
         }
@@ -472,6 +475,7 @@ struct SeguridadView: View {
     private func accesoCercano(_ titulo: String, icono: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icono).font(.title3).foregroundStyle(acento)
+                .accessibilityHidden(true)
             Text(titulo).font(.bodySm).foregroundStyle(Color.onSurfaceVariant)
                 .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
         }

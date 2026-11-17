@@ -53,14 +53,64 @@ struct AccesoParaderos: View {
 }
 
 enum CategoriaAyudaCercana: String, CaseIterable, Identifiable {
-    case comisarias, salud
+    case comisarias, salud, bomberos
     var id: String { rawValue }
     var titulo: String {
-        self == .comisarias ? L.t("Comisarías", "Police stations") : L.t("Salud", "Healthcare")
+        switch self {
+        case .comisarias: return L.t("Comisarías", "Police stations")
+        case .salud: return L.t("Salud", "Healthcare")
+        case .bomberos: return L.t("Bomberos", "Fire stations")
+        }
     }
-    var icono: String { self == .comisarias ? "shield.lefthalf.filled" : "cross.case" }
+    var icono: String {
+        switch self {
+        case .comisarias: return "shield.lefthalf.filled"
+        case .salud: return "cross.case"
+        case .bomberos: return "flame"
+        }
+    }
     var filtro: MKPointOfInterestFilter {
-        MKPointOfInterestFilter(including: self == .comisarias ? [.police] : [.hospital])
+        switch self {
+        case .comisarias: return MKPointOfInterestFilter(including: [.police])
+        case .salud: return MKPointOfInterestFilter(including: [.hospital])
+        case .bomberos: return MKPointOfInterestFilter(including: [.fireStation])
+        }
+    }
+
+    // En Trujillo, la consulta por categoría `.fireStation` no devuelve nada
+    // (MKError.placemarkNotFound a 5 y 15 km, comprobado el 15/11/2026), pero
+    // la búsqueda por texto «bomberos» sí encuentra las compañías; algunas,
+    // como Salvadora Trujillo 26, no tienen categoría asignada en Apple Maps.
+
+    /// Comisarías y salud usan la búsqueda por categoría; bomberos, por texto.
+    var buscaPorCategoria: Bool { self != .bomberos }
+
+    /// Consultas de texto: sin filtro (compañías sin categoría) y con el
+    /// filtro de estación de bomberos (las que Apple sí clasifica).
+    var consultasTexto: [(texto: String, filtro: MKPointOfInterestFilter?)] {
+        guard self == .bomberos else { return [] }
+        return [("bomberos", nil), ("bomberos", filtro)]
+    }
+
+    /// Hay muchas menos compañías de bomberos que comisarías o centros de salud.
+    var radioMetros: CLLocationDistance { self == .bomberos ? 20_000 : 5_000 }
+
+    /// La búsqueda por texto también trae tiendas de extintores; alguna incluso
+    /// figura como estación de bomberos.
+    func admite(_ item: MKMapItem) -> Bool {
+        guard self == .bomberos else { return true }
+        let nombre = (item.name ?? "").folding(options: [.caseInsensitive, .diacriticInsensitive],
+                                                locale: Locale(identifier: "es"))
+        if nombre.contains("extint") { return false }
+        return nombre.contains("bomber") || item.pointOfInterestCategory == .fireStation
+    }
+    /// Pista de VoiceOver del acceso en «Cerca de ti».
+    var pista: String {
+        switch self {
+        case .comisarias: return L.t("Muestra las comisarías más cercanas en un mapa", "Shows the nearest police stations on a map")
+        case .salud: return L.t("Muestra hospitales y centros de salud cercanos en un mapa", "Shows nearby hospitals and health centers on a map")
+        case .bomberos: return L.t("Muestra las compañías de bomberos más cercanas en un mapa", "Shows the nearest fire stations on a map")
+        }
     }
 }
 
@@ -284,25 +334,67 @@ struct AyudaCercanaSheet: View {
         centro = ubicacion?.coordinate ?? TransporteApp.referenciaInicio
         camara = .region(MKCoordinateRegion(center: centro,
             span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)))
-        let request = MKLocalPointsOfInterestRequest(center: centro, radius: 5_000)
-        request.pointOfInterestFilter = categoria.filtro
-        let search = MKLocalSearch(request: request)
-        busqueda = search
         defer { busqueda = nil; buscando = false }
-        do {
-            let response = try await search.start()
+        var encontrados: [MKMapItem] = []
+        var falloRed = false
+        if categoria.buscaPorCategoria {
+            let request = MKLocalPointsOfInterestRequest(center: centro, radius: categoria.radioMetros)
+            request.pointOfInterestFilter = categoria.filtro
+            await ejecutar(MKLocalSearch(request: request), en: &encontrados, falloRed: &falloRed)
+        }
+        for consulta in categoria.consultasTexto {
             guard !Task.isCancelled else { return }
-            let origen = CLLocation(latitude: centro.latitude, longitude: centro.longitude)
-            resultados = response.mapItems.sorted {
-                origen.distance(from: CLLocation(latitude: $0.placemark.coordinate.latitude,
-                                                 longitude: $0.placemark.coordinate.longitude))
-                < origen.distance(from: CLLocation(latitude: $1.placemark.coordinate.latitude,
-                                                   longitude: $1.placemark.coordinate.longitude))
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = consulta.texto
+            request.region = MKCoordinateRegion(center: centro, latitudinalMeters: categoria.radioMetros * 2,
+                                                longitudinalMeters: categoria.radioMetros * 2)
+            request.resultTypes = .pointOfInterest
+            request.pointOfInterestFilter = consulta.filtro
+            await ejecutar(MKLocalSearch(request: request), en: &encontrados, falloRed: &falloRed)
+        }
+        guard !Task.isCancelled else { return }
+
+        let origen = CLLocation(latitude: centro.latitude, longitude: centro.longitude)
+        func metros(_ item: MKMapItem) -> CLLocationDistance {
+            origen.distance(from: CLLocation(latitude: item.placemark.coordinate.latitude,
+                                             longitude: item.placemark.coordinate.longitude))
+        }
+        var unicos: [MKMapItem] = []
+        for item in encontrados where categoria.admite(item) && metros(item) <= categoria.radioMetros {
+            // Las dos consultas de texto repiten lugares.
+            let repetido = unicos.contains { otro in
+                otro.name == item.name
+                    || CLLocation(latitude: otro.placemark.coordinate.latitude,
+                                  longitude: otro.placemark.coordinate.longitude)
+                        .distance(from: CLLocation(latitude: item.placemark.coordinate.latitude,
+                                                   longitude: item.placemark.coordinate.longitude)) < 60
             }
+            if !repetido { unicos.append(item) }
+        }
+        resultados = unicos.sorted { metros($0) < metros($1) }
+        // Sin resultados no es un fallo de red: el listado muestra su aviso.
+        if resultados.isEmpty && falloRed {
+            self.error = ConectividadService.shared.estado == .sinConexion
+                ? L.t("Sin conexión. Esta búsqueda usa Apple Maps y necesita internet.",
+                      "No connection. This search uses Apple Maps and needs internet.")
+                : L.t("No pudimos buscar el lugar. Revisa tu conexión.",
+                      "Could not find the location. Check your connection.")
+        }
+    }
+
+    /// Ejecuta una búsqueda cancelable al cerrar la hoja. MapKit lanza
+    /// `placemarkNotFound` cuando no hay resultados: eso no es un fallo de red.
+    @MainActor
+    private func ejecutar(_ search: MKLocalSearch, en encontrados: inout [MKMapItem],
+                          falloRed: inout Bool) async {
+        busqueda = search
+        do {
+            encontrados += try await search.start().mapItems
         } catch {
-            guard !Task.isCancelled else { return }
-            self.error = L.t("No pudimos buscar el lugar. Revisa tu conexión.",
-                             "Could not find the location. Check your connection.")
+            let fallo = error as NSError
+            let sinResultados = fallo.domain == MKErrorDomain
+                && fallo.code == Int(MKError.Code.placemarkNotFound.rawValue)
+            if !sinResultados { falloRed = true }
         }
     }
 

@@ -23,6 +23,13 @@ import UIKit
 /// entera y centrada, sin recortes ni desplazamiento.
 struct VisorFotoCarnet: View {
     let imagen: UIImage
+    /// Textos de VoiceOver y del botón de ajuste. Por defecto, los del carné;
+    /// el visor de fotos de Comunidad pasa los suyos.
+    var etiquetaAccesible = L.t("Foto del carné", "Card photo")
+    var descripcionAccesible: String?
+    var textoVerCompleto = L.t("Ver completo", "Fit whole card")
+    var pistaVerCompleto = L.t("Vuelve a mostrar el carné entero en pantalla",
+                               "Shows the whole card on screen again")
 
     /// Ampliación elegida por el usuario. `1` = la tarjeta entera en pantalla.
     @State private var zoom: CGFloat = 1
@@ -149,8 +156,10 @@ struct VisorFotoCarnet: View {
                     }
                 )
                 .frame(width: geo.size.width, height: geo.size.height)
-                .accessibilityLabel(L.t("Foto del carné", "Card photo"))
-                .accessibilityValue(L.f("Ampliación {0} por ciento", "Zoom {0} percent", ["\(Int(zoom * 100))"]))
+                .accessibilityLabel(etiquetaAccesible)
+                .accessibilityValue([descripcionAccesible,
+                                     L.f("Ampliación {0} por ciento", "Zoom {0} percent", ["\(Int(zoom * 100))"])]
+                    .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ". "))
                 .accessibilityHint(L.t("Usa Acciones para acercar, alejar o restablecer la foto", "Use Actions to zoom in, zoom out or reset the photo"))
                 .accessibilityActions {
                     Button(L.t("Acercar", "Zoom in")) {
@@ -180,7 +189,7 @@ struct VisorFotoCarnet: View {
                     // vista completa, que es el estado por defecto.
                     if zoom > 1.01 {
                         Button(action: reiniciar) {
-                            Label(L.t("Ver completo", "Fit whole card"),
+                            Label(textoVerCompleto,
                                   systemImage: "arrow.up.left.and.arrow.down.right")
                                 .font(.footnote.weight(.semibold))
                                 .padding(.horizontal, 14)
@@ -189,8 +198,7 @@ struct VisorFotoCarnet: View {
                         }
                         .buttonStyle(.plain)
                         .padding(.bottom, 12)
-                        .accessibilityHint(L.t("Vuelve a mostrar el carné entero en pantalla",
-                                               "Shows the whole card on screen again"))
+                        .accessibilityHint(pistaVerCompleto)
                     }
                 }
         }

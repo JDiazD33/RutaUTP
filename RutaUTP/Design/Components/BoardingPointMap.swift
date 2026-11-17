@@ -37,6 +37,13 @@ struct BoardingPointMap: View {
     @State private var marcarUbicacionSolicitada = false
     @State private var mostrarAjustesUbicacion = false
     @State private var reanudarUbicacion = false
+    /// Explica por qué no se aceptó el último punto tocado.
+    @State private var avisoDistancia: String?
+    /// Se sube donde pasa la línea: más lejos no describe una subida.
+    static let distanciaMaximaSubida: Double = 200
+    /// Para centrar el mapa basta una lectura de los últimos minutos: quien
+    /// espera quieto no genera lecturas nuevas del GPS.
+    private static let antiguedadCamara: TimeInterval = 15 * 60
     private static let antiguedadMaximaUbicacion: TimeInterval = 30
     // Centrar un mapa admite la ubicación aproximada de iOS; no cambia la
     // precisión exigida por navegación, detección ni los demás consumidores.
@@ -50,21 +57,26 @@ struct BoardingPointMap: View {
         self.onSelect = onSelect
         _ultimoPermiso = State(initialValue: locationService.authorizationStatus)
         _point = State(initialValue: initialPoint)
-        let lecturas = [currentLocation, (locationService as? LocationService)?.lastKnownLocation]
+        let candidatas = [currentLocation, (locationService as? LocationService)?.lastKnownLocation]
             .compactMap { $0 }
-            .filter { locationService.authorizationStatus.isAuthorized
-                && UbicacionPuntual.esValida($0, ahora: Date(),
-                    antiguedadMaxima: Self.antiguedadMaximaUbicacion,
-                    precisionMaxima: Self.precisionMaximaUbicacion) }
-        let lectura = lecturas.max { $0.timestamp < $1.timestamp }
-        let center = lectura?.coordinate ?? initialPoint?.coordinate ?? TransporteApp.referenciaInicio
-        regionInicial = lectura.map(Self.regionUbicacion) ?? Self.regionCercana(center)
+        let autorizada = locationService.authorizationStatus.isAuthorized
+        func reciente(_ antiguedad: TimeInterval) -> CLLocation? {
+            candidatas
+                .filter { autorizada && UbicacionPuntual.esValida($0, ahora: Date(),
+                    antiguedadMaxima: antiguedad, precisionMaxima: Self.precisionMaximaUbicacion) }
+                .max { $0.timestamp < $1.timestamp }
+        }
+        // Marcar exige una lectura fresca; centrar admite una de hace minutos.
+        let lectura = reciente(Self.antiguedadMaximaUbicacion)
+        let lecturaCamara = lectura ?? reciente(Self.antiguedadCamara)
+        let center = lecturaCamara?.coordinate ?? initialPoint?.coordinate ?? TransporteApp.referenciaInicio
+        regionInicial = lecturaCamara.map(Self.regionUbicacion) ?? Self.regionCercana(center)
         _ubicacionActual = State(initialValue: lectura)
         // Con una lectura validada la cámara se fija en esa coordenada. Si se
         // usa `.userLocation`, MapKit puede resolverla con su propia caché (otra
         // ubicación) y no volver a centrar cuando llega el fix real; la flecha
         // sí funciona porque vuelve a pedir la posición.
-        _camera = State(initialValue: lectura.map { MapCameraPosition.region(Self.regionUbicacion($0)) }
+        _camera = State(initialValue: lecturaCamara.map { MapCameraPosition.region(Self.regionUbicacion($0)) }
             ?? .userLocation(followsHeading: false, fallback: .region(regionInicial)))
     }
 
@@ -104,6 +116,20 @@ struct BoardingPointMap: View {
 
     @MainActor
     private func seleccionar(_ coordinate: CLLocationCoordinate2D) {
+        // Solo se acepta un punto por donde pasa la línea o muy cerca de ella.
+        if let distancia = PolylineMatching.match(point: coordinate, on: route.shape,
+                                                  thresholdMeters: Self.distanciaMaximaSubida)?.distanceToRoute,
+           distancia > Self.distanciaMaximaSubida {
+            let texto = L.f("Ese punto está a {0} de la línea. Marca un lugar por donde pasa el micro.",
+                            "That point is {0} from the line. Mark a place where the bus passes.",
+                            [Measurement(value: distancia, unit: UnitLength.meters)
+                                .formatted(.measurement(width: .abbreviated, usage: .road)
+                                    .locale(FormatoFecha.localeActivo))])
+            avisoDistancia = texto
+            AccessibilityNotification.Announcement(texto).post()
+            return
+        }
+        avisoDistancia = nil
         guard let nuevoPunto = BoardingPoint(coordinate: coordinate) else { return }
         revisionPunto &+= 1
         point = nuevoPunto
@@ -373,6 +399,18 @@ struct BoardingPointMap: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.onSurfaceVariant)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let avisoDistancia {
+                        Label {
+                            Text(avisoDistancia)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(MotivoCambioRuta.cierre.tinta)
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Color.onSurface)
+                    }
 
                     if buscandoUbicacion {
                         Label(L.t("Buscando tu ubicación…", "Finding your location…"), systemImage: "location")

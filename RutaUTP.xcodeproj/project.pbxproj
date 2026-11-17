@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		0B5E184EFE00A5D3BDB6544C /* BusquedaLocalDestinos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5EF2DDEB2E362B313E5016 /* BusquedaLocalDestinos.swift */; };
 		0B5EA0F773C8FC73CCC098FF /* ConectividadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5EC787B38980FFB28A7D4D /* ConectividadService.swift */; };
+		0B5E2D685A03A67B2956522F /* VisorFotoComunidad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5E9AE1D4156625A93D5106 /* VisorFotoComunidad.swift */; };
+		0B5EB7D9C4293BF5B3CD5540 /* ReportarPublicacionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5E79C7067CE0444D03ADA6 /* ReportarPublicacionSheet.swift */; };
 		F7A193280B384C919C88D805 /* Transportes3DCargaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */; };
 		DE08174B36CB4F479B294DD7 /* Transportes3DUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4491B4B791014C98BCCCE6CF /* Transportes3DUITests.swift */; };
 		BD7200000000000000000002 /* AvisosLineasSeguridad.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD7200000000000000000001 /* AvisosLineasSeguridad.swift */; };
@@ -298,6 +300,8 @@
 		CA7B1A000000000000000101 /* desvio-M-34-A.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = "desvio-M-34-A.gpx"; path = "tools/prueba-desvio/desvio-M-34-A.gpx"; sourceTree = "<group>"; };
 		0B5EF2DDEB2E362B313E5016 /* BusquedaLocalDestinos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusquedaLocalDestinos.swift; sourceTree = "<group>"; };
 		0B5EC787B38980FFB28A7D4D /* ConectividadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConectividadService.swift; sourceTree = "<group>"; };
+		0B5E9AE1D4156625A93D5106 /* VisorFotoComunidad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisorFotoComunidad.swift; sourceTree = "<group>"; };
+		0B5E79C7067CE0444D03ADA6 /* ReportarPublicacionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportarPublicacionSheet.swift; sourceTree = "<group>"; };
 		43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DCargaTests.swift; sourceTree = "<group>"; };
 		4491B4B791014C98BCCCE6CF /* Transportes3DUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DUITests.swift; sourceTree = "<group>"; };
 		BD7200000000000000000001 /* AvisosLineasSeguridad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvisosLineasSeguridad.swift; sourceTree = "<group>"; };
@@ -942,6 +946,8 @@
 		0A8004DC300AD9FE004E1676 /* Seguridad */ = {
 			isa = PBXGroup;
 			children = (
+				0B5E9AE1D4156625A93D5106 /* VisorFotoComunidad.swift */,
+				0B5E79C7067CE0444D03ADA6 /* ReportarPublicacionSheet.swift */,
 				62EE7C67585548A1BC4EB681 /* RouteChangesLocationModel.swift */,
 				BD7200000000000000000001 /* AvisosLineasSeguridad.swift */,
 				0A8004DB300AD9FE004E1676 /* SeguridadView.swift */,
@@ -1322,6 +1328,8 @@
 			files = (
 				0B5E184EFE00A5D3BDB6544C /* BusquedaLocalDestinos.swift in Sources */,
 				0B5EA0F773C8FC73CCC098FF /* ConectividadService.swift in Sources */,
+				0B5E2D685A03A67B2956522F /* VisorFotoComunidad.swift in Sources */,
+				0B5EB7D9C4293BF5B3CD5540 /* ReportarPublicacionSheet.swift in Sources */,
 				BD6100000000000000000002 /* IdentificacionRuta3D.swift in Sources */,
 				E81C1E1883B8F5B84772D4A4 /* ColorTransporteReferencia.swift in Sources */,
 				19F05445E54309DE1643E82D /* ColoresTransporteReferencia.swift in Sources */,

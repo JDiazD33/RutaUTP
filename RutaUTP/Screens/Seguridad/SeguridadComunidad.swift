@@ -25,6 +25,36 @@ final class ComunidadReacciones: ObservableObject {
 
     @Published private var votos: [UUID: Voto] = [:]
     @Published private var comentarios: [UUID: [Comentario]] = [:]
+    @Published private var reportes: [UUID: ReportePublicacion] = [:]
+    @Published private var ocultas: Set<UUID> = []
+
+    // MARK: Reportes (misma vida que votos y comentarios: la sesión)
+
+    func reporteEnviado(_ reporte: ReporteComunidad) -> ReportePublicacion? {
+        reportes[reporte.id]
+    }
+
+    func estaOculta(_ reporte: ReporteComunidad) -> Bool {
+        ocultas.contains(reporte.id)
+    }
+
+    func reportar(_ reporte: ReporteComunidad, _ nuevo: ReportePublicacion, ocultar: Bool) {
+        reportes[reporte.id] = nuevo
+        if ocultar { ocultas.insert(reporte.id) }
+        AppHaptics.success()
+    }
+
+    func retirarReporte(_ reporte: ReporteComunidad) {
+        reportes[reporte.id] = nil
+        ocultas.remove(reporte.id)
+        AppHaptics.selection()
+    }
+
+    /// Vuelve a mostrar en el feed una publicación reportada; el reporte sigue.
+    func mostrar(_ reporte: ReporteComunidad) {
+        ocultas.remove(reporte.id)
+        AppHaptics.selection()
+    }
 
     func comentariosAgregados(_ reporte: ReporteComunidad) -> [Comentario] {
         comentarios[reporte.id] ?? []
@@ -68,7 +98,65 @@ struct ReporteCard: View {
     var abrir: () -> Void = {}
     var comentar: () -> Void = {}
 
+    @State private var reportando = false
+    @State private var confirmarRetiro = false
+    @State private var verFoto = false
+
     var body: some View {
+        Group {
+            if reacciones.estaOculta(reporte) {
+                tarjetaOculta
+            } else {
+                tarjeta
+            }
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.surfaceContainerLowest)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
+                )
+        )
+        // Mantener pulsada la tarjeta: la vista previa conserva su fondo.
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .contextMenu { menuContextual }
+        .flujoReportePublicacion(reporte, reacciones: reacciones, presentado: $reportando)
+        .confirmationDialog(L.t("Ya reportaste esta publicación", "You already reported this post"),
+                            isPresented: $confirmarRetiro, titleVisibility: .visible) {
+            Button(L.t("Retirar reporte", "Withdraw report"), role: .destructive) {
+                reacciones.retirarReporte(reporte)
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        }
+    }
+
+    @ViewBuilder
+    private var menuContextual: some View {
+        if reacciones.estaOculta(reporte) {
+            Button { reacciones.mostrar(reporte) } label: {
+                Label(L.t("Mostrar", "Show"), systemImage: "eye")
+            }
+        } else {
+            Button(action: abrir) {
+                Label(L.t("Ver publicación", "View post"), systemImage: "text.bubble")
+            }
+            if reporte.foto != nil {
+                Button { verFoto = true } label: {
+                    Label(L.t("Ver foto", "View photo"), systemImage: "photo")
+                }
+            }
+        }
+        Divider()
+        Button(role: reacciones.reporteEnviado(reporte) == nil ? .destructive : nil,
+               action: alternarReporte) {
+            Label(accionReporteTitulo,
+                  systemImage: reacciones.reporteEnviado(reporte) == nil ? "flag" : "flag.slash")
+        }
+    }
+
+    private var tarjeta: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: abrir) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -104,15 +192,32 @@ struct ReporteCard: View {
                         .lineLimit(4)
                         .foregroundStyle(.onSurface)
 
-                    if let foto = reporte.foto {
-                        FotoReporteView(foto: foto)
+                    if reacciones.reporteEnviado(reporte) != nil {
+                        EtiquetaReportada()
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
             .accessibilityHint(L.t("Ver publicación", "View post"))
+            // VoiceOver: las mismas acciones que la tarjeta ofrece al tacto,
+            // sin recorrer cada botón por separado.
+            .accessibilityActions {
+                Button(L.t("Me gusta", "Like")) { reacciones.votar(reporte, a: .util) }
+                Button(L.t("No me gusta", "Dislike")) { reacciones.votar(reporte, a: .noUtil) }
+                Button(L.t("Comentar", "Comment"), action: comentar)
+                if reporte.foto != nil {
+                    Button(L.t("Ver foto", "View photo")) { verFoto = true }
+                }
+                Button(accionReporteTitulo, action: alternarReporte)
+            }
+
+            // Fuera del botón de la tarjeta: tocar la foto la abre ampliada.
+            if let foto = reporte.foto {
+                FotoReporteView(foto: foto, mostrarVisor: $verFoto)
+            }
 
             Divider().overlay(Color.outlineVariant.opacity(0.2))
             HStack(spacing: 8) {
@@ -137,17 +242,62 @@ struct ReporteCard: View {
                 .accessibilityHint(L.t("Ver y añadir comentarios", "Read and add comments"))
             }
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.surfaceContainerLowest)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.outlineVariant.opacity(0.20), lineWidth: 0.5)
-                )
-        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L.t("Publicación de ", "Post by ") + reporte.nombre)
+    }
+
+    /// Sustituye a la publicación que el usuario reportó y decidió ocultar.
+    private var tarjetaOculta: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                textoOculta
+                Spacer(minLength: 0)
+                botonMostrar
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                textoOculta
+                botonMostrar
+            }
+        }
+    }
+
+    private var textoOculta: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L.t("Publicación oculta", "Hidden post"))
+                    .font(.bodyMdMedium)
+                    .foregroundStyle(Color.onSurface)
+                Text(L.t("La reportaste y no se muestra en tu feed.", "You reported it and it's hidden from your feed."))
+                    .font(.bodySm)
+                    .foregroundStyle(Color.onSurfaceVariant)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "eye.slash")
+                .foregroundStyle(Color.onSurfaceVariant)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var botonMostrar: some View {
+        Button(L.t("Mostrar", "Show")) { reacciones.mostrar(reporte) }
+            .buttonStyle(.bordered)
+            .frame(minHeight: 44)
+            .accessibilityLabel(L.t("Mostrar publicación de ", "Show post by ") + reporte.nombre)
+    }
+
+    private var accionReporteTitulo: String {
+        reacciones.reporteEnviado(reporte) == nil
+            ? L.t("Reportar publicación", "Report post")
+            : L.t("Retirar reporte", "Withdraw report")
+    }
+
+    private func alternarReporte() {
+        if reacciones.reporteEnviado(reporte) == nil {
+            reportando = true
+        } else {
+            confirmarRetiro = true
+        }
     }
 
     @ViewBuilder
@@ -185,14 +335,28 @@ struct ReporteCard: View {
     }
 }
 
+/// Indica en la tarjeta y en el detalle que el usuario ya reportó la publicación.
+struct EtiquetaReportada: View {
+    var body: some View {
+        Label(L.t("Reportaste esta publicación", "You reported this post"), systemImage: "flag.fill")
+            .font(.bodySmMedium)
+            .foregroundStyle(Color.appError)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
 // MARK: - Reporte Detail Sheet
 struct ReporteDetailSheet: View {
     let reporte: ReporteComunidad
     @ObservedObject var reacciones: ComunidadReacciones
     var comentarAlAbrir = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var comentario = ""
     @FocusState private var comentarioEnfocado: Bool
+    @State private var reportando = false
+    @State private var confirmarRetiro = false
+    @State private var verFoto = false
 
     /// Comentarios de muestra, deterministas por reporte (misma semilla →
     /// mismos comentarios mientras la sesión esté viva).
@@ -217,60 +381,41 @@ struct ReporteDetailSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(L.t("Publicación", "Post")).font(.headlineSm)
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.body.weight(.semibold))
-                        .foregroundStyle(Color.onSurfaceVariant).frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L.t("Cerrar", "Close"))
-            }
-            .padding(.horizontal, 20)
+        NavigationStack {
             ScrollViewReader { proxy in
-                ScrollView(.vertical, showsIndicators: false) {
+                ScrollView(.vertical) {
                     VStack(alignment: .leading, spacing: 16) {
-                        // Autor
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
-                                Text(reporte.iniciales)
-                                    .font(.headlineSm)
-                                    .foregroundStyle(reporte.avatarForeground)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(reporte.nombre)
-                                    .font(.headlineSm)
-                                Text(reporte.tiempoLocalizado)
-                                    .font(.labelCapsSm)
-                                    .foregroundStyle(.onSurfaceVariant)
-                                    .appTracking(AppTracking.wideLabel)
-                            }
-                            Spacer()
-                            Text(reporte.tipo.titulo.uppercased())
-                                .font(.labelCapsMd)
-                                .foregroundStyle(reporte.tipo.foreground)
-                                .appTracking(AppTracking.wideLabel)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
+                        autor
+
+                        if let enviado = reacciones.reporteEnviado(reporte) {
+                            avisoReportada(enviado)
                         }
 
                         Text(reporte.cuerpoLocalizado)
                             .font(.bodyLg)
                             .foregroundStyle(.onSurface)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
 
                         if let foto = reporte.foto {
-                            FotoReporteView(foto: foto, detalle: true)
+                            FotoReporteView(foto: foto, detalle: true, mostrarVisor: $verFoto)
                         }
 
-                        // Votos interactivos
-                        HStack(spacing: 10) {
-                            votoButton(.util)
-                            votoButton(.noUtil)
-                            Spacer()
+                        // Votos interactivos y reporte
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 10) {
+                                votoButton(.util)
+                                votoButton(.noUtil)
+                                Spacer(minLength: 8)
+                                botonReportar
+                            }
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 10) {
+                                    votoButton(.util)
+                                    votoButton(.noUtil)
+                                }
+                                botonReportar
+                            }
                         }
 
                         Divider()
@@ -344,14 +489,129 @@ struct ReporteDetailSheet: View {
                     withAnimation { proxy.scrollTo("finComentarios", anchor: .bottom) }
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) { campoComentario }
+            .background(Color.appSurface)
+            // Barra nativa: el título ya no queda pegado al indicador de
+            // arrastre ni se recorta con tamaños de texto grandes.
+            .navigationTitle(L.t("Publicación", "Post"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("Cerrar", "Close")) { dismiss() }
+                        .accessibilityLabel(L.t("Cerrar publicación", "Close post"))
+                }
+            }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { campoComentario }
+        .tint(Color.appAccent)
+        .flujoReportePublicacion(reporte, reacciones: reacciones, presentado: $reportando) { oculta in
+            // Una publicación oculta ya no está en el feed: se vuelve a él.
+            if oculta { dismiss() }
+        }
+        .confirmationDialog(L.t("Ya reportaste esta publicación", "You already reported this post"),
+                            isPresented: $confirmarRetiro, titleVisibility: .visible) {
+            Button(L.t("Retirar reporte", "Withdraw report"), role: .destructive) {
+                reacciones.retirarReporte(reporte)
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        }
+        .accessibilityAction(.escape) { dismiss() }
         .task {
             if comentarAlAbrir {
                 await Task.yield()
                 comentarioEnfocado = true
             }
         }
+    }
+
+    // MARK: Autor
+
+    /// Con tamaños de accesibilidad la etiqueta del tipo baja bajo el nombre
+    /// en lugar de comprimirlo.
+    private var autor: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+        return layout {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(reporte.avatarColor).frame(width: 48, height: 48)
+                    Text(reporte.iniciales)
+                        .font(.headlineSm)
+                        .foregroundStyle(reporte.avatarForeground)
+                }
+                .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(reporte.nombre)
+                        .font(.headlineSm)
+                        .foregroundStyle(.onSurface)
+                    Text(reporte.tiempoLocalizado)
+                        .font(.labelCapsSm)
+                        .foregroundStyle(.onSurfaceVariant)
+                        .appTracking(AppTracking.wideLabel)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 8) }
+            Text(reporte.tipo.titulo.uppercased())
+                .font(.labelCapsMd)
+                .foregroundStyle(reporte.tipo.foreground)
+                .appTracking(AppTracking.wideLabel)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(RoundedRectangle(cornerRadius: 6).fill(reporte.tipo.background))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    // MARK: Reporte
+
+    private func avisoReportada(_ enviado: ReportePublicacion) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            EtiquetaReportada()
+            Text(L.f("Motivo: {0}", "Reason: {0}", [enviado.motivo.titulo]))
+                .font(.bodySm)
+                .foregroundStyle(Color.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+            if !enviado.detalle.isEmpty {
+                Text(enviado.detalle)
+                    .font(.bodySm)
+                    .foregroundStyle(Color.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.appError.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    private var botonReportar: some View {
+        let reportada = reacciones.reporteEnviado(reporte) != nil
+        return Button {
+            if reportada { confirmarRetiro = true } else { reportando = true }
+        } label: {
+            Label(reportada ? L.t("Reportada", "Reported") : L.t("Reportar", "Report"),
+                  systemImage: reportada ? "flag.fill" : "flag")
+                .font(.bodySmMedium)
+                .foregroundStyle(reportada ? Color.appError : Color.onSurfaceVariant)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .frame(minHeight: 44)
+                .background(
+                    Capsule().fill(reportada ? Color.appError.opacity(0.10) : Color.surfaceContainerLow)
+                )
+                .overlay(
+                    Capsule().stroke(reportada ? Color.appError.opacity(0.35) : Color.outlineVariant.opacity(0.30),
+                                     lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L.t("Reportar publicación", "Report post"))
+        .accessibilityValue(reportada ? L.t("Reportada", "Reported") : "")
+        .accessibilityHint(reportada
+            ? L.t("Permite retirar tu reporte", "Lets you withdraw your report")
+            : L.t("Indica si es falsa, infringe derechos u ofende", "Tell us if it's false, infringes rights or is offensive"))
     }
 
     private var campoComentario: some View {
@@ -425,22 +685,43 @@ struct ReporteDetailSheet: View {
 struct FotoReporteView: View {
     let foto: FotoComunidad
     var detalle = false
+    /// Visor a pantalla completa; el contenedor lo enlaza para abrirlo también
+    /// desde sus acciones de VoiceOver o su menú contextual.
+    @Binding var mostrarVisor: Bool
+
+    @Namespace private var transicion
+    @ScaledMetric(relativeTo: .body) private var tamanoIconoAmpliar: CGFloat = 30
+
+    init(foto: FotoComunidad, detalle: Bool = false, mostrarVisor: Binding<Bool>) {
+        self.foto = foto
+        self.detalle = detalle
+        _mostrarVisor = mostrarVisor
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Group {
-                if detalle {
-                    Image(foto.asset).resizable().scaledToFit()
-                } else {
-                    Image(foto.asset).resizable().scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 180)
-                        .background(Color.surfaceContainerLow)
-                }
+            Button {
+                AppHaptics.impact(.light)
+                mostrarVisor = true
+            } label: {
+                miniatura
+                    .overlay(alignment: .topTrailing) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: tamanoIconoAmpliar, height: tamanoIconoAmpliar)
+                            .background(.black.opacity(0.45), in: Circle())
+                            .padding(8)
+                            .accessibilityHidden(true)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .contentShape(RoundedRectangle(cornerRadius: 14))
+                    .modifier(OrigenZoomFoto(id: foto.asset, espacio: transicion))
             }
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .buttonStyle(.plain)
             .accessibilityLabel(L.t("Foto de archivo: ", "Archive photo: ") + foto.lugar)
             .accessibilityValue(foto.descripcionLocalizada)
+            .accessibilityHint(L.t("Abre la foto a pantalla completa", "Opens the photo full screen"))
             Label(foto.lugar, systemImage: "mappin.and.ellipse")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.onSurface)
@@ -463,6 +744,22 @@ struct FotoReporteView: View {
                 }
                 .font(.caption.weight(.medium))
             }
+        }
+        .fullScreenCover(isPresented: $mostrarVisor) {
+            VisorFotoComunidad(foto: foto)
+                .modifier(DestinoZoomFoto(id: foto.asset, espacio: transicion))
+        }
+    }
+
+    @ViewBuilder
+    private var miniatura: some View {
+        if detalle {
+            Image(foto.asset).resizable().scaledToFit()
+        } else {
+            Image(foto.asset).resizable().scaledToFit()
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)
+                .background(Color.surfaceContainerLow)
         }
     }
 }
