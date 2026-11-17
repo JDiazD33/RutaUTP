@@ -29,20 +29,25 @@ import uuid
 
 from rutautp_backend.health import read_heartbeat, fresh_timestamp
 from rutautp_backend.simulation_admin import status
-from rutautp_backend.simulation_control_store import ControlStore, ControlUnavailable
-from rutautp_backend.simulation_profile import SimulationProfile, lima_zone
+from rutautp_backend.simulation_control_store import ControlBusy, ControlStore, ControlUnavailable
+from rutautp_backend.simulation_occupancy import demand_label
+from rutautp_backend.simulation_profile import (MICROS_BASE, MICROS_MAXIMO, MICROS_MINIMO,
+                                                SimulationProfile, lima_zone)
 from .publisher import load_credentials, parse_control
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DIRECTORY = Path.home()/'Library/Application Support/RutaUTP/Presentacion'
 READER = 'presentation-reader'
 CONTROL_TOPIC = 'rutautp/simulacion/estado'
-PRESENTATION_PROFILES = ('pasajeros-30', 'pasajeros-50')
+PRESENTATION_PROFILES = ('pasajeros-30', 'pasajeros-50',
+                         *(f'micros-{n}' for n in range(MICROS_MINIMO, MICROS_MAXIMO+1)))
 
 
 def profile_files(directory, name):
     if name not in PRESENTATION_PROFILES:raise ValueError('perfil de presentación no preparado')
-    suffix = '' if name == 'pasajeros-30' else '-'+name
+    # `micros-N` usa las cuentas y permisos ya verificados de pasajeros-50.
+    cuentas = MICROS_BASE if name.startswith('micros-') else name
+    suffix = '' if cuentas == 'pasajeros-30' else '-'+cuentas
     return Path(directory)/('actors-credentials'+suffix+'.json'), Path(directory)/('acl-verified'+suffix+'.json')
 
 
@@ -310,10 +315,28 @@ def wait_for(predicate,seconds=30,stopping=None):
     deadline=time.monotonic()+seconds
     while time.monotonic()<deadline:
         if stopping is not None and stopping.is_set():raise RuntimeError('interrumpido por el operador')
-        value=predicate()
+        # El backend o el productor pueden tener el control ocupado unos ms:
+        # se reintenta hasta el plazo en vez de abortar.
+        try:value=predicate()
+        except ControlBusy:value=None
         if value:return value
         time.sleep(.1)
     raise RuntimeError('no se confirmó el prerrequisito dentro del plazo')
+
+
+def reintentar_si_ocupado(accion,segundos=5):
+    """Repite `accion` mientras el backend o el productor escriben el control.
+
+    ControlBusy salta al no obtener el candado, antes de leer o escribir nada,
+    así que reintentar es seguro. Antes, un solo choque de más de 50 ms cortaba
+    la presentación entera; ahora solo es un fallo si sigue ocupado `segundos`.
+    """
+    limite=time.monotonic()+segundos
+    while True:
+        try:return accion()
+        except ControlBusy:
+            if time.monotonic()>=limite:raise
+            time.sleep(.05)
 
 
 def check_accounts(directory, profile_name='pasajeros-30'):
@@ -422,7 +445,9 @@ def _run_owned(directory,seconds,required,owner,profile_name='pasajeros-30'):
     if control.read()['enabled']:raise ValueError('control habilitado previo; detener y revisar')
     budget=aggregate_budget(ROOT.parent,control.path,day)
     if budget['otherControlEnabled']:raise ValueError('otro control está habilitado; no iniciar otra copia')
-    if budget['used']+required>10000:raise ValueError(f"cuota insuficiente: quedan {10000-budget['used']}, se reservan {required}")
+    # El mismo tope diario que fija el perfil y respeta el productor.
+    cupo=json.loads(profile.raw)['limits']['maxObservationPublishCallsPerDay']
+    if budget['used']+required>cupo:raise ValueError(f"cuota insuficiente: quedan {cupo-budget['used']}, se reservan {required}")
     _,_,reader,environment=configuration(directory,profile_name)
     credentials,proof_file=profile_files(directory,profile_name)
     original_health=private_read(directory/'setup.json')['normalBackendHealthFile']
@@ -436,7 +461,11 @@ def _run_owned(directory,seconds,required,owner,profile_name='pasajeros-30'):
         raise ValueError('volver a comprobar las cuentas después del cambio de configuración')
     load_credentials(credentials,profile.principals)
     run_dir=directory/'runs'/owner;run_dir.mkdir(mode=0o700)
-    env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'LANG':'C','PYTHONPATH':str(ROOT/'backend'),**environment}
+    # Incidencias simuladas de la presentación (obras, cierre, desvío, choque y
+    # tráfico): el backend las publica marcadas como simuladas.
+    env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'LANG':'C','PYTHONPATH':str(ROOT/'backend'),
+         'BACKEND_SIMULATION_ROUTE_CHANGES':str(ROOT/'backend'/'simulation'/'incidencias-presentacion.json'),
+         **environment}
     nominal_count=json.loads(profile.raw)['limits']['nominalVehicleCount']
     actor_count=len(profile.principals)
     children=[];streams=[];stopping=ServiceStop(directory,owner);previous={};probe=None;result={'owner':owner,'state':'preparando','profile':profile_name,'expectedVehicles':nominal_count,'expectedActors':actor_count,'seconds':seconds,'reservedUpperBoundCalls':required,'dayUsedBefore':budget['used']}
@@ -446,7 +475,7 @@ def _run_owned(directory,seconds,required,owner,profile_name='pasajeros-30'):
         result.update(fields);result['seenAt']=time.time();private_json(directory/'status.json',result)
         if result['state']!=last_state:
             print({'preparando':'Preparando backend y conexión…','conectando':f'Iniciando {actor_count} balizas…',
-                'listo':f'Listo: {nominal_count} micros vigentes con ocupación. Ya puedes abrir Mapa.',
+                'listo':f'Listo: {nominal_count} micros vigentes con ocupación; demanda simulada {demand_label(time.time())} a esta hora. Ya puedes abrir Mapa.',
                 'detenido':'Presentación detenida.','fallo':'El servicio terminó con un fallo; revisar el resultado.'}.get(result['state'],result['state']),flush=True)
             last_state=result['state']
     def spawn(args,name):
@@ -470,17 +499,18 @@ def _run_owned(directory,seconds,required,owner,profile_name='pasajeros-30'):
         spawn(['/usr/bin/caffeinate','-i','-w',str(os.getpid())], 'power.log')
         wait_for(lambda:(read_heartbeat(str(directory/'health.json')) or {}).get('connected') is True,30,stopping)
         if time.time()+seconds+20>=end:raise RuntimeError('ya no cabe la sesión antes del cierre de horario')
-        control.enable(profile.pinned(),time.time());started=time.monotonic();deadline=started+seconds
+        reintentar_si_ocupado(lambda:control.enable(profile.pinned(),time.time()));started=time.monotonic();deadline=started+seconds
         wait_for(lambda:(lambda s:s['backend']['fresh'] and s['runOwner'] is not None
             and s['mqtt']['lastAckedRevision']==s['controlRevision'])(status(control,time.time())),20,stopping)
-        run_id=status(control,time.time()).get('runId')
+        run_id=reintentar_si_ocupado(lambda:status(control,time.time())).get('runId')
         if run_id is None:raise RuntimeError('el backend no confirmó la identidad del run aplicado')
         actor=spawn([sys.executable,'-u','-m','simulation','--control-db',str(control.path),
             '--history-db',str(directory/'history.sqlite'),'--credentials-file',str(credentials),
-            '--profile',profile_name,'--gtfs-dir',str(ROOT/'gtfs'),'--reference-jsonl',str(run_dir/'reference.jsonl'),'run'],'producer.log')
+            '--profile',profile_name,'--gtfs-dir',str(ROOT/'gtfs'),'--reference-jsonl',str(run_dir/'reference.jsonl'),
+            '--route-changes',env['BACKEND_SIMULATION_ROUTE_CHANGES'],'run'],'producer.log')
         save(runId=run_id,deadlineHostUptime=deadline,state='conectando',readyObserved=False)
         while not stopping.wait(.25):
-            snapshot=probe.snapshot();current=status(control,time.time())
+            snapshot=probe.snapshot();current=reintentar_si_ocupado(lambda:status(control,time.time()))
             remaining=deadline-time.monotonic()
             if remaining<=0:result['reason']='presentation_duration_finished';break
             if backend.poll() is not None:raise RuntimeError('el backend propio terminó')
@@ -499,7 +529,7 @@ def _run_owned(directory,seconds,required,owner,profile_name='pasajeros-30'):
         else:result['reason']='fallo del servicio; revisar el registro privado'
     finally:
         disabled=None
-        try:disabled=control.disable(time.time(),result.get('reason','presentation_cleanup'))
+        try:disabled=reintentar_si_ocupado(lambda:control.disable(time.time(),result.get('reason','presentation_cleanup')))
         except (ControlUnavailable,OSError,sqlite3.Error):
             result.update(state='fallo',controlDisableConfirmed=False)
         if actor is not None and actor.poll() is None:
@@ -529,6 +559,16 @@ def _run_owned(directory,seconds,required,owner,profile_name='pasajeros-30'):
     return result
 
 
+def profile_for_start(profile_name, micros):
+    """`--micros N` elige `micros-N`; sin opciones se conserva pasajeros-30."""
+    if micros is None:return profile_name or 'pasajeros-30'
+    if profile_name is not None:raise ValueError('usa --micros o --profile, no ambos')
+    if type(micros) is not int or not MICROS_MINIMO<=micros<=MICROS_MAXIMO:
+        raise ValueError(f'--micros admite de {MICROS_MINIMO} a {MICROS_MAXIMO}: hay 50 cuentas '
+                         'y cada micro necesita 2 para que el backend lo publique')
+    return f'micros-{micros}'
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Presentación 30/50 balizas con tu broker MQTT existente')
     parser.add_argument('--directory',type=Path,default=DEFAULT_DIRECTORY)
@@ -537,7 +577,9 @@ def main(argv=None):
     extend=commands.add_parser('preparar-perfil');extend.add_argument('--profile',choices=['pasajeros-50'],required=True)
     check=commands.add_parser('comprobar');check.add_argument('--profile',choices=PRESENTATION_PROFILES,default='pasajeros-30')
     start=commands.add_parser('iniciar');start.add_argument('--seconds',type=int)
-    start.add_argument('--profile',choices=PRESENTATION_PROFILES,default='pasajeros-30')
+    start.add_argument('--profile',choices=PRESENTATION_PROFILES,default=None)
+    start.add_argument('--micros',type=int,default=None,
+        help=f'cantidad de micros ({MICROS_MINIMO}-{MICROS_MAXIMO}) con las 50 cuentas de pasajeros-50')
     commands.add_parser('estado');commands.add_parser('detener')
     args=parser.parse_args(argv)
     try:
@@ -545,7 +587,8 @@ def main(argv=None):
         elif args.command=='preparar-perfil':result=prepare_profile(args.directory,args.profile)
         elif args.command=='comprobar':
             with service_lock(args.directory):result=check_accounts(args.directory,args.profile)
-        elif args.command=='iniciar':result=run_service(args.directory,args.seconds,args.profile)
+        elif args.command=='iniciar':
+            result=run_service(args.directory,args.seconds,profile_for_start(args.profile,args.micros))
         elif args.command=='estado':result=service_state(args.directory)
         else:result=stop_service(args.directory)
         print(json.dumps(result,ensure_ascii=False,allow_nan=False,indent=2))

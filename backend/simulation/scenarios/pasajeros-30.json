@@ -37,7 +37,7 @@
     "nominalVehicleCount": 10,
     "maxRunDurationSeconds": 900,
     "maxObservationPublishCallsPerRun": 6000,
-    "maxObservationPublishCallsPerDay": 10000
+    "maxObservationPublishCallsPerDay": 30000
   },
   "publication": {
     "qos": 1,

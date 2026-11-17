@@ -36,7 +36,7 @@ def test_profiles_produce_exact_actor_counts_with_quorum_and_wire_contract(name,
     assert all(o.heading==-1 and o.speed==0 for o in frame.observations)
     assert all(len(o.payload())==11 for o in frame.observations)
     body=json.loads(profile.raw)
-    assert body['limits']['maxObservationPublishCallsPerDay']==(10000 if name=='pasajeros-30' else 6000)
+    assert body['limits']['maxObservationPublishCallsPerDay']==(30000 if name=='pasajeros-30' else 6000)
     assert body['limits']['maxRunDurationSeconds']<=PROFILE_SPECS[name][2]
 
 
@@ -175,7 +175,7 @@ def quota_reserve(store, state, instance, *, max_run=6000, max_day=10000):
         state['serviceDate'], max_run=max_run, max_day=max_day)
 
 
-@pytest.mark.parametrize('name,day_limit,version', [('ensayo-2',6000,1),('ensayo-6',6000,1),('pasajeros-30',10000,2)])
+@pytest.mark.parametrize('name,day_limit,version', [('ensayo-2',6000,1),('ensayo-6',6000,1),('pasajeros-30',30000,2)])
 def test_version_two_daily_ceiling_is_per_profile_and_versioned(name,day_limit,version):
     import rutautp_backend.simulation_profile as module
     assert Path(module.__file__).resolve().parents[1] == Path(__file__).resolve().parents[1]
@@ -190,7 +190,7 @@ def test_version_two_daily_ceiling_is_per_profile_and_versioned(name,day_limit,v
     assert all(len(vehicle['principals']) >= 2 for vehicle in body['vehicles'])
 
 
-@pytest.mark.parametrize('name,ceiling', [('ensayo-2',6000),('ensayo-6',6000),('pasajeros-30',10000)])
+@pytest.mark.parametrize('name,ceiling', [('ensayo-2',6000),('ensayo-6',6000),('pasajeros-30',30000)])
 @pytest.mark.parametrize('violation', ['day_over','run_over','zero','boolean','fractional'])
 def test_version_two_profile_and_actor_validator_reject_budget_boundaries(tmp_path,monkeypatch,name,ceiling,violation):
     import rutautp_backend.simulation_profile as module
@@ -211,13 +211,13 @@ def test_version_two_profile_and_actor_validator_reject_budget_boundaries(tmp_pa
     with pytest.raises(ValueError): validate_publication(replace(profile,raw=raw))
 
 
-@pytest.mark.parametrize('name,ceiling', [('ensayo-2',6000),('ensayo-6',6000),('pasajeros-30',10000)])
+@pytest.mark.parametrize('name,ceiling', [('ensayo-2',6000),('ensayo-6',6000),('pasajeros-30',30000)])
 def test_version_two_store_accepts_exact_daily_ceiling(tmp_path,name,ceiling):
     store,state,instance = quota_claimed_store(tmp_path,name)
     assert quota_reserve(store,state,instance,max_run=PROFILE_SPECS[name][3],max_day=ceiling) == (1,1)
 
 
-@pytest.mark.parametrize('name,ceiling', [('ensayo-2',6000),('ensayo-6',6000),('pasajeros-30',10000)])
+@pytest.mark.parametrize('name,ceiling', [('ensayo-2',6000),('ensayo-6',6000),('pasajeros-30',30000)])
 @pytest.mark.parametrize('violation', ['day_over','run_over','boolean','zero'])
 def test_version_two_store_rejects_invalid_limits_without_changing_ledger(tmp_path,name,ceiling,violation):
     store,state,instance = quota_claimed_store(tmp_path,name)

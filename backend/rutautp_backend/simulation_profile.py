@@ -16,8 +16,69 @@ PROFILE_DIRECTORY = Path(__file__).resolve().parents[1] / "simulation/scenarios"
 # Perfiles explícitos: cada ampliación conserva su whitelist y presupuesto.
 PROFILE_SPECS = {'ensayo-2': (2, 1, 300, 240), 'ensayo-6': (6, 2, 300, 720),
                  'pasajeros-30': (30, 10, 900, 6000), 'pasajeros-50': (50, 15, 300, 6000)}
-PROFILE_DAY_LIMITS = {'ensayo-2': 6000, 'ensayo-6': 6000, 'pasajeros-30': 10000,
-                      'pasajeros-50': 10000}
+# Tope diario de mensajes de la presentación (suma de todas sus sesiones del día,
+# hora de Lima). Protege la cuota del plan de EMQX y frena una simulación que no
+# se apague. Antes era 10000: subirlo exige cambiarlo aquí y en los escenarios.
+CUPO_DIARIO_PRESENTACION = 30000
+PROFILE_DAY_LIMITS = {'ensayo-2': 6000, 'ensayo-6': 6000, 'pasajeros-30': CUPO_DIARIO_PRESENTACION,
+                      'pasajeros-50': CUPO_DIARIO_PRESENTACION}
+
+# Variantes `micros-N`: las mismas 50 cuentas de pasajeros-50 repartidas en N
+# micros. El backend exige 2 cuentas distintas por micro, así que 50 cuentas
+# admiten hasta 25. Conservan duración y presupuestos de pasajeros-50.
+MICROS_BASE = 'pasajeros-50'
+MICROS_MINIMO, MICROS_MAXIMO = 10, 25
+for _micros in range(MICROS_MINIMO, MICROS_MAXIMO + 1):
+    PROFILE_SPECS[f'micros-{_micros}'] = (50, _micros, 300, 6000)
+    PROFILE_DAY_LIMITS[f'micros-{_micros}'] = CUPO_DIARIO_PRESENTACION
+del _micros
+
+# El motor exige una ruta distinta por micro. Rutas para los micros 16 a 25:
+# siguen el orden de route_id, con líneas distintas a las del perfil base, y
+# se comprobaron contra el feed fijado por huella (primer viaje de cada ruta,
+# su trazado y la línea que calcula el backend). Si el feed cambia, la huella
+# del perfil falla antes de usarlas.
+RUTAS_EXTRA_MICROS = (
+    ("17463385", "C-22", "15"), ("17463445", "M-23", "16"), ("17491518", "C-03", "18"),
+    ("17492018", "C-05", "19"), ("17508289", "C-12", "20"), ("17508501", "C-13", "22"),
+    ("17508507", "C-16", "24"), ("17520880", "C-23", "25"), ("17520994", "C-18", "26"),
+    ("17521004", "C-24", "27"),
+)
+
+
+def derivar_micros(base_bytes: bytes, micros: int) -> bytes:
+    """Reparte las cuentas del perfil base en `micros` micros, con 2 o más cada uno.
+
+    Es determinista: cada proceso obtiene los mismos bytes y la misma huella.
+    Los primeros micros conservan las rutas del perfil base; los siguientes
+    usan `RUTAS_EXTRA_MICROS`.
+    """
+    body = json.loads(base_bytes.decode("utf-8"))
+    base = body["vehicles"]
+    principals = [p for vehicle in base for p in vehicle["principals"]]
+    cuota, resto = divmod(len(principals), micros)
+    if cuota < 2:
+        raise ValueError("cada micro necesita al menos 2 cuentas")
+    if micros > len(base) + len(RUTAS_EXTRA_MICROS):
+        raise ValueError("no hay rutas preparadas para tantos micros")
+    vehicles, inicio = [], 0
+    for indice in range(micros):
+        if indice < len(base):
+            vehicle = {k: v for k, v in base[indice].items() if k != "principals"}
+        else:
+            extra = indice - len(base)
+            route_id, linea, trip_id = RUTAS_EXTRA_MICROS[extra]
+            vehicle = {"routeId": route_id, "linea": linea, "tripId": trip_id,
+                       "shapeId": route_id, "initialProgress": round(0.1 + 0.05 * extra, 2)}
+        vehicle["scenarioVehicleId"] = f"scenario-bus-{indice + 1:02d}"
+        tamano = cuota + (1 if indice < resto else 0)
+        vehicle["principals"] = principals[inicio:inicio + tamano]
+        inicio += tamano
+        vehicles.append(vehicle)
+    body["scenarioId"] = f"micros-{micros}"
+    body["limits"]["nominalVehicleCount"] = micros
+    body["vehicles"] = vehicles
+    return (json.dumps(body, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 def lima_zone() -> ZoneInfo:
     # No exigir la base IANA al arrancar el circuito observado con simulación
     # apagada. Si falta al activar, el controlador revoca el perfil.
@@ -44,13 +105,18 @@ class SimulationProfile:
         if name not in PROFILE_SPECS:
             raise ValueError('perfil no preparado: ' + ', '.join(PROFILE_SPECS))
         actor_count, vehicle_count, max_duration, max_calls = PROFILE_SPECS[name]
-        path = PROFILE_DIRECTORY / f"{name}.json"
+        derivado = name.startswith('micros-')
+        # Un perfil derivado vigila y lee el archivo base; su huella es la del
+        # JSON derivado, que es lo que se fija en el control del run.
+        path = PROFILE_DIRECTORY / f"{MICROS_BASE if derivado else name}.json"
         watched = [path, *(gtfs_dir / filename for filename in sorted(FEED_HASH_FILES))]
         def signatures():
             return tuple((s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
                          for s in (p.stat() for p in watched))
         before = signatures()
         raw_bytes = path.read_bytes()
+        if derivado:
+            raw_bytes = derivar_micros(raw_bytes, vehicle_count)
         if len(raw_bytes) > 64 * 1024:
             raise ValueError("manifiesto demasiado grande")
         raw = raw_bytes.decode("utf-8")
