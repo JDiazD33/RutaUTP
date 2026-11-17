@@ -23,6 +23,7 @@ struct TripSelectionSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @FocusState private var referenciaEnfocada: Bool
     @State private var showConsent = false
+    @State private var mostrarConsentimientoSegundoPlano = false
     @State private var comenzarAlEstarListo = false
     @State private var routes: [RutaGTFS] = []
     @State private var selected: RutaGTFS?
@@ -101,7 +102,9 @@ struct TripSelectionSheet: View {
         }
         comenzarAlEstarListo = false
         referenciaEnfocada = false
-        coordinator.beginTrip(route: DetectionRouteGeometry(route: route),
+        // El viaje declarado se mide con más detalle del recorrido: así una
+        // curva recortada no parece un desvío al grabar la calle nueva.
+        coordinator.beginTrip(route: DetectionRouteGeometry(route: route, maximumShapePoints: 1_000),
                               occupancy: BusOccupancyState(rawValue: occupancy),
                               boardingPlace: boardingPlace, boardingPoint: boardingPoint)
         // El coordinador puede rechazar el inicio si cambian las preferencias.
@@ -134,6 +137,7 @@ struct TripSelectionSheet: View {
                         recorrido(route)
                         puntoDeSubida
                         ocupacion
+                        segundoPlano
                         estadoContribucion
                     }
                     .padding(20)
@@ -178,6 +182,15 @@ struct TripSelectionSheet: View {
             Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
         } message: {
             Text(TextoConsentimientoContribucion.confirmacion)
+        }
+        .confirmationDialog(TextoConsentimientoContribucion.segundoPlanoDialogo,
+                            isPresented: $mostrarConsentimientoSegundoPlano, titleVisibility: .visible) {
+            Button(TextoConsentimientoContribucion.segundoPlanoAceptar) {
+                coordinator.setBackgroundContributionAllowed(true)
+            }
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(TextoConsentimientoContribucion.segundoPlanoConfirmacion)
         }
         .task(id: revisionCatalogo) { await cargarCatalogo() }
         .onChange(of: coordinator.isRunning) { _, listo in
@@ -382,6 +395,41 @@ struct TripSelectionSheet: View {
         .accessibilityLabel(title)
         .accessibilityValue(elegido ? L.t("Seleccionado", "Selected") : L.t("Sin seleccionar", "Not selected"))
         .accessibilityAddTraits(elegido ? [.isSelected] : [])
+    }
+
+    /// Elección explícita para seguir aportando con la pantalla bloqueada.
+    /// Activarla abre su propio consentimiento; desactivarla es inmediato.
+    @ViewBuilder
+    private var segundoPlano: some View {
+        if coordinator.isPublisherConfigured {
+            VStack(alignment: .leading, spacing: 12) {
+                tituloSeccion(L.t("Con la pantalla bloqueada (opcional)", "With the screen locked (optional)"))
+                Toggle(isOn: Binding(
+                    get: { coordinator.segundoPlanoPermitido },
+                    set: { permitir in
+                        if permitir {
+                            mostrarConsentimientoSegundoPlano = true
+                        } else {
+                            coordinator.setBackgroundContributionAllowed(false)
+                        }
+                    }
+                )) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "location.circle").frame(width: 24)
+                            .foregroundStyle(Color(uiColor: .secondaryLabel))
+                            .accessibilityHidden(true)
+                        Text(TextoConsentimientoContribucion.segundoPlanoTitulo)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .frame(minHeight: 52)
+                .background(superficie, in: RoundedRectangle(cornerRadius: 18))
+                .accessibilityHint(TextoConsentimientoContribucion.segundoPlanoPista)
+                Text(TextoConsentimientoContribucion.segundoPlanoNota)
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
     }
 
     @ViewBuilder

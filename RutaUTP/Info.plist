@@ -20,6 +20,10 @@
 	<array>
 		<string>tel</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>MQTT_HOST</key>
 	<string>ce14c140.ala.us-east-1.emqxsl.com</string>
 	<key>MQTT_PORT</key>

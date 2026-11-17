@@ -13,8 +13,10 @@
 //   - El AsyncStream se crea perezosamente por llamada a currentLocation():
 //     si alguien pide el stream antes de startUpdating, queda esperando sin
 //     emitir nada hasta que llegue la primera fix.
-//   - TODO (cuando se defina rol conductor): añadir startMonitoringSignificantLocationChanges()
-//     y permitir background updates (ver Info.plist UIBackModes).
+//   - Segundo plano: `permitirActualizacionesEnSegundoPlano` lo activa solo el
+//     rastreo pasivo durante un viaje con permiso explícito de la persona
+//     (Info.plist declara UIBackgroundModes → location).
+//   - TODO (cuando se defina rol conductor): añadir startMonitoringSignificantLocationChanges().
 //
 //  IMPORTANTE — este servicio es COMPARTIDO y ahora tiene varios consumidores:
 //  el mapa y el rastreo pasivo (`PassiveTrackingCoordinator`) piden ubicación a
@@ -58,6 +60,11 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
     // Avoid duplicate start
     private var isUpdating: Bool = false
+    /// Con la persona quieta y la última lectura vencida, el filtro de
+    /// distancia no entregaría otra y los consumidores descartan la antigua
+    /// (p. ej. el botón de ubicación del Mapa). Se abre hasta recibir una.
+    private var esperandoLecturaFresca = false
+    private static let antiguedadLecturaFresca: TimeInterval = 20
     /// Un cambio de permiso no debe reactivar un servicio que ya se detuvo.
     private var updatesRequested = false
 
@@ -132,8 +139,24 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
         guard requirement != appliedRequirement else { return }
         manager.desiredAccuracy = requirement.desiredAccuracy
-        manager.distanceFilter = requirement.distanceFilter
+        manager.distanceFilter = esperandoLecturaFresca ? kCLDistanceFilterNone : requirement.distanceFilter
         appliedRequirement = requirement
+    }
+
+    private func pedirLecturaFrescaSiHaceFalta() {
+        guard isUpdating, !esperandoLecturaFresca else { return }
+        if let ultima = lastKnownLocation ?? manager.location,
+           Date().timeIntervalSince(ultima.timestamp) <= Self.antiguedadLecturaFresca {
+            return
+        }
+        esperandoLecturaFresca = true
+        manager.distanceFilter = kCLDistanceFilterNone
+    }
+
+    private func terminarEsperaLecturaFresca() {
+        guard esperandoLecturaFresca else { return }
+        esperandoLecturaFresca = false
+        manager.distanceFilter = appliedRequirement.distanceFilter
     }
 
     func startUpdating() {
@@ -149,9 +172,11 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
             }
         }
 
-        guard !isUpdating else { return }
-        manager.startUpdatingLocation()
-        isUpdating = true
+        if !isUpdating {
+            manager.startUpdatingLocation()
+            isUpdating = true
+        }
+        pedirLecturaFrescaSiHaceFalta()
     }
 
     /// Solicita detener las actualizaciones de ubicación.
@@ -161,6 +186,31 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     func stopUpdating() {
         updatesRequested = false
         stopManagerIfUnused()
+    }
+
+    // MARK: - Segundo plano
+
+    /// Sin el modo `location` en Info.plist, activar la propiedad del gestor
+    /// lanza una excepción. Comprobarlo protege destinos sin ese modo.
+    private static let modoUbicacionEnSegundoPlanoDeclarado: Bool = {
+        let modos = Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") as? [String]
+        return modos?.contains("location") == true
+    }()
+
+    /// Permite que el GPS siga entregando lecturas con la pantalla bloqueada o
+    /// en otra app. Solo lo pide `PassiveTrackingCoordinator` durante un viaje
+    /// que la persona autorizó; al terminar, iOS suspende la app como antes.
+    ///
+    /// Con permiso «Al usar la app», iOS continúa las actualizaciones iniciadas
+    /// en primer plano y lo indica en la barra de estado.
+    func permitirActualizacionesEnSegundoPlano(_ permitir: Bool) {
+        let activar = permitir && Self.modoUbicacionEnSegundoPlanoDeclarado
+        guard manager.allowsBackgroundLocationUpdates != activar else { return }
+        manager.allowsBackgroundLocationUpdates = activar
+        manager.showsBackgroundLocationIndicator = activar
+        // En un atasco o un paradero largo, la pausa automática cortaría las
+        // lecturas y, en segundo plano, iOS no las reanudaría.
+        manager.pausesLocationUpdatesAutomatically = !activar
     }
 
     /// Instantánea de las continuaciones vivas en MainActor.
@@ -192,6 +242,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
 
         manager.stopUpdatingLocation()
         isUpdating = false
+        terminarEsperaLecturaFresca()
 
         #if DEBUG
         print(
@@ -210,6 +261,7 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
         updatesRequested = false
         manager.stopUpdatingLocation()
         isUpdating = false
+        terminarEsperaLecturaFresca()
 
         let activos = lectores.retirarTodos()
         applyActiveRequirements()
@@ -265,6 +317,10 @@ final class LocationService: NSObject, LocationServiceProtocol, ObservableObject
     private func recibirUbicaciones(_ locations: [CLLocation]) {
         guard isUpdating, let location = locations.last else { return }
         lastKnownLocation = location
+        if esperandoLecturaFresca,
+           Date().timeIntervalSince(location.timestamp) <= Self.antiguedadLecturaFresca {
+            terminarEsperaLecturaFresca()
+        }
         for continuation in activeContinuations {
             continuation.yield(location)
         }

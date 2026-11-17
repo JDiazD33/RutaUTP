@@ -46,6 +46,11 @@ protocol LocationServiceProtocol: AnyObject {
     /// API de compatibilidad. No libera el stream de quien llama; los
     /// consumidores normales terminan su propia tarea/stream.
     func stopUpdating()
+
+    /// Mantiene las lecturas con la app en segundo plano. Solo lo pide el
+    /// rastreo pasivo durante un viaje que la persona autorizó; con `false`,
+    /// iOS vuelve a suspender la app al salir de ella.
+    func permitirActualizacionesEnSegundoPlano(_ permitir: Bool)
 }
 
 extension LocationServiceProtocol {
@@ -54,6 +59,10 @@ extension LocationServiceProtocol {
     func currentLocation(requirement: LocationRequirement) -> AsyncStream<CLLocation> {
         currentLocation()
     }
+
+    /// Los proveedores alternativos y los dobles de prueba no usan segundo plano.
+    @MainActor
+    func permitirActualizacionesEnSegundoPlano(_ permitir: Bool) {}
 }
 
 // MARK: - Helpers de permiso (libres de UIColor/UIKit)

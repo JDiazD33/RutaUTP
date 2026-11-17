@@ -7,8 +7,14 @@ import UIKit
 final class PassiveTrackingCoordinator: ObservableObject {
 
     @Published private(set) var isEnabled: Bool
-    @Published private(set) var isRunning = false
+    @Published private(set) var isRunning = false {
+        didSet { actualizarUbicacionEnSegundoPlano() }
+    }
     @Published private(set) var errorCargaRutas: FalloCargaGTFS?
+
+    /// La persona permitió seguir aportando con la pantalla bloqueada o en
+    /// otra app. Desactivado por defecto; solo actúa durante un viaje.
+    @Published private(set) var segundoPlanoPermitido: Bool
 
     @Published var detectionState:
         PassengerDetectionState = .idle
@@ -38,12 +44,19 @@ final class PassiveTrackingCoordinator: ObservableObject {
         observationPublisher != nil
     }
 
-    @Published private(set) var selectedTripRoute: DetectionRouteGeometry?
+    @Published private(set) var selectedTripRoute: DetectionRouteGeometry? {
+        didSet { actualizarUbicacionEnSegundoPlano() }
+    }
     @Published private(set) var tripStartedAt: Date?
     @Published private(set) var boardingPlace: String?
     @Published private(set) var falloAlGuardarSubida = false
     @Published private(set) var boardingPoint: BoardingPoint?
     @Published var latestLocation: CLLocation?
+    /// Desvío que grabó el viaje actual, listo para reportarlo. Vive solo en
+    /// este teléfono hasta que se envía, se descarta o termina el viaje.
+    @Published var desvioDetectado: TrazadorDesvio.Desvio?
+    /// Graba el tramo que el micro recorre fuera de la ruta declarada.
+    var trazadorDesvio = TrazadorDesvio()
     let tripOccupancy: OccupancyService
     var waitingForNewTrip = false
 
@@ -57,6 +70,8 @@ final class PassiveTrackingCoordinator: ObservableObject {
         confirmedLine = nil
         shouldPublish = false
         selectedTripRoute = route
+        trazadorDesvio.reiniciar()
+        desvioDetectado = nil
         tripStartedAt = Date()
         self.boardingPlace = BoardingPlaceStore.normalized(boardingPlace)
         self.boardingPoint = boardingPoint
@@ -79,10 +94,17 @@ final class PassiveTrackingCoordinator: ObservableObject {
         tripOccupancy.prepareTripReport(routeID: route.id, state: state)
     }
 
+    /// El usuario no quiere reportar el desvío grabado, o ya lo envió.
+    func descartarDesvio() {
+        desvioDetectado = nil
+    }
+
     func endTrip() {
         stopObservationSession()
         tripOccupancy.clearTripReport()
         selectedTripRoute = nil
+        trazadorDesvio.reiniciar()
+        desvioDetectado = nil
         tripStartedAt = nil
         boardingPlace = nil
         falloAlGuardarSubida = false
@@ -154,7 +176,13 @@ final class PassiveTrackingCoordinator: ObservableObject {
     /// Se crea al confirmar el abordaje y se descarta del estado local al terminar
     /// la sesión. MQTT lo vincula a la cuenta autenticada; rotarlo no impide
     /// correlacionar viajes ni elimina las observaciones ya enviadas al backend.
-    var observationSessionID: String?
+    var observationSessionID: String? {
+        didSet { actualizarUbicacionEnSegundoPlano() }
+    }
+
+    /// Último valor aplicado al GPS compartido. Sin la preferencia nunca
+    /// cambia, así que el comportamiento anterior queda intacto.
+    private var segundoPlanoActivo = false
 
     /// Identificador GTFS fijado al confirmar el abordaje.
     ///
@@ -177,6 +205,9 @@ let isForcedOnboardForMQTTTest =
 
     private let consentStorageKey =
         "rutautp.passive-tracking-consent"
+
+    /// Preferencia independiente del consentimiento: ausente equivale a `false`.
+    static let llaveSegundoPlano = "rutautp.passive-tracking-background.v1"
 
     /// Construye el coordinador y sus dependencias.
     ///
@@ -230,6 +261,7 @@ let isForcedOnboardForMQTTTest =
         // Consultar el publicador resuelto, no el parámetro opcional: en el
         // arranque normal ese parámetro es nil aunque se haya creado MQTT.
         isEnabled = storedConsent && self.observationPublisher != nil
+        segundoPlanoPermitido = PreferenciasApp.boolGuardado(para: Self.llaveSegundoPlano) ?? false
 
         if storedConsent && self.observationPublisher == nil {
             if !preserveStoredConsentWhenUnconfigured {
@@ -292,6 +324,46 @@ let isForcedOnboardForMQTTTest =
             beginStart(reintentarGTFS: true)
         } else {
             stop()
+        }
+    }
+
+    // MARK: - Segundo plano
+
+    /// Guarda la elección de la persona. Desactivarla corta el segundo plano
+    /// en el momento; activarla solo actúa durante un viaje.
+    func setBackgroundContributionAllowed(_ permitido: Bool) {
+        UserDefaults.standard.set(permitido, forKey: Self.llaveSegundoPlano)
+        segundoPlanoPermitido = permitido
+        actualizarUbicacionEnSegundoPlano()
+    }
+
+    /// Hay un viaje declarado o una sesión de envío de un viaje detectado.
+    private var viajeEnCurso: Bool {
+        selectedTripRoute != nil || observationSessionID != nil
+    }
+
+    /// GPS y envío siguen con la app en segundo plano solo con permiso
+    /// explícito, contribución activa y un viaje en curso.
+    var continuaEnSegundoPlano: Bool {
+        segundoPlanoPermitido && isEnabled && isRunning && isPublisherConfigured && viajeEnCurso
+    }
+
+    /// La app está en segundo plano y no tiene permiso para seguir aportando.
+    var publicacionEnPausa: Bool {
+        appEnSegundoPlano && !continuaEnSegundoPlano
+    }
+
+    /// Sincroniza el GPS compartido con `continuaEnSegundoPlano`.
+    ///
+    /// Si el viaje termina con la app en segundo plano, se aplica la misma
+    /// pausa que sin permiso y iOS vuelve a suspender la app.
+    func actualizarUbicacionEnSegundoPlano() {
+        let continua = continuaEnSegundoPlano
+        guard continua != segundoPlanoActivo else { return }
+        segundoPlanoActivo = continua
+        locationService.permitirActualizacionesEnSegundoPlano(continua)
+        if !continua, appEnSegundoPlano {
+            pauseObservationSessionForBackground()
         }
     }
 
@@ -487,6 +559,8 @@ let isForcedOnboardForMQTTTest =
         confirmedLine = nil
         shouldPublish = false
         selectedTripRoute = nil
+        trazadorDesvio.reiniciar()
+        desvioDetectado = nil
         tripStartedAt = nil
         boardingPlace = nil
         falloAlGuardarSubida = false

@@ -27,6 +27,12 @@ extension PassiveTrackingCoordinator {
         latestLocation = location
         guard isEnabled else { return }
         guard !waitingForNewTrip else { return }
+        // Graba en el teléfono el tramo que el micro hace fuera de la ruta
+        // declarada; al retomarla, el desvío queda listo para reportarlo.
+        if let ruta = selectedTripRoute,
+           let desvio = trazadorDesvio.procesar(location, recorrido: ruta.shape, routeID: ruta.id) {
+            desvioDetectado = desvio
+        }
         let candidateRoutes = selectedTripRoute.map { [$0] } ?? routes
         guard let candidate =
             RouteCandidateMatcher.closestMatch(
@@ -81,7 +87,7 @@ if isForcedOnboardForMQTTTest {
             detectionEngine.process(sample, routeID: candidate.routeID)
 
         detectionState = decision.state
-        shouldPublish = decision.shouldPublish && !appEnSegundoPlano
+        shouldPublish = decision.shouldPublish && !publicacionEnPausa
 
         if decision.didConfirmBoarding {
             confirmedLine = candidate.linea
@@ -93,8 +99,8 @@ if isForcedOnboardForMQTTTest {
                 UUID().uuidString.lowercased()
 
             observationSessionID = sessionID
-            sesionPausadaPorBackground = appEnSegundoPlano
-            if !appEnSegundoPlano {
+            sesionPausadaPorBackground = publicacionEnPausa
+            if !publicacionEnPausa {
                 observationPublisher?.start(sessionID: sessionID, linea: candidate.linea)
             }
 
@@ -128,7 +134,7 @@ if isForcedOnboardForMQTTTest {
         // de la muestra actual, para conservar la identidad del viaje.
         if
             decision.shouldPublish,
-            !appEnSegundoPlano,
+            !publicacionEnPausa,
             observationSessionID != nil,
             let confirmedRouteID
         {
@@ -172,7 +178,7 @@ private func processForcedOnboardForMQTTTest(
     candidate: RouteCandidateMatch,
     activity: DetectedMotionActivity
 ) {
-    guard !appEnSegundoPlano else { return }
+    guard !publicacionEnPausa else { return }
     if observationSessionID == nil {
         let sessionID =
             UUID().uuidString.lowercased()

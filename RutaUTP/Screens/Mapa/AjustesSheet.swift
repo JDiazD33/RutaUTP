@@ -15,6 +15,8 @@ struct AjustesSheet: View {
 
     /// La confirmación completa se presenta antes de activar la contribución.
     @State private var mostrarConsentimiento = false
+    /// El segundo plano tiene su propio consentimiento, posterior al general.
+    @State private var mostrarConsentimientoSegundoPlano = false
     @State private var mostrarDetallesContribucion = false
     @State private var mostrarNotificaciones = false
 
@@ -78,6 +80,26 @@ struct AjustesSheet: View {
                     .disabled(!trackingCoordinator.isPublisherConfigured)
                     .accessibilityHint(TextoConsentimientoContribucion.pistaAccesibilidad)
 
+                    // Depende de la contribución: sin ella no hay viajes que continuar.
+                    if trackingCoordinator.isPublisherConfigured, trackingCoordinator.isEnabled {
+                        Toggle(isOn: Binding(
+                            get: { trackingCoordinator.segundoPlanoPermitido },
+                            set: { permitir in
+                                if permitir {
+                                    mostrarConsentimientoSegundoPlano = true
+                                } else {
+                                    trackingCoordinator.setBackgroundContributionAllowed(false)
+                                }
+                            }
+                        )) {
+                            FilaAjustes(titulo: TextoConsentimientoContribucion.segundoPlanoTitulo,
+                                        simbolo: "location.circle.fill",
+                                        detalle: TextoConsentimientoContribucion.segundoPlanoDetalle,
+                                        muestraFlecha: false)
+                        }
+                        .accessibilityHint(TextoConsentimientoContribucion.segundoPlanoPista)
+                    }
+
                     Menu {
                         Picker(L.t("Micros en el mapa", "Buses on the map"), selection: Binding(
                             get: { mapVehiclePreferences.limit },
@@ -129,10 +151,23 @@ struct AjustesSheet: View {
             Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
         } message: {
             // El alcance se declara ANTES de pedir el consentimiento, no
-            // después: la baliza solo transmite con la app abierta, y prometer
-            // continuidad en segundo plano sería anunciar algo que el sistema
-            // no hace con la configuración actual.
+            // después: por defecto la baliza solo transmite con la app
+            // abierta. Continuar en segundo plano exige un segundo
+            // consentimiento y solo actúa durante un viaje.
             Text(TextoConsentimientoContribucion.confirmacion)
+        }
+        .confirmationDialog(
+            TextoConsentimientoContribucion.segundoPlanoDialogo,
+            isPresented: $mostrarConsentimientoSegundoPlano,
+            titleVisibility: .visible
+        ) {
+            Button(TextoConsentimientoContribucion.segundoPlanoAceptar) {
+                trackingCoordinator.setBackgroundContributionAllowed(true)
+            }
+
+            Button(L.t("Cancelar", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(TextoConsentimientoContribucion.segundoPlanoConfirmacion)
         }
         .alert(L.t("Contribución de ubicaciones", "Location contribution"),
                isPresented: $mostrarDetallesContribucion) {
@@ -145,9 +180,12 @@ struct AjustesSheet: View {
     }
 
     private var resumenContribucion: String {
-        trackingCoordinator.isPublisherConfigured
-            ? L.t("Solo con la app abierta", "Only while the app is open")
-            : L.t("Envío de ubicaciones no configurado", "Location uploads not configured")
+        guard trackingCoordinator.isPublisherConfigured else {
+            return L.t("Envío de ubicaciones no configurado", "Location uploads not configured")
+        }
+        return trackingCoordinator.isEnabled && trackingCoordinator.segundoPlanoPermitido
+            ? L.t("También en segundo plano durante viajes", "Also in the background during trips")
+            : L.t("Solo con la app abierta", "Only while the app is open")
     }
 
     private enum TemaOpcion { case light, dark }

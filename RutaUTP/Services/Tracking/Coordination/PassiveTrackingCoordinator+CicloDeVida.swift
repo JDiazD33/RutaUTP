@@ -75,8 +75,13 @@ extension PassiveTrackingCoordinator {
     ///
     /// Visibilidad interna para que XCTest verifique la pausa/reanudación
     /// sin simular el ciclo de vida real de la app.
+    ///
+    /// Excepción: si la persona permitió el segundo plano y hay un viaje en
+    /// curso, GPS y envío continúan. Si ese viaje termina antes de volver,
+    /// `actualizarUbicacionEnSegundoPlano` aplica esta misma pausa.
     func pauseObservationSessionForBackground() {
         appEnSegundoPlano = true
+        guard !continuaEnSegundoPlano else { return }
         shouldPublish = false
         tripOccupancy.stop()
         guard observationSessionID != nil, !sesionPausadaPorBackground else {
@@ -107,7 +112,7 @@ extension PassiveTrackingCoordinator {
 
     func reanudarSesionPausadaSiSePuede() {
         guard
-            isEnabled, !appEnSegundoPlano, sesionPausadaPorBackground,
+            isEnabled, !publicacionEnPausa, sesionPausadaPorBackground,
             detectionState == .onboard,
             let sessionID = observationSessionID,
             let linea = confirmedLine, confirmedRouteID != nil
