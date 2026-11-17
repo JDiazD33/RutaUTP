@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "descripcion": "Incidencias simuladas de la presentación. Las genera tools/generar_incidencias_presentacion.py desde el GTFS.",
+  "alerts": [
+    {
+      "id": "obras-pierola-c01b",
+      "routeId": "17350695",
+      "reason": "works",
+      "lat": -8.105247,
+      "lon": -79.0344,
+      "place": "Avenida América Norte",
+      "endLat": -8.101692,
+      "endLon": -79.035953
+    },
+    {
+      "id": "desvio-m34a",
+      "routeId": "17434457",
+      "reason": "detour",
+      "lat": -8.100756,
+      "lon": -79.036522,
+      "place": "Avenida Nicolás de Piérola y Calle los Diamantes",
+      "via": "Avenida Mansiche",
+      "endLat": -8.103922,
+      "endLon": -79.031627,
+      "path": "vdmp@fykaNpAfBfAr@tJ~DpGiOpGiO_@k@{KmF"
+    },
+    {
+      "id": "desvio-pierola-17350695",
+      "routeId": "17350695",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17492018",
+      "routeId": "17492018",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17522621",
+      "routeId": "17522621",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17527200",
+      "routeId": "17527200",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17527397",
+      "routeId": "17527397",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17549744",
+      "routeId": "17549744",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17581473",
+      "routeId": "17581473",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17670087",
+      "routeId": "17670087",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    },
+    {
+      "id": "desvio-pierola-17670089",
+      "routeId": "17670089",
+      "reason": "detour",
+      "lat": -8.105173,
+      "lon": -79.034409,
+      "place": "Avenida Nicolás de Piérola",
+      "via": "Vera Enríquez, Chopin, Liszt, Sibelius y Dunker Lavalle",
+      "endLat": -8.096516,
+      "endLon": -79.038312,
+      "path": "h`np@`lkaNcDqCyGwCaDnHyBvBmA{@tBgBzCsHeJaEkFhMkBo@a@nAg@JGb@XZeBpEkHnC\\pACZ{CjA|AtE"
+    }
+  ]
+}

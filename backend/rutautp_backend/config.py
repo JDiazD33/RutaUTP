@@ -146,6 +146,9 @@ class Config:
     simulation_occupancy_enabled: bool = False
     # Estado privado separado del histórico. Vacío: no abrir controlador.
     simulation_control_path: str = ""
+    # JSON de incidencias de cambio de ruta simuladas para la presentación.
+    # Vacío: ninguna. Exige la entrada sintética: nunca en el backend habitual.
+    simulation_route_changes_path: str = ""
 
     # ── Feed ──────────────────────────────────────────────────────────────
     gtfs_dir: Path = DEFAULT_GTFS_DIR
@@ -205,6 +208,12 @@ class Config:
     #: antes de exponerlo a los consumidores. No se cuentan `sessionId`: una
     #: instalación comprometida puede rotarlos libremente.
     min_publish_principals: int = 2
+
+    #: Cuentas MQTT distintas que deben coincidir antes de publicar un cambio
+    #: de ruta o una incidencia de la comunidad. Con dos, basta un par de
+    #: cuentas coordinadas para mostrar un desvío falso en el mapa; subirlo
+    #: a 3 lo dificulta a cambio de tardar más en confirmar un cambio real.
+    route_changes_quorum: int = 2
 
     #: Diferencia de rumbo máxima para considerar que dos observaciones pueden
     #: ser del mismo vehículo.
@@ -302,10 +311,23 @@ class Config:
                 "BACKEND_MIN_PUBLISH_PRINCIPALS="
                 f"{self.min_publish_principals} debe ser un entero mayor o igual a 1"
             )
+        if (
+            isinstance(self.route_changes_quorum, bool)
+            or not isinstance(self.route_changes_quorum, int)
+            or self.route_changes_quorum < 2
+        ):
+            raise ConfigError(
+                "BACKEND_ROUTE_CHANGES_QUORUM="
+                f"{self.route_changes_quorum} debe ser un entero mayor o igual a 2"
+            )
         if self.simulation_ingress_enabled and (
             self.vehicle_position_schema_version != 2 or self.min_publish_principals < 2
         ):
             raise ConfigError("la entrada sintética exige salida v2 y quorum mínimo de 2")
+        if not isinstance(self.simulation_route_changes_path, str):
+            raise ConfigError("BACKEND_SIMULATION_ROUTE_CHANGES debe ser una ruta")
+        if self.simulation_route_changes_path and not self.simulation_ingress_enabled:
+            raise ConfigError("las incidencias simuladas exigen BACKEND_SIMULATION_INGRESS_ENABLED=1")
 
         for name in (
             "max_message_bytes",
@@ -403,6 +425,7 @@ class Config:
             simulation_ingress_enabled=_flag(env, "BACKEND_SIMULATION_INGRESS_ENABLED"),
             simulation_occupancy_enabled=_flag(env, "BACKEND_SIMULATION_OCCUPANCY_ENABLED"),
             simulation_control_path=env.get("BACKEND_SIMULATION_CONTROL_PATH", "").strip(),
+            simulation_route_changes_path=env.get("BACKEND_SIMULATION_ROUTE_CHANGES", "").strip(),
             gtfs_dir=Path(gtfs_dir) if gtfs_dir else DEFAULT_GTFS_DIR,
             database_path=env.get(
                 "BACKEND_DB_PATH", str(DEFAULT_DATABASE_PATH)
@@ -445,6 +468,9 @@ class Config:
             publish_interval_s=_number(env, "BACKEND_PUBLISH_INTERVAL_S", 5.0),
             min_publish_principals=_integer(
                 env, "BACKEND_MIN_PUBLISH_PRINCIPALS", 2, minimum=1
+            ),
+            route_changes_quorum=_integer(
+                env, "BACKEND_ROUTE_CHANGES_QUORUM", 2, minimum=2
             ),
             merge_max_heading_diff_deg=_number(
                 env, "BACKEND_MERGE_MAX_HEADING_DIFF_DEG", 90.0

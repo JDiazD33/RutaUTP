@@ -171,3 +171,18 @@ class TestParametrosRetirados:
         config = Config.from_env({"BACKEND_MIN_SPEED_MS": "4"})
 
         assert not hasattr(config, "min_speed_ms")
+
+
+def test_incidencias_simuladas_exigen_la_entrada_sintetica():
+    """El backend habitual nunca publica incidencias simuladas."""
+    with pytest.raises(ConfigError, match="BACKEND_SIMULATION_INGRESS_ENABLED"):
+        Config.from_env({"BACKEND_SIMULATION_ROUTE_CHANGES": "incidencias.json"})
+
+    config = Config.from_env({
+        "BACKEND_SIMULATION_ROUTE_CHANGES": "incidencias.json",
+        "BACKEND_SIMULATION_INGRESS_ENABLED": "1",
+        "BACKEND_VEHICLE_POSITION_SCHEMA_VERSION": "2",
+    })
+
+    assert config.simulation_route_changes_path == "incidencias.json"
+    assert Config.from_env({}).simulation_route_changes_path == ""

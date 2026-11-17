@@ -40,6 +40,7 @@ VARIABLES: dict[str, str] = {
     "simulation_ingress_enabled": "BACKEND_SIMULATION_INGRESS_ENABLED",
     "simulation_occupancy_enabled": "BACKEND_SIMULATION_OCCUPANCY_ENABLED",
     "simulation_control_path": "BACKEND_SIMULATION_CONTROL_PATH",
+    "simulation_route_changes_path": "BACKEND_SIMULATION_ROUTE_CHANGES",
     "database_path": "BACKEND_DB_PATH",
     "retention_days": "BACKEND_DB_RETENTION_DAYS",
     "health_file": "BACKEND_HEALTH_FILE",
@@ -61,6 +62,7 @@ VARIABLES: dict[str, str] = {
     "vehicle_ttl_s": "BACKEND_VEHICLE_TTL_S",
     "publish_interval_s": "BACKEND_PUBLISH_INTERVAL_S",
     "min_publish_principals": "BACKEND_MIN_PUBLISH_PRINCIPALS",
+    "route_changes_quorum": "BACKEND_ROUTE_CHANGES_QUORUM",
     "vehicle_namespace": "BACKEND_VEHICLE_NAMESPACE",
     "log_level": "BACKEND_LOG_LEVEL",
     "log_json": "BACKEND_LOG_JSON",
@@ -76,6 +78,7 @@ SIN_VALOR_FIJO = {
     "MQTT_CLIENT_ID",
     "BACKEND_VEHICLE_NAMESPACE",
     "BACKEND_SIMULATION_CONTROL_PATH",
+    "BACKEND_SIMULATION_ROUTE_CHANGES",
 }
 
 #: Campos que el código guarda **resueltos** (ruta absoluta) y el README

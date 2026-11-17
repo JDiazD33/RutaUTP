@@ -12,8 +12,9 @@ de la app no necesitan esta integración.
 2. Publica un registro privado por MQTT/TLS bajo su cuenta aprovisionada.
 3. El backend conserva líneas, idioma, zona horaria y política de silencio en
    SQLite, y responde con un recibo privado de la revisión que guardó.
-4. Dos cuentas diferentes confirman un cambio conforme a las reglas vigentes
-   de `RouteChanges`. Solo los eventos posteriores a la suscripción de cada
+4. Dos cuentas diferentes (quorum configurable) confirman una obra, un cierre
+   o un desvío conforme a las reglas vigentes de `RouteChanges`. El tráfico y
+   los choques no generan aviso remoto. Solo los eventos posteriores a la suscripción de cada
    línea se consideran para el envío. No hay anuncios oficiales ni datos ficticios.
 5. Un worker del backend envía un aviso visible a Apple por HTTP/2 con JWT ES256.
    El iPhone no necesita mantener MQTT conectado en segundo plano para recibirlo.

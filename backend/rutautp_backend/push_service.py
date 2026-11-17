@@ -116,12 +116,12 @@ class APNsProvider:
 
 
 PUSH_TEXTS = {
-    "es": ("Cambio reportado por la comunidad", "Dos o más usuarios reportan un cambio en {}. Abre RutaUTP para consultar el estado actual."),
-    "en": ("Community route report", "Two or more users report a change on {}. Open RutaUTP to check the current status."),
-    "fr": ("Changement signalé par la communauté", "Au moins deux utilisateurs signalent un changement sur {}. Ouvrez RutaUTP pour consulter l’état actuel."),
-    "pt-BR": ("Mudança relatada pela comunidade", "Dois ou mais usuários relatam uma mudança na {}. Abra o RutaUTP para consultar a situação atual."),
-    "de": ("Routenänderung aus der Community", "Mindestens zwei Nutzer melden eine Änderung auf {}. Öffne RutaUTP, um den aktuellen Stand zu prüfen."),
-    "zh-Hans": ("社区报告的线路变化", "至少两名用户报告 {} 有变化。打开 RutaUTP 查看当前情况。"),
+    "es": ("Cambio reportado por la comunidad", "Varios usuarios reportan un cambio en {}. Abre RutaUTP para consultar el estado actual."),
+    "en": ("Community route report", "Several users report a change on {}. Open RutaUTP to check the current status."),
+    "fr": ("Changement signalé par la communauté", "Plusieurs utilisateurs signalent un changement sur {}. Ouvrez RutaUTP pour consulter l’état actuel."),
+    "pt-BR": ("Mudança relatada pela comunidade", "Vários usuários relatam uma mudança na {}. Abra o RutaUTP para consultar a situação atual."),
+    "de": ("Routenänderung aus der Community", "Mehrere Nutzer melden eine Änderung auf {}. Öffne RutaUTP, um den aktuellen Stand zu prüfen."),
+    "zh-Hans": ("社区报告的线路变化", "多名用户报告 {} 有变化。打开 RutaUTP 查看当前情况。"),
 }
 
 
