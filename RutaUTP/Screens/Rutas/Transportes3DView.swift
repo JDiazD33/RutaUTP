@@ -114,7 +114,8 @@ struct PanelTransporte3D: View {
     var activo = true
     /// En el detalle de ruta el panel queda bajo el mapa, casi siempre fuera
     /// de la pantalla al entrar. Con `true`, el visor espera a que el panel se
-    /// vea dentro del scroll (iOS 18 o posterior) antes de crear RealityKit.
+    /// vea dentro del scroll y a que el desplazamiento se detenga antes de
+    /// crear RealityKit.
     var esperarVisibilidad = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("transportes3d.variante") private var variante: VarianteTransporte3D = .original
@@ -131,13 +132,17 @@ struct PanelTransporte3D: View {
     /// primera entrada, y ocurría aunque el panel estuviera fuera de la
     /// pantalla. En el detalle se monta cuando el panel ya se ve y el scroll
     /// se detuvo un momento; una vez montado se conserva.
+    ///
+    /// La espera usaba `onScrollVisibilityChange`, que solo existe en iOS 18:
+    /// en iOS 17 el visor se creaba 350 ms después de entrar, dentro de la
+    /// animación de entrada. Ahora la visibilidad se mide igual en ambas
+    /// versiones y el visor no se crea mientras el contenido se desplaza.
     @State private var visorListo = false
     @State private var visibleEnScroll = false
+    @State private var seguimiento = SeguimientoScroll()
 
     private var puedeMontarVisor: Bool {
-        guard esperarVisibilidad else { return true }
-        if #available(iOS 18.0, *) { return visibleEnScroll }
-        return true
+        esperarVisibilidad ? visibleEnScroll : true
     }
 
     var body: some View {
@@ -184,7 +189,10 @@ struct PanelTransporte3D: View {
     private var visor: some View {
         ZStack {
             Color.white
-            if scenePhase == .active && activo && visorListo {
+            // Solo el segundo plano libera RealityKit. `.inactive` también llega
+            // con el Centro de control o un aviso: destruir y recrear el visor
+            // en cada caso detenía la interfaz al volver.
+            if scenePhase != .background && activo && visorListo {
                 VisorTransporte3D(tipo: tipo, variante: variante, color: UIColor(PaletasEmpresa.actual.colorMarca),
                                  intento: intento, orden: orden, identificacion: identificacion, estado: $estado)
                     .accessibilityElement(children: .ignore)
@@ -220,10 +228,20 @@ struct PanelTransporte3D: View {
         }
         .frame(height: 340)
         .clipShape(RoundedRectangle(cornerRadius: 24))
-        .modifier(VisibilidadEnScroll(activa: esperarVisibilidad, visible: $visibleEnScroll))
+        .modifier(VisibilidadEnScroll(activa: esperarVisibilidad, visible: $visibleEnScroll,
+                                      seguimiento: seguimiento))
         .task(id: puedeMontarVisor) {
             guard puedeMontarVisor, !visorListo else { return }
-            try? await Task.sleep(for: .milliseconds(esperarVisibilidad ? 350 : 500))
+            if esperarVisibilidad {
+                // Crear el visor detiene la interfaz un instante: se espera a
+                // que termine la entrada de la pantalla y a que el contenido
+                // lleve un momento quieto.
+                while !Task.isCancelled, !seguimiento.enReposo {
+                    try? await Task.sleep(for: .milliseconds(120))
+                }
+            } else {
+                try? await Task.sleep(for: .milliseconds(500))
+            }
             guard !Task.isCancelled, puedeMontarVisor else { return }
             visorListo = true
         }
@@ -290,15 +308,46 @@ private struct SelectorTransporte3D<Opcion: Hashable & RawRepresentable>: View w
     }
 }
 
-/// Informa si el panel se ve dentro del scroll que lo contiene. Solo existe en
-/// iOS 18; en versiones anteriores el panel conserva el retraso fijo.
+/// Momento del último desplazamiento del panel. No es estado de la vista:
+/// actualizarlo en cada fotograma del scroll no vuelve a evaluar ningún `body`.
+private final class SeguimientoScroll {
+    private let creado = Date()
+    var ultimoMovimiento = Date.distantPast
+
+    /// La pantalla ya terminó de entrar y el contenido lleva un momento quieto.
+    var enReposo: Bool {
+        let ahora = Date()
+        return ahora.timeIntervalSince(creado) >= 0.7 && ahora.timeIntervalSince(ultimoMovimiento) >= 0.3
+    }
+}
+
+/// Informa si el panel se ve dentro del scroll que lo contiene y anota cada
+/// desplazamiento. Fuera de un scroll el panel cuenta como visible.
 private struct VisibilidadEnScroll: ViewModifier {
     let activa: Bool
     @Binding var visible: Bool
+    let seguimiento: SeguimientoScroll
+
+    private struct Marco: Equatable {
+        let visible: Bool
+        /// Posición del panel en tramos de 24 puntos: basta para saber que se movió.
+        let tramo: Int
+    }
 
     func body(content: Content) -> some View {
-        if activa, #available(iOS 18.0, *) {
-            content.onScrollVisibilityChange(threshold: 0.25) { visible = $0 }
+        if activa {
+            content.onGeometryChange(for: Marco.self) { proxy in
+                let propio = CGRect(origin: .zero, size: proxy.size)
+                guard propio.height > 0, let ventana = proxy.bounds(of: .scrollView) else {
+                    return Marco(visible: true, tramo: 0)
+                }
+                let visto = propio.intersection(ventana)
+                let fraccion = visto.isNull ? 0 : visto.height / propio.height
+                return Marco(visible: fraccion >= 0.25, tramo: Int((ventana.minY / 24).rounded(.down)))
+            } action: { marco in
+                seguimiento.ultimoMovimiento = Date()
+                if visible != marco.visible { visible = marco.visible }
+            }
         } else {
             content
         }

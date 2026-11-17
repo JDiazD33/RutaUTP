@@ -9,15 +9,14 @@ struct DetalleRutaView: View {
 
     @State private var showCarPlay: Bool = false
     @State private var showExplorador: Bool = false
-    /// MapKit crea su vista y pide teselas en el mismo fotograma en que se
-    /// monta. Hacerlo dentro de la animación de entrada la entrecortaba, sobre
-    /// todo la primera vez. El mapa aparece cuando la entrada termina.
-    @State private var mapaListo = false
+    /// El panel 3D y la guía quedan bajo el mapa, fuera de la pantalla al
+    /// entrar. Construirlos en el primer fotograma retrasaba el inicio de la
+    /// animación de entrada; se añaden cuando esta termina.
+    @State private var seccionesListas = false
     @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
     @Environment(\.bottomNavBarHeight) private var tabBarHeight
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.self) private var entorno
     @ScaledMetric(relativeTo: .title) private var tamanoInsignia = 76
 
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
@@ -33,10 +32,14 @@ struct DetalleRutaView: View {
                     datosDelViaje
                     recorrido
 
-                    IdentificacionRuta3DView(identificacion: IdentificacionRuta3D(ruta: ruta),
-                                            activo: !showExplorador && !showCarPlay)
+                    if seccionesListas {
+                        IdentificacionRuta3DView(identificacion: IdentificacionRuta3D(ruta: ruta),
+                                                activo: !showExplorador && !showCarPlay)
+                            .transition(.opacity)
 
-                    guia
+                        guia
+                            .transition(.opacity)
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -52,10 +55,10 @@ struct DetalleRutaView: View {
         .padding(.bottom, tabBarHeight)
         .background(Color.appBackground.ignoresSafeArea())
         .task {
-            guard !mapaListo else { return }
-            try? await Task.sleep(for: .milliseconds(450))
+            guard !seccionesListas else { return }
+            try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
-            withAnimation(reducirMovimiento ? nil : .easeOut(duration: 0.2)) { mapaListo = true }
+            withAnimation(reducirMovimiento ? nil : .easeOut(duration: 0.2)) { seccionesListas = true }
         }
         // Explorador del recorrido (se abre tocando el mapa)
         .fullScreenCover(isPresented: $showExplorador) {
@@ -167,7 +170,7 @@ struct DetalleRutaView: View {
     }
 
     private var colorTextoLetra: Color {
-        ruta.colorLinea.textoContrastante(in: entorno)
+        ruta.colorLinea.textoContrastante(esquema: colorScheme)
     }
 
     private var tituloFrecuencia: some View {
@@ -219,17 +222,11 @@ struct DetalleRutaView: View {
                         .background(superficie, in: Circle())
                 }
 
-                Group {
-                    if mapaListo {
-                        RutaMapKitView(ruta: ruta)
-                            .transition(.opacity)
-                    } else {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(Color.surfaceContainerLow)
-                    }
-                }
-                .frame(height: 240)
-                .allowsHitTesting(false)
+                // Imagen fija del recorrido: se prepara fuera del hilo principal
+                // y no cuesta nada al desplazar la pantalla.
+                RutaMapKitView(ruta: ruta)
+                    .frame(height: 240)
+                    .allowsHitTesting(false)
             }
             .contentShape(Rectangle())
         }

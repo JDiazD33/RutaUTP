@@ -2,192 +2,206 @@
 //  RutaMapKitView.swift
 //  RutaUTP
 //
-//  CORREGIDO V4: Reemplaza el contenedor azul decorativo por un mapa real.
-//  - Usa un unico MKMapView (UIViewRepresentable) con anotaciones y polyline.
-//  - Esto evita el problema de doble mapa (SwiftUI Map + MKMapView overlay)
-//    donde los tiles del MKMapView ocultaban las anotaciones.
+//  Mapa del recorrido en el detalle de ruta: una imagen fija preparada con
+//  MKMapSnapshotter, con el trazado y sus extremos dibujados encima.
 //  - Badge "RECORRIDO OFICIAL" sobre el mapa en esquina superior derecha.
 //    Antes decía "RUTA SEGURA", que afirmaba una seguridad que el feed GTFS
 //    no respalda: el feed describe el trazado y los paraderos, no si la zona
 //    es segura. "Recorrido oficial" sí es cierto y verificable.
-//  - Se usa con .disabled(true) y .allowsHitTesting(false) desde el padre
-//    para no capturar gestos de scroll.
+//  - No captura gestos: el padre abre el explorador al tocarla.
 //
 
 import SwiftUI
 import MapKit
 import UIKit
 
-// MARK: - Anotacion personalizada
-enum TipoMarcadorRuta { case origen, destino, bus }
+// MARK: - Imagen del recorrido
+//
+// El detalle de ruta mostraba un `MKMapView` vivo que no admite gestos. Crear
+// esa vista ocupa el hilo principal y sigue dibujando teselas mientras se
+// desplaza la pantalla; en teléfonos antiguos se notaba al entrar y al bajar.
+// `MKMapSnapshotter` prepara la misma imagen fuera del hilo principal y una
+// imagen fija no cuesta nada al desplazar. Se conserva en memoria por ruta,
+// tema y tamaño, así que volver a una línea ya vista es inmediato.
+enum InstantaneaRecorrido {
+    struct Clave: Hashable {
+        let idRuta: String
+        let oscuro: Bool
+        let ancho: Int
+        let alto: Int
+        let escala: Int
 
-final class MarcadorRutaAnnotation: NSObject, MKAnnotation {
-    let coordinate: CLLocationCoordinate2D
-    let tipo: TipoMarcadorRuta
-    let color: UIColor
-    let linea: String?
-    let titleText: String?
+        var texto: NSString { "\(idRuta)|\(oscuro)|\(ancho)x\(alto)@\(escala)" as NSString }
+        var valida: Bool { ancho > 0 && alto > 0 && escala > 0 }
+    }
 
-    var title: String? { titleText }
+    private static let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 16
+        return cache
+    }()
 
-    init(coordinate: CLLocationCoordinate2D,
-         tipo: TipoMarcadorRuta,
-         color: UIColor,
-         linea: String? = nil,
-         title: String? = nil) {
-        self.coordinate = coordinate
-        self.tipo = tipo
-        self.color = color
-        self.linea = linea
-        self.titleText = title
+    static func guardada(_ clave: Clave) -> UIImage? { cache.object(forKey: clave.texto) }
+
+    /// Márgenes del recorrido dentro de la imagen, en puntos.
+    private static let margenes = UIEdgeInsets(top: 40, left: 30, bottom: 40, right: 30)
+
+    /// Prepara la captura en el hilo principal, que es breve; el mapa y el
+    /// dibujo del trazado se resuelven fuera de él. `nil` si se cancela o falla.
+    @MainActor
+    static func generar(_ clave: Clave, coordenadas: [CLLocationCoordinate2D],
+                        colorLinea: UIColor) async -> UIImage? {
+        guard clave.valida, coordenadas.count >= 2 else { return nil }
+        if let guardada = guardada(clave) { return guardada }
+
+        let tamano = CGSize(width: clave.ancho, height: clave.alto)
+        let rasgos = UITraitCollection { rasgos in
+            rasgos.userInterfaceStyle = clave.oscuro ? .dark : .light
+            rasgos.displayScale = CGFloat(clave.escala)
+        }
+        let limites = MKPolyline(coordinates: coordenadas, count: coordenadas.count).boundingMapRect
+        let opciones = MKMapSnapshotter.Options()
+        opciones.size = tamano
+        opciones.traitCollection = rasgos
+        opciones.pointOfInterestFilter = .excludingAll
+        opciones.mapRect = encuadre(limites, en: tamano)
+
+        let tarea = TareaInstantanea(MKMapSnapshotter(options: opciones))
+        let color = colorLinea.resolvedColor(with: rasgos)
+        // Dibujar con menos puntos no cambia la imagen a este tamaño.
+        let trazo = PolylineMatching.decimate(coordenadas, maxPoints: 400)
+        let imagen = await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuacion: CheckedContinuation<UIImage?, Never>) in
+                tarea.iniciar { instantanea in
+                    guard let instantanea else {
+                        continuacion.resume(returning: nil)
+                        return
+                    }
+                    continuacion.resume(returning: dibujar(instantanea, trazo: trazo.count >= 2 ? trazo : coordenadas,
+                                                           color: color, tamano: tamano, rasgos: rasgos))
+                }
+            }
+        } onCancel: {
+            tarea.cancelar()
+        }
+        guard let imagen, !Task.isCancelled else { return nil }
+        cache.setObject(imagen, forKey: clave.texto)
+        return imagen
+    }
+
+    /// Región del mapa que deja el recorrido dentro de los márgenes.
+    private static func encuadre(_ limites: MKMapRect, en tamano: CGSize) -> MKMapRect {
+        let anchoUtil = max(1, Double(tamano.width - margenes.left - margenes.right))
+        let altoUtil = max(1, Double(tamano.height - margenes.top - margenes.bottom))
+        // Puntos de mapa por punto de pantalla; un recorrido mínimo evita una
+        // región vacía cuando todos los puntos coinciden.
+        let porPunto = max(limites.size.width / anchoUtil, limites.size.height / altoUtil, 1)
+        let ancho = porPunto * Double(tamano.width)
+        let alto = porPunto * Double(tamano.height)
+        return MKMapRect(x: limites.midX - ancho / 2, y: limites.midY - alto / 2, width: ancho, height: alto)
+    }
+
+    private static func dibujar(_ instantanea: MKMapSnapshotter.Snapshot, trazo: [CLLocationCoordinate2D],
+                                color: UIColor, tamano: CGSize, rasgos: UITraitCollection) -> UIImage {
+        let formato = UIGraphicsImageRendererFormat(for: rasgos)
+        formato.opaque = true
+        return UIGraphicsImageRenderer(size: tamano, format: formato).image { contexto in
+            instantanea.image.draw(at: .zero)
+
+            let linea = UIBezierPath()
+            for (indice, coordenada) in trazo.enumerated() {
+                let punto = instantanea.point(for: coordenada)
+                if indice == 0 { linea.move(to: punto) } else { linea.addLine(to: punto) }
+            }
+            linea.lineWidth = 5
+            linea.lineCapStyle = .round
+            linea.lineJoinStyle = .round
+            color.setStroke()
+            linea.stroke()
+
+            // Inicio: punto del color de la línea. Final: bandera, como en el
+            // explorador y en la guía.
+            if let inicio = trazo.first {
+                marcador(en: instantanea.point(for: inicio), radio: 8, relleno: color,
+                         simbolo: nil, contexto: contexto.cgContext)
+            }
+            if let fin = trazo.last {
+                marcador(en: instantanea.point(for: fin), radio: 13, relleno: .systemRed.resolvedColor(with: rasgos),
+                         simbolo: "flag.fill", contexto: contexto.cgContext)
+            }
+        }
+    }
+
+    private static func marcador(en centro: CGPoint, radio: CGFloat, relleno: UIColor,
+                                 simbolo: String?, contexto: CGContext) {
+        let marco = CGRect(x: centro.x - radio, y: centro.y - radio, width: radio * 2, height: radio * 2)
+        contexto.saveGState()
+        contexto.setShadow(offset: CGSize(width: 0, height: 1), blur: 3,
+                           color: UIColor.black.withAlphaComponent(0.25).cgColor)
+        UIColor.white.setFill()
+        UIBezierPath(ovalIn: marco.insetBy(dx: -2, dy: -2)).fill()
+        contexto.restoreGState()
+        relleno.setFill()
+        UIBezierPath(ovalIn: marco).fill()
+        guard let simbolo,
+              let icono = UIImage(systemName: simbolo,
+                                  withConfiguration: UIImage.SymbolConfiguration(pointSize: radio * 0.95, weight: .bold))?
+                .withTintColor(.white, renderingMode: .alwaysOriginal) else { return }
+        icono.draw(at: CGPoint(x: centro.x - icono.size.width / 2, y: centro.y - icono.size.height / 2))
     }
 }
 
-// MARK: - UIViewRepresentable del mapa
-struct MapaRutaRepresentable: UIViewRepresentable {
-    let coordenadas: [CLLocationCoordinate2D]
-    let colorLinea: UIColor
-    let linea: String
-    /// `route_id` de la ruta. Identifica la geometría: si cambia, SwiftUI
-    /// reutilizó esta vista para OTRA ruta y hay que rehacer overlays y
-    /// marcadores. Sin esto, `updateUIView` era un no-op y el mapa seguía
-    /// mostrando el trazado anterior.
-    let idRuta: String
-    var tituloOrigen: String? = nil
-    var tituloDestino: String? = nil
+/// Permite cancelar la captura desde la tarea que la espera. Entrega el
+/// resultado una sola vez, también si la captura se cancela sin responder.
+private final class TareaInstantanea: @unchecked Sendable {
+    private let captura: MKMapSnapshotter
+    private let candado = NSLock()
+    private var alTerminar: (@Sendable (MKMapSnapshotter.Snapshot?) -> Void)?
+    private var cancelada = false
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(color: colorLinea, linea: linea, idRuta: idRuta)
-    }
+    init(_ captura: MKMapSnapshotter) { self.captura = captura }
 
-    func makeUIView(context: Context) -> MKMapView {
-        let mapView = MKMapView()
-        mapView.delegate = context.coordinator
-        mapView.isUserInteractionEnabled = false
-        mapView.pointOfInterestFilter = .excludingAll
-        construir(mapView)
-        return mapView
-    }
-
-    func updateUIView(_ mapView: MKMapView, context: Context) {
-        // Solo se rehace si la geometría es de otra ruta. Comparar el route_id
-        // es fiable; `[CLLocationCoordinate2D]` no es Equatable y comparar
-        // solo el número de puntos no distinguiría dos rutas del mismo tamaño.
-        guard context.coordinator.idRuta != idRuta else { return }
-        context.coordinator.idRuta = idRuta
-        context.coordinator.color = colorLinea
-        context.coordinator.linea = linea
-        construir(mapView)
-    }
-
-    /// Dibuja el recorrido y sus marcadores. Se usa al crear la vista y cuando
-    /// se reutiliza para otra ruta.
-    private func construir(_ mapView: MKMapView) {
-        mapView.removeOverlays(mapView.overlays)
-        mapView.removeAnnotations(mapView.annotations)
-
-        guard !coordenadas.isEmpty else { return }
-
-        // Polyline
-        let polyline = MKPolyline(coordinates: coordenadas, count: coordenadas.count)
-        mapView.addOverlay(polyline)
-
-        // Ajustar region al boundingRect del polyline
-        mapView.setVisibleMapRect(
-            polyline.boundingMapRect,
-            edgePadding: UIEdgeInsets(top: 40, left: 30, bottom: 40, right: 30),
-            animated: false
-        )
-
-        // Anotaciones (origen y destino según el feed GTFS)
-        if let primero = coordenadas.first {
-            mapView.addAnnotation(MarcadorRutaAnnotation(
-                coordinate: primero,
-                tipo: .origen,
-                color: colorLinea,
-                title: tituloOrigen
-            ))
+    func iniciar(_ alTerminar: @escaping @Sendable (MKMapSnapshotter.Snapshot?) -> Void) {
+        candado.lock()
+        let yaCancelada = cancelada
+        if !yaCancelada { self.alTerminar = alTerminar }
+        candado.unlock()
+        guard !yaCancelada else {
+            alTerminar(nil)
+            return
         }
-        if let ultimo = coordenadas.last {
-            mapView.addAnnotation(MarcadorRutaAnnotation(
-                coordinate: ultimo,
-                tipo: .destino,
-                color: .systemRed,
-                title: tituloDestino ?? L.t("Destino", "Destination")
-            ))
-        }
-        // Bus decorativo a mitad del recorrido
-        if coordenadas.count > 2 {
-            let medio = coordenadas[coordenadas.count / 2]
-            mapView.addAnnotation(MarcadorRutaAnnotation(
-                coordinate: medio,
-                tipo: .bus,
-                color: colorLinea,
-                linea: linea
-            ))
+        captura.start(with: DispatchQueue.global(qos: .userInitiated)) { [weak self] instantanea, _ in
+            self?.entregar(instantanea)
         }
     }
 
-    final class Coordinator: NSObject, MKMapViewDelegate {
-        var color: UIColor
-        var linea: String
-        var idRuta: String
+    func cancelar() {
+        candado.lock()
+        cancelada = true
+        candado.unlock()
+        captura.cancel()
+        entregar(nil)
+    }
 
-        init(color: UIColor, linea: String, idRuta: String) {
-            self.color = color
-            self.linea = linea
-            self.idRuta = idRuta
-        }
-
-        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-            if let polyline = overlay as? MKPolyline {
-                let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = color
-                renderer.lineWidth = 5
-                renderer.lineCap = .round
-                renderer.lineJoin = .round
-                return renderer
-            }
-            return MKOverlayRenderer(overlay: overlay)
-        }
-
-        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
-            guard let marcador = annotation as? MarcadorRutaAnnotation else { return nil }
-
-            let id = "Marcador-\(marcador.tipo)"
-            let view: MKMarkerAnnotationView
-
-            if let dequeued = mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView {
-                dequeued.annotation = annotation
-                view = dequeued
-            } else {
-                view = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: id)
-            }
-
-            view.markerTintColor = marcador.color
-            view.glyphTintColor = .white
-            view.titleVisibility = marcador.tipo == .destino ? .visible : .hidden
-            view.subtitleVisibility = .hidden
-            view.canShowCallout = marcador.tipo == .destino
-            view.animatesWhenAdded = false
-
-            switch marcador.tipo {
-            case .origen:
-                view.glyphImage = UIImage(systemName: "circle.fill")
-            case .destino:
-                view.glyphImage = UIImage(systemName: "graduationcap.fill")
-            case .bus:
-                view.glyphText = marcador.linea
-            }
-
-            return view
-        }
+    private func entregar(_ instantanea: MKMapSnapshotter.Snapshot?) {
+        candado.lock()
+        let pendiente = alTerminar
+        alTerminar = nil
+        candado.unlock()
+        pendiente?(instantanea)
     }
 }
 
 // MARK: - Vista SwiftUI con mapa + badge
 struct RutaMapKitView: View {
     let ruta: RutaOpcion
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.displayScale) private var displayScale
+    @Environment(\.accessibilityReduceMotion) private var reducirMovimiento
+    @State private var tamano: CGSize = .zero
+    @State private var imagen: UIImage?
+    @State private var claveMostrada: InstantaneaRecorrido.Clave?
 
     /// Shape real del feed GTFS.
     ///
@@ -197,17 +211,26 @@ struct RutaMapKitView: View {
     /// un estado vacío explícito.
     private var coordenadas: [CLLocationCoordinate2D] { ruta.shape }
 
+    private var clave: InstantaneaRecorrido.Clave {
+        InstantaneaRecorrido.Clave(idRuta: ruta.id, oscuro: colorScheme == .dark,
+                                   ancho: Int(tamano.width.rounded()), alto: Int(tamano.height.rounded()),
+                                   escala: Int(displayScale.rounded()))
+    }
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if coordenadas.count >= 2 {
-                MapaRutaRepresentable(
-                    coordenadas: coordenadas,
-                    colorLinea: UIColor(ruta.colorLinea),
-                    linea: ruta.linea,
-                    idRuta: ruta.id,
-                    tituloOrigen: ruta.paradaInicioVisible,
-                    tituloDestino: ruta.paradaFinVisible
-                )
+                Color.surfaceContainerLow
+                    .overlay {
+                        if let imagen, claveMostrada == clave {
+                            Image(uiImage: imagen)
+                                .resizable()
+                                .scaledToFill()
+                                .transition(.opacity)
+                        }
+                    }
+                    .onGeometryChange(for: CGSize.self) { $0.size } action: { tamano = $0 }
+                    .task(id: clave) { await cargar(clave) }
             } else {
                 sinTrazado
             }
@@ -228,6 +251,26 @@ struct RutaMapKitView: View {
             .accessibilityElement(children: .combine)
         }
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    /// Una imagen ya preparada aparece al instante. La primera vez espera a
+    /// que termine la entrada de la pantalla para no competir con su animación.
+    private func cargar(_ clave: InstantaneaRecorrido.Clave) async {
+        guard clave.valida else { return }
+        if let guardada = InstantaneaRecorrido.guardada(clave) {
+            imagen = guardada
+            claveMostrada = clave
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(350))
+        guard !Task.isCancelled,
+              let nueva = await InstantaneaRecorrido.generar(clave, coordenadas: coordenadas,
+                                                             colorLinea: UIColor(ruta.colorLinea)),
+              !Task.isCancelled else { return }
+        withAnimation(reducirMovimiento ? nil : .easeOut(duration: 0.2)) {
+            imagen = nueva
+            claveMostrada = clave
+        }
     }
 
     /// Estado honesto para una ruta sin geometría en el feed.

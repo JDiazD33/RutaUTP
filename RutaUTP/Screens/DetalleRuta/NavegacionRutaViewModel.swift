@@ -1,5 +1,6 @@
 // NavegacionRutaViewModel.swift
-// Separado por responsabilidad; conserva el comportamiento existente.
+// Estado de la navegación sobre el recorrido de una línea: avance, paradero
+// de bajada elegido y avisos de llegada.
 
 import Foundation
 import Combine
@@ -16,7 +17,19 @@ final class NavegacionRutaViewModel: ObservableObject {
         case enRuta
         case fueraDeRuta(metros: Double)
         case cercaDestino
+        /// El avance superó el paradero elegido sin detenerse cerca de él.
+        case destinoPasado
         case finalizado
+    }
+
+    /// Paradero situado sobre el recorrido, en orden de viaje.
+    struct ParadaEnRuta: Identifiable, Equatable {
+        /// Posición en el orden de viaje. Un recorrido circular repite
+        /// paraderos, así que el `id` del feed no basta para distinguirlos.
+        let id: Int
+        let paradero: ParaderoGTFS
+        /// Avance 0...1 del recorrido en el que se encuentra.
+        let fraccion: Double
     }
 
     // Publicados para la UI
@@ -30,6 +43,10 @@ final class NavegacionRutaViewModel: ObservableObject {
     @Published private(set) var paraderoCercano: ParaderoGTFS?
     @Published private(set) var distanciaParaderoM: Double?
     @Published private(set) var haEntradoEnRuta = false
+    /// Paraderos sobre el recorrido, listos para elegir dónde bajar.
+    @Published private(set) var paradas: [ParadaEnRuta] = []
+    /// Paradero donde la persona quiere bajar. `nil`: el final de la línea.
+    @Published private(set) var destino: ParadaEnRuta?
     @Published var modoDemo: Bool = false {
         didSet {
             guard modoDemo != oldValue else { return }
@@ -47,7 +64,8 @@ final class NavegacionRutaViewModel: ObservableObject {
     private var demoTask: Task<Void, Never>?
     private var actividadVisual = true
     private var demoProgreso: Double = 0
-    private var fraccionesParaderos: [(paradero: ParaderoGTFS, fraccion: Double)] = []
+    /// Avance en el que la persona entró al recorrido: desde ahí se mide su viaje.
+    private var fraccionSubida: Double?
     private var distanciasAcumuladas: [Double] = []
 
     init(ruta: RutaOpcion, locationService: LocationServiceProtocol) {
@@ -62,6 +80,9 @@ final class NavegacionRutaViewModel: ObservableObject {
         distanciasAcumuladas = Self.longitudesAcumuladas(shape)
         self.distanciaRestanteM = distanciaTotalM
     }
+
+    /// Hay un viaje en marcha que se perdería al cerrar la pantalla.
+    var viajeEnCurso: Bool { haEntradoEnRuta && estado != .finalizado }
 
     /// Longitud acumulada (m) de cada punto del trazado respecto al inicio.
     private static func longitudesAcumuladas(_ puntos: [CLLocationCoordinate2D]) -> [Double] {
@@ -83,7 +104,7 @@ final class NavegacionRutaViewModel: ObservableObject {
     /// trazado, y bloqueaban la aparición de la pantalla sin que hubiera nada
     /// dibujado todavía que lo explicara.
     private func prepararParaderos() async {
-        guard fraccionesParaderos.isEmpty, shape.count >= 2 else { return }
+        guard paradas.isEmpty, shape.count >= 2 else { return }
         let trazado = shape
         let paraderos = ruta.paraderos
 
@@ -97,9 +118,63 @@ final class NavegacionRutaViewModel: ObservableObject {
         }.value
 
         guard !Task.isCancelled else { return }
-        fraccionesParaderos = calculadas
-        paraderosRestantes = calculadas.count
-        paraderoSiguiente = calculadas.first?.paradero
+        paradas = calculadas.enumerated().map {
+            ParadaEnRuta(id: $0.offset, paradero: $0.element.paradero, fraccion: $0.element.fraccion)
+        }
+        actualizarParaderos()
+    }
+
+    // MARK: - Paradero de bajada
+
+    /// Avance del recorrido en el que termina el viaje de la persona.
+    private var fraccionDestino: Double { destino?.fraccion ?? 1 }
+
+    /// Nombre del paradero donde termina el viaje.
+    var nombreDestino: String { destino?.paradero.nombreVisible ?? ruta.paradaFinVisible }
+
+    /// Punto del mapa donde termina el viaje.
+    var coordenadaDestino: CLLocationCoordinate2D? {
+        guard shape.count >= 2 else { return nil }
+        return destino == nil ? shape.last : coordenadaEnFraccion(fraccionDestino)
+    }
+
+    /// Un paradero que ya quedó atrás no se puede elegir para bajar.
+    func yaPaso(_ parada: ParadaEnRuta) -> Bool {
+        haEntradoEnRuta && parada.fraccion <= progreso + 0.001
+    }
+
+    /// Cambia el paradero de bajada. `nil` vuelve al final de la línea.
+    func elegirDestino(_ parada: ParadaEnRuta?) {
+        if let parada, yaPaso(parada) { return }
+        destino = parada
+        actualizarRestante()
+        actualizarParaderos()
+        guard estado != .sinRecorrido, estado != .sinPermiso, estado != .esperandoGPS else { return }
+        // Una llegada o un aviso anteriores ya no corresponden al nuevo destino.
+        if case .fueraDeRuta = estado { return }
+        estado = distanciaRestanteM < 180 ? .cercaDestino : .enRuta
+        if modoDemo { reanudarDemo() }
+    }
+
+    private func actualizarRestante() {
+        distanciaRestanteM = max(0, distanciaTotalM * (fraccionDestino - progreso))
+    }
+
+    private func actualizarParaderos() {
+        let pendientes = paradas.filter {
+            $0.fraccion > progreso + 0.001 && $0.fraccion <= fraccionDestino + 0.0005
+        }
+        paraderosRestantes = pendientes.count
+        paraderoSiguiente = pendientes.first?.paradero ?? destino?.paradero ?? paradas.last?.paradero
+    }
+
+    /// Avance 0...1 del viaje de la persona, desde donde subió hasta donde baja.
+    var progresoViaje: Double {
+        guard haEntradoEnRuta else { return 0 }
+        let inicio = min(fraccionSubida ?? 0, progreso)
+        let tramo = fraccionDestino - inicio
+        guard tramo > 0.0005 else { return estado == .finalizado ? 1 : 0 }
+        return max(0, min(1, (progreso - inicio) / tramo))
     }
 
     // MARK: - Ciclo de vida
@@ -166,6 +241,7 @@ final class NavegacionRutaViewModel: ObservableObject {
             return
         }
         haEntradoEnRuta = true
+        if fraccionSubida == nil { fraccionSubida = progresoDemo ?? match.progressFraction }
 
         // Anti-jitter: el progreso no retrocede por pequeños saltos de GPS;
         // sí se recalcula si el usuario "re-embarca" mucho más atrás.
@@ -174,18 +250,20 @@ final class NavegacionRutaViewModel: ObservableObject {
             progreso = nuevo
         }
 
-        distanciaRestanteM = max(0, distanciaTotalM * (1 - progreso))
-        paraderosRestantes = fraccionesParaderos.filter { $0.fraccion > progreso + 0.001 }.count
-        paraderoSiguiente = fraccionesParaderos
-            .first { $0.fraccion > progreso + 0.001 }?.paradero
-            ?? fraccionesParaderos.last?.paradero
+        if let subida = fraccionSubida, progreso < subida { fraccionSubida = progreso }
 
-        let distanciaFinal = shape.last.map {
+        actualizarRestante()
+        actualizarParaderos()
+
+        let distanciaFinal = coordenadaDestino.map {
             PolylineMatching.distanceMeters(coordenada, $0)
         } ?? .infinity
         if distanciaRestanteM <= 25 && distanciaFinal <= 35 {
             estado = .finalizado
             detenerDemo()
+        } else if destino != nil, (progreso - fraccionDestino) * distanciaTotalM > 60 {
+            // Con el final de la línea no puede ocurrir: el avance termina ahí.
+            estado = .destinoPasado
         } else if distanciaRestanteM < 180 {
             estado = .cercaDestino
         } else {
@@ -194,7 +272,8 @@ final class NavegacionRutaViewModel: ObservableObject {
     }
 
     var minutosRestantes: Int {
-        estado == .finalizado ? 0 : max(1, Int(ceil(Double(ruta.duracionMin) * (1 - progreso))))
+        estado == .finalizado
+            ? 0 : max(1, Int(ceil(Double(ruta.duracionMin) * max(0, fraccionDestino - progreso))))
     }
 
     var distanciaRestanteTexto: String {
@@ -204,7 +283,7 @@ final class NavegacionRutaViewModel: ObservableObject {
     }
 
     var distanciaProximoParaderoTexto: String? {
-        guard let proximo = fraccionesParaderos.first(where: { $0.fraccion > progreso + 0.001 }) else { return nil }
+        guard let proximo = paradas.first(where: { $0.fraccion > progreso + 0.001 }) else { return nil }
         let metros = max(0, (proximo.fraccion - progreso) * distanciaTotalM)
         return metros >= 1000 ? FormatoNumero.decimal(metros / 1000) + " km" : "\(Int(metros)) m"
     }
@@ -213,9 +292,9 @@ final class NavegacionRutaViewModel: ObservableObject {
         progreso = 0
         posicion = nil
         haEntradoEnRuta = false
-        distanciaRestanteM = distanciaTotalM
-        paraderosRestantes = fraccionesParaderos.count
-        paraderoSiguiente = fraccionesParaderos.first?.paradero
+        fraccionSubida = nil
+        actualizarRestante()
+        actualizarParaderos()
         paraderoCercano = nil
         distanciaParaderoM = nil
         estado = shape.count >= 2 ? .esperandoGPS : .sinRecorrido
