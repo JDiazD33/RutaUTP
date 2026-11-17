@@ -442,12 +442,17 @@ struct PerfilView: View {
     }
 
     private var offlineToggleRow: some View {
-        chevronRow(icon: "wifi.slash", iconColor: .secondary,
-                   label: L.t("Modo offline", "Offline mode")) {
+        let conectividad = ConectividadService.shared
+        let detalle = conectividad.modoOfflineManual ? L.t("Activado", "On")
+            : conectividad.estado == .sinConexion ? L.t("Sin conexión · automático", "No connection · automatic")
+            : L.t("Automático", "Automatic")
+        return chevronRow(icon: "wifi.slash", iconColor: .secondary,
+                          label: L.t("Modo offline", "Offline mode"), detalle: detalle) {
             AppHaptics.impact(.light)
             showOfflineMapPopup = true
         }
-        .accessibilityHint(L.t("Consulta qué puedes usar sin internet", "See what works without internet"))
+        .accessibilityHint(L.t("Muestra la conexión, activa el modo y qué funciona sin internet",
+                               "Shows the connection, turns the mode on and what works without internet"))
     }
 
     private func tituloSeccion(_ titulo: String) -> some View {

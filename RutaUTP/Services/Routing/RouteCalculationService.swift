@@ -6,6 +6,8 @@ enum RouteCalculationError: Error, Equatable {
     case appleDirectionsFailed(String)
     case invalidRequest
     case timedOut
+    /// Sin red o con Modo offline: la caminata se estima sin consultar Apple.
+    case offline
 }
 
 struct CalculatedRoute: Equatable {
@@ -51,7 +53,10 @@ actor RouteCalculationService {
     private var inFlight: [Key: InFlightRequest] = [:]
 
     init(loader: @escaping Loader = { request in
-        try await PendingDirections(request: request).run()
+        // Sin red MKDirections solo esperaría su plazo máximo: quien llama ya
+        // estima la caminata ante un fallo, así que se falla al instante.
+        if ConectividadService.soloDatosLocalesAhora { throw RouteCalculationError.offline }
+        return try await PendingDirections(request: request).run()
     }, now: @escaping @Sendable () -> Date = { Date() }) {
         self.loader = loader
         self.now = now

@@ -48,6 +48,9 @@ struct RutaUTPApp: App {
         // migrar. Ver `Services/Persistencia/Persistencia.swift`.
         Persistencia.migrarSiHaceFalta()
 
+        // El estado de la red se conoce antes de la primera búsqueda del Mapa.
+        _ = ConectividadService.shared
+
         let compartido = LocationService()
         self.locationService = compartido
         _trackingCoordinator = StateObject(
