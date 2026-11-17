@@ -449,6 +449,7 @@ def test_simulated_incidents_are_published_marked_and_renewed(feed, sample_route
 
 @pytest.mark.parametrize("updates", [dict(routeId="missing"), dict(reason="fake"), dict(lat=0, lon=0),
     dict(place="x"), dict(id="Con Mayúsculas"), dict(lat=True), dict(via="ab"),
+    dict(afterS=-1), dict(afterS=True), dict(afterS=1.5), dict(afterS=3601),
     dict(reason="traffic", endLat=0.0, endLon=0.0, path="??")])
 def test_invalid_simulated_incidents_are_dropped(feed, sample_route, tmp_path, updates):
     assert load_simulated(write_simulated(tmp_path, simulated_item(sample_route, **updates)), feed) == []
@@ -470,3 +471,14 @@ def test_presentation_incidents_stay_valid_with_the_feed(feed):
     assert len(alerts) == len(items)
     assert {a["reason"] for a in alerts} == {"works", "detour"}
     assert all("path" in a for a in alerts if a["reason"] == "detour")
+
+
+def test_delayed_simulated_incidents_appear_after_their_delay(feed, sample_route, tmp_path):
+    alerts = load_simulated(write_simulated(
+        tmp_path, simulated_item(sample_route), simulated_item(sample_route, id="vivo-prueba", afterS=60)), feed)
+    service = RouteChanges(feed, simulated=alerts)
+    assert [a["id"] for a in service.snapshot(NOW)["alerts"]] == ["sim-obras-prueba"]
+    assert [a["id"] for a in service.snapshot(NOW + 59)["alerts"]] == ["sim-obras-prueba"]
+    published = service.snapshot(NOW + 60)["alerts"]
+    assert [a["id"] for a in published] == ["sim-obras-prueba", "sim-vivo-prueba"]
+    assert all("afterS" not in a for a in published)

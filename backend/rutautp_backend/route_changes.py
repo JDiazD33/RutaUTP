@@ -56,7 +56,10 @@ MAX_PATHS_PER_GROUP = 6
 # Incidencias simuladas de la presentación: se publican marcadas y con una
 # vigencia que se renueva en cada snapshot mientras el backend las sirve.
 SIMULATED_TTL_S = 30 * 60
-MAX_SIMULATED = 20
+MAX_SIMULATED = 60
+# Una incidencia simulada puede aparecer `afterS` segundos después del primer
+# snapshot, como si la comunidad la reportara durante la presentación.
+MAX_SIMULATED_DELAY_S = 3600
 
 
 def encode_polyline(points):
@@ -178,6 +181,7 @@ def _simulated_alert(item, feed):
     ident, route_id, reason = item.get("id"), item.get("routeId"), item.get("reason")
     lat, lon, place = item.get("lat"), item.get("lon"), item.get("place")
     via, path_text = item.get("via"), item.get("path")
+    after = item.get("afterS", 0)
     end = (item.get("endLat"), item.get("endLon"))
     has_end = end != (None, None)
     route = feed.get(route_id) if isinstance(route_id, str) else None
@@ -185,6 +189,7 @@ def _simulated_alert(item, feed):
             or not isinstance(ident, str) or not re.fullmatch(r"[a-z0-9-]{1,40}", ident)
             or not isinstance(place, str) or not 3 <= len(place.strip()) <= 120
             or not all(is_finite_real(v) for v in (lat, lon))
+            or type(after) is not int or not 0 <= after <= MAX_SIMULATED_DELAY_S
             or (via is not None and (not isinstance(via, str) or not 3 <= len(via.strip()) <= 80))
             or (has_end and (not all(is_finite_real(v) for v in end)
                              or not 50 <= haversine_m(lat, lon, *end) <= MAX_STRETCH_M))
@@ -205,6 +210,8 @@ def _simulated_alert(item, feed):
         alert["endLat"], alert["endLon"] = end
     if path_text is not None:
         alert["path"] = path_text
+    if after:
+        alert["afterS"] = after
     return alert
 
 
@@ -215,8 +222,10 @@ class RouteChanges:
         self.feed = feed
         self.quorum = quorum
         # Incidencias simuladas de la presentación. No tienen votos ni avisos
-        # push: se publican con el quorum y una vigencia que se renueva.
+        # push: se publican con el quorum y una vigencia que se renueva. Las
+        # que llevan `afterS` esperan ese tiempo desde el primer snapshot.
         self.simulated = list(simulated)
+        self.simulated_origin = None
         self.groups = []
         self.last_snapshot = float("-inf")
         self.last_reports = {}
@@ -354,8 +363,12 @@ class RouteChanges:
             # Los trazos por cuenta identifican a quien reportó: no se publican.
             alerts.append({**{k: v for k, v in group.items() if k not in ("votes", "confirmedAt", "paths")},
                            "confirmations": len(group["votes"]), "expiresAt": expires})
-        alerts += [{**alert, "confirmations": self.quorum, "expiresAt": now + SIMULATED_TTL_S}
-                   for alert in self.simulated]
+        if self.simulated_origin is None:
+            self.simulated_origin = now
+        elapsed = now - self.simulated_origin
+        alerts += [{**{k: v for k, v in alert.items() if k != "afterS"},
+                    "confirmations": self.quorum, "expiresAt": now + SIMULATED_TTL_S}
+                   for alert in self.simulated if elapsed >= alert.get("afterS", 0)]
         return {"schemaVersion": 1, "timestamp": now, "quorum": self.quorum, "alerts": alerts}
 
     def confirmed_for_push(self, now):
