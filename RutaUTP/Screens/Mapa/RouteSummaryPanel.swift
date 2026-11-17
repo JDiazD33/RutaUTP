@@ -10,52 +10,38 @@ struct RouteSummaryPanel: View {
     let onConfirmBoarding: () -> Void
     let onShowAlternatives: () -> Void
     let onDetailsPresentationChange: (Bool) -> Void
+    /// «Ya subí al micro»: abre directamente la elección de línea del viaje.
+    var onAlreadyOnBoard: () -> Void = {}
     @State private var visibleOptionID: [String] = []
     @State private var showDetails = false
     @State private var boardingAfterDetails: [String]?
     @State private var contentHeight: CGFloat?
+    /// Alto del resumen de cada opción; crece con Dynamic Type.
+    @ScaledMetric(relativeTo: .title3) private var altoResumen: CGFloat = 84
 
     private var pages: [TransitItinerary] { vm.opcionesResumen }
 
     private var pageIndex: Int { pages.firstIndex { $0.optionID == visibleOptionID } ?? 0 }
 
+    /// Paginador y acciones solo antes de empezar el viaje.
+    private var mostrarAcciones: Bool {
+        !pages.isEmpty && trackingCoordinator.selectedTripRoute == nil
+    }
+
     var body: some View {
-        ScrollView(.vertical) {
-            VStack(alignment: .leading, spacing: 8) {
-                header
-                if !pages.isEmpty {
-                    carousel
-                    if trackingCoordinator.selectedTripRoute == nil { pageNavigation }
-                } else if let mensaje = vm.mensajeRuta {
-                    Text(L.aviso(mensaje)).foregroundStyle(Color.onSurfaceVariant)
-                    if !vm.alternativasItinerario.isEmpty {
-                        Button(action: onShowAlternatives) {
-                            Label(L.t("Ver otras rutas", "See other routes"), systemImage: "list.bullet")
-                                .frame(minHeight: 44)
-                        }
-                        .foregroundStyle(Color.appAccent)
-                    }
-                }
-                if let mensaje = vm.mensajeAlternativa {
-                    Label(L.aviso(mensaje), systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(Color.onSurfaceVariant)
-                }
+        tarjeta
+    }
+
+    /// Tarjeta compacta para que el recorrido se vea en el mapa: el resumen se
+    /// desplaza si hace falta y las acciones quedan siempre a la vista debajo.
+    private var tarjeta: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            resumenDesplazable
+            if mostrarAcciones {
+                acciones
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
             }
-            .padding(14)
-            .background {
-                GeometryReader { geometry in
-                    Color.clear.preference(key: RoutePanelHeightKey.self, value: geometry.size.height)
-                }
-            }
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        // Ajustar la tarjeta a su contenido elimina el hueco bajo los controles.
-        // La altura máxima sigue protegiendo el espacio visible del mapa.
-        .frame(height: min(maximumPanelHeight, contentHeight ?? 244))
-        .onPreferenceChange(RoutePanelHeightKey.self) { height in
-            let rounded = ceil(height)
-            if rounded > 0, contentHeight != rounded { contentHeight = rounded }
         }
         .font(.footnote)
         .foregroundStyle(Color.onSurface)
@@ -94,12 +80,69 @@ struct RouteSummaryPanel: View {
         }
     }
 
+    private var resumenDesplazable: some View {
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 6) {
+                header
+                if !pages.isEmpty {
+                    carousel
+                    avisoCambios
+                } else if let mensaje = vm.mensajeRuta {
+                    Text(L.aviso(mensaje)).foregroundStyle(Color.onSurfaceVariant)
+                    if !vm.alternativasItinerario.isEmpty {
+                        Button(action: onShowAlternatives) {
+                            Label(L.t("Ver otras rutas", "See other routes"), systemImage: "list.bullet")
+                                .frame(minHeight: 44)
+                        }
+                        .foregroundStyle(Color.appAccent)
+                    }
+                }
+                if let mensaje = vm.mensajeAlternativa {
+                    Label(L.aviso(mensaje), systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(Color.onSurfaceVariant)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 4)
+            .padding(.bottom, 8)
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(key: RoutePanelHeightKey.self, value: geometry.size.height)
+                }
+            }
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        // Ajustar la tarjeta a su contenido elimina el hueco bajo los controles.
+        // La altura máxima, descontadas las acciones, protege el mapa visible.
+        .frame(height: min(maximumPanelHeight - (mostrarAcciones ? 56 : 0), contentHeight ?? 160))
+        .onPreferenceChange(RoutePanelHeightKey.self) { height in
+            let rounded = ceil(height)
+            if rounded > 0, contentHeight != rounded { contentHeight = rounded }
+        }
+    }
+
+    /// Cambios confirmados por la comunidad que tocan la opción visible.
+    @ViewBuilder
+    private var avisoCambios: some View {
+        if let plan = pages.first(where: { $0.optionID == visibleOptionID }) ?? pages.first {
+            let avisos = vm.cambios(afectando: plan)
+            if !avisos.isEmpty {
+                AvisoCambioRutaFila(avisos: avisos) {
+                    vm.cambiosSeleccionados = SeleccionCambiosRuta(avisos: avisos)
+                }
+            }
+        }
+    }
+
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 4) {
             Text(vm.busquedaResultado.map { L.t("Hacia ", "To ") + $0.titulo } ?? "")
                 .font(.subheadline.weight(.semibold))
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            // El paginador comparte la fila del título: ahorra una fila entera.
+            if mostrarAcciones, pages.count > 1 { paginador }
             Button { vm.limpiar() } label: {
                 Image(systemName: "xmark")
                     .font(.body.weight(.medium))
@@ -139,7 +182,7 @@ struct RouteSummaryPanel: View {
             get: { visibleOptionID.isEmpty ? nil : visibleOptionID },
             set: { if let optionID = $0 { visibleOptionID = optionID } }
         ))
-        .frame(height: min(136, max(88, maximumPanelHeight - 132)))
+        .frame(height: min(altoResumen, max(72, maximumPanelHeight - 120)))
         .accessibilityIdentifier("route-options-carousel")
     }
 
@@ -147,21 +190,21 @@ struct RouteSummaryPanel: View {
         let current = vm.itinerarioInstalado
         let metrics = (current?.plan.optionID == plan.optionID ? current?.metrics : nil)
             ?? ItineraryMetrics(plan: plan)
-        return VStack(alignment: .leading, spacing: 8) {
-            RouteCategoryBadges(categories: vm.categorias(de: plan))
-            RouteJourneyLines(plan: plan)
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+        // Tres filas: línea y tiempo; categorías; caminata y transbordos.
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
+                RouteJourneyLines(plan: plan)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Text("~" + L.f("{0} min", "{0} min",
                                ["\(max(1, Int(ceil((metrics.totalSeconds + plan.boardingWaitSeconds) / 60))))"]))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(Color.onSurface)
-                Text(plan.transfer == nil ? L.t("Sin transbordos", "No transfers") : L.t("1 transbordo", "1 transfer"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .fixedSize()
             }
+            RouteCategoryBadges(categories: vm.categorias(de: plan))
             Label(L.f("{0} min a pie para subir · {1} m", "{0} min walk to board · {1} m",
-                      ["\(Int(ceil(metrics.walkToBoardMeters / 1.4 / 60)))", "\(Int(ceil(metrics.walkToBoardMeters)))"]),
+                      ["\(Int(ceil(metrics.walkToBoardMeters / 1.4 / 60)))", "\(Int(ceil(metrics.walkToBoardMeters)))"])
+                  + " · " + (plan.transfer == nil ? L.t("Sin transbordos", "No transfers") : L.t("1 transbordo", "1 transfer")),
                   systemImage: "figure.walk")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -312,39 +355,42 @@ struct RouteSummaryPanel: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var pageNavigation: some View {
+    /// «‹ 1/2 ›» junto al título. VoiceOver lo lee y ajusta como antes.
+    private var paginador: some View {
+        HStack(spacing: 0) {
+            navigationButton(previous: true)
+            Text("\(pageIndex + 1)/\(pages.count)")
+                .font(.footnote.weight(.medium).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .fixedSize()
+                .accessibilityLabel(L.f("Ruta {0} de {1}", "Route {0} of {1}", ["\(pageIndex + 1)", "\(pages.count)"]))
+                .accessibilityAdjustableAction { direction in
+                    if direction == .increment { movePage(by: 1) }
+                    if direction == .decrement { movePage(by: -1) }
+                }
+            navigationButton(previous: false)
+        }
+    }
+
+    /// Acción principal y secundarias en una sola fila; con letra muy grande,
+    /// la principal ocupa su propia fila.
+    private var acciones: some View {
         let layout = textSize >= .xxxLarge
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
             : AnyLayout(HStackLayout(spacing: 8))
         return layout {
-            if pages.count > 1 {
-                HStack(spacing: 0) {
-                    navigationButton(previous: true)
-                    Text(L.f("Ruta {0} de {1}", "Route {0} of {1}", ["\(pageIndex + 1)", "\(pages.count)"]))
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAdjustableAction { direction in
-                            if direction == .increment { movePage(by: 1) }
-                            if direction == .decrement { movePage(by: -1) }
-                        }
-                    navigationButton(previous: false)
-                }
-            }
+            botonYaSubi
             HStack(spacing: 8) {
                 Button { showDetails = true } label: {
-                    Text(L.t("Ver detalles", "View details"))
-                        .font(.subheadline.weight(.semibold))
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "info.circle")
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.appAccent)
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .frame(width: 44, height: 44)
                         .background(Color.surfaceContainerLow, in: RoundedRectangle(cornerRadius: 12))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L.t("Ver detalles", "View details"))
                 if vm.alternativasItinerario.count > 1 {
                     Button(action: onShowAlternatives) {
                         Image(systemName: "list.bullet")
@@ -359,6 +405,37 @@ struct RouteSummaryPanel: View {
                 }
             }
         }
+    }
+
+    /// Siempre visible mientras no hay viaje: quien ya subió no espera la
+    /// pregunta automática para empezar «Estoy en un micro». Va dentro de la
+    /// tarjeta, fuera de su desplazamiento, para no tapar más mapa.
+    private var botonYaSubi: some View {
+        Button {
+            guard puedeConfirmarSubida else { return }
+            onAlreadyOnBoard()
+        } label: {
+            Label(L.t("Ya subí al micro", "I'm on the bus"), systemImage: "bus.fill")
+                .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(puedeConfirmarSubida ? Color.onPrimaryFill : Color.onSurfaceVariant)
+                .padding(.horizontal, 10)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(puedeConfirmarSubida ? Color.primaryFill : Color.surfaceContainerHigh,
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!puedeConfirmarSubida)
+        .accessibilityHint(L.t("Empieza «Estoy en un micro» con la línea de esta ruta.",
+                               "Starts “I'm on a bus” with this route's line."))
+    }
+
+    /// La opción a la vista es la instalada y todavía no hay un viaje.
+    private var puedeConfirmarSubida: Bool {
+        !vm.calculandoItinerario && vm.itinerario?.optionID == visibleOptionID
+            && trackingCoordinator.selectedTripRoute == nil
     }
 
     private func navigationButton(previous: Bool) -> some View {

@@ -42,6 +42,8 @@ private struct MapaScreenContent: View {
     @Binding var mostrarDrawer: Bool
     @State private var showReportarSheet = false
     @State private var showBoardingConfirmation = false
+    /// «Ya subí al micro» desde la tarjeta de la ruta: directo a la línea.
+    @State private var showTripSelection = false
     @State private var mostrarAvisoViaje = false
     @State private var boardingReminderTask: Task<Void, Never>?
     @State private var boardingReminderDate: Date?
@@ -60,6 +62,9 @@ private struct MapaScreenContent: View {
     @State private var marcadorUsuario: CLLocationCoordinate2D?
     /// Punto bajo el círculo y cámara visible, sin publicar cada movimiento.
     @State private var centroMapa = CentroMapaVisible()
+    /// Solo cambia al cruzar el umbral de zoom de los avisos: así el mapa no
+    /// se redibuja en cada gesto de la cámara.
+    @State private var mapaAcercado = false
     @FocusState private var campoEnfocado: Bool
 
     @State private var cameraPosition: MapCameraPosition = .region(
@@ -130,7 +135,8 @@ private struct MapaScreenContent: View {
                 onCameraEnd: {
                     if modoColocarMarcador { programarConfirmacionMarcador() }
                 },
-                onClearMarker: despejarMarcador
+                onClearMarker: despejarMarcador,
+                mapaAcercado: mapaAcercado
             )
             .accessibilityHidden(mostrarDrawer || (vm.calculandoItinerario && !viajeActivo))
 
@@ -166,6 +172,9 @@ private struct MapaScreenContent: View {
                         }, onDetailsPresentationChange: { presented in
                             routeDetailsPresented = presented
                             if presented { cancelarPreguntaDeViaje() }
+                        }, onAlreadyOnBoard: {
+                            cancelarPreguntaDeViaje()
+                            showTripSelection = true
                         })
                             .padding(.horizontal, 16)
                             .padding(.top, 8)
@@ -201,6 +210,8 @@ private struct MapaScreenContent: View {
                 .opacity(panelesRetirados ? 0 : 1)
                 .allowsHitTesting(!panelesRetirados)
                 .accessibilityHidden(panelesRetirados)
+                // La ficha del micro ocupa este sitio mientras está abierta.
+                .modifier(OcultoConFichaDeMicro(vm: vm, fichaDisponible: !viajeActivo))
             }
             .animation(animacionPaneles, value: panelesRetirados)
             // Entrada/salida del buscador según haya o no itinerario resuelto.
@@ -217,7 +228,8 @@ private struct MapaScreenContent: View {
                                  statusColor: colorEstadoContribucion,
                                  onEndTrip: finalizarVistaDeViaje,
                                  reportButton: botonReportar,
-                                 locationButton: botonMiUbicacion)
+                                 locationButton: botonMiUbicacion,
+                                 onReportarDesvio: { vm.desvioPorReportar = $0 })
                     .transition(.opacity)
                     .accessibilityHidden(mostrarDrawer)
             }
@@ -265,6 +277,12 @@ private struct MapaScreenContent: View {
         .animation(animacionPaneles, value: mostrandoRuta)
         .animation(animacionPaneles, value: viajeActivo)
         .animation(animacionPaneles, value: vm.buscandoItinerarioInicial)
+        .modifier(CambiosRutaEnMapaModifier(
+            vm: vm,
+            rutaViaje: viajeActivo ? trackingCoordinator.selectedTripRoute : nil,
+            activo: pantallaVisible && scenePhase == .active,
+            locationService: vm.sharedLocationService,
+            alEnviarDesvio: { trackingCoordinator.descartarDesvio() }))
         .onAppear {
             pantallaVisible = true
             vm.actualizarActividadVisual(scenePhase == .active && !viajeActivo)
@@ -321,11 +339,17 @@ private struct MapaScreenContent: View {
             guard !viajeActivo else { return }
             guard let polyline = vm.routePolyline else { return }
             programarPreguntaDeViaje(en: 30)
-            // Comparar líneas mostrando su recorrido completo, con espacio
-            // alrededor para la guía flotante y los controles del mapa.
+            // Comparar líneas mostrando su recorrido completo. La guía ocupa la
+            // parte alta y los controles la baja: con el mismo margen total que
+            // antes, se deja más arriba para que el recorrido caiga en la franja
+            // libre del mapa y no bajo la tarjeta.
             let rect = polyline.boundingMapRect
-            moverCamara(.rect(rect.insetBy(dx: -max(rect.width * 0.25, 1000),
-                                           dy: -max(rect.height * 0.65, 1800))))
+            let lateral = max(rect.width * 0.25, 1000)
+            let arriba = max(rect.height * 0.95, 2600)
+            let abajo = max(rect.height * 0.35, 1000)
+            moverCamara(.rect(MKMapRect(x: rect.minX - lateral, y: rect.minY - arriba,
+                                        width: rect.width + 2 * lateral,
+                                        height: rect.height + arriba + abajo)))
         }
         .onChange(of: vm.destinoFocusTick) { _, _ in
             guard !viajeActivo else { return }
@@ -363,6 +387,12 @@ private struct MapaScreenContent: View {
                                       locationService: vm.sharedLocationService,
                                       itinerary: vm.itinerario,
                                       onRemindLater: { programarPreguntaDeViaje(en: 120) })
+        }
+        .sheet(isPresented: $showTripSelection) {
+            // Quien ya dijo «Ya subí» no vuelve a ver la pregunta.
+            TripSelectionSheet(coordinator: trackingCoordinator,
+                               locationService: vm.sharedLocationService,
+                               itinerary: vm.itinerario)
         }
         .sheet(isPresented: $showRouteAlternatives) {
             RouteAlternativesSheet(vm: vm)
@@ -493,10 +523,9 @@ private struct MapaScreenContent: View {
 
     private var controlesMapaSinRuta: some View {
         HStack(alignment: .bottom, spacing: 12) {
-            VStack(alignment: .leading, spacing: 10) {
-                if !vm.busesAnimados.isEmpty { botonVerMicros }
-                botonReportar.frame(minHeight: 44)
-            }
+            // Sin botón de cantidad de micros: el mapa queda más limpio y la
+            // flota ya se ve en el mapa y en las tarjetas del panel.
+            botonReportar.frame(minHeight: 44)
             Spacer(minLength: 12)
             VStack(spacing: 10) {
                 botonColocarMarcador
@@ -505,27 +534,6 @@ private struct MapaScreenContent: View {
         }
         .frame(minHeight: 44)
         .padding(.horizontal, 20)
-    }
-
-    private var botonVerMicros: some View {
-        Button {
-            guard let rect = vm.encuadreDeMicros else { return }
-            campoEnfocado = false
-            moverCamara(.rect(rect))
-        } label: {
-            Label(vm.busesEnMapa.count == vm.busesAnimados.count
-                  ? L.f("{0} micros", "{0} buses", ["\(vm.busesEnMapa.count)"])
-                  : L.f("{0} de {1} micros", "{0} of {1} buses",
-                        ["\(vm.busesEnMapa.count)", "\(vm.busesAnimados.count)"]),
-                  systemImage: "bus.fill")
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(.regularMaterial, in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(L.f("Ver los {0} micros del mapa", "Show the {0} buses on the map",
-                                ["\(vm.busesEnMapa.count)"]))
     }
 
     // MARK: - Botón Mi Ubicación (centra el mapa en el GPS real)
@@ -597,6 +605,8 @@ private struct MapaScreenContent: View {
         }
         centroMapa.camara = context.camera
         centroMapa.region = context.region
+        let acercado = context.region.span.latitudeDelta < TransitMapCanvas.zoomDetalleAvisos
+        if mapaAcercado != acercado { mapaAcercado = acercado }
     }
 
     private func actualizarPuntoVisible(_ punto: CLLocationCoordinate2D?) {
