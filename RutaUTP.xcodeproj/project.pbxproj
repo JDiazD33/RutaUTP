@@ -137,6 +137,9 @@
 		0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */; };
 		C9E10B000000000000000012 /* MapaViewModel+Flota.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9E10B000000000000000011 /* MapaViewModel+Flota.swift */; };
 		C9E10B000000000000000014 /* MapaViewModel+Itinerario.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9E10B000000000000000013 /* MapaViewModel+Itinerario.swift */; };
+		CA7B1A000000000000000002 /* RouteChangePresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA7B1A000000000000000001 /* RouteChangePresentation.swift */; };
+		CA7B1A000000000000000004 /* MapaViewModel+CambiosRuta.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA7B1A000000000000000003 /* MapaViewModel+CambiosRuta.swift */; };
+		CA7B1A000000000000000006 /* CambiosRutaMapa.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA7B1A000000000000000005 /* CambiosRutaMapa.swift */; };
 		0A800509300AD9FE004E1676 /* MapMarkers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D0300AD9FE004E1676 /* MapMarkers.swift */; };
 		0A80050A300AD9FE004E1676 /* SideDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8004D1300AD9FE004E1676 /* SideDrawer.swift */; };
 		0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */; };
@@ -246,6 +249,7 @@
 		2102EC41EDE83B453742D292 /* BoardingPointMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 740CB3E4E51C6A2D3BE147C5 /* BoardingPointMap.swift */; };
 		BB9900000000000000000022 /* OccupancyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000021 /* OccupancyTests.swift */; };
 		BB9900000000000000000062 /* RouteChangesLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000061 /* RouteChangesLocationTests.swift */; };
+		CA7B1A000000000000000008 /* RouteChangeStretchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA7B1A000000000000000007 /* RouteChangeStretchTests.swift */; };
 		BB9900000000000000000072 /* RouteTrackingSharedLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */; };
 		BB9900000000000000000082 /* GTFSCSVCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */; };
 		BB9900000000000000000092 /* GTFSDistanceToRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */; };
@@ -290,6 +294,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		CA7B1A000000000000000102 /* inicio-M-34-A.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = "inicio-M-34-A.gpx"; path = "tools/prueba-desvio/inicio-M-34-A.gpx"; sourceTree = "<group>"; };
+		CA7B1A000000000000000101 /* desvio-M-34-A.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = "desvio-M-34-A.gpx"; path = "tools/prueba-desvio/desvio-M-34-A.gpx"; sourceTree = "<group>"; };
 		0B5EF2DDEB2E362B313E5016 /* BusquedaLocalDestinos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusquedaLocalDestinos.swift; sourceTree = "<group>"; };
 		0B5EC787B38980FFB28A7D4D /* ConectividadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConectividadService.swift; sourceTree = "<group>"; };
 		43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DCargaTests.swift; sourceTree = "<group>"; };
@@ -430,6 +436,9 @@
 		0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapaViewModel.swift; sourceTree = "<group>"; };
 		C9E10B000000000000000011 /* MapaViewModel+Flota.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+Flota.swift"; sourceTree = "<group>"; };
 		C9E10B000000000000000013 /* MapaViewModel+Itinerario.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+Itinerario.swift"; sourceTree = "<group>"; };
+		CA7B1A000000000000000001 /* RouteChangePresentation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RouteChangePresentation.swift; sourceTree = "<group>"; };
+		CA7B1A000000000000000003 /* MapaViewModel+CambiosRuta.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "MapaViewModel+CambiosRuta.swift"; sourceTree = "<group>"; };
+		CA7B1A000000000000000005 /* CambiosRutaMapa.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CambiosRutaMapa.swift; sourceTree = "<group>"; };
 		0A8004D0300AD9FE004E1676 /* MapMarkers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapMarkers.swift; sourceTree = "<group>"; };
 		0A8004D1300AD9FE004E1676 /* SideDrawer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SideDrawer.swift; sourceTree = "<group>"; };
 		0A8004D5300AD9FE004E1676 /* CarnetScannerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarnetScannerView.swift; sourceTree = "<group>"; };
@@ -532,6 +541,7 @@
 		740CB3E4E51C6A2D3BE147C5 /* BoardingPointMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardingPointMap.swift; sourceTree = "<group>"; };
 		BB9900000000000000000021 /* OccupancyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OccupancyTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000061 /* RouteChangesLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangesLocationTests.swift; sourceTree = "<group>"; };
+		CA7B1A000000000000000007 /* RouteChangeStretchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteChangeStretchTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTrackingSharedLocationTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSCSVCompatibilityTests.swift; sourceTree = "<group>"; };
 		BB9900000000000000000091 /* GTFSDistanceToRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTFSDistanceToRouteTests.swift; sourceTree = "<group>"; };
@@ -621,6 +631,8 @@
 				AA6600000000000000000D01 /* gtfs */,
 				AA6600000000000000000E07 /* senias */,
 				0A80041B300AD9FE004E1676 /* RutaUTPTests */,
+				CA7B1A000000000000000102 /* inicio-M-34-A.gpx */,
+				CA7B1A000000000000000101 /* desvio-M-34-A.gpx */,
 				0A40D9152FDE5E7D00F79FBC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -660,6 +672,7 @@
 				BB9900000000000000000081 /* GTFSCSVCompatibilityTests.swift */,
 				BB9900000000000000000071 /* RouteTrackingSharedLocationTests.swift */,
 				BB9900000000000000000061 /* RouteChangesLocationTests.swift */,
+				CA7B1A000000000000000007 /* RouteChangeStretchTests.swift */,
 				0A800416300AD9FE004E1676 /* RutaUTPTests.swift */,
 				0A800402300AD9FE004E1676 /* MQTTConfigurationTests.swift */,
 				0A800403300AD9FE004E1676 /* ObservationPublishThrottleTests.swift */,
@@ -856,6 +869,8 @@
 				0A8004CF300AD9FE004E1676 /* MapaViewModel.swift */,
 				C9E10B000000000000000011 /* MapaViewModel+Flota.swift */,
 				C9E10B000000000000000013 /* MapaViewModel+Itinerario.swift */,
+				CA7B1A000000000000000003 /* MapaViewModel+CambiosRuta.swift */,
+				CA7B1A000000000000000005 /* CambiosRutaMapa.swift */,
 				BA9900000000000000000071 /* MapaViewModel+Busqueda.swift */,
 				BA9900000000000000000073 /* MapaViewModel+SimulacionBuses.swift */,
 				BA9900000000000000000075 /* MapaViewModel+Destinos.swift */,
@@ -1166,6 +1181,7 @@
 				8F2D1B0673A747118C28ADAE /* RoutePointValidation.swift */,
 				BB9900000000000000000001 /* OccupancyService.swift */,
 				BA9900000000000000000001 /* RouteChangesService.swift */,
+				CA7B1A000000000000000001 /* RouteChangePresentation.swift */,
 				BC1200000000000000000001 /* ServiceDeadlineScheduler.swift */,
 			);
 			path = Community;
@@ -1465,6 +1481,9 @@
 				0A800508300AD9FE004E1676 /* MapaViewModel.swift in Sources */,
 				C9E10B000000000000000012 /* MapaViewModel+Flota.swift in Sources */,
 				C9E10B000000000000000014 /* MapaViewModel+Itinerario.swift in Sources */,
+				CA7B1A000000000000000002 /* RouteChangePresentation.swift in Sources */,
+				CA7B1A000000000000000004 /* MapaViewModel+CambiosRuta.swift in Sources */,
+				CA7B1A000000000000000006 /* CambiosRutaMapa.swift in Sources */,
 				0A8004FD300AD9FE004E1676 /* LugarGuardado.swift in Sources */,
 				0A800432300AD9FE004E1676 /* LugaresStore.swift in Sources */,
 				30C8E60E781443809B689068 /* RecuperacionPreferencias.swift in Sources */,
@@ -1553,6 +1572,7 @@
 				BB9900000000000000000082 /* GTFSCSVCompatibilityTests.swift in Sources */,
 				BB9900000000000000000072 /* RouteTrackingSharedLocationTests.swift in Sources */,
 				BB9900000000000000000062 /* RouteChangesLocationTests.swift in Sources */,
+				CA7B1A000000000000000008 /* RouteChangeStretchTests.swift in Sources */,
 				0A800503300AD9FE004E1676 /* MQTTConfigurationTests.swift in Sources */,
 				0A80050B300AD9FE004E1676 /* ObservationPublishThrottleTests.swift in Sources */,
 				0A80051E300AD9FE004E1676 /* PassengerDetectionEngineTests.swift in Sources */,

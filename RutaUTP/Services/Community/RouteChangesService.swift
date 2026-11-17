@@ -11,11 +11,24 @@ struct RouteChangeAlert: Codable, Identifiable, Equatable {
     let place: String
     let confirmations: Int
     let expiresAt: TimeInterval
+    /// Vía por la que pasa ahora el transporte, si algún reporte la indicó.
+    var via: String? = nil
+    /// Punto donde retoma su recorrido habitual. Con él se conoce el tramo
+    /// que deja de atender; sin él solo se conoce dónde empieza el cambio.
+    var endLat: Double? = nil
+    var endLon: Double? = nil
+    /// Calle nueva como polilínea codificada. El servidor solo la publica
+    /// cuando dos cuentas grabaron a bordo trazos que coinciden.
+    var path: String? = nil
+    /// Incidencia de la presentación: no es un reporte de la comunidad.
+    var simulated: Bool? = nil
 }
 
 private struct RouteChangeSnapshot: Decodable {
     let schemaVersion: Int
     let timestamp: TimeInterval
+    /// Cuentas distintas que exige el servidor. Ausente en servidores antiguos.
+    let quorum: Int?
     let alerts: [RouteChangeAlert]
 }
 
@@ -23,9 +36,12 @@ private struct RouteChangeReceipt: Decodable {
     let requestId: String
     let accepted: Bool
     let code: String
+    let confirmations: Int?
+    let required: Int?
 }
 
 /// Canal independiente: no modifica posiciones, rutas ni estimaciones de buses.
+/// Los avisos confirmados se dibujan sobre el mapa como información añadida.
 @MainActor
 final class RouteChangesService: ObservableObject {
     private let clock: () -> TimeInterval
@@ -41,6 +57,14 @@ final class RouteChangesService: ObservableObject {
     @Published private(set) var sending = false
     @Published private(set) var result: String?
     @Published private(set) var configured = false
+    /// Cuentas distintas necesarias para confirmar, según el último snapshot.
+    @Published private(set) var quorum = 2
+    /// Recibos aceptados por el servidor. Permite saber que un reporte con
+    /// trazo llegó y que el desvío grabado ya no hace falta.
+    @Published private(set) var reportesAceptados = 0
+
+    /// Vigencia máxima de un voto en el servidor (24 h) más el margen de reloj.
+    private static let vigenciaMaxima: TimeInterval = 24 * 3600 + 10
 
     private var mqtt: CocoaMQTT?
     private var principal = ""
@@ -119,15 +143,23 @@ final class RouteChangesService: ObservableObject {
         refresh()
     }
 
-    func send(routeID: String, reason: String, lat: Double, lon: Double, place: String) {
+    func send(routeID: String, reason: String, lat: Double, lon: Double, place: String,
+              via: String? = nil, end: (lat: Double, lon: Double)? = nil, path: String? = nil) {
         refresh()
         defer { reprogramarVencimiento() }
         guard ready, !sending, let mqtt else { return }
         let id = UUID().uuidString
-        let body: [String: Any] = ["schemaVersion": 1, "requestId": id,
+        var body: [String: Any] = ["schemaVersion": 1, "requestId": id,
                                   "routeId": routeID, "reason": reason,
                                   "lat": lat, "lon": lon, "place": place,
                                   "timestamp": clock()]
+        if let via, via.count >= 3 { body["via"] = via }
+        if let end {
+            body["endLat"] = end.lat
+            body["endLon"] = end.lon
+            // El trazo solo vale con el punto donde retoma.
+            if let path { body["path"] = path }
+        }
         guard let data = try? JSONSerialization.data(withJSONObject: body),
               let json = String(data: data, encoding: .utf8) else { return }
         let now = clock()
@@ -177,20 +209,37 @@ final class RouteChangesService: ObservableObject {
         defer { refresh() }
         let now = clock()
         if topic == "rutautp/cambios/estado",
-           data.count <= 300_000,
+           // Con trazos cabe un snapshot mayor; sigue por debajo del paquete
+           // máximo de 1 MB del broker.
+           data.count <= 900_000,
            let snapshot = try? JSONDecoder().decode(RouteChangeSnapshot.self, from: data),
            snapshot.schemaVersion == 1, snapshot.timestamp.isFinite,
            (-10...20).contains(now - snapshot.timestamp), snapshot.alerts.count <= 500 {
             // Un snapshot tardío no debe sustituir uno más reciente.
             guard lastSnapshot.map({ snapshot.timestamp >= $0 }) ?? true else { return }
             lastSnapshot = snapshot.timestamp
+            // Nunca se muestra un aviso con menos de dos cuentas, diga lo que
+            // diga el servidor.
+            let minimo = max(2, snapshot.quorum ?? 2)
+            if quorum != minimo { quorum = minimo }
             var seen = Set<String>()
             let current = snapshot.alerts.filter {
-                $0.confirmations >= 2 && $0.expiresAt.isFinite && $0.expiresAt > now
-                && $0.expiresAt <= now + 910 && (-90...90).contains($0.lat)
+                $0.confirmations >= minimo && $0.expiresAt.isFinite && $0.expiresAt > now
+                && $0.expiresAt <= now + Self.vigenciaMaxima && (-90...90).contains($0.lat)
                 && (-180...180).contains($0.lon) && $0.place.count <= 120
-                && ["works", "closure", "detour"].contains($0.reason)
+                && ($0.via?.count ?? 0) <= 80
+                && ($0.path?.utf8.count ?? 0) <= 4_000
+                && ($0.endLat == nil) == ($0.endLon == nil)
+                && $0.endLat.map { (-90...90).contains($0) } != false
+                && $0.endLon.map { (-180...180).contains($0) } != false
+                && MotivoCambioRuta(rawValue: $0.reason) != nil
                 && seen.insert($0.id).inserted
+            }.map { aviso -> RouteChangeAlert in
+                // Un trazo ilegible no invalida el aviso: se muestra sin calle nueva.
+                guard let path = aviso.path, PolilineaCodificada.decodificar(path) == nil else { return aviso }
+                var limpio = aviso
+                limpio.path = nil
+                return limpio
             }
             if alerts != current { alerts = current }
         } else if topic == "rutautp/cambios/\(principal)/recibo",
@@ -199,16 +248,24 @@ final class RouteChangesService: ObservableObject {
             sending = false
             pendingID = nil
             if receipt.accepted {
+                reportesAceptados += 1
+                let cuentas = receipt.confirmations ?? 1
+                let necesarias = receipt.required ?? quorum
                 result = receipt.code == "confirmed"
-                    ? L.t("Reporte recibido. El cambio ya cuenta con al menos dos cuentas distintas.",
-                          "Report received. At least two different accounts now support this change.")
-                    : L.t("Reporte recibido. Queda pendiente: hace falta otra cuenta que confirme el mismo cambio.",
-                          "Report received and pending: another account must confirm the same change.")
+                    ? L.f("Reporte recibido. Ya lo confirman {0} cuentas distintas y se muestra en el mapa.",
+                          "Report received. {0} different accounts now confirm it and it shows on the map.",
+                          ["\(cuentas)"])
+                    : L.f("Reporte recibido. Van {0} de {1} cuentas distintas necesarias para mostrarlo en el mapa.",
+                          "Report received. {0} of the {1} different accounts needed to show it on the map.",
+                          ["\(cuentas)", "\(necesarias)"])
             } else {
                 switch receipt.code {
                 case "off_route":
                     result = L.t("El punto está lejos de esta ruta. Revisa la línea y el lugar.",
                                  "The point is far from this route. Check the line and location.")
+                case "invalid_path":
+                    result = L.t("No se pudo usar el recorrido grabado. Quítalo y vuelve a enviar en 30 segundos.",
+                                 "The recorded route couldn't be used. Remove it and send again in 30 seconds.")
                 case "rate_limit":
                     result = L.t("Espera 30 segundos entre reportes. Repetirlo no suma otra confirmación.",
                                  "Wait 30 seconds between reports. Repeating it won't add another confirmation.")

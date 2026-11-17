@@ -18,7 +18,9 @@ final class GeocodificacionComunidadModel: ObservableObject {
     private var espera: Task<Void, Never>?
     private var vencimiento: Task<Void, Never>?
 
-    func buscar(_ coordenada: CLLocationCoordinate2D, demora: Duration = .zero,
+    /// - Parameter soloCalle: devuelve solo el nombre de la vía, sin número ni
+    ///   ciudad. Sirve para sugerir por dónde va ahora una línea desviada.
+    func buscar(_ coordenada: CLLocationCoordinate2D, demora: Duration = .zero, soloCalle: Bool = false,
                 alCompletar: (@MainActor @Sendable (String?) -> Void)? = nil) {
         cancelar(limpiar: true)
         guard CLLocationCoordinate2DIsValid(coordenada) else { return }
@@ -31,10 +33,7 @@ final class GeocodificacionComunidadModel: ObservableObject {
             self.geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
                 Task { @MainActor [weak self] in
                     guard let self, self.solicitud.isCurrent(token) else { return }
-                    let partes = [placemarks?.first?.thoroughfare,
-                                  placemarks?.first?.subThoroughfare,
-                                  placemarks?.first?.locality].compactMap { $0 }
-                    self.direccion = partes.isEmpty ? nil : partes.joined(separator: " ")
+                    self.direccion = Self.texto(de: placemarks?.first, soloCalle: soloCalle)
                     self.buscando = false
                     self.vencimiento?.cancel()
                     self.vencimiento = nil
@@ -49,6 +48,21 @@ final class GeocodificacionComunidadModel: ObservableObject {
             self.cancelar(limpiar: true)
             alCompletar?(nil)
         }
+    }
+
+    /// Calle y número, o el nombre del lugar si no hay calle (un parque, un
+    /// campus: «Estadio UNT»), seguido de la ciudad. Antes, sin calle quedaba
+    /// solo «Trujillo», que no sirve como referencia.
+    static func texto(de lugar: CLPlacemark?, soloCalle: Bool) -> String? {
+        guard let lugar else { return nil }
+        if soloCalle { return lugar.thoroughfare }
+        let sitio = lugar.thoroughfare.map { [$0, lugar.subThoroughfare].compactMap { $0 }.joined(separator: " ") }
+            ?? lugar.areasOfInterest?.first ?? lugar.subLocality
+        var partes: [String] = []
+        for parte in [sitio, lugar.locality].compactMap({ $0 }) where !partes.contains(parte) {
+            partes.append(parte)
+        }
+        return partes.isEmpty ? nil : partes.joined(separator: ", ")
     }
 
     func cancelar(limpiar: Bool = false) {

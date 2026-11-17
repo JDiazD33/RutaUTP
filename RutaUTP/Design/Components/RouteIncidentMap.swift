@@ -14,6 +14,18 @@ struct RouteIncidentMap: View {
     @Binding var point: CLLocationCoordinate2D?
     @Binding var camera: MapCameraPosition
     var markerTint: Color = .orange
+    /// Rótulo del punto que se está colocando.
+    var markerTitle: String = L.t("Lugar afectado", "Affected location")
+    /// El otro extremo del tramo. Se muestra, pero los toques no lo mueven.
+    var secondaryPoint: CLLocationCoordinate2D? = nil
+    var secondaryTitle: String = ""
+    /// Tercer punto, también fijo: la calle por la que va ahora o el regreso.
+    var extraPoint: CLLocationCoordinate2D? = nil
+    var extraTitle: String = ""
+    /// Parte del recorrido entre ambos puntos: la que la línea deja de atender.
+    var stretch: [CLLocationCoordinate2D] = []
+    /// Calle por la que pasó el micro, grabada a bordo. Línea continua.
+    var newStreet: [CLLocationCoordinate2D] = []
     /// Se llama cuando el usuario toca el mapa. Permite distinguir "el pin
     /// está donde yo lo puse" de "el pin se puso solo", que es lo que decide
     /// si se recoloca al cambiar de línea.
@@ -22,9 +34,32 @@ struct RouteIncidentMap: View {
     var body: some View {
         MapReader { proxy in
             Map(position: $camera) {
+                // El mapa abre donde está el usuario: su punto azul lo confirma.
+                UserAnnotation()
                 MapPolyline(coordinates: route.shape).stroke(route.color, lineWidth: 4)
+                if stretch.count >= 2 {
+                    MapPolyline(coordinates: stretch)
+                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round))
+                    MapPolyline(coordinates: stretch)
+                        .stroke(markerTint, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round,
+                                                               dash: [2, 8]))
+                }
+                if newStreet.count >= 2 {
+                    MapPolyline(coordinates: newStreet)
+                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round))
+                    MapPolyline(coordinates: newStreet)
+                        .stroke(markerTint, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                }
+                if let secondaryPoint {
+                    Marker(secondaryTitle, systemImage: "mappin", coordinate: secondaryPoint)
+                        .tint(.gray)
+                }
+                if let extraPoint {
+                    Marker(extraTitle, systemImage: "mappin", coordinate: extraPoint)
+                        .tint(.gray)
+                }
                 if let point {
-                    Marker(L.t("Lugar afectado", "Affected location"), coordinate: point)
+                    Marker(markerTitle, coordinate: point)
                         .tint(markerTint)
                 }
             }

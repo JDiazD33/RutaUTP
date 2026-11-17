@@ -13,6 +13,62 @@ struct TransitMapCanvas: View {
     let onPlacementPointChange: (CLLocationCoordinate2D?) -> Void
     let onCameraEnd: () -> Void
     let onClearMarker: () -> Void
+    /// La cámara está lo bastante cerca para mostrar los avisos con su icono.
+    var mapaAcercado: Bool = false
+
+    /// Caminatas punteadas y recorrido del transporte en línea continua, en
+    /// orden de dibujo. En viaje, solo el tramo del pasajero: desde donde sube
+    /// hasta donde baja; sin un destino que coincida con la línea, el recorrido
+    /// completo.
+    private var trazosRuta: [TrazoMapa] {
+        let caminata = StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7])
+        let contorno = StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round)
+        let linea = StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
+        var trazos: [TrazoMapa] = []
+        func agregar(_ id: String, _ coordenadas: [CLLocationCoordinate2D], _ color: Color, _ estilo: StrokeStyle) {
+            guard coordenadas.count >= 2 else { return }
+            trazos.append(TrazoMapa(id: id, coordenadas: coordenadas, color: color, estilo: estilo))
+        }
+        if let rutaViaje {
+            let tramo = TramoViaje(plan: vm.itinerario, rutaViaje: rutaViaje)
+            let bus = tramo?.bus ?? rutaViaje.shape
+            agregar("viaje-contorno-\(rutaViaje.id)", bus, .appSurface, contorno)
+            agregar("viaje-linea-\(rutaViaje.id)", bus, .appPrimary, linea)
+            if let transfer = tramo?.transbordo {
+                agregar("viaje-caminata-transbordo", transfer.walk, .secondary, caminata)
+                agregar("viaje-contorno-\(transfer.route.id)", transfer.busDibujo, .appSurface, contorno)
+                agregar("viaje-linea-\(transfer.route.id)", transfer.busDibujo, transfer.route.color, linea)
+            }
+            if let tramo {
+                agregar("viaje-caminata-final", tramo.caminata, .secondary, caminata)
+            }
+        } else if let plan = vm.itinerario {
+            agregar("plan-caminata-subida", plan.walkToBoard, .secondary, caminata)
+            agregar("plan-contorno-\(plan.route.id)", plan.busDibujo, .appSurface, contorno)
+            agregar("plan-linea-\(plan.route.id)", plan.busDibujo, plan.route.color, linea)
+            if let transfer = plan.transfer {
+                agregar("plan-caminata-transbordo", transfer.walk, .secondary, caminata)
+                agregar("plan-contorno-\(transfer.route.id)", transfer.busDibujo, .appSurface, contorno)
+                agregar("plan-linea-\(transfer.route.id)", transfer.busDibujo, transfer.route.color, linea)
+            }
+            agregar("plan-caminata-final", plan.walkToDestination, .secondary, caminata)
+        }
+        return trazos
+    }
+
+    /// Por debajo de este alto visible (en grados) los avisos se ven con icono.
+    static let zoomDetalleAvisos: Double = 0.03
+
+    /// Con ruta o viaje, los avisos que llegan al mapa ya son los que les
+    /// afectan; el que el usuario abre también se dibuja entero.
+    private func avisoConLineas(_ cambio: CambioRutaEnMapa) -> Bool {
+        rutaViaje != nil || vm.itinerario != nil
+            || vm.cambiosSeleccionados?.avisos.contains(where: { $0.id == cambio.id }) == true
+    }
+
+    private func avisoConIcono(_ cambio: CambioRutaEnMapa) -> Bool {
+        avisoConLineas(cambio) || mapaAcercado
+    }
 
     private var destinoCoincideConReferencia: Bool {
         guard let destino = vm.busquedaResultado else { return false }
@@ -78,25 +134,23 @@ struct TransitMapCanvas: View {
             }
 
             // Caminatas punteadas y recorrido del transporte en línea continua.
+            ForEach(trazosRuta) { trazo in
+                MapPolyline(coordinates: trazo.coordenadas)
+                    .stroke(trazo.color, style: trazo.estilo)
+            }
             if let rutaViaje {
-                MapPolyline(coordinates: rutaViaje.shape)
-                    .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                MapPolyline(coordinates: rutaViaje.shape)
-                    .stroke(Color.appPrimary, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                if let resto = TramoViaje(plan: vm.itinerario, rutaViaje: rutaViaje) {
+                    if let transfer = resto.transbordo {
+                        Annotation(transfer.board.nombreVisible, coordinate: transfer.board.coordinate, anchor: .bottom) {
+                            TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
+                        }
+                    }
+                    Annotation(L.t("Baja aquí", "Get off here"), coordinate: resto.bajada.coordinate, anchor: .bottom) {
+                        TransitStopMarker(number: resto.numeroBajada, title: L.t("BAJA", "EXIT"), color: .appPrimary)
+                    }
+                }
             } else if let plan = vm.itinerario {
-                MapPolyline(coordinates: plan.walkToBoard)
-                    .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                MapPolyline(coordinates: plan.busDibujo)
-                    .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                MapPolyline(coordinates: plan.busDibujo)
-                    .stroke(plan.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 if let transfer = plan.transfer {
-                    MapPolyline(coordinates: transfer.walk)
-                        .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
-                    MapPolyline(coordinates: transfer.busDibujo)
-                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                    MapPolyline(coordinates: transfer.busDibujo)
-                        .stroke(transfer.route.color, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                     Annotation(plan.firstAlight.nombreVisible, coordinate: plan.firstAlight.coordinate, anchor: .bottom) {
                         TransitStopMarker(number: "2", title: L.t("BAJA", "EXIT"), color: .orange)
                     }
@@ -104,14 +158,54 @@ struct TransitMapCanvas: View {
                         TransitStopMarker(number: "3", title: L.t("CAMBIA", "CHANGE"), color: transfer.route.color)
                     }
                 }
-                MapPolyline(coordinates: plan.walkToDestination)
-                    .stroke(Color.secondary, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [3, 7]))
                 Annotation(L.t("Sube aquí", "Board here"), coordinate: plan.board.coordinate, anchor: .bottom) {
                     TransitStopMarker(number: "1", title: L.t("SUBE", "BOARD"), color: .secondary)
                 }
                 Annotation(L.t("Baja aquí", "Get off here"), coordinate: plan.alight.coordinate, anchor: .bottom) {
                     TransitStopMarker(number: plan.transfer == nil ? "2" : "4", title: L.t("BAJA", "EXIT"), color: .appPrimary)
                 }
+            }
+
+            // 3b. Cambios confirmados por la comunidad. El tramo que la línea
+            // deja de recorrer se pinta punteado SOBRE su trazo continuo: el
+            // contorno claro lo borra y el punteado indica que ya no pasa.
+            // Mapa libre: un punto pequeño por aviso. El icono aparece al acercar
+            // el mapa; las líneas, al tocarlo o cuando afecta a la ruta o al viaje.
+            ForEach(vm.cambiosEnMapa) { cambio in
+                if avisoConLineas(cambio), cambio.tramo.count >= 2 {
+                    MapPolyline(coordinates: cambio.tramo)
+                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                    MapPolyline(coordinates: cambio.tramo)
+                        .stroke(cambio.aviso.motivo.tinta,
+                                style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round, dash: [2, 9]))
+                }
+                // Calle nueva: línea continua del mismo color. Punteado es «ya
+                // no pasa»; continuo es «ahora pasa por aquí».
+                if avisoConLineas(cambio), cambio.calleNueva.count >= 2 {
+                    MapPolyline(coordinates: cambio.calleNueva)
+                        .stroke(Color.appSurface, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+                    MapPolyline(coordinates: cambio.calleNueva)
+                        .stroke(cambio.aviso.motivo.tinta,
+                                style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                }
+                Annotation(cambio.aviso.motivo.tituloAviso, coordinate: cambio.aviso.coordenada) {
+                    Button {
+                        campoEnfocado = false
+                        vm.cambiosSeleccionados = SeleccionCambiosRuta(avisos: [cambio.aviso])
+                    } label: {
+                        if avisoConIcono(cambio) {
+                            MarcadorCambioRuta(motivo: cambio.aviso.motivo)
+                        } else {
+                            PuntoCambioRuta(motivo: cambio.aviso.motivo)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(cambio.aviso.motivo.tituloAviso + ". "
+                                        + (cambio.aviso.textoVia ?? cambio.aviso.place))
+                    .accessibilityHint(L.t("Muestra los cambios confirmados en esta ruta.",
+                                           "Shows the confirmed changes on this route."))
+                }
+                .annotationTitles(avisoConLineas(cambio) ? .automatic : .hidden)
             }
 
             // 4. Marcador del Destino Buscado (ej. UPAO, Casa, Mall Plaza)
@@ -170,5 +264,46 @@ struct TransitMapCanvas: View {
         }
         // Las anotaciones gestionan sus toques; la ficha se cierra con su X.
         // Un gesto en el Map padre competía con la selección del micro.
+    }
+}
+
+/// Una línea del mapa con identidad propia. MapKit reconoce cada `MapPolyline`
+/// por su posición en el contenido y, si ahí ya había una línea con las mismas
+/// coordenadas, conserva el estilo anterior: al empezar un viaje, la línea del
+/// viaje heredaba el contorno blanco de la guía y no se veía el color. Con un
+/// id por papel (guía o viaje) y línea, cada cambio crea una línea nueva.
+private struct TrazoMapa: Identifiable {
+    let id: String
+    let coordenadas: [CLLocationCoordinate2D]
+    let color: Color
+    let estilo: StrokeStyle
+}
+
+/// El tramo del pasajero durante el viaje: desde donde sube hasta donde baja,
+/// con el transbordo y la caminata final si los hay. `nil` si no hay destino o
+/// si la línea del viaje no es la de la ruta calculada.
+private struct TramoViaje {
+    let bus: [CLLocationCoordinate2D]
+    let transbordo: TransitTransfer?
+    let caminata: [CLLocationCoordinate2D]
+    let bajada: ParaderoGTFS
+    let numeroBajada: String
+
+    init?(plan: TransitItinerary?, rutaViaje: DetectionRouteGeometry) {
+        guard let plan else { return nil }
+        if plan.route.id == rutaViaje.id {
+            bus = plan.busDibujo
+            transbordo = plan.transfer
+        } else if let transfer = plan.transfer, transfer.route.id == rutaViaje.id {
+            // Ya hizo el transbordo: solo queda la segunda línea.
+            bus = transfer.busDibujo
+            transbordo = nil
+        } else {
+            return nil
+        }
+        guard bus.count >= 2 else { return nil }
+        caminata = plan.walkToDestination
+        bajada = plan.alight
+        numeroBajada = plan.transfer == nil ? "2" : "4"
     }
 }

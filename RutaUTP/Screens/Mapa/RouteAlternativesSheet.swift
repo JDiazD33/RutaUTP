@@ -148,6 +148,14 @@ struct RouteAlternativesSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                // Cambio confirmado por la comunidad en el tramo que se recorre.
+                if let aviso = vm.cambios(afectando: plan).first {
+                    Label(aviso.motivo.tituloAviso + " · " + (aviso.textoVia ?? aviso.place),
+                          systemImage: aviso.motivo.icono)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(aviso.motivo.tinta)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .padding(.vertical, 12)

@@ -110,7 +110,7 @@ struct ReportarSheet: View {
                 Image(systemName: "arrow.triangle.branch")
                     .font(.body).foregroundStyle(acento)
                     .frame(minWidth: 24).accessibilityHidden(true)
-                Text(L.t("Obras, cierres o cambios de ruta", "Roadworks, closures or route changes"))
+                Text(L.t("Cambios de ruta, obras o tráfico", "Route changes, roadworks or traffic"))
                     .font(.body.weight(.medium))
                     .foregroundStyle(Color.onSurface)
                     .fixedSize(horizontal: false, vertical: true)

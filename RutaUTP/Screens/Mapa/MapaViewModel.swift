@@ -100,6 +100,11 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
 
     // Búsqueda MapKit
     var sugerenciasBusqueda: [MKLocalSearchCompletion] = []
+    /// Sin red: paraderos del feed y lugares guardados (ver BusquedaLocalDestinos).
+    var sugerenciasLocales: [SugerenciaLocal] = []
+    var buscandoLocal = false
+    var avisoBusquedaLocal: String?
+    @ObservationIgnored var busquedaLocalTask: Task<Void, Never>?
     var busquedaResultado: (titulo: String, coordenada: CLLocationCoordinate2D)? = nil
     var buscando: Bool = false
 
@@ -127,6 +132,19 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     var mensajeRuta: String?
     var itinerarioFocusTick = 0
     var etaMinutos: Int? = nil
+
+    // Cambios de ruta confirmados por la comunidad (ver +CambiosRuta).
+    /// Avisos vigentes. Solo llegan los que alcanzaron el quorum del servidor.
+    var cambiosRuta: [RouteChangeAlert] = []
+    /// Avisos que tocan lo que el mapa muestra, con su tramo ya resuelto.
+    var cambiosEnMapa: [CambioRutaEnMapa] = []
+    /// Avisos abiertos en la hoja de detalle.
+    var cambiosSeleccionados: SeleccionCambiosRuta?
+    /// Desvío grabado en «Estoy en un micro» que el usuario decidió reportar.
+    var desvioPorReportar: TrazadorDesvio.Desvio?
+    /// Avisos por opción de ruta. Evita volver a proyectar cada aviso sobre el
+    /// recorrido en cada redibujado del panel.
+    @ObservationIgnored var cambiosPorOpcion: [[String]: [String]] = [:]
 
     // Buses Animados en Tiempo Real
     /// Estado VIVO de la simulación: avanza en cada tick (10 Hz) y NO se
@@ -272,6 +290,10 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     /// valor (el usuario puede haber arrastrado el mapa sin pasar por aquí).
     var recentrarToken = 0
 
+    /// El botón se tocó sin una lectura vigente: centrar al recibir la
+    /// siguiente, aunque la referencia de inicio sea el campus o una sede.
+    @ObservationIgnored private var recentrarAlRecibirUbicacion = false
+
     private let locationService: LocationServiceProtocol
     /// El mismo servicio compartido, expuesto para las pantallas que lo
     /// necesitan sin instanciar un segundo `CLLocationManager` (el reporte de
@@ -330,6 +352,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         routeTask?.cancel()
         lineasTask?.cancel()
         activeSearch?.cancel()
+        busquedaLocalTask?.cancel()
         busSimulationTask?.cancel()
         vehicleTrackingTask?.cancel()
         if let provider = vehicleProvider {
@@ -351,6 +374,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         invalidarSeleccionAnterior()
         // Al volver, el primer fix recalcula el destino que siga seleccionado.
         userRealCoordinate = nil
+        recentrarAlRecibirUbicacion = false
     }
 
     /// Pausa la flota simulada sin borrar el catálogo ni las posiciones.
@@ -383,10 +407,16 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                     guard UbicacionPuntual.esValida(location, ahora: Date()) else { continue }
                     let isInitialFix = (self.userRealCoordinate == nil)
                     self.userRealCoordinate = location.coordinate
+                    let pidioRecentrar = self.recentrarAlRecibirUbicacion
+                    self.recentrarAlRecibirUbicacion = false
                     if isInitialFix {
                         if self.busquedaResultado == nil, self.sedeTrabajo == nil, !self.utpComoReferencia {
                             self.recenterOnUser()
                             self.recargarLineas(cercaDe: nil)
+                        } else if pidioRecentrar {
+                            // Antes el toque solo reiniciaba el GPS: con UTP o una
+                            // sede como referencia, la cámara no se movía.
+                            self.recenterOnUser()
                         }
 
                         // Un destino puede elegirse antes del primer fix:
@@ -404,6 +434,17 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
         iniciarSimulacionBuses()
     }
 
+    /// Centra la cámara en un micro por el mismo canal que el botón de ubicación.
+    /// Usa la posición del micro en el momento del toque; luego sigue su ruta.
+    func enfocarBus(_ bus: BusAnimado) {
+        // La ficha puede conservar una copia anterior: usar la posición actual.
+        let actual = busesAnimados.first { $0.id == bus.id } ?? bus
+        recentrarToken += 1
+        withAnimation(.spring(response: 0.5)) {
+            region = Self.regionDePersona(actual.coordinate, duranteViaje: true)
+        }
+    }
+
     func recenterOnUser() {
         if let userCoord = userRealCoordinate {
             // Token: garantiza que la vista mueva la cámara aunque la
@@ -414,6 +455,7 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
                 region = Self.regionDePersona(userCoord)
             }
         } else {
+            recentrarAlRecibirUbicacion = true
             iniciarGPS()
         }
     }

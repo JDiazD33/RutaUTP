@@ -125,7 +125,8 @@ struct AvisosLineasSeguridad: View {
             guardado.cargarLineas()
         }
         .sheet(item: $seleccionado) { aviso in
-            AvisoLineaMapa(inicial: aviso, linea: tituloLinea(aviso.routeId), servicio: servicio)
+            AvisoLineaMapa(inicial: aviso, linea: tituloLinea(aviso.routeId),
+                           recorrido: recorrido(aviso.routeId), servicio: servicio)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .seguirTemaForzado()
@@ -142,6 +143,13 @@ struct AvisosLineasSeguridad: View {
         if let activa = rutaActiva, activa.id == id { return activa.lineaConLetra }
         // Conserva el aviso aunque el catálogo falle, sin mostrar ids técnicos.
         return L.t("Línea guardada", "Saved line")
+    }
+
+    /// Recorrido de la línea, para dibujar el tramo que deja de atender.
+    private func recorrido(_ id: String) -> [CLLocationCoordinate2D] {
+        if let ruta = rutas.first(where: { $0.id == id }) { return ruta.shape }
+        if let activa = rutaActiva, activa.id == id { return activa.shape }
+        return []
     }
 
     private func estado<Accion: View>(_ titulo: String, detalle: String, icono: String,
@@ -168,10 +176,14 @@ struct AvisosLineasSeguridad: View {
                     Label(L.t("En tu viaje", "On your trip"), systemImage: "bus.fill")
                         .font(.caption).foregroundStyle(Color.onSurfaceVariant)
                 }
-                Label(aviso.tituloMotivo, systemImage: aviso.iconoMotivo)
+                Label(aviso.motivo.tituloAviso, systemImage: aviso.motivo.icono)
                     .font(.headline).foregroundStyle(Color.onSurface)
                 Text(aviso.place).font(.subheadline).foregroundStyle(Color.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
+                if let via = aviso.textoVia {
+                    Text(via).font(.subheadline.weight(.medium)).foregroundStyle(Color.onSurface)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Text(aviso.detalleVigencia).font(.caption).foregroundStyle(Color.onSurfaceVariant)
                 Label(L.t("Ver en mapa", "View on map"), systemImage: "map")
                     .font(.subheadline.weight(.semibold)).foregroundStyle(acento).padding(.top, 4)
@@ -184,29 +196,10 @@ struct AvisosLineasSeguridad: View {
     }
 }
 
+// Motivo, icono, coordenada y vigencia vienen de RouteChangePresentation.swift.
 private extension RouteChangeAlert {
-    var tituloMotivo: String {
-        switch reason {
-        case "works": return L.t("Obras en la vía", "Roadworks")
-        case "closure": return L.t("Vía cerrada", "Road closed")
-        default: return L.t("Desvío de ruta", "Route detour")
-        }
-    }
-    var iconoMotivo: String {
-        switch reason {
-        case "works": return "hammer"
-        case "closure": return "nosign"
-        default: return "arrow.triangle.branch"
-        }
-    }
-    var coordenada: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
     var region: MKCoordinateRegion {
         MKCoordinateRegion(center: coordenada, span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008))
-    }
-    var detalleVigencia: String {
-        L.f("{0} cuentas · hasta {1}", "{0} accounts · until {1}", ["\(confirmations)",
-            Date(timeIntervalSince1970: expiresAt).formatted(
-                Date.FormatStyle(date: .omitted, time: .shortened).locale(FormatoFecha.localeActivo))])
     }
 }
 
@@ -215,19 +208,26 @@ private extension RouteChangeAlert {
 private struct AvisoLineaMapa: View {
     let inicial: RouteChangeAlert
     let linea: String
+    let recorrido: [CLLocationCoordinate2D]
     @ObservedObject var servicio: RouteChangesService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @State private var camara: MapCameraPosition
 
-    init(inicial: RouteChangeAlert, linea: String, servicio: RouteChangesService) {
+    init(inicial: RouteChangeAlert, linea: String, recorrido: [CLLocationCoordinate2D],
+         servicio: RouteChangesService) {
         self.inicial = inicial
         self.linea = linea
+        self.recorrido = recorrido
         self.servicio = servicio
         _camara = State(initialValue: .region(inicial.region))
     }
 
     private var aviso: RouteChangeAlert { servicio.alerts.first { $0.id == inicial.id } ?? inicial }
+    /// Tramo que la línea deja de recorrer, si el aviso indica dónde retoma.
+    private var tramo: [CLLocationCoordinate2D] {
+        TramoCambioRuta.coordenadas(de: aviso, en: recorrido) ?? []
+    }
     private var vigente: Bool { servicio.ready && servicio.alerts.contains { $0.id == inicial.id } }
     private var acento: Color { colorScheme == .dark ? .primaryFixed : .appPrimary }
 
@@ -236,14 +236,30 @@ private struct AvisoLineaMapa: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text(linea).font(.subheadline.weight(.semibold)).foregroundStyle(acento)
-                    Label(aviso.tituloMotivo, systemImage: aviso.iconoMotivo).font(.title2.weight(.semibold))
+                    Label(aviso.motivo.tituloAviso, systemImage: aviso.motivo.icono).font(.title2.weight(.semibold))
                     Text(aviso.place).font(.body).foregroundStyle(Color.onSurfaceVariant)
+                    if let via = aviso.textoVia {
+                        Label(via, systemImage: "arrow.triangle.turn.up.right.diamond")
+                            .font(.body.weight(.medium))
+                    }
+                    let tramo = tramo
                     Map(position: $camara) {
-                        Marker(aviso.tituloMotivo, coordinate: aviso.coordenada).tint(acento)
+                        if tramo.count >= 2 {
+                            MapPolyline(coordinates: tramo)
+                                .stroke(aviso.motivo.tinta,
+                                        style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round,
+                                                           dash: [2, 9]))
+                        }
+                        Marker(aviso.motivo.tituloAviso, coordinate: aviso.coordenada).tint(acento)
                     }
                     .mapControls { MapCompass(); MapScaleView() }
                     .frame(height: 360)
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    if tramo.count >= 2 {
+                        Text(L.t("El tramo punteado del mapa es el que la línea deja de recorrer.",
+                                 "The dotted stretch on the map is the part the line no longer covers."))
+                            .font(.footnote).foregroundStyle(Color.onSurfaceVariant)
+                    }
                     if vigente {
                         Text(aviso.detalleVigencia).font(.subheadline).foregroundStyle(Color.onSurfaceVariant)
                     } else {

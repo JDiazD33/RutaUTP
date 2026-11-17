@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Punto de partida de la prueba de desvío, quieto sobre la M-34 «A»: sirve
+     para declarar «Estoy en un micro» antes de reproducir desvio-M-34-A.gpx. -->
+<gpx version="1.1" creator="RutaUTP" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="-8.094680" lon="-79.039268"><name>Inicio prueba de desvío M-34 A</name></wpt>
+</gpx>

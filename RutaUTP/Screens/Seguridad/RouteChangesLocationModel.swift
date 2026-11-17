@@ -21,6 +21,18 @@ final class RouteChangesLocationModel: ObservableObject {
         coordenada = location?.coordinate
     }
 
+    /// Última posición conocida de los últimos minutos, solo para centrar el
+    /// mapa al abrir: quien está quieto no genera lecturas nuevas del GPS y la
+    /// lectura fresca puede no llegar.
+    static func aproximada(de service: LocationServiceProtocol,
+                           ahora: Date = Date()) -> CLLocationCoordinate2D? {
+        guard service.authorizationStatus.isAuthorized,
+              let ultima = (service as? LocationService)?.lastKnownLocation,
+              UbicacionPuntual.esValida(ultima, ahora: ahora, antiguedadMaxima: 15 * 60,
+                                        precisionMaxima: 3_000) else { return nil }
+        return ultima.coordinate
+    }
+
     func puntoAutomatico(para ruta: RutaGTFS?, puntoActual: CLLocationCoordinate2D?,
                          editadoAMano: Bool, mapaAmpliadoAbierto: Bool) -> CLLocationCoordinate2D? {
         guard !editadoAMano, !mapaAmpliadoAbierto, puntoActual == nil,

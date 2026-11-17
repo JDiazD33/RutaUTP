@@ -13,6 +13,8 @@ struct MapaViajeOverlay<ReportButton: View, LocationButton: View>: View {
     let onEndTrip: () -> Void
     let reportButton: ReportButton
     let locationButton: LocationButton
+    /// El usuario quiere reportar el desvío que grabó el viaje.
+    var onReportarDesvio: (TrazadorDesvio.Desvio) -> Void = { _ in }
     @AccessibilityFocusState private var menuFocused: Bool
 
     var body: some View {
@@ -48,6 +50,19 @@ struct MapaViajeOverlay<ReportButton: View, LocationButton: View>: View {
 
             Spacer(minLength: 20)
 
+            if let desvio = coordinator.desvioDetectado {
+                AvisoDesvioDetectado(desvio: desvio,
+                                     onReportar: { onReportarDesvio(desvio) },
+                                     onDescartar: {
+                                         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                                             coordinator.descartarDesvio()
+                                         }
+                                     })
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
+
             HStack {
                 reportButton
                 Spacer(minLength: 12)
@@ -56,6 +71,7 @@ struct MapaViajeOverlay<ReportButton: View, LocationButton: View>: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 34)
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: coordinator.desvioDetectado?.id)
         .onChange(of: mostrarDrawer) { _, open in
             if !open { menuFocused = true }
         }
