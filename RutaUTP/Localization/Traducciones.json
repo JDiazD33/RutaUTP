@@ -3289,13 +3289,6 @@
     "pt-BR": "Conectando aos alertas de rota…",
     "zh-Hans": "正在连接路线警报..."
   },
-  "Confirma solo si lo has visto. Se necesitan dos cuentas distintas en la misma ruta, motivo y zona. Los reportes vencen a los 15 minutos. El aviso señala la incidencia; el recorrido alterno aún no está verificado.": {
-    "de": "Bestätigen Sie nur das, was Sie gesehen haben. Zwei verschiedene Konten müssen dieselbe Route, denselben Grund und dasselbe Gebiet melden. Berichte verfallen nach 15 Minuten. Die Warnung identifiziert den Vorfall; Der alternative Pfad wurde nicht überprüft.",
-    "en": "Confirm only what you've seen. Two different accounts must report the same route, reason and area. Reports expire after 15 minutes. The alert identifies the incident; the alternative path hasn't been verified.",
-    "fr": "Confirmez uniquement ce que vous avez vu. Deux comptes différents doivent signaler le même itinéraire, le même motif et la même zone. Les rapports expirent après 15 minutes. L'alerte identifie l'incident ; le chemin alternatif n'a pas été vérifié.",
-    "pt-BR": "Confirme apenas o que você viu. Duas contas diferentes devem informar a mesma rota, motivo e área. Os relatórios expiram após 15 minutos. O alerta identifica o incidente; o caminho alternativo não foi verificado.",
-    "zh-Hans": "仅确认您所看到的内容。两个不同的账户必须报告相同的路线、原因和区域。报告将在 15 分钟后过期。警报识别事件；替代路径尚未得到验证。"
-  },
   "Confirma tu empresa y sede para aplicar sus colores y la referencia del mapa.": {
     "de": "Bestätigen Sie Ihr Unternehmen und Ihren Arbeitsplatz, um dessen Farben und Kartenreferenz anzuwenden.",
     "en": "Confirm your company and workplace to apply its colors and map reference.",
@@ -8532,13 +8525,6 @@
     "pt-BR": "Obras rodoviárias",
     "zh-Hans": "道路工程"
   },
-  "Obras, cierres o cambios de ruta": {
-    "de": "Straßenarbeiten, Sperrungen oder Routenänderungen",
-    "en": "Roadworks, closures or route changes",
-    "fr": "Travaux routiers, fermetures ou changements d'itinéraire",
-    "pt-BR": "Obras rodoviárias, fechamentos ou mudanças de rota",
-    "zh-Hans": "道路施工、封闭或路线变更"
-  },
   "Octavo de pollo a la brasa con papas, ensalada y gaseosa de un litro y medio para compartir en familia.": {
     "de": "Ein Achtel Brathähnchen mit Pommes Frites, Salat und eineinhalb Liter Limonade zum Teilen mit der Familie.",
     "en": "Eighth of rotisserie chicken with fries, salad and a one-and-a-half-liter soda to share as a family.",
@@ -9967,26 +9953,12 @@
     "pt-BR": "Relatório recebido. Ainda não há relatórios correspondentes suficientes para confirmar este estado.",
     "zh-Hans": "报告已收到。目前还没有足够的匹配报告来确认这一状态。"
   },
-  "Reporte recibido. El cambio ya cuenta con al menos dos cuentas distintas.": {
-    "de": "Bericht erhalten. Mindestens zwei verschiedene Konten unterstützen diese Änderung mittlerweile.",
-    "en": "Report received. At least two different accounts now support this change.",
-    "fr": "Rapport reçu. Au moins deux comptes différents prennent désormais en charge ce changement.",
-    "pt-BR": "Relatório recebido. Pelo menos duas contas diferentes agora suportam esta mudança.",
-    "zh-Hans": "报告已收到。现在至少有两个不同的帐户支持此更改。"
-  },
   "Reporte recibido. La ocupación ya cuenta con al menos dos cuentas distintas.": {
     "de": "Bericht erhalten. Mindestens zwei verschiedene Konten unterstützen diesen Belegungsbericht mittlerweile.",
     "en": "Report received. At least two different accounts now support this occupancy report.",
     "fr": "Rapport reçu. Au moins deux comptes différents prennent désormais en charge ce rapport d'occupation.",
     "pt-BR": "Relatório recebido. Pelo menos duas contas diferentes agora suportam este relatório de ocupação.",
     "zh-Hans": "报告已收到。现在至少有两个不同的帐户支持此占用报告。"
-  },
-  "Reporte recibido. Queda pendiente: hace falta otra cuenta que confirme el mismo cambio.": {
-    "de": "Bericht erhalten und ausstehend: Ein anderes Konto muss dieselbe Änderung bestätigen.",
-    "en": "Report received and pending: another account must confirm the same change.",
-    "fr": "Rapport reçu et en attente : un autre compte doit confirmer le même changement.",
-    "pt-BR": "Relatório recebido e pendente: outra conta deverá confirmar a mesma alteração.",
-    "zh-Hans": "报告已收到并待处理：另一个帐户必须确认相同的更改。"
   },
   "Reporte registrado": {
     "de": "Bericht aufgezeichnet",
@@ -10695,12 +10667,12 @@
     "pt-BR": "Se as obras de asfalto afetarem Larco, identifique a faixa afetada e a linha que segue para outra rua. Esta é uma foto de referência de arquivo.",
     "zh-Hans": "如果沥青工程影响 Larco，请确定受影响的车道和走另一条街道的线路。这是存档参考照片。"
   },
-  "Si lo activas, la app analizará tu ubicación y actividad física para detectar viajes. Tras confirmar uno, enviará al servicio configurado ubicación y precisión, fecha, ruta y línea, velocidad, rumbo y actividad física, junto a la cuenta de esta instalación y un identificador de viaje. La cuenta permite relacionar distintos viajes. El servidor puede conservar un historial sin borrado automático, según su configuración. La contribución se pausa en segundo plano o con la pantalla bloqueada. Desactivarla detiene futuros envíos, sin borrar lo ya recibido.": {
-    "de": "Wenn Sie diese Option aktivieren, analysiert die App Ihren Standort und Ihre Bewegungsaktivität, um Fahrten zu erkennen. Nach der Bestätigung werden Standort und Genauigkeit, Zeit, Route und Linie, Geschwindigkeit, Richtung und Bewegungsaktivität zusammen mit dem Konto dieser Installation und einer Fahrtkennung an den konfigurierten Dienst gesendet. Das Konto ermöglicht die Verknüpfung verschiedener Fahrten. Abhängig von seiner Konfiguration speichert der Server möglicherweise einen Verlauf ohne automatisches Löschen. Der Beitrag pausiert im Hintergrund oder bei gesperrtem Bildschirm. Wenn Sie die Funktion deaktivieren, werden zukünftige Uploads gestoppt, ohne dass bereits empfangene Daten gelöscht werden.",
-    "en": "If you turn this on, the app will analyse your location and motion activity to detect trips. After confirming one, it will send location and accuracy, time, route and line, speed, heading and motion activity to the configured service, along with this installation's account and a trip identifier. The account allows different trips to be linked. Depending on its configuration, the server may keep a history without automatic deletion. Contribution pauses in the background or while the screen is locked. Turning it off stops future uploads without deleting data already received.",
-    "fr": "Si vous l'activez, l'application analysera votre position et votre activité de mouvement pour détecter les déplacements. Après en avoir confirmé un, il enverra l'emplacement et la précision, l'heure, l'itinéraire et la ligne, la vitesse, le cap et l'activité de mouvement au service configuré, ainsi que le compte de cette installation et un identifiant de voyage. Le compte permet d'enchaîner différents voyages. Selon sa configuration, le serveur peut conserver un historique sans suppression automatique. La contribution s'interrompt en arrière-plan ou lorsque l'écran est verrouillé. Le désactiver arrête les futurs téléchargements sans supprimer les données déjà reçues.",
-    "pt-BR": "Se você ativar esta opção, o aplicativo analisará sua localização e atividade de movimento para detectar viagens. Após a confirmação, enviará localização e precisão, hora, rota e linha, velocidade, rumo e atividade de movimento para o serviço configurado, juntamente com a conta desta instalação e um identificador de viagem. A conta permite vincular diferentes viagens. Dependendo da sua configuração, o servidor poderá manter um histórico sem exclusão automática. A contribuição é pausada em segundo plano ou enquanto a tela está bloqueada. Desligá-lo interrompe uploads futuros sem excluir os dados já recebidos.",
-    "zh-Hans": "如果您打开此功能，该应用程序将分析您的位置和运动活动以检测行程。确认后，它将向配置的服务发送位置和准确性、时间、路线和线路、速度、航向和运动活动，以及该安装的帐户和行程标识符。该帐户允许链接不同的行程。根据其配置，服务器可能会保留历史记录而不自动删除。贡献在后台或屏幕锁定时暂停。关闭它会停止将来的上传，而不删除已接收的数据。"
+  "Si lo activas, la app analizará tu ubicación y actividad física para detectar viajes. Tras confirmar uno, enviará al servicio configurado ubicación y precisión, fecha, ruta y línea, velocidad, rumbo y actividad física, junto a la cuenta de esta instalación y un identificador de viaje. La cuenta permite relacionar distintos viajes. El servidor puede conservar un historial sin borrado automático, según su configuración. Por defecto, la contribución se pausa en segundo plano o con la pantalla bloqueada; si lo permites, continúa solo durante tus viajes. Desactivarla detiene futuros envíos, sin borrar lo ya recibido.": {
+    "de": "Wenn Sie diese Option aktivieren, analysiert die App Ihren Standort und Ihre Bewegungsaktivität, um Fahrten zu erkennen. Nach der Bestätigung werden Standort und Genauigkeit, Zeit, Route und Linie, Geschwindigkeit, Richtung und Bewegungsaktivität zusammen mit dem Konto dieser Installation und einer Fahrtkennung an den konfigurierten Dienst gesendet. Das Konto ermöglicht die Verknüpfung verschiedener Fahrten. Abhängig von seiner Konfiguration speichert der Server möglicherweise einen Verlauf ohne automatisches Löschen. Standardmäßig pausiert der Beitrag im Hintergrund oder bei gesperrtem Bildschirm; wenn Sie es erlauben, läuft er nur während Ihrer Fahrten weiter. Wenn Sie die Funktion deaktivieren, werden zukünftige Uploads gestoppt, ohne dass bereits empfangene Daten gelöscht werden.",
+    "en": "If you turn this on, the app will analyse your location and motion activity to detect trips. After confirming one, it will send location and accuracy, time, route and line, speed, heading and motion activity to the configured service, along with this installation's account and a trip identifier. The account allows different trips to be linked. Depending on its configuration, the server may keep a history without automatic deletion. By default, contribution pauses in the background or while the screen is locked; if you allow it, it continues only during your trips. Turning it off stops future uploads without deleting data already received.",
+    "fr": "Si vous l'activez, l'application analysera votre position et votre activité de mouvement pour détecter les déplacements. Après en avoir confirmé un, il enverra l'emplacement et la précision, l'heure, l'itinéraire et la ligne, la vitesse, le cap et l'activité de mouvement au service configuré, ainsi que le compte de cette installation et un identifiant de voyage. Le compte permet d'enchaîner différents voyages. Selon sa configuration, le serveur peut conserver un historique sans suppression automatique. Par défaut, la contribution s'interrompt en arrière-plan ou lorsque l'écran est verrouillé ; si vous l'autorisez, elle continue uniquement pendant vos trajets. Le désactiver arrête les futurs téléchargements sans supprimer les données déjà reçues.",
+    "pt-BR": "Se você ativar esta opção, o aplicativo analisará sua localização e atividade de movimento para detectar viagens. Após a confirmação, enviará localização e precisão, hora, rota e linha, velocidade, rumo e atividade de movimento para o serviço configurado, juntamente com a conta desta instalação e um identificador de viagem. A conta permite vincular diferentes viagens. Dependendo da sua configuração, o servidor poderá manter um histórico sem exclusão automática. Por padrão, a contribuição é pausada em segundo plano ou enquanto a tela está bloqueada; se você permitir, ela continua só durante suas viagens. Desligá-lo interrompe uploads futuros sem excluir os dados já recebidos.",
+    "zh-Hans": "如果您打开此功能，该应用程序将分析您的位置和运动活动以检测行程。确认后，它将向配置的服务发送位置和准确性、时间、路线和线路、速度、航向和运动活动，以及该安装的帐户和行程标识符。该帐户允许链接不同的行程。根据其配置，服务器可能会保留历史记录而不自动删除。默认情况下，贡献在后台或屏幕锁定时暂停；如果您允许，则仅在行程中继续。关闭它会停止将来的上传，而不删除已接收的数据。"
   },
   "Si una reparación en España obliga a cambiar de paradero, marca el tramo desde Reportar y describe dónde está parando tu transporte.": {
     "de": "Wenn Reparaturen an España eine andere Haltestelle erfordern, markieren Sie den Abschnitt im Bericht und beschreiben Sie, wo Ihr Bus hält.",
@@ -10961,12 +10933,12 @@
     "pt-BR": "Somente a referência local será removida; seu cartão bancário não mudará.",
     "zh-Hans": "仅删除本地引用；您的银行卡不会改变。"
   },
-  "Solo tras confirmar un viaje se enviarán ubicación, fecha, ruta y datos de movimiento al servicio configurado, asociados a la cuenta de esta instalación y al identificador del viaje. La cuenta permite relacionar distintos viajes. El servidor puede conservar un historial sin borrado automático, según su configuración. El envío se pausa en segundo plano o con la pantalla bloqueada. Desactivar detiene futuros envíos; no borra lo recibido.": {
-    "de": "Erst nach Bestätigung einer Fahrt werden Orts-, Zeit-, Routen- und Bewegungsdaten an den konfigurierten Dienst gesendet, verknüpft mit dem Konto dieser Installation und der Fahrtkennung. Das Konto ermöglicht die Verknüpfung verschiedener Fahrten. Abhängig von seiner Konfiguration speichert der Server möglicherweise einen Verlauf ohne automatisches Löschen. Uploads werden im Hintergrund oder bei gesperrtem Bildschirm angehalten. Wenn Sie dies deaktivieren, werden zukünftige Uploads gestoppt. Bereits empfangene Daten werden nicht gelöscht.",
-    "en": "Only after confirming a trip will location, time, route and motion data be sent to the configured service, linked to this installation's account and the trip identifier. The account allows different trips to be linked. Depending on its configuration, the server may keep a history without automatic deletion. Uploads pause in the background or while the screen is locked. Turning this off stops future uploads; it does not delete data already received.",
-    "fr": "Ce n'est qu'après avoir confirmé un voyage que les données de localisation, d'heure, d'itinéraire et de mouvement seront envoyées au service configuré, lié au compte de cette installation et à l'identifiant du voyage. Le compte permet d'enchaîner différents voyages. Selon sa configuration, le serveur peut conserver un historique sans suppression automatique. Les téléchargements s'interrompent en arrière-plan ou pendant que l'écran est verrouillé. La désactivation de cette option arrête les futurs téléchargements ; il ne supprime pas les données déjà reçues.",
-    "pt-BR": "Só após a confirmação de uma viagem é que serão enviados para o serviço configurado os dados de localização, hora, percurso e movimento, associados à conta desta instalação e ao identificador da viagem. A conta permite vincular diferentes viagens. Dependendo da sua configuração, o servidor poderá manter um histórico sem exclusão automática. Os uploads são pausados ​​em segundo plano ou enquanto a tela está bloqueada. Desativar isso interrompe uploads futuros; não exclui dados já recebidos.",
-    "zh-Hans": "只有在确认行程后，位置、时间、路线和运动数据才会发送到已配置的服务，并链接到该安装的帐户和行程标识符。该帐户允许链接不同的行程。根据其配置，服务器可能会保留历史记录而不自动删除。上传在后台或屏幕锁定时暂停。关闭此功能会停止以后的上传；它不会删除已经收到的数据。"
+  "Solo tras confirmar un viaje se enviarán ubicación, fecha, ruta y datos de movimiento al servicio configurado, asociados a la cuenta de esta instalación y al identificador del viaje. La cuenta permite relacionar distintos viajes. El servidor puede conservar un historial sin borrado automático, según su configuración. Por defecto, el envío se pausa en segundo plano o con la pantalla bloqueada; puedes permitir que continúe durante tus viajes. Desactivar detiene futuros envíos; no borra lo recibido.": {
+    "de": "Erst nach Bestätigung einer Fahrt werden Orts-, Zeit-, Routen- und Bewegungsdaten an den konfigurierten Dienst gesendet, verknüpft mit dem Konto dieser Installation und der Fahrtkennung. Das Konto ermöglicht die Verknüpfung verschiedener Fahrten. Abhängig von seiner Konfiguration speichert der Server möglicherweise einen Verlauf ohne automatisches Löschen. Standardmäßig werden Uploads im Hintergrund oder bei gesperrtem Bildschirm angehalten; Sie können erlauben, dass sie während Ihrer Fahrten weiterlaufen. Wenn Sie dies deaktivieren, werden zukünftige Uploads gestoppt. Bereits empfangene Daten werden nicht gelöscht.",
+    "en": "Only after confirming a trip will location, time, route and motion data be sent to the configured service, linked to this installation's account and the trip identifier. The account allows different trips to be linked. Depending on its configuration, the server may keep a history without automatic deletion. By default, uploads pause in the background or while the screen is locked; you can allow them to continue during your trips. Turning this off stops future uploads; it does not delete data already received.",
+    "fr": "Ce n'est qu'après avoir confirmé un voyage que les données de localisation, d'heure, d'itinéraire et de mouvement seront envoyées au service configuré, lié au compte de cette installation et à l'identifiant du voyage. Le compte permet d'enchaîner différents voyages. Selon sa configuration, le serveur peut conserver un historique sans suppression automatique. Par défaut, les téléchargements s'interrompent en arrière-plan ou pendant que l'écran est verrouillé ; vous pouvez autoriser leur poursuite pendant vos trajets. La désactivation de cette option arrête les futurs téléchargements ; il ne supprime pas les données déjà reçues.",
+    "pt-BR": "Só após a confirmação de uma viagem é que serão enviados para o serviço configurado os dados de localização, hora, percurso e movimento, associados à conta desta instalação e ao identificador da viagem. A conta permite vincular diferentes viagens. Dependendo da sua configuração, o servidor poderá manter um histórico sem exclusão automática. Por padrão, os uploads são pausados em segundo plano ou enquanto a tela está bloqueada; você pode permitir que continuem durante suas viagens. Desativar isso interrompe uploads futuros; não exclui dados já recebidos.",
+    "zh-Hans": "只有在确认行程后，位置、时间、路线和运动数据才会发送到已配置的服务，并链接到该安装的帐户和行程标识符。该帐户允许链接不同的行程。根据其配置，服务器可能会保留历史记录而不自动删除。默认情况下，上传在后台或屏幕锁定时暂停；您可以允许在行程中继续上传。关闭此功能会停止以后的上传；它不会删除已经收到的数据。"
   },
   "Son los mismos que guardas en Seguridad. Elige uno para buscar cómo llegar desde tu ubicación.": {
     "de": "Dies sind die Stopps, die Sie in Safety speichern. Wählen Sie eine aus, um Wegbeschreibungen von Ihrem Standort aus zu finden.",
@@ -12606,13 +12578,6 @@
     "pt-BR": "{0} comentários",
     "zh-Hans": "{0} 条评论"
   },
-  "{0} cuentas · vigente hasta ": {
-    "de": "{0} Konten · gültig bis ",
-    "en": "{0} accounts · valid until ",
-    "fr": "{0} comptes · valable jusqu'à ",
-    "pt-BR": "{0} contas · válido até ",
-    "zh-Hans": "{0} 个账户 · 有效期至 "
-  },
   "{0} línea(s) guardada(s) del feed oficial.": {
     "de": "{0} hat Linie(n) aus dem offiziellen Feed gespeichert.",
     "en": "{0} saved line(s) from the official feed.",
@@ -13704,5 +13669,1951 @@
     "pt-BR": "Saldo após a recarga: {0}",
     "de": "Guthaben nach der Aufladung: {0}",
     "zh-Hans": "充值后余额：{0}"
+  },
+  "Ya reportaste esta publicación": {
+    "en": "You already reported this post",
+    "fr": "Vous avez déjà signalé cette publication",
+    "pt-BR": "Você já denunciou esta publicação",
+    "de": "Du hast diesen Beitrag bereits gemeldet",
+    "zh-Hans": "你已举报过这条帖子"
+  },
+  "Retirar reporte": {
+    "en": "Withdraw report",
+    "fr": "Retirer le signalement",
+    "pt-BR": "Retirar denúncia",
+    "de": "Meldung zurückziehen",
+    "zh-Hans": "撤回举报"
+  },
+  "Comentar": {
+    "en": "Comment",
+    "fr": "Commenter",
+    "pt-BR": "Comentar",
+    "de": "Kommentieren",
+    "zh-Hans": "评论"
+  },
+  "Publicación oculta": {
+    "en": "Hidden post",
+    "fr": "Publication masquée",
+    "pt-BR": "Publicação oculta",
+    "de": "Ausgeblendeter Beitrag",
+    "zh-Hans": "已隐藏的帖子"
+  },
+  "La reportaste y no se muestra en tu feed.": {
+    "en": "You reported it and it's hidden from your feed.",
+    "fr": "Vous l’avez signalée ; elle n’apparaît plus dans votre fil.",
+    "pt-BR": "Você a denunciou e ela não aparece no seu feed.",
+    "de": "Du hast ihn gemeldet; er wird in deinem Feed nicht angezeigt.",
+    "zh-Hans": "你已举报该帖子，它不会显示在你的动态中。"
+  },
+  "Mostrar": {
+    "en": "Show",
+    "fr": "Afficher",
+    "pt-BR": "Mostrar",
+    "de": "Anzeigen",
+    "zh-Hans": "显示"
+  },
+  "Mostrar publicación de ": {
+    "en": "Show post by ",
+    "fr": "Afficher la publication de ",
+    "pt-BR": "Mostrar publicação de ",
+    "de": "Beitrag anzeigen von ",
+    "zh-Hans": "显示以下用户的帖子："
+  },
+  "Reportar publicación": {
+    "en": "Report post",
+    "fr": "Signaler la publication",
+    "pt-BR": "Denunciar publicação",
+    "de": "Beitrag melden",
+    "zh-Hans": "举报帖子"
+  },
+  "Reportaste esta publicación": {
+    "en": "You reported this post",
+    "fr": "Vous avez signalé cette publication",
+    "pt-BR": "Você denunciou esta publicação",
+    "de": "Du hast diesen Beitrag gemeldet",
+    "zh-Hans": "你举报了这条帖子"
+  },
+  "Cerrar publicación": {
+    "en": "Close post",
+    "fr": "Fermer la publication",
+    "pt-BR": "Fechar publicação",
+    "de": "Beitrag schließen",
+    "zh-Hans": "关闭帖子"
+  },
+  "Motivo: {0}": {
+    "en": "Reason: {0}",
+    "fr": "Motif : {0}",
+    "pt-BR": "Motivo: {0}",
+    "de": "Grund: {0}",
+    "zh-Hans": "原因：{0}"
+  },
+  "Reportada": {
+    "en": "Reported",
+    "fr": "Signalée",
+    "pt-BR": "Denunciada",
+    "de": "Gemeldet",
+    "zh-Hans": "已举报"
+  },
+  "Permite retirar tu reporte": {
+    "en": "Lets you withdraw your report",
+    "fr": "Permet de retirer votre signalement",
+    "pt-BR": "Permite retirar sua denúncia",
+    "de": "Ermöglicht, deine Meldung zurückzuziehen",
+    "zh-Hans": "可撤回你的举报"
+  },
+  "Indica si es falsa, infringe derechos u ofende": {
+    "en": "Tell us if it's false, infringes rights or is offensive",
+    "fr": "Indiquez si elle est fausse, enfreint des droits ou est offensante",
+    "pt-BR": "Indique se é falsa, infringe direitos ou ofende",
+    "de": "Gib an, ob er falsch ist, Rechte verletzt oder beleidigt",
+    "zh-Hans": "说明其是否虚假、侵权或具有冒犯性"
+  },
+  "Abre la foto a pantalla completa": {
+    "en": "Opens the photo full screen",
+    "fr": "Ouvre la photo en plein écran",
+    "pt-BR": "Abre a foto em tela cheia",
+    "de": "Öffnet das Foto im Vollbild",
+    "zh-Hans": "全屏打开照片"
+  },
+  "Información falsa o engañosa": {
+    "en": "False or misleading information",
+    "fr": "Information fausse ou trompeuse",
+    "pt-BR": "Informação falsa ou enganosa",
+    "de": "Falsche oder irreführende Information",
+    "zh-Hans": "虚假或误导性信息"
+  },
+  "Infringe derechos de autor o de imagen": {
+    "en": "Infringes copyright or image rights",
+    "fr": "Enfreint le droit d’auteur ou le droit à l’image",
+    "pt-BR": "Infringe direitos autorais ou de imagem",
+    "de": "Verletzt Urheber- oder Bildrechte",
+    "zh-Hans": "侵犯版权或肖像权"
+  },
+  "Lenguaje ofensivo o acoso": {
+    "en": "Offensive language or harassment",
+    "fr": "Propos offensants ou harcèlement",
+    "pt-BR": "Linguagem ofensiva ou assédio",
+    "de": "Beleidigende Sprache oder Belästigung",
+    "zh-Hans": "冒犯性言论或骚扰"
+  },
+  "Expone datos personales": {
+    "en": "Exposes personal information",
+    "fr": "Expose des données personnelles",
+    "pt-BR": "Expõe dados pessoais",
+    "de": "Legt persönliche Daten offen",
+    "zh-Hans": "泄露个人信息"
+  },
+  "Spam o publicidad": {
+    "en": "Spam or advertising",
+    "fr": "Spam ou publicité",
+    "pt-BR": "Spam ou publicidade",
+    "de": "Spam oder Werbung",
+    "zh-Hans": "垃圾信息或广告"
+  },
+  "Otro motivo": {
+    "en": "Another reason",
+    "fr": "Autre motif",
+    "pt-BR": "Outro motivo",
+    "de": "Anderer Grund",
+    "zh-Hans": "其他原因"
+  },
+  "El incidente no ocurrió, ya terminó o la ubicación es incorrecta.": {
+    "en": "The incident didn't happen, is over or the location is wrong.",
+    "fr": "L’incident n’a pas eu lieu, est terminé ou l’emplacement est erroné.",
+    "pt-BR": "O incidente não aconteceu, já terminou ou o local está incorreto.",
+    "de": "Der Vorfall ist nicht passiert, schon vorbei oder der Ort stimmt nicht.",
+    "zh-Hans": "事件未发生、已结束或位置有误。"
+  },
+  "Usa una foto o un texto ajeno sin permiso, o muestra a alguien sin su consentimiento.": {
+    "en": "Uses someone else's photo or text without permission, or shows someone without consent.",
+    "fr": "Utilise la photo ou le texte d’autrui sans autorisation, ou montre quelqu’un sans son consentement.",
+    "pt-BR": "Usa a foto ou o texto de outra pessoa sem permissão, ou mostra alguém sem consentimento.",
+    "de": "Verwendet fremde Fotos oder Texte ohne Erlaubnis oder zeigt jemanden ohne Einwilligung.",
+    "zh-Hans": "未经许可使用他人的照片或文字，或未经同意展示他人。"
+  },
+  "Insulta, amenaza o discrimina a una persona o a un grupo.": {
+    "en": "Insults, threatens or discriminates against a person or group.",
+    "fr": "Insulte, menace ou discrimine une personne ou un groupe.",
+    "pt-BR": "Insulta, ameaça ou discrimina uma pessoa ou um grupo.",
+    "de": "Beleidigt, bedroht oder diskriminiert eine Person oder Gruppe.",
+    "zh-Hans": "侮辱、威胁或歧视个人或群体。"
+  },
+  "Muestra placas, teléfonos, direcciones o rostros identificables.": {
+    "en": "Shows license plates, phone numbers, addresses or identifiable faces.",
+    "fr": "Montre des plaques d’immatriculation, des numéros de téléphone, des adresses ou des visages identifiables.",
+    "pt-BR": "Mostra placas, telefones, endereços ou rostos identificáveis.",
+    "de": "Zeigt Kennzeichen, Telefonnummern, Adressen oder erkennbare Gesichter.",
+    "zh-Hans": "显示车牌、电话号码、地址或可识别的面孔。"
+  },
+  "Promociona productos o repite el mismo mensaje.": {
+    "en": "Promotes products or repeats the same message.",
+    "fr": "Fait la promotion de produits ou répète le même message.",
+    "pt-BR": "Promove produtos ou repete a mesma mensagem.",
+    "de": "Bewirbt Produkte oder wiederholt dieselbe Nachricht.",
+    "zh-Hans": "推销产品或重复发布相同内容。"
+  },
+  "Cuéntanos qué ocurre en los detalles.": {
+    "en": "Tell us what's wrong in the details.",
+    "fr": "Expliquez le problème dans les détails.",
+    "pt-BR": "Conte o que acontece nos detalhes.",
+    "de": "Beschreibe das Problem in den Details.",
+    "zh-Hans": "请在详情中说明问题。"
+  },
+  "Motivo": {
+    "en": "Reason",
+    "fr": "Motif",
+    "pt-BR": "Motivo",
+    "de": "Grund",
+    "zh-Hans": "原因"
+  },
+  "¿Por qué la reportas?": {
+    "en": "Why are you reporting it?",
+    "fr": "Pourquoi la signalez-vous ?",
+    "pt-BR": "Por que você está denunciando?",
+    "de": "Warum meldest du ihn?",
+    "zh-Hans": "你为什么要举报？"
+  },
+  "Explica el motivo": {
+    "en": "Explain the reason",
+    "fr": "Expliquez le motif",
+    "pt-BR": "Explique o motivo",
+    "de": "Erkläre den Grund",
+    "zh-Hans": "说明原因"
+  },
+  "Añade detalles (opcional)": {
+    "en": "Add details (optional)",
+    "fr": "Ajoutez des détails (facultatif)",
+    "pt-BR": "Adicione detalhes (opcional)",
+    "de": "Details hinzufügen (optional)",
+    "zh-Hans": "添加详情（可选）"
+  },
+  "Detalles": {
+    "en": "Details",
+    "fr": "Détails",
+    "pt-BR": "Detalhes",
+    "de": "Details",
+    "zh-Hans": "详情"
+  },
+  "{0} de {1} caracteres": {
+    "en": "{0} of {1} characters",
+    "fr": "{0} sur {1} caractères",
+    "pt-BR": "{0} de {1} caracteres",
+    "de": "{0} von {1} Zeichen",
+    "zh-Hans": "{0}/{1} 个字符"
+  },
+  "Ocultar en mi feed": {
+    "en": "Hide from my feed",
+    "fr": "Masquer dans mon fil",
+    "pt-BR": "Ocultar no meu feed",
+    "de": "In meinem Feed ausblenden",
+    "zh-Hans": "在我的动态中隐藏"
+  },
+  "El autor no sabrá quién la reportó. En esta versión de prueba el reporte se guarda solo en este iPhone durante la sesión y no se envía a moderación.": {
+    "en": "The author won't know who reported it. In this trial version the report is kept only on this iPhone for the session and isn't sent for moderation.",
+    "fr": "L’auteur ne saura pas qui l’a signalée. Dans cette version d’essai, le signalement est conservé uniquement sur cet iPhone pendant la session et n’est pas envoyé en modération.",
+    "pt-BR": "O autor não saberá quem denunciou. Nesta versão de teste, a denúncia fica salva apenas neste iPhone durante a sessão e não é enviada para moderação.",
+    "de": "Die Person erfährt nicht, wer den Beitrag gemeldet hat. In dieser Testversion wird die Meldung nur während der Sitzung auf diesem iPhone gespeichert und nicht zur Moderation gesendet.",
+    "zh-Hans": "作者不会知道是谁举报的。在此试用版中，举报仅在本次会话期间保存在此 iPhone 上，不会提交审核。"
+  },
+  "Enviar": {
+    "en": "Send",
+    "fr": "Envoyer",
+    "pt-BR": "Enviar",
+    "de": "Senden",
+    "zh-Hans": "发送"
+  },
+  "Elige un motivo para poder enviar": {
+    "en": "Choose a reason to send",
+    "fr": "Choisissez un motif pour pouvoir envoyer",
+    "pt-BR": "Escolha um motivo para poder enviar",
+    "de": "Wähle einen Grund, um zu senden",
+    "zh-Hans": "请选择一个原因后再发送"
+  },
+  "Gracias por reportar": {
+    "en": "Thanks for reporting",
+    "fr": "Merci pour votre signalement",
+    "pt-BR": "Obrigado por denunciar",
+    "de": "Danke für deine Meldung",
+    "zh-Hans": "感谢你的举报"
+  },
+  "Ocultamos la publicación de tu feed. En esta versión de prueba el reporte no se envía a moderación.": {
+    "en": "We hid the post from your feed. In this trial version the report isn't sent for moderation.",
+    "fr": "Nous avons masqué la publication de votre fil. Dans cette version d’essai, le signalement n’est pas envoyé en modération.",
+    "pt-BR": "Ocultamos a publicação do seu feed. Nesta versão de teste, a denúncia não é enviada para moderação.",
+    "de": "Wir haben den Beitrag aus deinem Feed ausgeblendet. In dieser Testversion wird die Meldung nicht zur Moderation gesendet.",
+    "zh-Hans": "我们已在你的动态中隐藏该帖子。在此试用版中，举报不会提交审核。"
+  },
+  "Marcamos la publicación como reportada. En esta versión de prueba el reporte no se envía a moderación.": {
+    "en": "We marked the post as reported. In this trial version the report isn't sent for moderation.",
+    "fr": "Nous avons marqué la publication comme signalée. Dans cette version d’essai, le signalement n’est pas envoyé en modération.",
+    "pt-BR": "Marcamos a publicação como denunciada. Nesta versão de teste, a denúncia não é enviada para moderação.",
+    "de": "Wir haben den Beitrag als gemeldet markiert. In dieser Testversion wird die Meldung nicht zur Moderation gesendet.",
+    "zh-Hans": "我们已将该帖子标记为已举报。在此试用版中，举报不会提交审核。"
+  },
+  "Ver completa": {
+    "en": "Fit photo",
+    "fr": "Voir en entier",
+    "pt-BR": "Ver inteira",
+    "de": "Ganz anzeigen",
+    "zh-Hans": "查看完整照片"
+  },
+  "Vuelve a mostrar la foto entera en pantalla": {
+    "en": "Shows the whole photo on screen again",
+    "fr": "Affiche à nouveau la photo entière à l’écran",
+    "pt-BR": "Volta a mostrar a foto inteira na tela",
+    "de": "Zeigt wieder das ganze Foto auf dem Bildschirm",
+    "zh-Hans": "重新在屏幕上显示整张照片"
+  },
+  "Foto no disponible": {
+    "en": "Photo unavailable",
+    "fr": "Photo indisponible",
+    "pt-BR": "Foto indisponível",
+    "de": "Foto nicht verfügbar",
+    "zh-Hans": "照片不可用"
+  },
+  "Cerrar foto": {
+    "en": "Close photo",
+    "fr": "Fermer la photo",
+    "pt-BR": "Fechar foto",
+    "de": "Foto schließen",
+    "zh-Hans": "关闭照片"
+  },
+  "Bomberos": {
+    "en": "Fire stations",
+    "fr": "Pompiers",
+    "pt-BR": "Bombeiros",
+    "de": "Feuerwehr",
+    "zh-Hans": "消防站"
+  },
+  "Muestra las comisarías más cercanas en un mapa": {
+    "en": "Shows the nearest police stations on a map",
+    "fr": "Affiche les commissariats les plus proches sur une carte",
+    "pt-BR": "Mostra as delegacias mais próximas em um mapa",
+    "de": "Zeigt die nächsten Polizeiwachen auf einer Karte",
+    "zh-Hans": "在地图上显示最近的警察局"
+  },
+  "Muestra hospitales y centros de salud cercanos en un mapa": {
+    "en": "Shows nearby hospitals and health centers on a map",
+    "fr": "Affiche les hôpitaux et centres de santé proches sur une carte",
+    "pt-BR": "Mostra hospitais e postos de saúde próximos em um mapa",
+    "de": "Zeigt Krankenhäuser und Gesundheitszentren in der Nähe auf einer Karte",
+    "zh-Hans": "在地图上显示附近的医院和医疗中心"
+  },
+  "Muestra las compañías de bomberos más cercanas en un mapa": {
+    "en": "Shows the nearest fire stations on a map",
+    "fr": "Affiche les casernes de pompiers les plus proches sur une carte",
+    "pt-BR": "Mostra os quartéis de bombeiros mais próximos em um mapa",
+    "de": "Zeigt die nächsten Feuerwachen auf einer Karte",
+    "zh-Hans": "在地图上显示最近的消防站"
+  },
+  "Modo offline activado. Se usan los datos del iPhone.": {
+    "en": "Offline mode on. Using data on this iPhone.",
+    "fr": "Mode hors ligne activé. Les données de l’iPhone sont utilisées.",
+    "pt-BR": "Modo off-line ativado. São usados os dados do iPhone.",
+    "de": "Offline-Modus aktiviert. Es werden die Daten auf dem iPhone verwendet.",
+    "zh-Hans": "离线模式已开启。正在使用此 iPhone 上的数据。"
+  },
+  "Modo offline desactivado.": {
+    "en": "Offline mode off.",
+    "fr": "Mode hors ligne désactivé.",
+    "pt-BR": "Modo off-line desativado.",
+    "de": "Offline-Modus deaktiviert.",
+    "zh-Hans": "离线模式已关闭。"
+  },
+  "Sin conexión. La búsqueda usa paraderos y lugares guardados.": {
+    "en": "No connection. Search uses stops and saved places.",
+    "fr": "Pas de connexion. La recherche utilise les arrêts et les lieux enregistrés.",
+    "pt-BR": "Sem conexão. A busca usa pontos de ônibus e lugares salvos.",
+    "de": "Keine Verbindung. Die Suche verwendet Haltestellen und gespeicherte Orte.",
+    "zh-Hans": "无网络连接。搜索将使用站点和保存的地点。"
+  },
+  "Conexión recuperada.": {
+    "en": "Connection restored.",
+    "fr": "Connexion rétablie.",
+    "pt-BR": "Conexão restabelecida.",
+    "de": "Verbindung wiederhergestellt.",
+    "zh-Hans": "网络连接已恢复。"
+  },
+  "Lugar guardado": {
+    "en": "Saved place",
+    "fr": "Lieu enregistré",
+    "pt-BR": "Lugar salvo",
+    "de": "Gespeicherter Ort",
+    "zh-Hans": "保存的地点"
+  },
+  "Lugar guardado · {0}": {
+    "en": "Saved place · {0}",
+    "fr": "Lieu enregistré · {0}",
+    "pt-BR": "Lugar salvo · {0}",
+    "de": "Gespeicherter Ort · {0}",
+    "zh-Hans": "保存的地点 · {0}"
+  },
+  "Paradero · {0}{1} · {2} km": {
+    "en": "Stop · {0}{1} · {2} km",
+    "fr": "Arrêt · {0}{1} · {2} km",
+    "pt-BR": "Ponto · {0}{1} · {2} km",
+    "de": "Haltestelle · {0}{1} · {2} km",
+    "zh-Hans": "站点 · {0}{1} · {2} 公里"
+  },
+  "Sin conexión: ningún paradero ni lugar guardado coincide con «{0}».": {
+    "en": "No connection: no stop or saved place matches “{0}”.",
+    "fr": "Pas de connexion : aucun arrêt ni lieu enregistré ne correspond à « {0} ».",
+    "pt-BR": "Sem conexão: nenhum ponto de ônibus ou lugar salvo corresponde a “{0}”.",
+    "de": "Keine Verbindung: Keine Haltestelle und kein gespeicherter Ort passt zu „{0}“.",
+    "zh-Hans": "无网络连接：没有与“{0}”匹配的站点或保存的地点。"
+  },
+  "Sin conexión: todavía se están preparando los paraderos. Inténtalo de nuevo.": {
+    "en": "No connection: stops are still being prepared. Try again.",
+    "fr": "Pas de connexion : les arrêts sont encore en préparation. Réessayez.",
+    "pt-BR": "Sem conexão: os pontos de ônibus ainda estão sendo preparados. Tente novamente.",
+    "de": "Keine Verbindung: Die Haltestellen werden noch vorbereitet. Versuche es erneut.",
+    "zh-Hans": "无网络连接：站点仍在准备中，请重试。"
+  },
+  "Paradero o lugar guardado": {
+    "en": "Stop or saved place",
+    "fr": "Arrêt ou lieu enregistré",
+    "pt-BR": "Ponto ou lugar salvo",
+    "de": "Haltestelle oder gespeicherter Ort",
+    "zh-Hans": "站点或保存的地点"
+  },
+  "Sin conexión: busca entre los paraderos y tus lugares guardados": {
+    "en": "No connection: searches stops and your saved places",
+    "fr": "Pas de connexion : recherche parmi les arrêts et vos lieux enregistrés",
+    "pt-BR": "Sem conexão: busca entre os pontos de ônibus e seus lugares salvos",
+    "de": "Keine Verbindung: sucht in Haltestellen und deinen gespeicherten Orten",
+    "zh-Hans": "无网络连接：在站点和你保存的地点中搜索"
+  },
+  "Sin conexión · datos del iPhone": {
+    "en": "No connection · data on this iPhone",
+    "fr": "Pas de connexion · données de l’iPhone",
+    "pt-BR": "Sem conexão · dados do iPhone",
+    "de": "Keine Verbindung · Daten auf dem iPhone",
+    "zh-Hans": "无网络连接 · 此 iPhone 上的数据"
+  },
+  "Modo offline · datos del iPhone": {
+    "en": "Offline mode · data on this iPhone",
+    "fr": "Mode hors ligne · données de l’iPhone",
+    "pt-BR": "Modo off-line · dados do iPhone",
+    "de": "Offline-Modus · Daten auf dem iPhone",
+    "zh-Hans": "离线模式 · 此 iPhone 上的数据"
+  },
+  "Ningún paradero ni lugar guardado coincide. Prueba con el nombre de una avenida o de un paradero.": {
+    "en": "No stop or saved place matches. Try the name of an avenue or a stop.",
+    "fr": "Aucun arrêt ni lieu enregistré ne correspond. Essayez le nom d’une avenue ou d’un arrêt.",
+    "pt-BR": "Nenhum ponto de ônibus ou lugar salvo corresponde. Tente o nome de uma avenida ou de um ponto.",
+    "de": "Keine Haltestelle und kein gespeicherter Ort passt. Versuche den Namen einer Straße oder Haltestelle.",
+    "zh-Hans": "没有匹配的站点或保存的地点。请尝试输入大街或站点的名称。"
+  },
+  "Busca una ruta hasta este lugar con los datos del iPhone": {
+    "en": "Finds a route to this place using data on this iPhone",
+    "fr": "Recherche un itinéraire vers ce lieu avec les données de l’iPhone",
+    "pt-BR": "Busca uma rota até este lugar com os dados do iPhone",
+    "de": "Sucht mit den Daten auf dem iPhone eine Route zu diesem Ort",
+    "zh-Hans": "使用此 iPhone 上的数据查找前往此地点的路线"
+  },
+  "Úsalo con mala señal o para ahorrar datos: el Mapa deja de consultar Apple Maps, busca entre paraderos y lugares guardados y estima las caminatas al instante. Si pierdes la conexión, se aplica solo.": {
+    "en": "Use it with poor signal or to save data: the Map stops querying Apple Maps, searches stops and saved places, and estimates walks instantly. If you lose your connection, it applies automatically.",
+    "fr": "Utilisez-le avec un mauvais signal ou pour économiser des données : la Carte cesse d’interroger Apple Maps, recherche parmi les arrêts et les lieux enregistrés et estime les trajets à pied instantanément. Si vous perdez la connexion, il s’applique automatiquement.",
+    "pt-BR": "Use com sinal fraco ou para economizar dados: o Mapa deixa de consultar o Apple Maps, busca entre pontos de ônibus e lugares salvos e estima as caminhadas na hora. Se você perder a conexão, ele é aplicado automaticamente.",
+    "de": "Nutze ihn bei schlechtem Empfang oder um Daten zu sparen: Die Karte fragt Apple Maps nicht mehr ab, sucht in Haltestellen und gespeicherten Orten und schätzt Fußwege sofort. Wenn die Verbindung abbricht, gilt er automatisch.",
+    "zh-Hans": "信号差或想节省流量时使用：地图将不再查询 Apple 地图，而是在站点和保存的地点中搜索，并立即估算步行路线。断网时会自动启用。"
+  },
+  "Rutas y recorridos": {
+    "en": "Routes",
+    "fr": "Lignes et trajets",
+    "pt-BR": "Rotas e trajetos",
+    "de": "Linien und Strecken",
+    "zh-Hans": "线路与行程"
+  },
+  "Paraderos para buscar": {
+    "en": "Searchable stops",
+    "fr": "Arrêts consultables",
+    "pt-BR": "Pontos de ônibus para buscar",
+    "de": "Durchsuchbare Haltestellen",
+    "zh-Hans": "可搜索的站点"
+  },
+  "Líneas guardadas": {
+    "en": "Saved lines",
+    "fr": "Lignes enregistrées",
+    "pt-BR": "Linhas salvas",
+    "de": "Gespeicherte Linien",
+    "zh-Hans": "保存的线路"
+  },
+  "Configurado": {
+    "en": "Set up",
+    "fr": "Configuré",
+    "pt-BR": "Configurado",
+    "de": "Eingerichtet",
+    "zh-Hans": "已设置"
+  },
+  "Sin configurar": {
+    "en": "Not set up",
+    "fr": "Non configuré",
+    "pt-BR": "Não configurado",
+    "de": "Nicht eingerichtet",
+    "zh-Hans": "未设置"
+  },
+  "Guardado en este iPhone": {
+    "en": "Stored on this iPhone",
+    "fr": "Enregistré sur cet iPhone",
+    "pt-BR": "Salvo neste iPhone",
+    "de": "Auf diesem iPhone gespeichert",
+    "zh-Hans": "存储在此 iPhone 上"
+  },
+  "Los recorridos y paraderos vienen incluidos en la app; no hace falta descargarlos.": {
+    "en": "Routes and stops ship with the app; there's nothing to download.",
+    "fr": "Les trajets et arrêts sont inclus dans l’app ; inutile de les télécharger.",
+    "pt-BR": "Os trajetos e pontos de ônibus já vêm no app; não é preciso baixá-los.",
+    "de": "Strecken und Haltestellen sind in der App enthalten; du musst nichts herunterladen.",
+    "zh-Hans": "线路和站点已内置于 App 中，无需下载。"
+  },
+  "Funciona sin conexión": {
+    "en": "Works offline",
+    "fr": "Fonctionne hors ligne",
+    "pt-BR": "Funciona sem conexão",
+    "de": "Funktioniert offline",
+    "zh-Hans": "离线可用"
+  },
+  "Buscar destino entre paraderos y lugares guardados": {
+    "en": "Search for a destination among stops and saved places",
+    "fr": "Rechercher une destination parmi les arrêts et les lieux enregistrés",
+    "pt-BR": "Buscar destino entre pontos de ônibus e lugares salvos",
+    "de": "Ziel in Haltestellen und gespeicherten Orten suchen",
+    "zh-Hans": "在站点和保存的地点中搜索目的地"
+  },
+  "Calcular la ruta en micro con los recorridos del iPhone": {
+    "en": "Plan the bus route with the routes on this iPhone",
+    "fr": "Calculer l’itinéraire en bus avec les trajets de l’iPhone",
+    "pt-BR": "Calcular a rota de ônibus com os trajetos do iPhone",
+    "de": "Busroute mit den Strecken auf dem iPhone planen",
+    "zh-Hans": "使用此 iPhone 上的线路规划公交路线"
+  },
+  "Estimar la caminata en línea recta": {
+    "en": "Estimate the walk in a straight line",
+    "fr": "Estimer le trajet à pied en ligne droite",
+    "pt-BR": "Estimar a caminhada em linha reta",
+    "de": "Fußweg in Luftlinie schätzen",
+    "zh-Hans": "按直线估算步行距离"
+  },
+  "Ver tus lugares, líneas y respaldos guardados": {
+    "en": "View your saved places, lines and backups",
+    "fr": "Voir vos lieux, lignes et sauvegardes enregistrés",
+    "pt-BR": "Ver seus lugares, linhas e backups salvos",
+    "de": "Deine gespeicherten Orte, Linien und Backups ansehen",
+    "zh-Hans": "查看你保存的地点、线路和备份"
+  },
+  "Llamar al 105 o a tu contacto de emergencia (usa la red telefónica)": {
+    "en": "Call 105 or your emergency contact (uses the phone network)",
+    "fr": "Appeler le 105 ou votre contact d’urgence (réseau téléphonique)",
+    "pt-BR": "Ligar para o 105 ou para seu contato de emergência (usa a rede telefônica)",
+    "de": "Die 105 oder deinen Notfallkontakt anrufen (über das Telefonnetz)",
+    "zh-Hans": "拨打 105 或你的紧急联系人（使用电话网络）"
+  },
+  "Buscar direcciones y lugares en Apple Maps": {
+    "en": "Search addresses and places in Apple Maps",
+    "fr": "Rechercher des adresses et des lieux dans Apple Maps",
+    "pt-BR": "Buscar endereços e lugares no Apple Maps",
+    "de": "Adressen und Orte in Apple Maps suchen",
+    "zh-Hans": "在 Apple 地图中搜索地址和地点"
+  },
+  "Indicaciones de caminata calle por calle": {
+    "en": "Street-by-street walking directions",
+    "fr": "Itinéraire à pied rue par rue",
+    "pt-BR": "Rotas a pé rua por rua",
+    "de": "Fußwegbeschreibung Straße für Straße",
+    "zh-Hans": "逐街步行导航"
+  },
+  "Comisarías, salud y bomberos cercanos": {
+    "en": "Nearby police, healthcare and fire stations",
+    "fr": "Commissariats, santé et pompiers à proximité",
+    "pt-BR": "Delegacias, saúde e bombeiros próximos",
+    "de": "Polizeiwachen, Gesundheit und Feuerwehr in der Nähe",
+    "zh-Hans": "附近的警察局、医疗机构和消防站"
+  },
+  "Alertas de cambios de ruta": {
+    "en": "Route change alerts",
+    "fr": "Alertes de changement d’itinéraire",
+    "pt-BR": "Alertas de mudanças de rota",
+    "de": "Hinweise zu Routenänderungen",
+    "zh-Hans": "线路变更提醒"
+  },
+  "El mapa base de Apple solo se muestra si ya está en caché. La app no descarga mapas para usarlos sin conexión.": {
+    "en": "Apple's base map only appears if it's already cached. The app doesn't download maps for offline use.",
+    "fr": "Le fond de carte d’Apple ne s’affiche que s’il est déjà en cache. L’app ne télécharge pas de cartes pour une utilisation hors ligne.",
+    "pt-BR": "O mapa base da Apple só aparece se já estiver em cache. O app não baixa mapas para uso off-line.",
+    "de": "Die Apple-Basiskarte erscheint nur, wenn sie bereits zwischengespeichert ist. Die App lädt keine Karten für die Offline-Nutzung herunter.",
+    "zh-Hans": "只有已缓存的 Apple 底图才会显示。本 App 不会下载离线地图。"
+  },
+  "Comprobando conexión…": {
+    "en": "Checking connection…",
+    "fr": "Vérification de la connexion…",
+    "pt-BR": "Verificando conexão…",
+    "de": "Verbindung wird geprüft …",
+    "zh-Hans": "正在检查网络连接…"
+  },
+  "Mientras tanto, la app funciona con normalidad.": {
+    "en": "The app works normally meanwhile.",
+    "fr": "En attendant, l’app fonctionne normalement.",
+    "pt-BR": "Enquanto isso, o app funciona normalmente.",
+    "de": "In der Zwischenzeit funktioniert die App normal.",
+    "zh-Hans": "在此期间，App 可正常使用。"
+  },
+  "Sin conexión": {
+    "en": "Offline",
+    "fr": "Hors ligne",
+    "pt-BR": "Sem conexão",
+    "de": "Keine Verbindung",
+    "zh-Hans": "无网络连接"
+  },
+  "La app usa los datos guardados en este iPhone.": {
+    "en": "The app uses the data stored on this iPhone.",
+    "fr": "L’app utilise les données enregistrées sur cet iPhone.",
+    "pt-BR": "O app usa os dados salvos neste iPhone.",
+    "de": "Die App verwendet die auf diesem iPhone gespeicherten Daten.",
+    "zh-Hans": "App 正在使用此 iPhone 上存储的数据。"
+  },
+  "Modo offline activado": {
+    "en": "Offline mode on",
+    "fr": "Mode hors ligne activé",
+    "pt-BR": "Modo off-line ativado",
+    "de": "Offline-Modus aktiviert",
+    "zh-Hans": "离线模式已开启"
+  },
+  "Hay conexión, pero la app usa solo los datos de este iPhone.": {
+    "en": "You're connected, but the app only uses data on this iPhone.",
+    "fr": "Vous êtes connecté, mais l’app n’utilise que les données de cet iPhone.",
+    "pt-BR": "Há conexão, mas o app usa apenas os dados deste iPhone.",
+    "de": "Du bist verbunden, aber die App nutzt nur die Daten auf diesem iPhone.",
+    "zh-Hans": "已联网，但 App 仅使用此 iPhone 上的数据。"
+  },
+  "Conectado por Wi-Fi": {
+    "en": "Connected via Wi-Fi",
+    "fr": "Connecté en Wi-Fi",
+    "pt-BR": "Conectado por Wi-Fi",
+    "de": "Über WLAN verbunden",
+    "zh-Hans": "已通过 Wi-Fi 连接"
+  },
+  "Conectado por datos móviles": {
+    "en": "Connected via mobile data",
+    "fr": "Connecté via les données cellulaires",
+    "pt-BR": "Conectado por dados móveis",
+    "de": "Über mobile Daten verbunden",
+    "zh-Hans": "已通过蜂窝数据连接"
+  },
+  "Conectado a internet": {
+    "en": "Connected to the internet",
+    "fr": "Connecté à Internet",
+    "pt-BR": "Conectado à internet",
+    "de": "Mit dem Internet verbunden",
+    "zh-Hans": "已连接到互联网"
+  },
+  "Conexión con datos limitados: el Modo offline te ayuda a ahorrarlos.": {
+    "en": "Limited data connection: Offline mode helps you save data.",
+    "fr": "Connexion à données limitées : le mode hors ligne vous aide à les économiser.",
+    "pt-BR": "Conexão com dados limitados: o Modo off-line ajuda você a economizá-los.",
+    "de": "Verbindung mit begrenztem Datenvolumen: Der Offline-Modus hilft dir beim Sparen.",
+    "zh-Hans": "当前为流量受限的连接：离线模式可帮你节省流量。"
+  },
+  "Si pierdes la señal, la app pasa sola a los datos del iPhone.": {
+    "en": "If you lose signal, the app switches to on-device data automatically.",
+    "fr": "Si vous perdez le signal, l’app passe automatiquement aux données de l’iPhone.",
+    "pt-BR": "Se você perder o sinal, o app passa sozinho para os dados do iPhone.",
+    "de": "Wenn du keinen Empfang mehr hast, wechselt die App automatisch zu den Daten auf dem iPhone.",
+    "zh-Hans": "如果信号中断，App 会自动改用此 iPhone 上的数据。"
+  },
+  "Comprobando": {
+    "en": "Checking",
+    "fr": "Vérification",
+    "pt-BR": "Verificando",
+    "de": "Wird geprüft",
+    "zh-Hans": "正在检查"
+  },
+  "Sin conexión · automático": {
+    "en": "No connection · automatic",
+    "fr": "Hors ligne · automatique",
+    "pt-BR": "Sem conexão · automático",
+    "de": "Keine Verbindung · automatisch",
+    "zh-Hans": "无网络连接 · 自动"
+  },
+  "Automático": {
+    "en": "Automatic",
+    "fr": "Automatique",
+    "pt-BR": "Automático",
+    "de": "Automatisch",
+    "zh-Hans": "自动"
+  },
+  "Muestra la conexión, activa el modo y qué funciona sin internet": {
+    "en": "Shows the connection, turns the mode on and what works without internet",
+    "fr": "Affiche la connexion, active le mode et indique ce qui fonctionne sans Internet",
+    "pt-BR": "Mostra a conexão, ativa o modo e o que funciona sem internet",
+    "de": "Zeigt die Verbindung, schaltet den Modus ein und was ohne Internet funktioniert",
+    "zh-Hans": "显示网络状态、开启该模式并列出无网络时可用的功能"
+  },
+  "Accesos de Seguridad": {
+    "en": "Safety shortcuts",
+    "fr": "Raccourcis de Sécurité",
+    "pt-BR": "Atalhos de Segurança",
+    "de": "Sicherheits-Kurzbefehle",
+    "zh-Hans": "安全快捷入口"
+  },
+  "Cupones guardados": {
+    "en": "Saved coupons",
+    "fr": "Coupons enregistrés",
+    "pt-BR": "Cupons salvos",
+    "de": "Gespeicherte Gutscheine",
+    "zh-Hans": "保存的优惠券"
+  },
+  "Lugares de subida": {
+    "en": "Boarding spots",
+    "fr": "Lieux de montée",
+    "pt-BR": "Locais de embarque",
+    "de": "Einstiegsorte",
+    "zh-Hans": "上车地点"
+  },
+  "Se quitará": {
+    "en": "Will be removed",
+    "fr": "Sera supprimé",
+    "pt-BR": "Será removido",
+    "de": "Wird entfernt",
+    "zh-Hans": "将被移除"
+  },
+  "Sin datos": {
+    "en": "No data",
+    "fr": "Aucune donnée",
+    "pt-BR": "Sem dados",
+    "de": "Keine Daten",
+    "zh-Hans": "无数据"
+  },
+  "Tema": {
+    "en": "Theme",
+    "fr": "Thème",
+    "pt-BR": "Tema",
+    "de": "Design",
+    "zh-Hans": "主题"
+  },
+  "El archivo es demasiado grande para ser un respaldo de RutaUTP.": {
+    "en": "The file is too large to be a RutaUTP backup.",
+    "fr": "Le fichier est trop volumineux pour être une sauvegarde RutaUTP.",
+    "pt-BR": "O arquivo é grande demais para ser um backup do RutaUTP.",
+    "de": "Die Datei ist zu groß für ein RutaUTP-Backup.",
+    "zh-Hans": "该文件过大，不是 RutaUTP 备份。"
+  },
+  "El archivo no es un respaldo de RutaUTP o está dañado.": {
+    "en": "The file isn't a RutaUTP backup or is damaged.",
+    "fr": "Le fichier n’est pas une sauvegarde RutaUTP ou il est endommagé.",
+    "pt-BR": "O arquivo não é um backup do RutaUTP ou está danificado.",
+    "de": "Die Datei ist kein RutaUTP-Backup oder beschädigt.",
+    "zh-Hans": "该文件不是 RutaUTP 备份或已损坏。"
+  },
+  "No hay datos que guardar o restaurar.": {
+    "en": "There's no data to save or restore.",
+    "fr": "Il n’y a aucune donnée à enregistrer ou à restaurer.",
+    "pt-BR": "Não há dados para salvar ou restaurar.",
+    "de": "Es gibt keine Daten zum Sichern oder Wiederherstellen.",
+    "zh-Hans": "没有可保存或恢复的数据。"
+  },
+  "No se pudo completar la operación. Revisa el espacio disponible y que el iPhone esté desbloqueado.": {
+    "en": "The operation couldn't be completed. Check available storage and that the iPhone is unlocked.",
+    "fr": "L’opération n’a pas pu aboutir. Vérifiez l’espace disponible et que l’iPhone est déverrouillé.",
+    "pt-BR": "Não foi possível concluir a operação. Verifique o espaço disponível e se o iPhone está desbloqueado.",
+    "de": "Der Vorgang konnte nicht abgeschlossen werden. Prüfe den freien Speicher und ob das iPhone entsperrt ist.",
+    "zh-Hans": "无法完成操作。请检查可用存储空间，并确保 iPhone 已解锁。"
+  },
+  "Respaldo manual": {
+    "en": "Manual backup",
+    "fr": "Sauvegarde manuelle",
+    "pt-BR": "Backup manual",
+    "de": "Manuelles Backup",
+    "zh-Hans": "手动备份"
+  },
+  "Copia previa a restaurar": {
+    "en": "Copy before restoring",
+    "fr": "Copie avant restauration",
+    "pt-BR": "Cópia antes de restaurar",
+    "de": "Kopie vor der Wiederherstellung",
+    "zh-Hans": "恢复前的副本"
+  },
+  "Respaldo importado": {
+    "en": "Backup imported",
+    "fr": "Sauvegarde importée",
+    "pt-BR": "Backup importado",
+    "de": "Importiertes Backup",
+    "zh-Hans": "已导入的备份"
+  },
+  "Accesos de Seguridad antes de reiniciar": {
+    "en": "Safety shortcuts before reset",
+    "fr": "Raccourcis de Sécurité avant réinitialisation",
+    "pt-BR": "Atalhos de Segurança antes de redefinir",
+    "de": "Sicherheits-Kurzbefehle vor dem Zurücksetzen",
+    "zh-Hans": "重置前的安全快捷入口"
+  },
+  "Cupones antes de reiniciar": {
+    "en": "Coupons before reset",
+    "fr": "Coupons avant réinitialisation",
+    "pt-BR": "Cupons antes de redefinir",
+    "de": "Gutscheine vor dem Zurücksetzen",
+    "zh-Hans": "重置前的优惠券"
+  },
+  "Lugares de subida antes de reiniciar": {
+    "en": "Boarding spots before reset",
+    "fr": "Lieux de montée avant réinitialisation",
+    "pt-BR": "Locais de embarque antes de redefinir",
+    "de": "Einstiegsorte vor dem Zurücksetzen",
+    "zh-Hans": "重置前的上车地点"
+  },
+  "Líneas antes de reiniciar": {
+    "en": "Lines before reset",
+    "fr": "Lignes avant réinitialisation",
+    "pt-BR": "Linhas antes de redefinir",
+    "de": "Linien vor dem Zurücksetzen",
+    "zh-Hans": "重置前的线路"
+  },
+  "Copia antes de reiniciar una sección": {
+    "en": "Copy before resetting a section",
+    "fr": "Copie avant réinitialisation d’une section",
+    "pt-BR": "Cópia antes de redefinir uma seção",
+    "de": "Kopie vor dem Zurücksetzen eines Bereichs",
+    "zh-Hans": "重置某个部分前的副本"
+  },
+  "Crear respaldo ahora": {
+    "en": "Back up now",
+    "fr": "Sauvegarder maintenant",
+    "pt-BR": "Fazer backup agora",
+    "de": "Jetzt sichern",
+    "zh-Hans": "立即备份"
+  },
+  "Importar desde Archivos": {
+    "en": "Import from Files",
+    "fr": "Importer depuis Fichiers",
+    "pt-BR": "Importar do app Arquivos",
+    "de": "Aus Dateien importieren",
+    "zh-Hans": "从“文件”导入"
+  },
+  "Guarda tus lugares, líneas, accesos de Seguridad, cupones, lugares de subida, contacto de emergencia, datos personales y preferencias. No incluye fotos, tarjetas ni el saldo del monedero. Comparte un respaldo para conservarlo fuera del iPhone.": {
+    "en": "Saves your places, lines, safety shortcuts, coupons, boarding spots, emergency contact, personal details and preferences. Photos, cards and wallet balance aren't included. Share a backup to keep it off the iPhone.",
+    "fr": "Enregistre vos lieux, lignes, raccourcis de Sécurité, coupons, lieux de montée, contact d’urgence, informations personnelles et préférences. Les photos, les cartes et le solde du portefeuille ne sont pas inclus. Partagez une sauvegarde pour la conserver en dehors de l’iPhone.",
+    "pt-BR": "Salva seus lugares, linhas, atalhos de Segurança, cupons, locais de embarque, contato de emergência, dados pessoais e preferências. Não inclui fotos, cartões nem o saldo da carteira. Compartilhe um backup para guardá-lo fora do iPhone.",
+    "de": "Sichert deine Orte, Linien, Sicherheits-Kurzbefehle, Gutscheine, Einstiegsorte, deinen Notfallkontakt, persönliche Angaben und Präferenzen. Fotos, Karten und das Guthaben der Geldbörse sind nicht enthalten. Teile ein Backup, um es außerhalb des iPhone aufzubewahren.",
+    "zh-Hans": "保存你的地点、线路、安全快捷入口、优惠券、上车地点、紧急联系人、个人信息和偏好设置。不包括照片、卡片和钱包余额。共享备份即可在 iPhone 之外保留一份。"
+  },
+  "Crea un respaldo para recuperar tus datos si cambias de opinión o reinicias una sección. También aparecerán aquí las copias que la app guarda antes de reiniciar datos.": {
+    "en": "Create a backup to recover your data if you change your mind or reset a section. Copies the app saves before resetting data also appear here.",
+    "fr": "Créez une sauvegarde pour récupérer vos données si vous changez d’avis ou réinitialisez une section. Les copies que l’app enregistre avant de réinitialiser des données apparaissent aussi ici.",
+    "pt-BR": "Crie um backup para recuperar seus dados se mudar de ideia ou redefinir uma seção. As cópias que o app salva antes de redefinir dados também aparecem aqui.",
+    "de": "Erstelle ein Backup, um deine Daten wiederherzustellen, wenn du es dir anders überlegst oder einen Bereich zurücksetzt. Kopien, die die App vor dem Zurücksetzen speichert, erscheinen ebenfalls hier.",
+    "zh-Hans": "创建备份，以便在你改变主意或重置某个部分时恢复数据。App 在重置数据前保存的副本也会显示在这里。"
+  },
+  "Eliminar respaldo": {
+    "en": "Delete backup",
+    "fr": "Supprimer la sauvegarde",
+    "pt-BR": "Excluir backup",
+    "de": "Backup löschen",
+    "zh-Hans": "删除备份"
+  },
+  "¿Eliminar este respaldo?": {
+    "en": "Delete this backup?",
+    "fr": "Supprimer cette sauvegarde ?",
+    "pt-BR": "Excluir este backup?",
+    "de": "Dieses Backup löschen?",
+    "zh-Hans": "要删除此备份吗？"
+  },
+  "Se borrará del iPhone y no se puede deshacer. Las copias que hayas compartido se conservan.": {
+    "en": "It will be deleted from this iPhone and can't be undone. Copies you've shared are kept.",
+    "fr": "Elle sera supprimée de l’iPhone, sans possibilité d’annulation. Les copies que vous avez partagées sont conservées.",
+    "pt-BR": "Ele será apagado do iPhone e isso não pode ser desfeito. As cópias que você compartilhou são mantidas.",
+    "de": "Es wird vom iPhone gelöscht und lässt sich nicht wiederherstellen. Geteilte Kopien bleiben erhalten.",
+    "zh-Hans": "备份将从此 iPhone 中删除，且无法撤销。你共享过的副本会保留。"
+  },
+  "Respaldo creado": {
+    "en": "Backup created",
+    "fr": "Sauvegarde créée",
+    "pt-BR": "Backup criado",
+    "de": "Backup erstellt",
+    "zh-Hans": "备份已创建"
+  },
+  "Ya está en la lista. Puedes compartirlo para guardarlo en Archivos o en otro dispositivo.": {
+    "en": "It's now in the list. You can share it to keep it in Files or on another device.",
+    "fr": "Elle figure déjà dans la liste. Vous pouvez la partager pour la conserver dans Fichiers ou sur un autre appareil.",
+    "pt-BR": "Ele já está na lista. Você pode compartilhá-lo para guardá-lo no app Arquivos ou em outro dispositivo.",
+    "de": "Es ist jetzt in der Liste. Du kannst es teilen, um es in Dateien oder auf einem anderen Gerät aufzubewahren.",
+    "zh-Hans": "备份已在列表中。你可以共享它，将其保存到“文件”或其他设备。"
+  },
+  "Ábrelo en la lista para elegir qué restaurar.": {
+    "en": "Open it in the list to choose what to restore.",
+    "fr": "Ouvrez-la dans la liste pour choisir ce que vous restaurez.",
+    "pt-BR": "Abra-o na lista para escolher o que restaurar.",
+    "de": "Öffne es in der Liste, um auszuwählen, was wiederhergestellt wird.",
+    "zh-Hans": "在列表中打开它，选择要恢复的内容。"
+  },
+  "No se pudo importar": {
+    "en": "Couldn't import",
+    "fr": "Importation impossible",
+    "pt-BR": "Não foi possível importar",
+    "de": "Import nicht möglich",
+    "zh-Hans": "无法导入"
+  },
+  "No se pudo eliminar": {
+    "en": "Couldn't delete",
+    "fr": "Suppression impossible",
+    "pt-BR": "Não foi possível excluir",
+    "de": "Löschen nicht möglich",
+    "zh-Hans": "无法删除"
+  },
+  "Archivo de respaldo": {
+    "en": "Backup file",
+    "fr": "Fichier de sauvegarde",
+    "pt-BR": "Arquivo de backup",
+    "de": "Backup-Datei",
+    "zh-Hans": "备份文件"
+  },
+  "No se pudo leer su contenido": {
+    "en": "Its contents couldn't be read",
+    "fr": "Son contenu n’a pas pu être lu",
+    "pt-BR": "Não foi possível ler o conteúdo",
+    "de": "Der Inhalt konnte nicht gelesen werden",
+    "zh-Hans": "无法读取其内容"
+  },
+  "Sin datos que restaurar": {
+    "en": "Nothing to restore",
+    "fr": "Rien à restaurer",
+    "pt-BR": "Nada para restaurar",
+    "de": "Nichts wiederherzustellen",
+    "zh-Hans": "没有可恢复的数据"
+  },
+  "Respaldo no disponible": {
+    "en": "Backup unavailable",
+    "fr": "Sauvegarde indisponible",
+    "pt-BR": "Backup indisponível",
+    "de": "Backup nicht verfügbar",
+    "zh-Hans": "备份不可用"
+  },
+  "Respaldo": {
+    "en": "Backup",
+    "fr": "Sauvegarde",
+    "pt-BR": "Backup",
+    "de": "Backup",
+    "zh-Hans": "备份"
+  },
+  "Fecha": {
+    "en": "Date",
+    "fr": "Date",
+    "pt-BR": "Data",
+    "de": "Datum",
+    "zh-Hans": "日期"
+  },
+  "Tamaño": {
+    "en": "Size",
+    "fr": "Taille",
+    "pt-BR": "Tamanho",
+    "de": "Größe",
+    "zh-Hans": "大小"
+  },
+  "Archivo": {
+    "en": "File",
+    "fr": "Fichier",
+    "pt-BR": "Arquivo",
+    "de": "Datei",
+    "zh-Hans": "文件"
+  },
+  "Qué restaurar": {
+    "en": "What to restore",
+    "fr": "Éléments à restaurer",
+    "pt-BR": "O que restaurar",
+    "de": "Was wiederhergestellt wird",
+    "zh-Hans": "要恢复的内容"
+  },
+  "Se ignoran {0} valores que esta versión de la app no reconoce.": {
+    "en": "{0} values this version of the app doesn't recognize will be ignored.",
+    "fr": "{0} valeurs que cette version de l’app ne reconnaît pas seront ignorées.",
+    "pt-BR": "{0} valores que esta versão do app não reconhece serão ignorados.",
+    "de": "{0} Werte, die diese App-Version nicht kennt, werden ignoriert.",
+    "zh-Hans": "将忽略 {0} 个此版本 App 无法识别的值。"
+  },
+  "Restaurar selección": {
+    "en": "Restore selection",
+    "fr": "Restaurer la sélection",
+    "pt-BR": "Restaurar seleção",
+    "de": "Auswahl wiederherstellen",
+    "zh-Hans": "恢复所选内容"
+  },
+  "Antes de restaurar se guarda una copia automática de tus datos actuales: si cambias de opinión, restáurala desde esta lista.": {
+    "en": "Before restoring, an automatic copy of your current data is saved: if you change your mind, restore it from this list.",
+    "fr": "Avant la restauration, une copie automatique de vos données actuelles est enregistrée : si vous changez d’avis, restaurez-la depuis cette liste.",
+    "pt-BR": "Antes de restaurar, é salva uma cópia automática dos seus dados atuais: se mudar de ideia, restaure-a nesta lista.",
+    "de": "Vor dem Wiederherstellen wird automatisch eine Kopie deiner aktuellen Daten gespeichert: Wenn du es dir anders überlegst, stellst du sie aus dieser Liste wieder her.",
+    "zh-Hans": "恢复前会自动保存一份当前数据的副本：如果你改变主意，可在此列表中恢复它。"
+  },
+  "No se pudo leer este archivo. Puedes compartirlo para conservarlo.": {
+    "en": "This file couldn't be read. You can share it to keep it.",
+    "fr": "Ce fichier n’a pas pu être lu. Vous pouvez le partager pour le conserver.",
+    "pt-BR": "Não foi possível ler este arquivo. Você pode compartilhá-lo para guardá-lo.",
+    "de": "Diese Datei konnte nicht gelesen werden. Du kannst sie teilen, um sie aufzubewahren.",
+    "zh-Hans": "无法读取此文件。你可以共享它以便保留。"
+  },
+  "Este respaldo no contiene datos que la app pueda restaurar. Puedes compartirlo para conservarlo.": {
+    "en": "This backup has no data the app can restore. You can share it to keep it.",
+    "fr": "Cette sauvegarde ne contient aucune donnée que l’app peut restaurer. Vous pouvez la partager pour la conserver.",
+    "pt-BR": "Este backup não contém dados que o app possa restaurar. Você pode compartilhá-lo para guardá-lo.",
+    "de": "Dieses Backup enthält keine Daten, die die App wiederherstellen kann. Du kannst es teilen, um es aufzubewahren.",
+    "zh-Hans": "此备份不包含 App 可恢复的数据。你可以共享它以便保留。"
+  },
+  "¿Restaurar este respaldo?": {
+    "en": "Restore this backup?",
+    "fr": "Restaurer cette sauvegarde ?",
+    "pt-BR": "Restaurar este backup?",
+    "de": "Dieses Backup wiederherstellen?",
+    "zh-Hans": "要恢复此备份吗？"
+  },
+  "Restaurar": {
+    "en": "Restore",
+    "fr": "Restaurer",
+    "pt-BR": "Restaurar",
+    "de": "Wiederherstellen",
+    "zh-Hans": "恢复"
+  },
+  "Se sustituirán tus datos actuales de: {0}.": {
+    "en": "Your current data will be replaced for: {0}.",
+    "fr": "Vos données actuelles seront remplacées pour : {0}.",
+    "pt-BR": "Seus dados atuais serão substituídos em: {0}.",
+    "de": "Deine aktuellen Daten werden ersetzt für: {0}.",
+    "zh-Hans": "以下内容的当前数据将被替换：{0}。"
+  },
+  "No se pudo completar": {
+    "en": "Couldn't complete",
+    "fr": "Opération impossible",
+    "pt-BR": "Não foi possível concluir",
+    "de": "Nicht abgeschlossen",
+    "zh-Hans": "无法完成"
+  },
+  "Respaldo restaurado": {
+    "en": "Backup restored",
+    "fr": "Sauvegarde restaurée",
+    "pt-BR": "Backup restaurado",
+    "de": "Backup wiederhergestellt",
+    "zh-Hans": "备份已恢复"
+  },
+  "Se restauró: {0}. La copia de tus datos anteriores está en la lista.": {
+    "en": "Restored: {0}. A copy of your previous data is in the list.",
+    "fr": "Restauré : {0}. La copie de vos données précédentes figure dans la liste.",
+    "pt-BR": "Restaurado: {0}. A cópia dos seus dados anteriores está na lista.",
+    "de": "Wiederhergestellt: {0}. Die Kopie deiner vorherigen Daten ist in der Liste.",
+    "zh-Hans": "已恢复：{0}。之前数据的副本在列表中。"
+  },
+  "En RutaUTP": {
+    "en": "In RutaUTP",
+    "fr": "Dans RutaUTP",
+    "pt-BR": "No RutaUTP",
+    "de": "In RutaUTP",
+    "zh-Hans": "在 RutaUTP 中"
+  },
+  "Publicaciones de Comunidad": {
+    "en": "Community posts",
+    "fr": "Publications de la Communauté",
+    "pt-BR": "Publicações da Comunidade",
+    "de": "Beiträge der Gemeinschaft",
+    "zh-Hans": "社区帖子"
+  },
+  "En Seguridad, elige una publicación y desliza un dedo hacia arriba o hacia abajo para escuchar sus acciones: Me gusta, No me gusta, Comentar, Ver foto y Reportar publicación.": {
+    "en": "In Safety, choose a post and swipe up or down with one finger to hear its actions: Like, Dislike, Comment, View photo and Report post.",
+    "fr": "Dans Sécurité, choisissez une publication et balayez vers le haut ou le bas avec un doigt pour entendre ses actions : J’aime, Je n’aime pas, Commenter, Voir la photo et Signaler la publication.",
+    "pt-BR": "Em Segurança, escolha uma publicação e deslize um dedo para cima ou para baixo para ouvir as ações: Curtir, Não curtir, Comentar, Ver foto e Denunciar publicação.",
+    "de": "Wähle in Sicherheit einen Beitrag und streiche mit einem Finger nach oben oder unten, um seine Aktionen zu hören: Gefällt mir, Gefällt mir nicht, Kommentieren, Foto ansehen und Beitrag melden.",
+    "zh-Hans": "在“安全”中选择一条帖子，用一根手指向上或向下轻扫即可听到其操作：赞、踩、评论、查看照片和举报帖子。"
+  },
+  "Reportar una publicación": {
+    "en": "Report a post",
+    "fr": "Signaler une publication",
+    "pt-BR": "Denunciar uma publicação",
+    "de": "Einen Beitrag melden",
+    "zh-Hans": "举报帖子"
+  },
+  "Dentro de la publicación, el botón Reportar abre los motivos: información falsa, derechos de autor o de imagen, ofensas, datos personales o spam. El motivo elegido se anuncia como seleccionado.": {
+    "en": "Inside the post, the Report button opens the reasons: false information, copyright or image rights, offensive content, personal information or spam. The chosen reason is announced as selected.",
+    "fr": "Dans la publication, le bouton Signaler ouvre les motifs : information fausse, droit d’auteur ou droit à l’image, propos offensants, données personnelles ou spam. Le motif choisi est annoncé comme sélectionné.",
+    "pt-BR": "Dentro da publicação, o botão Relatar abre os motivos: informação falsa, direitos autorais ou de imagem, ofensas, dados pessoais ou spam. O motivo escolhido é anunciado como selecionado.",
+    "de": "Im Beitrag öffnet die Taste Melden die Gründe: falsche Information, Urheber- oder Bildrechte, Beleidigungen, persönliche Daten oder Spam. Der gewählte Grund wird als ausgewählt angesagt.",
+    "zh-Hans": "在帖子中，“报告”按钮会打开举报原因：虚假信息、版权或肖像权、冒犯内容、个人信息或垃圾信息。所选原因会被朗读为“已选择”。"
+  },
+  "Ver una foto": {
+    "en": "View a photo",
+    "fr": "Voir une photo",
+    "pt-BR": "Ver uma foto",
+    "de": "Ein Foto ansehen",
+    "zh-Hans": "查看照片"
+  },
+  "Toca dos veces la foto para abrirla a pantalla completa. Usa las acciones para acercar, alejar o moverla, y frota dos dedos en forma de Z para cerrarla.": {
+    "en": "Double-tap the photo to open it full screen. Use the actions to zoom in, zoom out or move it, and scrub two fingers in a Z shape to close it.",
+    "fr": "Touchez deux fois la photo pour l’ouvrir en plein écran. Utilisez les actions pour zoomer, dézoomer ou la déplacer, et frottez deux doigts en forme de Z pour la fermer.",
+    "pt-BR": "Toque duas vezes na foto para abri-la em tela cheia. Use as ações para aproximar, afastar ou movê-la e faça um Z com dois dedos para fechá-la.",
+    "de": "Tippe zweimal auf das Foto, um es im Vollbild zu öffnen. Nutze die Aktionen zum Vergrößern, Verkleinern oder Verschieben und wische mit zwei Fingern ein Z, um es zu schließen.",
+    "zh-Hans": "连按两下照片即可全屏打开。使用操作可放大、缩小或移动照片，用两根手指画“Z”字形即可关闭。"
+  },
+  "En Seguridad, sección Ayuda, Comisarías, Salud y Bomberos abren un mapa con los lugares más cercanos y su distancia.": {
+    "en": "In Safety, Help section, Police stations, Healthcare and Fire stations open a map with the nearest places and their distance.",
+    "fr": "Dans Sécurité, section Aide, Commissariats, Santé et Pompiers ouvrent une carte avec les lieux les plus proches et leur distance.",
+    "pt-BR": "Em Segurança, seção Ajuda, Delegacias, Saúde e Bombeiros abrem um mapa com os lugares mais próximos e sua distância.",
+    "de": "In Sicherheit, Bereich Hilfe, öffnen Polizeiwachen, Gesundheit und Feuerwehr eine Karte mit den nächsten Orten und ihrer Entfernung.",
+    "zh-Hans": "在“安全”的“帮助”部分，“警察局”“医疗”和“消防站”会打开一张地图，显示最近的地点及距离。"
+  },
+  "VoiceOver avisa cuando se pierde o se recupera la conexión. Sin internet, el buscador del Mapa ofrece paraderos y lugares guardados. El Modo offline se activa en Perfil.": {
+    "en": "VoiceOver tells you when the connection is lost or restored. Without internet, the Map search offers stops and saved places. Turn on Offline mode in Profile.",
+    "fr": "VoiceOver vous prévient quand la connexion est perdue ou rétablie. Sans Internet, la recherche de la Carte propose les arrêts et les lieux enregistrés. Activez le mode hors ligne dans Profil.",
+    "pt-BR": "O VoiceOver avisa quando a conexão cai ou volta. Sem internet, a busca do Mapa oferece pontos de ônibus e lugares salvos. Ative o Modo off-line em Perfil.",
+    "de": "VoiceOver sagt an, wenn die Verbindung abbricht oder zurückkommt. Ohne Internet bietet die Suche der Karte Haltestellen und gespeicherte Orte an. Den Offline-Modus schaltest du im Profil ein.",
+    "zh-Hans": "网络断开或恢复时，VoiceOver 会提示你。没有网络时，地图搜索会提供站点和保存的地点。可在“个人中心”中开启离线模式。"
+  },
+  "En Perfil, crea, importa, restaura o comparte copias de tus datos. En la lista, las acciones permiten eliminar un respaldo.": {
+    "en": "In Profile, create, import, restore or share copies of your data. In the list, the actions let you delete a backup.",
+    "fr": "Dans Profil, créez, importez, restaurez ou partagez des copies de vos données. Dans la liste, les actions permettent de supprimer une sauvegarde.",
+    "pt-BR": "Em Perfil, crie, importe, restaure ou compartilhe cópias dos seus dados. Na lista, as ações permitem excluir um backup.",
+    "de": "Im Profil erstellst, importierst, teilst oder stellst du Kopien deiner Daten wieder her. In der Liste kannst du über die Aktionen ein Backup löschen.",
+    "zh-Hans": "在“个人中心”中，可创建、导入、恢复或共享数据副本。在列表中，可通过操作删除备份。"
+  },
+  "1 acceso": {
+    "en": "1 shortcut",
+    "fr": "1 raccourci",
+    "pt-BR": "1 atalho",
+    "de": "1 Kurzbefehl",
+    "zh-Hans": "1 个快捷入口"
+  },
+  "{0} accesos": {
+    "en": "{0} shortcuts",
+    "fr": "{0} raccourcis",
+    "pt-BR": "{0} atalhos",
+    "de": "{0} Kurzbefehle",
+    "zh-Hans": "{0} 个快捷入口"
+  },
+  "1 cupón": {
+    "en": "1 coupon",
+    "fr": "1 coupon",
+    "pt-BR": "1 cupom",
+    "de": "1 Gutschein",
+    "zh-Hans": "1 张优惠券"
+  },
+  "{0} cupones": {
+    "en": "{0} coupons",
+    "fr": "{0} coupons",
+    "pt-BR": "{0} cupons",
+    "de": "{0} Gutscheine",
+    "zh-Hans": "{0} 张优惠券"
+  },
+  "1 lugar de subida": {
+    "en": "1 boarding spot",
+    "fr": "1 lieu de montée",
+    "pt-BR": "1 local de embarque",
+    "de": "1 Einstiegsort",
+    "zh-Hans": "1 个上车地点"
+  },
+  "{0} lugares de subida": {
+    "en": "{0} boarding spots",
+    "fr": "{0} lieux de montée",
+    "pt-BR": "{0} locais de embarque",
+    "de": "{0} Einstiegsorte",
+    "zh-Hans": "{0} 个上车地点"
+  },
+  "1 campo": {
+    "en": "1 field",
+    "fr": "1 champ",
+    "pt-BR": "1 campo",
+    "de": "1 Feld",
+    "zh-Hans": "1 个字段"
+  },
+  "{0} campos": {
+    "en": "{0} fields",
+    "fr": "{0} champs",
+    "pt-BR": "{0} campos",
+    "de": "{0} Felder",
+    "zh-Hans": "{0} 个字段"
+  },
+  "Buscando en el iPhone…": {
+    "en": "Searching on this iPhone…",
+    "fr": "Recherche sur l’iPhone…",
+    "pt-BR": "Buscando no iPhone…",
+    "de": "Suche auf dem iPhone …",
+    "zh-Hans": "正在此 iPhone 上搜索…"
+  },
+  "Sin conexión. Esta búsqueda usa Apple Maps y necesita internet.": {
+    "en": "No connection. This search uses Apple Maps and needs internet.",
+    "fr": "Pas de connexion. Cette recherche utilise Apple Maps et nécessite Internet.",
+    "pt-BR": "Sem conexão. Esta busca usa o Apple Maps e precisa de internet.",
+    "de": "Keine Verbindung. Diese Suche nutzt Apple Maps und braucht Internet.",
+    "zh-Hans": "无网络连接。此搜索使用 Apple 地图，需要联网。"
+  },
+  "Cambios de ruta, obras o tráfico": {
+    "en": "Route changes, roadworks or traffic",
+    "fr": "Changements d'itinéraire, travaux ou trafic",
+    "pt-BR": "Mudanças de rota, obras ou trânsito",
+    "de": "Routenänderungen, Bauarbeiten oder Stau",
+    "zh-Hans": "路线变更、施工或拥堵"
+  },
+  "Tráfico intenso": {
+    "en": "Heavy traffic",
+    "fr": "Trafic dense",
+    "pt-BR": "Trânsito intenso",
+    "de": "Dichter Verkehr",
+    "zh-Hans": "交通拥堵"
+  },
+  "Choque en la vía": {
+    "en": "Crash on the road",
+    "fr": "Accident sur la voie",
+    "pt-BR": "Acidente na via",
+    "de": "Unfall auf der Strecke",
+    "zh-Hans": "道路事故"
+  },
+  "Ahora va por {0}": {
+    "en": "Now runs along {0}",
+    "fr": "Passe désormais par {0}",
+    "pt-BR": "Agora passa por {0}",
+    "de": "Fährt jetzt über {0}",
+    "zh-Hans": "现改走 {0}"
+  },
+  "Reporte recibido. Ya lo confirman {0} cuentas distintas y se muestra en el mapa.": {
+    "en": "Report received. {0} different accounts now confirm it and it shows on the map.",
+    "fr": "Signalement reçu. {0} comptes différents le confirment désormais et il s’affiche sur la carte.",
+    "pt-BR": "Relato recebido. {0} contas diferentes já o confirmam e ele aparece no mapa.",
+    "de": "Meldung erhalten. {0} verschiedene Konten bestätigen sie jetzt und sie erscheint auf der Karte.",
+    "zh-Hans": "已收到报告。现已有 {0} 个不同账号确认，并已显示在地图上。"
+  },
+  "Reporte recibido. Van {0} de {1} cuentas distintas necesarias para mostrarlo en el mapa.": {
+    "en": "Report received. {0} of the {1} different accounts needed to show it on the map.",
+    "fr": "Signalement reçu. {0} des {1} comptes différents nécessaires pour l’afficher sur la carte.",
+    "pt-BR": "Relato recebido. {0} de {1} contas diferentes necessárias para mostrá-lo no mapa.",
+    "de": "Meldung erhalten. {0} von {1} verschiedenen Konten, die für die Anzeige auf der Karte nötig sind.",
+    "zh-Hans": "已收到报告。在地图上显示需要 {1} 个不同账号确认，目前已有 {0} 个。"
+  },
+  "{0} y {1} más": {
+    "en": "{0} and {1} more",
+    "fr": "{0} et {1} de plus",
+    "pt-BR": "{0} e mais {1}",
+    "de": "{0} und {1} weitere",
+    "zh-Hans": "{0} 等另外 {1} 项"
+  },
+  "Muestra los cambios confirmados en esta ruta.": {
+    "en": "Shows the confirmed changes on this route.",
+    "fr": "Affiche les changements confirmés sur cet itinéraire.",
+    "pt-BR": "Mostra as mudanças confirmadas nesta rota.",
+    "de": "Zeigt die bestätigten Änderungen auf dieser Route.",
+    "zh-Hans": "显示此路线上已确认的变更。"
+  },
+  "Reportado desde {0}. Afecta a las líneas que pasan por aquí.": {
+    "en": "Reported from {0}. Affects the lines that pass here.",
+    "fr": "Signalé depuis {0}. Concerne les lignes qui passent ici.",
+    "pt-BR": "Relatado a partir de {0}. Afeta as linhas que passam por aqui.",
+    "de": "Gemeldet von {0}. Betrifft die Linien, die hier vorbeifahren.",
+    "zh-Hans": "由 {0} 的乘客报告。影响经过此处的线路。"
+  },
+  "El tramo punteado del mapa es el que la línea deja de recorrer.": {
+    "en": "The dotted stretch on the map is the part the line no longer covers.",
+    "fr": "Le tronçon en pointillé sur la carte est celui que la ligne ne dessert plus.",
+    "pt-BR": "O trecho pontilhado no mapa é o que a linha deixa de percorrer.",
+    "de": "Der gepunktete Abschnitt auf der Karte wird von der Linie nicht mehr befahren.",
+    "zh-Hans": "地图上的虚线路段是该线路不再行驶的部分。"
+  },
+  "Reportes de la comunidad. Un cambio se muestra cuando lo confirman {0} cuentas distintas. Para confirmarlo o corregirlo, usa Reportar.": {
+    "en": "Community reports. A change is shown once {0} different accounts confirm it. To confirm or correct it, use Report.",
+    "fr": "Signalements de la communauté. Un changement s’affiche lorsque {0} comptes différents le confirment. Pour le confirmer ou le corriger, utilisez Signaler.",
+    "pt-BR": "Relatos da comunidade. Uma mudança é exibida quando {0} contas diferentes a confirmam. Para confirmá-la ou corrigi-la, use Relatar.",
+    "de": "Meldungen der Community. Eine Änderung wird angezeigt, sobald {0} verschiedene Konten sie bestätigen. Zum Bestätigen oder Korrigieren nutze Melden.",
+    "zh-Hans": "社区报告。当 {0} 个不同账号确认后，变更才会显示。如需确认或更正，请使用“报告”。"
+  },
+  "Ajusta el punto final sobre el recorrido de la línea.": {
+    "en": "Move the end point onto the line's route.",
+    "fr": "Placez le point final sur le tracé de la ligne.",
+    "pt-BR": "Ajuste o ponto final sobre o trajeto da linha.",
+    "de": "Setze den Endpunkt auf den Verlauf der Linie.",
+    "zh-Hans": "请将终点移到该线路的路线上。"
+  },
+  "El punto final está demasiado cerca del inicio.": {
+    "en": "The end point is too close to the start.",
+    "fr": "Le point final est trop proche du début.",
+    "pt-BR": "O ponto final está muito perto do início.",
+    "de": "Der Endpunkt liegt zu nah am Anfang.",
+    "zh-Hans": "终点离起点太近。"
+  },
+  "El tramo no puede superar 5 km.": {
+    "en": "The stretch can't exceed 5 km.",
+    "fr": "Le tronçon ne peut pas dépasser 5 km.",
+    "pt-BR": "O trecho não pode passar de 5 km.",
+    "de": "Der Abschnitt darf höchstens 5 km lang sein.",
+    "zh-Hans": "路段不能超过 5 公里。"
+  },
+  "Confirma solo si lo has visto. Un cambio se muestra en el mapa cuando lo reportan {0} cuentas distintas con el mismo motivo y en la misma zona. El tráfico vence a los 30 minutos, un choque a la hora, un cierre a las 12 horas y las obras o desvíos a las 24 horas; cada reporte nuevo los renueva. La vía alterna y el tramo los indica la comunidad.": {
+    "en": "Confirm only what you've seen. A change is shown on the map once {0} different accounts report the same reason in the same area. Traffic expires after 30 minutes, a crash after one hour, a closure after 12 hours and roadworks or detours after 24 hours; each new report renews them. The alternative street and the stretch come from the community.",
+    "fr": "Ne confirmez que ce que vous avez vu. Un changement s’affiche sur la carte lorsque {0} comptes différents signalent le même motif dans la même zone. Le trafic expire après 30 minutes, un accident après une heure, une fermeture après 12 heures et les travaux ou déviations après 24 heures ; chaque nouveau signalement les renouvelle. La rue de remplacement et le tronçon sont indiqués par la communauté.",
+    "pt-BR": "Confirme apenas o que você viu. Uma mudança aparece no mapa quando {0} contas diferentes relatam o mesmo motivo na mesma área. O trânsito expira em 30 minutos, um acidente em uma hora, uma interdição em 12 horas e obras ou desvios em 24 horas; cada novo relato os renova. A via alternativa e o trecho são indicados pela comunidade.",
+    "de": "Bestätige nur, was du selbst gesehen hast. Eine Änderung erscheint auf der Karte, sobald {0} verschiedene Konten denselben Grund im selben Bereich melden. Stau läuft nach 30 Minuten ab, ein Unfall nach einer Stunde, eine Sperrung nach 12 Stunden, Bauarbeiten oder Umleitungen nach 24 Stunden; jede neue Meldung verlängert sie. Ausweichstraße und Abschnitt stammen aus der Community.",
+    "zh-Hans": "请只确认您亲眼所见的情况。当 {0} 个不同账号在同一区域报告相同原因时，变更才会显示在地图上。拥堵在 30 分钟后失效，事故在 1 小时后失效，封闭在 12 小时后失效，施工或绕行在 24 小时后失效；每次新的报告都会延长有效期。替代道路和路段由社区提供。"
+  },
+  "Retoma su ruta": {
+    "en": "Rejoins its route",
+    "fr": "Reprend son itinéraire",
+    "pt-BR": "Retoma sua rota",
+    "de": "Zurück auf der Route",
+    "zh-Hans": "恢复原路线"
+  },
+  "Quitar el punto donde retoma": {
+    "en": "Remove the rejoin point",
+    "fr": "Retirer le point de reprise",
+    "pt-BR": "Remover o ponto de retomada",
+    "de": "Rückkehrpunkt entfernen",
+    "zh-Hans": "移除恢复点"
+  },
+  "Punto que marcas en el mapa": {
+    "en": "Point you mark on the map",
+    "fr": "Point que vous placez sur la carte",
+    "pt-BR": "Ponto que você marca no mapa",
+    "de": "Punkt, den du auf der Karte setzt",
+    "zh-Hans": "您在地图上标记的点"
+  },
+  "Dónde empieza": {
+    "en": "Where it starts",
+    "fr": "Début",
+    "pt-BR": "Onde começa",
+    "de": "Beginn",
+    "zh-Hans": "变更起点"
+  },
+  "Dónde retoma": {
+    "en": "Where it rejoins",
+    "fr": "Reprise",
+    "pt-BR": "Onde retoma",
+    "de": "Rückkehr",
+    "zh-Hans": "恢复点"
+  },
+  "Opcional: toca dónde vuelve a su recorrido": {
+    "en": "Optional: tap where it rejoins its route",
+    "fr": "Facultatif : touchez l’endroit où elle reprend son itinéraire",
+    "pt-BR": "Opcional: toque onde ela retoma o trajeto",
+    "de": "Optional: Tippe auf die Stelle, an der sie auf ihre Route zurückkehrt",
+    "zh-Hans": "可选：轻点线路恢复原路线的位置"
+  },
+  "¿Por dónde va ahora?": {
+    "en": "Where does it go now?",
+    "fr": "Par où passe-t-elle maintenant ?",
+    "pt-BR": "Por onde passa agora?",
+    "de": "Wo fährt sie jetzt entlang?",
+    "zh-Hans": "现在改走哪里？"
+  },
+  "Calle o avenida (opcional)": {
+    "en": "Street or avenue (optional)",
+    "fr": "Rue ou avenue (facultatif)",
+    "pt-BR": "Rua ou avenida (opcional)",
+    "de": "Straße oder Allee (optional)",
+    "zh-Hans": "街道或大道（可选）"
+  },
+  "Vía por la que pasa ahora (opcional)": {
+    "en": "Street it now uses (optional)",
+    "fr": "Voie empruntée désormais (facultatif)",
+    "pt-BR": "Via por onde passa agora (opcional)",
+    "de": "Jetzt befahrene Straße (optional)",
+    "zh-Hans": "现在行驶的道路（可选）"
+  },
+  "Ejemplo: Av. América Norte. Se mostrará junto al aviso en el mapa.": {
+    "en": "Example: Av. América Norte. It'll be shown with the alert on the map.",
+    "fr": "Exemple : Av. América Norte. Elle s’affichera avec l’alerte sur la carte.",
+    "pt-BR": "Exemplo: Av. América Norte. Será exibida junto ao aviso no mapa.",
+    "de": "Beispiel: Av. América Norte. Sie wird zusammen mit dem Hinweis auf der Karte angezeigt.",
+    "zh-Hans": "例如：Av. América Norte。它将与提醒一起显示在地图上。"
+  },
+  "Escribe al menos 3 caracteres en la vía o déjala vacía.": {
+    "en": "Enter at least 3 characters for the street, or leave it empty.",
+    "fr": "Saisissez au moins 3 caractères pour la voie ou laissez-la vide.",
+    "pt-BR": "Digite pelo menos 3 caracteres na via ou deixe-a vazia.",
+    "de": "Gib mindestens 3 Zeichen für die Straße ein oder lass das Feld leer.",
+    "zh-Hans": "道路名称请至少输入 3 个字符，或留空。"
+  },
+  "¿El micro tomó otra calle?": {
+    "en": "Did the bus take another street?",
+    "fr": "Le bus a-t-il pris une autre rue ?",
+    "pt-BR": "O ônibus pegou outra rua?",
+    "de": "Ist der Bus durch eine andere Straße gefahren?",
+    "zh-Hans": "公交车走了另一条街吗？"
+  },
+  "Grabamos {0} fuera de su recorrido. Repórtalo para que otros vean la calle nueva.": {
+    "en": "We recorded {0} off its route. Report it so others can see the new street.",
+    "fr": "Nous avons enregistré {0} hors de son itinéraire. Signalez-le pour que d'autres voient la nouvelle rue.",
+    "pt-BR": "Gravamos {0} fora do trajeto. Informe para que outras pessoas vejam a nova rua.",
+    "de": "Wir haben {0} außerhalb der Strecke aufgezeichnet. Melde es, damit andere die neue Straße sehen.",
+    "zh-Hans": "我们记录了偏离路线的 {0}。请报告，让其他人看到新的街道。"
+  },
+  "Posible desvío grabado": {
+    "en": "Possible detour recorded",
+    "fr": "Déviation possible enregistrée",
+    "pt-BR": "Possível desvio gravado",
+    "de": "Mögliche Umleitung aufgezeichnet",
+    "zh-Hans": "已记录可能的绕行"
+  },
+  "Reportar desvío": {
+    "en": "Report detour",
+    "fr": "Signaler la déviation",
+    "pt-BR": "Informar desvio",
+    "de": "Umleitung melden",
+    "zh-Hans": "报告绕行"
+  },
+  "Ahora no": {
+    "en": "Not now",
+    "fr": "Plus tard",
+    "pt-BR": "Agora não",
+    "de": "Nicht jetzt",
+    "zh-Hans": "暂不"
+  },
+  "Recorrido grabado: {0}": {
+    "en": "Recorded route: {0}",
+    "fr": "Trajet enregistré : {0}",
+    "pt-BR": "Trajeto gravado: {0}",
+    "de": "Aufgezeichnete Strecke: {0}",
+    "zh-Hans": "已记录路线：{0}"
+  },
+  "Quitar el recorrido grabado": {
+    "en": "Remove the recorded route",
+    "fr": "Supprimer le trajet enregistré",
+    "pt-BR": "Remover o trajeto gravado",
+    "de": "Aufgezeichnete Strecke entfernen",
+    "zh-Hans": "删除已记录的路线"
+  },
+  "La línea continua es la calle por la que pasó tu micro. Si mueves un punto, se quita.": {
+    "en": "The solid line is the street your bus took. Moving a point removes it.",
+    "fr": "La ligne continue est la rue empruntée par votre bus. Si vous déplacez un point, elle est supprimée.",
+    "pt-BR": "A linha contínua é a rua por onde seu ônibus passou. Se você mover um ponto, ela é removida.",
+    "de": "Die durchgezogene Linie ist die Straße, die dein Bus genommen hat. Wenn du einen Punkt verschiebst, wird sie entfernt.",
+    "zh-Hans": "实线是你的公交车经过的街道。移动任一点会将其删除。"
+  },
+  "La calle nueva se dibuja cuando dos cuentas graban el mismo recorrido con «Estoy en un micro».": {
+    "en": "The new street is drawn once two accounts record the same route with “I'm on a bus”.",
+    "fr": "La nouvelle rue s'affiche quand deux comptes enregistrent le même trajet avec « je suis dans un bus ».",
+    "pt-BR": "A nova rua aparece quando duas contas gravam o mesmo trajeto com “Estou em um ônibus”.",
+    "de": "Die neue Straße wird gezeichnet, sobald zwei Konten mit „Ich sitze im Bus“ dieselbe Strecke aufzeichnen.",
+    "zh-Hans": "当两个账户通过“我在公交车上”记录到相同路线时，会绘制新的街道。"
+  },
+  "La línea continua es la calle por la que va ahora; la punteada, el tramo que deja de recorrer.": {
+    "en": "The solid line is the street it now takes; the dotted one, the stretch it no longer covers.",
+    "fr": "La ligne continue est la rue qu'il emprunte désormais ; la ligne pointillée, le tronçon qu'il ne dessert plus.",
+    "pt-BR": "A linha contínua é a rua por onde passa agora; a pontilhada, o trecho que deixa de percorrer.",
+    "de": "Die durchgezogene Linie ist die Straße, die er jetzt nimmt; die gepunktete der Abschnitt, den er nicht mehr fährt.",
+    "zh-Hans": "实线是它现在经过的街道；虚线是它不再经过的路段。"
+  },
+  "No se pudo usar el recorrido grabado. Quítalo y vuelve a enviar en 30 segundos.": {
+    "en": "The recorded route couldn't be used. Remove it and send again in 30 seconds.",
+    "fr": "Le trajet enregistré n'a pas pu être utilisé. Supprimez-le et renvoyez dans 30 secondes.",
+    "pt-BR": "Não foi possível usar o trajeto gravado. Remova-o e envie de novo em 30 segundos.",
+    "de": "Die aufgezeichnete Strecke konnte nicht verwendet werden. Entferne sie und sende in 30 Sekunden erneut.",
+    "zh-Hans": "无法使用已记录的路线。请删除后在 30 秒后重新发送。"
+  },
+  "Reporte enviado": {
+    "en": "Report sent",
+    "fr": "Signalement envoyé",
+    "pt-BR": "Relato enviado",
+    "de": "Meldung gesendet",
+    "zh-Hans": "报告已发送"
+  },
+  "Ya enviaste este reporte. Para enviar otro, cambia algún dato.": {
+    "en": "You already sent this report. To send another, change a detail.",
+    "fr": "Vous avez déjà envoyé ce signalement. Pour en envoyer un autre, modifiez une information.",
+    "pt-BR": "Você já enviou este relato. Para enviar outro, altere algum dado.",
+    "de": "Du hast diese Meldung bereits gesendet. Ändere eine Angabe, um eine weitere zu senden.",
+    "zh-Hans": "你已发送此报告。如需再发送一份，请修改任一信息。"
+  },
+  "Qué significa cada color": {
+    "en": "What each color means",
+    "fr": "Signification de chaque couleur",
+    "pt-BR": "O que cada cor significa",
+    "de": "Was jede Farbe bedeutet",
+    "zh-Hans": "各颜色的含义"
+  },
+  "Calle por la que va ahora": {
+    "en": "Street it now takes",
+    "fr": "Rue qu'il emprunte désormais",
+    "pt-BR": "Rua por onde passa agora",
+    "de": "Straße, die er jetzt nimmt",
+    "zh-Hans": "现在经过的街道"
+  },
+  "Tramo que deja de recorrer": {
+    "en": "Stretch it no longer covers",
+    "fr": "Tronçon qu'il ne dessert plus",
+    "pt-BR": "Trecho que deixa de percorrer",
+    "de": "Abschnitt, den er nicht mehr fährt",
+    "zh-Hans": "不再经过的路段"
+  },
+  "Ya subí al micro": {
+    "en": "I'm on the bus",
+    "fr": "Je suis monté dans le bus",
+    "pt-BR": "Já entrei no ônibus",
+    "de": "Ich bin eingestiegen",
+    "zh-Hans": "我已上车"
+  },
+  "Empieza «Estoy en un micro» con la línea de esta ruta.": {
+    "en": "Starts “I'm on a bus” with this route's line.",
+    "fr": "Lance « je suis dans un bus » avec la ligne de cet itinéraire.",
+    "pt-BR": "Inicia “Estou em um ônibus” com a linha desta rota.",
+    "de": "Startet „Ich sitze im Bus“ mit der Linie dieser Route.",
+    "zh-Hans": "使用此路线的线路开始“我在公交车上”。"
+  },
+  "Incidencia simulada para la presentación": {
+    "en": "Simulated incident for the presentation",
+    "fr": "Incident simulé pour la présentation",
+    "pt-BR": "Incidente simulado para a apresentação",
+    "de": "Simulierter Vorfall für die Präsentation",
+    "zh-Hans": "演示用的模拟事件"
+  },
+  "Por dónde va": {
+    "en": "Where it goes",
+    "fr": "Par où il passe",
+    "pt-BR": "Por onde passa",
+    "de": "Wo er fährt",
+    "zh-Hans": "现在经过"
+  },
+  "Va por aquí": {
+    "en": "Now goes here",
+    "fr": "Passe par ici",
+    "pt-BR": "Passa por aqui",
+    "de": "Fährt jetzt hier",
+    "zh-Hans": "现在经过这里"
+  },
+  "Opcional: toca la calle por la que va ahora": {
+    "en": "Optional: tap the street it now takes",
+    "fr": "Facultatif : touchez la rue qu'il emprunte désormais",
+    "pt-BR": "Opcional: toque na rua por onde passa agora",
+    "de": "Optional: Tippe auf die Straße, die er jetzt nimmt",
+    "zh-Hans": "可选：点按它现在经过的街道"
+  },
+  "Ese punto está a {0} de la línea. Marca un lugar por donde pasa el micro.": {
+    "en": "That point is {0} from the line. Mark a place where the bus passes.",
+    "fr": "Ce point est à {0} de la ligne. Marquez un endroit où passe le bus.",
+    "pt-BR": "Esse ponto está a {0} da linha. Marque um lugar por onde o ônibus passa.",
+    "de": "Dieser Punkt ist {0} von der Linie entfernt. Markiere eine Stelle, an der der Bus vorbeifährt.",
+    "zh-Hans": "该点距离线路 {0}。请标记公交车经过的地点。"
+  },
+  "Seguir en segundo plano": {
+    "en": "Continue in background",
+    "fr": "Continuer en arrière-plan",
+    "pt-BR": "Continuar em segundo plano",
+    "de": "Im Hintergrund fortsetzen",
+    "zh-Hans": "在后台继续"
+  },
+  "Solo durante tus viajes": {
+    "en": "Only during your trips",
+    "fr": "Uniquement pendant vos trajets",
+    "pt-BR": "Só durante suas viagens",
+    "de": "Nur während Ihrer Fahrten",
+    "zh-Hans": "仅在行程中"
+  },
+  "¿Seguir ayudando en segundo plano?": {
+    "en": "Keep helping in the background?",
+    "fr": "Continuer à aider en arrière-plan ?",
+    "pt-BR": "Continuar ajudando em segundo plano?",
+    "de": "Im Hintergrund weiter helfen?",
+    "zh-Hans": "要在后台继续提供帮助吗？"
+  },
+  "Durante un viaje, RutaUTP seguirá usando tu ubicación y enviando los mismos datos aunque bloquees la pantalla o cambies de app. iOS lo indicará en la barra de estado. Se detiene al terminar el viaje y no se usa fuera de uno. Consume más batería. Puedes desactivarlo cuando quieras.": {
+    "en": "During a trip, RutaUTP will keep using your location and sending the same data even if you lock the screen or switch apps. iOS shows this in the status bar. It stops when the trip ends and isn't used outside a trip. It uses more battery. You can turn it off at any time.",
+    "fr": "Pendant un trajet, RutaUTP continuera d’utiliser votre position et d’envoyer les mêmes données, même si vous verrouillez l’écran ou changez d’app. iOS l’indique dans la barre d’état. Cela s’arrête à la fin du trajet et n’est pas utilisé en dehors d’un trajet. Cela consomme plus de batterie. Vous pouvez le désactiver à tout moment.",
+    "pt-BR": "Durante uma viagem, o RutaUTP continuará usando sua localização e enviando os mesmos dados, mesmo se você bloquear a tela ou mudar de app. O iOS mostra isso na barra de status. Para ao terminar a viagem e não é usado fora de uma. Consome mais bateria. Você pode desativar quando quiser.",
+    "de": "Während einer Fahrt verwendet RutaUTP weiterhin Ihren Standort und sendet dieselben Daten, auch wenn Sie den Bildschirm sperren oder die App wechseln. iOS zeigt dies in der Statusleiste an. Es endet mit der Fahrt und wird außerhalb einer Fahrt nicht verwendet. Es verbraucht mehr Akku. Sie können es jederzeit deaktivieren.",
+    "zh-Hans": "行程中，即使您锁定屏幕或切换到其他应用，RutaUTP 也会继续使用您的位置并发送相同的数据。iOS 会在状态栏中显示此状态。行程结束时即停止，行程之外不会使用。这会消耗更多电量。您可以随时关闭。"
+  },
+  "Permitir en segundo plano": {
+    "en": "Allow in background",
+    "fr": "Autoriser en arrière-plan",
+    "pt-BR": "Permitir em segundo plano",
+    "de": "Im Hintergrund erlauben",
+    "zh-Hans": "允许在后台运行"
+  },
+  "Permite que la contribución siga con la pantalla bloqueada o en otra app durante un viaje.": {
+    "en": "Lets contribution continue with the screen locked or in another app during a trip.",
+    "fr": "Permet à la contribution de continuer écran verrouillé ou dans une autre app pendant un trajet.",
+    "pt-BR": "Permite que a contribuição continue com a tela bloqueada ou em outro app durante uma viagem.",
+    "de": "Ermöglicht, dass der Beitrag während einer Fahrt bei gesperrtem Bildschirm oder in einer anderen App weiterläuft.",
+    "zh-Hans": "允许在行程中锁屏或使用其他应用时继续贡献。"
+  },
+  "Solo durante tus viajes. iOS lo indica en la barra de estado y consume más batería.": {
+    "en": "Only during your trips. iOS shows it in the status bar, and it uses more battery.",
+    "fr": "Uniquement pendant vos trajets. iOS l’indique dans la barre d’état et cela consomme plus de batterie.",
+    "pt-BR": "Só durante suas viagens. O iOS mostra isso na barra de status e consome mais bateria.",
+    "de": "Nur während Ihrer Fahrten. iOS zeigt es in der Statusleiste an, und es verbraucht mehr Akku.",
+    "zh-Hans": "仅在行程中。iOS 会在状态栏中显示，并会消耗更多电量。"
+  },
+  "También en segundo plano durante viajes": {
+    "en": "Also in the background during trips",
+    "fr": "Aussi en arrière-plan pendant les trajets",
+    "pt-BR": "Também em segundo plano durante viagens",
+    "de": "Auch im Hintergrund während Fahrten",
+    "zh-Hans": "行程中也在后台运行"
+  },
+  "Con la pantalla bloqueada (opcional)": {
+    "en": "With the screen locked (optional)",
+    "fr": "Écran verrouillé (facultatif)",
+    "pt-BR": "Com a tela bloqueada (opcional)",
+    "de": "Bei gesperrtem Bildschirm (optional)",
+    "zh-Hans": "锁屏时（可选）"
+  },
+  "Punto guardado. Toca otro lugar del mapa para cambiarlo.": {
+    "en": "Point saved. Tap another place on the map to change it.",
+    "fr": "Point enregistré. Touchez un autre endroit de la carte pour le modifier.",
+    "pt-BR": "Ponto salvo. Toque em outro lugar do mapa para alterá-lo.",
+    "de": "Punkt gespeichert. Tippen Sie auf eine andere Stelle der Karte, um ihn zu ändern.",
+    "zh-Hans": "已保存该点。轻点地图上的其他位置即可更改。"
+  },
+  "Tu ubicación es aproximada. Ajusta el punto en el mapa si hace falta.": {
+    "en": "Your location is approximate. Adjust the point on the map if needed.",
+    "fr": "Votre position est approximative. Ajustez le point sur la carte si nécessaire.",
+    "pt-BR": "Sua localização é aproximada. Ajuste o ponto no mapa se necessário.",
+    "de": "Ihr Standort ist ungefähr. Passen Sie den Punkt bei Bedarf auf der Karte an.",
+    "zh-Hans": "您的位置是大致位置。如有需要，请在地图上调整该点。"
+  },
+  "Guarda tu ubicación actual como punto de subida.": {
+    "en": "Saves your current location as the boarding point.",
+    "fr": "Enregistre votre position actuelle comme point de montée.",
+    "pt-BR": "Salva sua localização atual como ponto de embarque.",
+    "de": "Speichert Ihren aktuellen Standort als Einstiegspunkt.",
+    "zh-Hans": "将您当前的位置保存为上车点。"
+  },
+  "Ocupación no disponible": {
+    "en": "Occupancy unavailable",
+    "fr": "Affluence non disponible",
+    "pt-BR": "Ocupação indisponível",
+    "de": "Auslastung nicht verfügbar",
+    "zh-Hans": "无法获取拥挤程度"
+  },
+  "{0} micros": {
+    "en": "{0} buses",
+    "fr": "{0} bus",
+    "pt-BR": "{0} ônibus",
+    "de": "{0} Busse",
+    "zh-Hans": "{0} 辆公交车"
+  },
+  "{0} de {1} micros": {
+    "en": "{0} of {1} buses",
+    "fr": "{0} bus sur {1}",
+    "pt-BR": "{0} de {1} ônibus",
+    "de": "{0} von {1} Bussen",
+    "zh-Hans": "{0}/{1} 辆公交车"
+  },
+  "Ver los {0} micros del mapa": {
+    "en": "Show the {0} buses on the map",
+    "fr": "Afficher les {0} bus de la carte",
+    "pt-BR": "Ver os {0} ônibus do mapa",
+    "de": "Die {0} Busse auf der Karte anzeigen",
+    "zh-Hans": "查看地图上的 {0} 辆公交车"
+  },
+  "Micros en el mapa": {
+    "en": "Buses on the map",
+    "fr": "Bus sur la carte",
+    "pt-BR": "Ônibus no mapa",
+    "de": "Busse auf der Karte",
+    "zh-Hans": "地图上的公交车"
+  },
+  "Elige cuántos micros se muestran en el mapa": {
+    "en": "Choose how many buses appear on the map",
+    "fr": "Choisissez combien de bus apparaissent sur la carte",
+    "pt-BR": "Escolha quantos ônibus aparecem no mapa",
+    "de": "Wählen Sie, wie viele Busse auf der Karte angezeigt werden",
+    "zh-Hans": "选择地图上显示多少辆公交车"
+  },
+  "Puedes ver los micros, pero el envío de ubicaciones desde este teléfono aún no está configurado. Necesita una cuenta propia para enviar sus aportes.": {
+    "en": "You can see buses, but location uploads from this phone are not configured yet. It needs its own account to send contributions.",
+    "fr": "Vous pouvez voir les bus, mais l’envoi de positions depuis ce téléphone n’est pas encore configuré. Il lui faut son propre compte pour envoyer ses contributions.",
+    "pt-BR": "Você pode ver os ônibus, mas o envio de localizações deste telefone ainda não está configurado. Ele precisa de uma conta própria para enviar suas contribuições.",
+    "de": "Sie können die Busse sehen, aber das Senden von Standorten von diesem Telefon ist noch nicht eingerichtet. Es braucht ein eigenes Konto, um Beiträge zu senden.",
+    "zh-Hans": "您可以查看公交车，但此手机尚未配置位置上传。它需要自己的帐户才能发送贡献。"
+  },
+  "Envío de ubicaciones no configurado": {
+    "en": "Location uploads not configured",
+    "fr": "Envoi de positions non configuré",
+    "pt-BR": "Envio de localizações não configurado",
+    "de": "Standortübermittlung nicht eingerichtet",
+    "zh-Hans": "未配置位置上传"
+  },
+  "Esperando posiciones de vehículos": {
+    "en": "Waiting for vehicle positions",
+    "fr": "En attente des positions des véhicules",
+    "pt-BR": "Aguardando posições dos veículos",
+    "de": "Warten auf Fahrzeugpositionen",
+    "zh-Hans": "正在等待车辆位置"
+  },
+  "Inicio del recorrido": {
+    "en": "Route start",
+    "fr": "Début de l'itinéraire",
+    "pt-BR": "Início da rota",
+    "de": "Beginn der Route",
+    "zh-Hans": "路线起点"
+  },
+  "Tu ubicación": {
+    "en": "Your location",
+    "fr": "Votre position",
+    "pt-BR": "Sua localização",
+    "de": "Ihr Standort",
+    "zh-Hans": "您的位置"
+  },
+  ". Inicio del recorrido": {
+    "en": ". Route start",
+    "fr": ". Début de l'itinéraire",
+    "pt-BR": ". Início da rota",
+    "de": ". Beginn der Route",
+    "zh-Hans": "。路线起点"
+  },
+  "Cerrar recorrido": {
+    "en": "Close route",
+    "fr": "Fermer l'itinéraire",
+    "pt-BR": "Fechar rota",
+    "de": "Route schließen",
+    "zh-Hans": "关闭路线"
+  },
+  "Ir a mi ubicación": {
+    "en": "Go to my location",
+    "fr": "Aller à ma position",
+    "pt-BR": "Ir para minha localização",
+    "de": "Zu meinem Standort",
+    "zh-Hans": "前往我的位置"
+  },
+  "Ver recorrido completo": {
+    "en": "Show entire route",
+    "fr": "Afficher tout l'itinéraire",
+    "pt-BR": "Ver rota completa",
+    "de": "Gesamte Route anzeigen",
+    "zh-Hans": "查看完整路线"
+  },
+  "Activa la ubicación para RutaUTP en Ajustes para centrar el mapa en tu posición.": {
+    "en": "Enable location for RutaUTP in Settings to center the map on your position.",
+    "fr": "Activez la localisation pour RutaUTP dans Réglages pour centrer la carte sur votre position.",
+    "pt-BR": "Ative a localização do RutaUTP em Ajustes para centralizar o mapa na sua posição.",
+    "de": "Aktivieren Sie die Ortung für RutaUTP in den Einstellungen, um die Karte auf Ihre Position zu zentrieren.",
+    "zh-Hans": "请在“设置”中为 RutaUTP 开启定位，以便将地图居中到您的位置。"
+  },
+  "Este dispositivo restringe el acceso a la ubicación.": {
+    "en": "This device restricts location access.",
+    "fr": "Cet appareil restreint l’accès à la position.",
+    "pt-BR": "Este dispositivo restringe o acesso à localização.",
+    "de": "Dieses Gerät schränkt den Zugriff auf den Standort ein.",
+    "zh-Hans": "此设备限制了位置访问。"
+  },
+  "No pudimos obtener tu ubicación. Vuelve a intentarlo.": {
+    "en": "Couldn't get your location. Try again.",
+    "fr": "Impossible d’obtenir votre position. Réessayez.",
+    "pt-BR": "Não foi possível obter sua localização. Tente novamente.",
+    "de": "Ihr Standort konnte nicht ermittelt werden. Versuchen Sie es erneut.",
+    "zh-Hans": "无法获取您的位置。请重试。"
+  },
+  "Cerrar seguimiento": {
+    "en": "Close tracking",
+    "fr": "Fermer le suivi",
+    "pt-BR": "Fechar acompanhamento",
+    "de": "Verfolgung schließen",
+    "zh-Hans": "关闭跟踪"
+  },
+  "SEGUIMIENTO": {
+    "en": "TRACKING",
+    "fr": "SUIVI",
+    "pt-BR": "ACOMPANHAMENTO",
+    "de": "VERFOLGUNG",
+    "zh-Hans": "跟踪"
+  },
+  "Ubicación del vehículo": {
+    "en": "Vehicle location",
+    "fr": "Position du véhicule",
+    "pt-BR": "Localização do veículo",
+    "de": "Fahrzeugstandort",
+    "zh-Hans": "车辆位置"
+  },
+  "POSICIÓN RECIBIDA": {
+    "en": "RECEIVED POSITION",
+    "fr": "POSITION REÇUE",
+    "pt-BR": "POSIÇÃO RECEBIDA",
+    "de": "EMPFANGENE POSITION",
+    "zh-Hans": "已接收位置"
+  },
+  "Ver la ciudad": {
+    "en": "Show city",
+    "fr": "Voir la ville",
+    "pt-BR": "Ver a cidade",
+    "de": "Stadt anzeigen",
+    "zh-Hans": "查看城市"
+  },
+  "Muestra la mayor parte de Trujillo sin cambiar el lugar marcado": {
+    "en": "Shows most of Trujillo without changing the marked place",
+    "fr": "Affiche la majeure partie de Trujillo sans modifier le lieu marqué",
+    "pt-BR": "Mostra a maior parte de Trujillo sem alterar o local marcado",
+    "de": "Zeigt den Großteil von Trujillo, ohne den markierten Ort zu ändern",
+    "zh-Hans": "显示特鲁希略的大部分区域，不更改已标记的地点"
+  },
+  "Simulación": {
+    "en": "Simulation",
+    "fr": "Simulation",
+    "pt-BR": "Simulação",
+    "de": "Simulation",
+    "zh-Hans": "模拟"
+  },
+  "Elegir dónde bajar": {
+    "en": "Choose where to get off",
+    "fr": "Choisir où descendre",
+    "pt-BR": "Escolher onde descer",
+    "de": "Ausstieg wählen",
+    "zh-Hans": "选择下车站点"
+  },
+  "Más opciones": {
+    "en": "More options",
+    "fr": "Plus d’options",
+    "pt-BR": "Mais opções",
+    "de": "Weitere Optionen",
+    "zh-Hans": "更多选项"
+  },
+  "¿Finalizar la navegación?": {
+    "en": "End navigation?",
+    "fr": "Terminer la navigation ?",
+    "pt-BR": "Encerrar a navegação?",
+    "de": "Navigation beenden?",
+    "zh-Hans": "结束导航？"
+  },
+  "Seguir navegando": {
+    "en": "Keep navigating",
+    "fr": "Continuer la navigation",
+    "pt-BR": "Continuar navegando",
+    "de": "Weiter navigieren",
+    "zh-Hans": "继续导航"
+  },
+  "Dejaremos de seguir tu avance en esta línea.": {
+    "en": "We'll stop following your progress on this line.",
+    "fr": "Nous arrêterons de suivre votre progression sur cette ligne.",
+    "pt-BR": "Vamos parar de acompanhar seu progresso nesta linha.",
+    "de": "Wir verfolgen deinen Fortschritt auf dieser Linie dann nicht mehr.",
+    "zh-Hans": "我们将停止跟踪你在这条线路上的进度。"
+  },
+  "Bajas en": {
+    "en": "You get off at",
+    "fr": "Vous descendez à",
+    "pt-BR": "Você desce em",
+    "de": "Du steigst aus an",
+    "zh-Hans": "下车站点"
+  },
+  "Abre la lista de paraderos para elegir dónde bajar.": {
+    "en": "Opens the stop list to choose where to get off.",
+    "fr": "Ouvre la liste des arrêts pour choisir où descendre.",
+    "pt-BR": "Abre a lista de paradas para escolher onde descer.",
+    "de": "Öffnet die Haltestellenliste, um den Ausstieg zu wählen.",
+    "zh-Hans": "打开站点列表以选择下车站点。"
+  },
+  "Avance de tu viaje · tiempos estimados": {
+    "en": "Trip progress · estimated times",
+    "fr": "Progression du trajet · temps estimés",
+    "pt-BR": "Progresso da viagem · tempos estimados",
+    "de": "Fahrtfortschritt · geschätzte Zeiten",
+    "zh-Hans": "行程进度 · 预计时间"
+  },
+  "Avance de tu viaje, tiempos estimados": {
+    "en": "Trip progress, estimated times",
+    "fr": "Progression du trajet, temps estimés",
+    "pt-BR": "Progresso da viagem, tempos estimados",
+    "de": "Fahrtfortschritt, geschätzte Zeiten",
+    "zh-Hans": "行程进度，预计时间"
+  },
+  "Ya pasaste tu paradero": {
+    "en": "You passed your stop",
+    "fr": "Vous avez dépassé votre arrêt",
+    "pt-BR": "Você passou da sua parada",
+    "de": "Du hast deine Haltestelle verpasst",
+    "zh-Hans": "你已坐过站"
+  },
+  "Llegaste a tu paradero": {
+    "en": "You reached your stop",
+    "fr": "Vous êtes arrivé à votre arrêt",
+    "pt-BR": "Você chegou à sua parada",
+    "de": "Du hast deine Haltestelle erreicht",
+    "zh-Hans": "你已到达下车站点"
+  },
+  "Baja en el siguiente o elige otro paradero.": {
+    "en": "Get off at the next one or choose another stop.",
+    "fr": "Descendez au prochain ou choisissez un autre arrêt.",
+    "pt-BR": "Desça na próxima ou escolha outra parada.",
+    "de": "Steig an der nächsten aus oder wähle eine andere Haltestelle.",
+    "zh-Hans": "请在下一站下车，或选择其他站点。"
+  },
+  "Seguir en esta línea": {
+    "en": "Stay on this line",
+    "fr": "Rester sur cette ligne",
+    "pt-BR": "Continuar nesta linha",
+    "de": "Auf dieser Linie bleiben",
+    "zh-Hans": "继续乘坐这条线路"
+  },
+  "Final de la línea": {
+    "en": "End of the line",
+    "fr": "Terminus de la ligne",
+    "pt-BR": "Fim da linha",
+    "de": "Endstation der Linie",
+    "zh-Hans": "线路终点"
+  },
+  "Esta línea no tiene paraderos sobre su recorrido.": {
+    "en": "This line has no stops along its route.",
+    "fr": "Cette ligne n’a aucun arrêt sur son itinéraire.",
+    "pt-BR": "Esta linha não tem paradas ao longo da rota.",
+    "de": "Diese Linie hat keine Haltestellen entlang ihrer Route.",
+    "zh-Hans": "这条线路沿途没有站点。"
+  },
+  "Ningún paradero coincide con la búsqueda.": {
+    "en": "No stops match your search.",
+    "fr": "Aucun arrêt ne correspond à la recherche.",
+    "pt-BR": "Nenhuma parada corresponde à busca.",
+    "de": "Keine Haltestelle passt zur Suche.",
+    "zh-Hans": "没有符合搜索条件的站点。"
+  },
+  "Ya pasaste este paradero": {
+    "en": "You already passed this stop",
+    "fr": "Vous avez déjà dépassé cet arrêt",
+    "pt-BR": "Você já passou desta parada",
+    "de": "Diese Haltestelle hast du schon passiert",
+    "zh-Hans": "你已经过这一站"
+  },
+  "En orden de viaje": {
+    "en": "In travel order",
+    "fr": "Dans l’ordre du trajet",
+    "pt-BR": "Na ordem da viagem",
+    "de": "In Fahrtreihenfolge",
+    "zh-Hans": "按行驶顺序"
+  },
+  "Buscar paradero": {
+    "en": "Search stops",
+    "fr": "Rechercher un arrêt",
+    "pt-BR": "Buscar parada",
+    "de": "Haltestelle suchen",
+    "zh-Hans": "搜索站点"
+  },
+  "¿Dónde bajas?": {
+    "en": "Where do you get off?",
+    "fr": "Où descendez-vous ?",
+    "pt-BR": "Onde você desce?",
+    "de": "Wo steigst du aus?",
+    "zh-Hans": "你在哪里下车？"
+  },
+  "Ver micro": {
+    "en": "View bus",
+    "fr": "Voir le bus",
+    "pt-BR": "Ver ônibus",
+    "de": "Bus anzeigen",
+    "zh-Hans": "查看公交车"
+  },
+  "Ver ruta": {
+    "en": "View route",
+    "fr": "Voir l'itinéraire",
+    "pt-BR": "Ver rota",
+    "de": "Route anzeigen",
+    "zh-Hans": "查看路线"
+  },
+  "Centra el mapa en este micro": {
+    "en": "Centers the map on this bus",
+    "fr": "Centre la carte sur ce bus",
+    "pt-BR": "Centraliza o mapa neste ônibus",
+    "de": "Zentriert die Karte auf diesen Bus",
+    "zh-Hans": "将地图居中到这辆公交车"
+  },
+  "Abre el recorrido completo de esta línea en Rutas": {
+    "en": "Opens this line's full route in Routes",
+    "fr": "Ouvre l'itinéraire complet de cette ligne dans Itinéraires",
+    "pt-BR": "Abre a rota completa desta linha em Rotas",
+    "de": "Öffnet die vollständige Route dieser Linie in Routen",
+    "zh-Hans": "在“路线”中打开这条线路的完整路线"
+  },
+  "Sin estimación": {
+    "en": "No estimate",
+    "fr": "Aucune estimation",
+    "pt-BR": "Sem estimativa",
+    "de": "Keine Schätzung",
+    "zh-Hans": "暂无预计时间"
   }
 }
