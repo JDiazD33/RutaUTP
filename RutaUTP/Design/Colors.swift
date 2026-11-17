@@ -206,4 +206,13 @@ extension Color {
         let contrasteBlanco = 1.05 / (luminancia + 0.05)
         return contrasteNegro >= contrasteBlanco ? .black : .white
     }
+
+    /// Igual que `textoContrastante(in:)`, a partir del esquema de color.
+    /// Leer `\.self` del entorno vuelve a evaluar la vista con cualquier cambio
+    /// del entorno; aquí basta saber si el tema es claro u oscuro.
+    func textoContrastante(esquema: ColorScheme) -> Color {
+        let rasgos = UITraitCollection(userInterfaceStyle: esquema == .dark ? .dark : .light)
+        let luminancia = Color.luminancia(UIColor(self).resolvedColor(with: rasgos))
+        return (luminancia + 0.05) / 0.05 >= 1.05 / (luminancia + 0.05) ? .black : .white
+    }
 }

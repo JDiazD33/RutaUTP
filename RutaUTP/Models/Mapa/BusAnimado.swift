@@ -66,21 +66,6 @@ struct BusAnimado: Identifiable, Equatable {
         return backendVehicleID
     }
 
-    /// Texto de la llegada para la interfaz.
-    ///
-    /// Las posiciones MQTT muestran `~` porque su llegada se estima con la
-    /// posición, rumbo y velocidad disponibles sobre el recorrido GTFS. Si el
-    /// vehículo se aleja del punto consultado o faltan datos fiables, se evita
-    /// inventar un valor y se muestra "SIN ETA".
-    var etiquetaLlegada: String {
-        guard let minutosLlegada else {
-            return L.t("SIN ETA", "NO ETA")
-        }
-
-        let tiempo = L.f("{0} min", "{0} min", ["\(minutosLlegada)"]).uppercased()
-        return fuente == .real ? "~" + tiempo : tiempo
-    }
-
     var longitudRutaM: Double { acumulados.last ?? 0 }
 
     var coordinate: CLLocationCoordinate2D {
