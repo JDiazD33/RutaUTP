@@ -88,8 +88,10 @@ Por petición del usuario, el backend puede añadir un guion de ocupación a cad
 micro sintético: `empty` (Vacío), `space` (Con espacio), `full` (Lleno).
 No se deduce de la cantidad de balizas ni de votos. La política v1 es determinista
 por identificador de vehículo y timestamp de la posición, con ciclos de cinco
-minutos y mezcla por franja horaria de Lima. Un cambio puede saltar entre estados;
-no representa un conteo de pasajeros ni capacidad física medida.
+minutos y mezcla según la curva horaria de demanda de Lima descrita en
+[README.md](README.md#curva-horaria-de-demanda-15112026). Un micro cambia como
+máximo un nivel entre bloques contiguos; no representa un conteo de pasajeros ni
+capacidad física medida.
 
 `BACKEND_SIMULATION_OCCUPANCY_ENABLED=1` requiere ingreso sintético habilitado.
 Por defecto está apagado. Con el flag, solamente las posiciones sintéticas usan

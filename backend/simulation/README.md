@@ -263,8 +263,9 @@ Por petición del usuario, el backend puede añadir un guion de ocupación a cad
 micro sintético: `empty` (Vacío), `space` (Con espacio), `full` (Lleno).
 No se deduce de la cantidad de balizas ni de votos. La política v1 es determinista
 por identificador de vehículo y timestamp de la posición, con ciclos de cinco
-minutos y mezcla por franja horaria de Lima. Un cambio puede saltar entre estados;
-no representa un conteo de pasajeros ni capacidad física medida.
+minutos y mezcla según la curva horaria de demanda de Lima descrita más abajo.
+Un micro cambia como máximo un nivel entre bloques contiguos; no representa un
+conteo de pasajeros ni capacidad física medida.
 
 `BACKEND_SIMULATION_OCCUPANCY_ENABLED=1` requiere ingreso sintético habilitado.
 Por defecto está apagado. Con el flag, solamente las posiciones sintéticas usan
@@ -286,3 +287,44 @@ una fila no prueba entrega MQTT/iOS. Los informes de esquema 1 siguen siendo de
 solo lectura y no disparan migraciones. Se añade el conteo de estados almacenados.
 El ensayo aislado admite `--scenario-occupancy`; conserva las cuentas, ACL,
 presupuestos y apagado de S10. No se modificó una base activa para desplegar esto.
+
+### Curva horaria de demanda (15/11/2026)
+
+Por petición del usuario, la mezcla depende de la hora a la que se enciende la
+simulación. `DEMAND_CURVE`, en `rutautp_backend/simulation_occupancy.py`, fija una
+demanda de 0 a 1 por hora de Lima (UTC−5 fijo; Perú no aplica horario de verano)
+y la interpola minuto a minuto, de modo que sube y baja sin escalones. Los
+porcentajes de la tabla se calcularon con 1500 identificadores sintéticos a la
+hora indicada; no son una medición de la app ni de demanda real.
+
+| Hora de Lima | Demanda | Mezcla aproximada |
+|---|---|---|
+| 06:00 | 0,50 | Arranque: 80 % con espacio, 20 % vacíos |
+| 07:00–09:00 | 0,88–1,00 | Punta universitaria (clases de 8 y 9): 50–85 % llenos |
+| 10:00–11:00 | 0,62–0,70 | Valle: casi todos con espacio |
+| 12:00–14:00 | 0,92–1,00 | Pico del mediodía: 60–85 % llenos |
+| 15:00 | 0,78 | Baja leve: unos 20 % llenos |
+| 16:00–18:00 | 0,88–0,95 | Tarde alta: 50–70 % llenos |
+| 19:00 | 0,82 | Empieza a bajar: unos 30 % llenos |
+| 20:00 | 0,66 | Casi todos con espacio, casi sin llenos |
+| 21:00 | 0,52 | Aparecen vacíos: unos 15 %, sin llenos |
+| 22:00–22:30 | 0,38–0,29 | Mayoría vacíos: 60–80 % |
+
+La carga de cada micro es la demanda del bloque más un sesgo propio, estable
+durante el run (±0,15: unas unidades van más llenas que otras), y una variación
+por bloque (±0,12). Por debajo de 0,40 queda vacío; desde 0,88, lleno. La carga
+cambia entre bloques contiguos menos que la distancia entre umbrales, así que un
+micro no pasa de vacío a lleno sin mostrar antes «con espacio». Con 10 micros
+los porcentajes son orientativos: el sesgo propio puede dejar un run más lleno o
+más vacío que la media.
+
+La curva es la misma todos los días, incluidos fines de semana y feriados. La
+ventana de los perfiles sigue en 07:00–22:30; el tramo anterior a las 07:00 solo
+se vería si se amplía esa ventana. La terminal de la presentación indica en el
+mensaje «Listo» si la demanda simulada de esa hora es alta, media o baja.
+
+`occupancyScriptVersion` sigue en 1 porque el contrato del mensaje no cambia: los
+mismos tres estados y campos. Subirla obligaría a actualizar a la vez el lector
+iOS, el `CHECK` de SQLite y el esquema JSON, que hoy exigen el valor 1. Las filas
+del histórico anteriores al 15/11/2026 se generaron con la mezcla previa de dos
+franjas (punta 07–09 y 17–20, resto igual) y también llevan la versión 1.

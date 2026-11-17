@@ -142,6 +142,7 @@ Los ajustes propios del servicio llevan el prefijo `BACKEND_`.
 | `BACKEND_VEHICLE_TTL_S` | `60` | Sin observaciones durante este tiempo, el vehículo se retira |
 | `BACKEND_PUBLISH_INTERVAL_S` | `5` | Ritmo mínimo de publicación por vehículo |
 | `BACKEND_MIN_PUBLISH_PRINCIPALS` | `2` | Instalaciones MQTT autenticadas distintas requeridas antes de publicar un vehículo. No cuenta sesiones rotadas de un mismo principal |
+| `BACKEND_ROUTE_CHANGES_QUORUM` | `2` | Cuentas MQTT distintas que deben coincidir para publicar un cambio de ruta o una incidencia. Mínimo `2` |
 | `BACKEND_VEHICLE_NAMESPACE` | aleatorio por arranque | Espacio de nombres del `vehicleId`. Fijarlo da identificadores reproducibles; vacío genera uno nuevo en cada arranque, que es lo que evita heredar la identidad visible de un proceso anterior |
 
 La ventana `BACKEND_MERGE_WINDOW_S` también acota la retención en memoria de
@@ -174,6 +175,7 @@ autorización de cada ensayo la da el controlador interno, no estas variables. V
 | `BACKEND_VEHICLE_POSITION_SCHEMA_VERSION` | `1` | Versión del mensaje de posición publicado: `1` o `2`. La rama sintética exige `2` |
 | `BACKEND_SIMULATION_INGRESS_ENABLED` | `0` | `1` prepara la rama sintética. Requiere esquema `2` y `BACKEND_MIN_PUBLISH_PRINCIPALS` de al menos `2` |
 | `BACKEND_SIMULATION_OCCUPANCY_ENABLED` | `0` | `1` publica la ocupación de escenario. Requiere la entrada sintética habilitada |
+| `BACKEND_SIMULATION_ROUTE_CHANGES` | — | JSON con incidencias simuladas para la presentación: obras, cierre, desvío, choque y tráfico. Exige `BACKEND_SIMULATION_INGRESS_ENABLED=1`. Se validan como reportes y se publican con `simulated: true`, sin avisos push |
 | `BACKEND_SIMULATION_CONTROL_PATH` | — | Base SQLite privada del controlador de simulación, separada del histórico. Vacío: no se abre el controlador |
 
 ### Persistencia
@@ -479,27 +481,60 @@ el seguimiento de vehículos, la geometría GTFS ni el cálculo de llegada.
 
 - Entrada: `rutautp/cambios/{principal}/reporte`, QoS 1, sin retención.
   JSON: `schemaVersion: 1`, `requestId` (UUID), `routeId`, `reason`
-  (`works`, `closure`, `detour`), `lat`, `lon`, `place` (3–120 caracteres),
-  `timestamp` (Unix en segundos). El punto debe quedar a 500 m o menos de
-  la ruta GTFS y el mensaje tener como máximo 120 s de antigüedad.
+  (`works`, `closure`, `detour`, `traffic`, `crash`), `lat`, `lon`, `place`
+  (3–120 caracteres), `timestamp` (Unix en segundos). El punto debe quedar a
+  500 m o menos de la ruta GTFS y el mensaje tener como máximo 120 s de
+  antigüedad. Opcionales: `via` (3–80 caracteres, la vía por la que pasa
+  ahora) y `endLat`/`endLon` (dónde retoma su recorrido: sobre la misma ruta
+  y entre 50 m y 5 km del punto inicial). `path` es el trazo de la calle nueva
+  que grabó el teléfono a bordo: polilínea codificada (algoritmo de Google,
+  precisión 1e-5), de 3 a 120 puntos y como máximo 1400 caracteres. Solo vale
+  para `works`, `closure` y `detour` y exige `endLat`/`endLon`; sus extremos quedan a 75 m o menos del inicio y del punto
+  donde retoma, sin saltos de más de 600 m, con un largo de hasta 8 km y algún
+  punto a más de 60 m del recorrido.
 - Recibo privado: `rutautp/cambios/{principal}/recibo`, con `requestId`,
   `accepted` y `code`: `pending`, `confirmed`, `off_route`, `rate_limit`,
-  `busy` o `invalid`. Un recibo de MQTT no sustituye esta respuesta del servidor.
+  `busy`, `invalid` o `invalid_path` (el trazo no cumple; consume la cuota de
+  30 s porque validarlo es lo más costoso). Un reporte aceptado añade `confirmations` y `required`
+  (cuentas que coinciden y cuentas necesarias). Un recibo de MQTT no sustituye
+  esta respuesta del servidor.
 - Consulta: `rutautp/cambios/estado`. Snapshot completo cada 5 s, incluso
-  vacío, con `schemaVersion`, `timestamp` y `alerts`. Cada alerta contiene
-  `id`, `routeId`, `reason`, `lat`, `lon`, `place`, `confirmations`, `expiresAt`.
+  vacío, con `schemaVersion`, `timestamp`, `quorum` y `alerts`. Cada alerta
+  contiene `id`, `routeId`, `reason`, `lat`, `lon`, `place`, `confirmations`,
+  `expiresAt` y, si algún reporte los aportó, `via`, `endLat` y `endLon`.
+  En la presentación se añaden las incidencias de
+  `BACKEND_SIMULATION_ROUTE_CHANGES` con `simulated: true`, el quorum como
+  confirmaciones y una vigencia de 30 minutos que se renueva en cada snapshot.
+  `path` aparece cuando dos cuentas del grupo enviaron trazos que coinciden
+  (ningún punto a más de 80 m del otro trazo y 35 m de media); se publica el
+  del reporte más antiguo. Un trazo aislado nunca se publica.
   No contiene las identidades de quienes reportaron.
 
-Se agrupan misma ruta y motivo dentro de 200 m del punto inicial. Se requieren
-**dos principales autenticados distintos**; cambiar requestId o repetir desde
-la misma cuenta nunca suma otra confirmación. Cada voto dura 15 minutos y la
-alerta desaparece si deja de haber dos vigentes. Se permite un reporte cada
-30 segundos por cuenta; hay límites de grupos y votos en memoria. El estado
-es efímero: reiniciar el backend requiere reportes nuevos. Dos cuentas no
-prueban por sí solas la existencia de una incidencia; dependen del
-aprovisionamiento de cuentas independientes, igual que el quorum vehicular.
+Se agrupan misma ruta y motivo dentro de 200 m del punto inicial. El tráfico
+y los choques son incidencias de la vía: se agrupan sin mirar la ruta, de modo
+que pasajeros de líneas distintas confirman el mismo hecho. Se requieren
+**dos principales autenticados distintos** (`BACKEND_ROUTE_CHANGES_QUORUM`);
+cambiar requestId o repetir desde la misma cuenta nunca suma otra
+confirmación, solo renueva el voto propio. Cada voto dura según su motivo:
 
-La app ofrece «Obras, cierres o cambios de ruta» dentro de «Reportar».
+| Motivo | Vigencia del voto |
+| --- | --- |
+| `traffic` | 30 minutos |
+| `crash` | 1 hora |
+| `closure` | 12 horas |
+| `detour`, `works` | 24 horas |
+
+La alerta desaparece cuando dejan de haber tantos votos vigentes como exige
+el quorum. El primer reporte que aporta `via` o el punto final los fija para
+el grupo. Se permite un reporte cada 30 segundos por cuenta y cada cuenta
+mantiene como máximo 10 votos vigentes: el más antiguo se retira. Hay límites
+de grupos y votos en memoria. El estado es efímero: reiniciar el backend
+requiere reportes nuevos, también para las obras de varios días. Dos cuentas
+no prueban por sí solas la existencia de una incidencia; dependen del
+aprovisionamiento de cuentas independientes, igual que el quorum vehicular.
+Los avisos remotos solo cubren `works`, `closure` y `detour`.
+
+La app ofrece «Cambios de ruta, obras o tráfico» dentro de «Reportar».
 El mapa del formulario se puede ampliar a pantalla completa para elegir el
 lugar afectado. «Reportar» conserva además alertas de seguridad, sugerencias
 y otros incidentes.

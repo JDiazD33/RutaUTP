@@ -4,7 +4,7 @@ Preparación del 27/10/2026. Usa tu despliegue **rutautp-broker** de EMQX:
 `ce14c140.ala.us-east-1.emqxsl.com`, puerto **8883**, con TLS.
 La Mac ejecuta backend y 30 balizas; EMQX transporta; el iPhone recibe diez modelos
 con Vacío / Con espacio / Lleno. La nueva vista dibuja la flota vigente completa;
-el botón con su cantidad permite encuadrarla. El panel de líneas mantiene su filtro.
+si no se ve entera, aleja el mapa con dos dedos. El panel de líneas mantiene su filtro.
 En Ajustes → Micros en el mapa se puede limitar la cantidad visible; la opción
 predeterminada es Todos. El límite no elimina posiciones del receptor ni recorta
 la información disponible para rutas y fichas. El micro seleccionado se mantiene
@@ -139,6 +139,32 @@ permitir otro ensayo. El perfil conserva los topes 6000/run y 10000/día.
 Si no alcanza hoy, el consumo diario corresponde a la nueva fecha de Lima desde
 medianoche, y el horario permite iniciar de nuevo desde las 07:00. El histórico
 de días anteriores permanece guardado.
+
+## Incidencias simuladas en el mapa
+
+La presentación publica cambios de ruta reales o comprobados en la calle; ya no
+usa motivos inventados:
+
+- Obra en la Av. Nicolás de Piérola (aviso de la MPT, noviembre de 2026), desde la
+  entrada por la Av. América Norte hasta el Hospital Primavera (C-01 «B»).
+- Su desvío oficial para 9 líneas rumbo al norte: Vera Enríquez, Federico Chopin,
+  Franz Liszt, Sibelius y Dunker Lavalle. Los micros simulados de esas líneas
+  recorren el desvío y el backend acepta sus posiciones sobre el trazo.
+- M-34 «A»: desvío en Av. Nicolás de Piérola y Calle los Diamantes, con la
+  calle nueva por Av. Mansiche hasta Av. Gerónimo de la Torre.
+
+En la app se ven como cualquier aviso, pero su detalle dice «Incidencia
+simulada para la presentación» y no se pueden confirmar. No generan avisos push
+y desaparecen al apagar la presentación. El backend habitual nunca las publica:
+la opción `BACKEND_SIMULATION_ROUTE_CHANGES` exige la entrada sintética.
+
+Para moverlas o cambiarlas, editar o regenerar
+`simulation/incidencias-presentacion.json`:
+
+```sh
+cd /Users/joaquindiaz05/Documents/RU-IOQT/RutaUTP/backend
+.venv/bin/python tools/generar_incidencias_presentacion.py
+```
 
 ## Apagar
 

@@ -22,10 +22,14 @@ Abre **RutaUTP desde su icono** en el iPhone, con Internet.
 Entrará a **Mapa**; no uses «Demo de seguimiento».
 El teléfono puede estar desconectado del cable. Aparecerán los micros y su
 ocupación al recibir los datos frescos. La Mac debe seguir ejecutando el servicio.
-Pulsa el botón con la cantidad de micros para encuadrarlos. En **Ajustes**, justo
+Si no ves todos los micros, aleja el mapa con dos dedos. En **Ajustes**, justo
 debajo de **Ayudar con ubicaciones**, **Micros en el mapa** permite elegir
-**Todos, 5, 10, 15 o 20**. Se recuerda al reabrir; comienza en **Todos**.
-Si limitas la vista, el botón muestra, por ejemplo, **«5 de 15 micros»**.
+**Todos, 5, 10, 15, 20 o 25**. Se recuerda al reabrir; comienza en **Todos**.
+
+La ocupación depende de la hora de Lima a la que enciendas la simulación. Hay más
+micros llenos de 7 a 9, de 12 a 14 y de 16 a 18. Desde las 19 baja poco a poco y
+hacia las 22 predominan los vacíos. El mensaje «Listo» indica si la demanda
+simulada de esa hora es alta, media o baja.
 
 ## 3. Apagar
 
@@ -58,5 +62,17 @@ La firma del iPhone debe estar vigente: la examinada vence el 30/10 a las 15:35.
 backend/.venv/bin/python backend/tools/presentacion.py iniciar --profile pasajeros-50 --seconds 240
 ```
 
-Espera **«Listo: 15 micros…»** y pulsa **«15 micros»** en Mapa. Este perfil permite
+Espera **«Listo: 15 micros…»** y abre Mapa. Este perfil permite
 hasta cinco minutos por sesión. La orden habitual sin `--profile` conserva 30.
+
+**Elegir cuántos micros (10 a 25)** con las mismas 50 cuentas del ensayo de 50:
+
+```sh
+backend/.venv/bin/python backend/tools/presentacion.py iniciar --micros 20 --seconds 240
+```
+
+Reparte las 50 cuentas entre los micros, con 2 o más por micro, que es el mínimo
+para que el backend lo publique. Con 25 micros cada uno tiene 2: si una cuenta
+falla, ese micro desaparece. Hasta 15 micros se usan las rutas del ensayo de 50 y
+desde 16 se suman 10 rutas más del feed. Dura hasta 5 minutos por sesión y gasta
+la misma cuota que el ensayo de 50. No uses `--micros` junto con `--profile`.
