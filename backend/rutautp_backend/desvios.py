@@ -1,7 +1,8 @@
 """Desvíos vigentes: el trazo que reemplaza un tramo cerrado de una ruta.
 
-Parte de incidencias `detour` con trazo (`path`) ya validadas por
-`route_changes.load_simulated`. La validación acepta posiciones sobre ese
+Parte de incidencias con trazo (`path`) ya validadas por
+`route_changes.load_simulated`: desvíos, y también cierres u obras que indican
+la calle por la que va ahora la línea. La validación acepta posiciones sobre ese
 trazo, con su rumbo y un avance interpolado entre la salida y el regreso,
 para que el agregador siga agrupando al micro. La simulación mueve el micro
 por el mismo trazo (`recorrido_con_desvios`).
@@ -12,7 +13,7 @@ import math
 from dataclasses import dataclass
 
 from .geo import haversine_m
-from .route_changes import decode_polyline
+from .route_changes import ROAD_REASONS, decode_polyline
 
 RADIO_EXTREMO_M = 60
 LARGO_MAXIMO_M = 5000
@@ -78,10 +79,13 @@ def tramo_cerrado(shape, salida, regreso) -> tuple[float, float] | None:
 
 
 def desvios_por_ruta(alertas, feed) -> dict[str, tuple[Desvio, ...]]:
-    """Desvíos con trazo de cada ruta, a partir de alertas ya validadas."""
+    """Desvíos con trazo de cada ruta, a partir de alertas ya validadas.
+
+    Un atasco o un choque no cambian el recorrido: nunca traen trazo.
+    """
     resultado: dict[str, list[Desvio]] = {}
     for alerta in alertas:
-        if alerta.get("reason") != "detour" or not alerta.get("path") or "endLat" not in alerta:
+        if alerta.get("reason") in ROAD_REASONS or not alerta.get("path") or "endLat" not in alerta:
             continue
         ruta = feed.get(alerta["routeId"])
         trazo = tuple(decode_polyline(alerta["path"]) or ())
