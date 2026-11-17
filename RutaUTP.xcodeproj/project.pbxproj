@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B5E184EFE00A5D3BDB6544C /* BusquedaLocalDestinos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5EF2DDEB2E362B313E5016 /* BusquedaLocalDestinos.swift */; };
 		0B5EA0F773C8FC73CCC098FF /* ConectividadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5EC787B38980FFB28A7D4D /* ConectividadService.swift */; };
 		F7A193280B384C919C88D805 /* Transportes3DCargaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */; };
 		DE08174B36CB4F479B294DD7 /* Transportes3DUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4491B4B791014C98BCCCE6CF /* Transportes3DUITests.swift */; };
@@ -289,6 +290,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0B5EF2DDEB2E362B313E5016 /* BusquedaLocalDestinos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BusquedaLocalDestinos.swift; sourceTree = "<group>"; };
 		0B5EC787B38980FFB28A7D4D /* ConectividadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConectividadService.swift; sourceTree = "<group>"; };
 		43744B2B80C744B68BE6EBC3 /* Transportes3DCargaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DCargaTests.swift; sourceTree = "<group>"; };
 		4491B4B791014C98BCCCE6CF /* Transportes3DUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transportes3DUITests.swift; sourceTree = "<group>"; };
@@ -835,6 +837,7 @@
 		0A8004D2300AD9FE004E1676 /* Mapa */ = {
 			isa = PBXGroup;
 			children = (
+				0B5EF2DDEB2E362B313E5016 /* BusquedaLocalDestinos.swift */,
 				BC0300000000000000000003 /* RouteSummaryPanel.swift */,
 				BA9900000000000000000041 /* RouteSummaryComponents.swift */,
 				3A7F0E1B5C594AA8AE8A1001 /* RouteAlternativesSheet.swift */,
@@ -1301,6 +1304,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0B5E184EFE00A5D3BDB6544C /* BusquedaLocalDestinos.swift in Sources */,
 				0B5EA0F773C8FC73CCC098FF /* ConectividadService.swift in Sources */,
 				BD6100000000000000000002 /* IdentificacionRuta3D.swift in Sources */,
 				E81C1E1883B8F5B84772D4A4 /* ColorTransporteReferencia.swift in Sources */,

@@ -188,6 +188,10 @@ extension MapaViewModel {
         busquedaResultado = nil
         sugerenciasBusqueda = []
         completer.queryFragment = ""
+        busquedaLocalTask?.cancel()
+        buscandoLocal = false
+        sugerenciasLocales = []
+        avisoBusquedaLocal = nil
         routePolyline = nil
         etaMinutos = nil
         // Sin destino: volver a la sede o al punto disponible, sin elegir viaje.

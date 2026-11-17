@@ -19,6 +19,17 @@ extension MapaViewModel {
     // filtro por foco lo aplica la vista, que es quien lo conoce.
     func actualizarTextoBusqueda(_ nuevoTexto: String) {
         let t = nuevoTexto.trimmingCharacters(in: .whitespacesAndNewlines)
+        if usaBusquedaLocal {
+            // Sin red no se consulta a Apple: paraderos y lugares guardados.
+            if !completer.queryFragment.isEmpty { completer.queryFragment = "" }
+            sugerenciasBusqueda = []
+            buscarLocalmente(t)
+            return
+        }
+        busquedaLocalTask?.cancel()
+        buscandoLocal = false
+        if !sugerenciasLocales.isEmpty { sugerenciasLocales = [] }
+        avisoBusquedaLocal = nil
         if t.isEmpty {
             sugerenciasBusqueda = []
             completer.queryFragment = ""
@@ -44,6 +55,10 @@ extension MapaViewModel {
     func seleccionar(destino: DestinoChip) {
         invalidarSeleccionAnterior()
         sugerenciasBusqueda = []
+        busquedaLocalTask?.cancel()
+        buscandoLocal = false
+        sugerenciasLocales = []
+        avisoBusquedaLocal = nil
         destinoSeleccionado = destino
         let destCoord = CLLocationCoordinate2D(latitude: destino.lat, longitude: destino.lon)
         busquedaResultado = (titulo: destino.label, coordenada: destCoord)
@@ -91,6 +106,11 @@ extension MapaViewModel {
             return
         }
 
+        if usaBusquedaLocal {
+            buscarTextoLocal(t)
+            return
+        }
+
         invalidarSeleccionAnterior()
         let revision = selectionRevision
         buscando = true
@@ -118,6 +138,10 @@ extension MapaViewModel {
 
     func seleccionarLugar(titulo: String, coordenada: CLLocationCoordinate2D) {
         invalidarSeleccionAnterior()
+        busquedaLocalTask?.cancel()
+        buscandoLocal = false
+        sugerenciasLocales = []
+        avisoBusquedaLocal = nil
         textoBusqueda = titulo
         destinoSeleccionado = nil
         busquedaResultado = (titulo: titulo, coordenada: coordenada)
