@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from rutautp_backend.desvios import desvios_por_ruta
 from rutautp_backend.geo import haversine_m, match_point_to_polyline
 from rutautp_backend.route_changes import (
     DEFAULT_QUORUM, MAX_VOTES_PER_PRINCIPAL, RouteChanges, SIMULATED_TTL_S, SNAPSHOT_TOPIC, TTL,
@@ -464,13 +465,31 @@ def test_unreadable_simulated_file_publishes_nothing(feed, tmp_path, content):
 
 
 def test_presentation_incidents_stay_valid_with_the_feed(feed):
-    # Solo incidencias reales: la obra de Nicolás de Piérola (MPT, noviembre de
-    # 2026), sus desvíos oficiales y el desvío de prueba de la M-34 «A».
+    # Las reales (obra de Nicolás de Piérola, MPT, noviembre de 2026, sus
+    # desvíos oficiales y el desvío de prueba de la M-34 «A», extendido a las
+    # líneas que recorren su tramo) salen al arrancar con su calle nueva. Los
+    # reportes en vivo de demostración aparecen después, escalonados, y cada
+    # línea afectada lleva también su calle nueva.
     items = json.loads(PRESENTATION_INCIDENTS.read_text(encoding="utf-8"))["alerts"]
     alerts = load_simulated(PRESENTATION_INCIDENTS, feed)
     assert len(alerts) == len(items)
-    assert {a["reason"] for a in alerts} == {"works", "detour"}
-    assert all("path" in a for a in alerts if a["reason"] == "detour")
+    reales = [a for a in alerts if "afterS" not in a]
+    en_vivo = [a for a in alerts if "afterS" in a]
+    assert {a["reason"] for a in reales} == {"works", "detour"}
+    assert all("path" in a for a in reales if a["reason"] == "detour")
+    m34 = next(a for a in reales if a["id"] == "sim-desvio-m34a")
+    assert sum(a.get("path") == m34["path"] for a in reales) > 1
+    assert en_vivo and all(a["id"].startswith("sim-vivo-") and "path" in a for a in en_vivo)
+    # Las líneas de un mismo reporte aparecen a la vez.
+    demoras = {}
+    for alert in en_vivo:
+        demoras.setdefault(alert["id"].rsplit("-", 1)[0], set()).add(alert["afterS"])
+    assert len(demoras) > 1 and all(len(d) == 1 for d in demoras.values())
+    # Cada calle nueva, también la de un cierre u obra, es un recorrido válido
+    # para los micros simulados de su línea.
+    desvios = desvios_por_ruta(alerts, feed)
+    assert ({d.alert_id for ds in desvios.values() for d in ds}
+            == {a["id"] for a in alerts if "path" in a})
 
 
 def test_delayed_simulated_incidents_appear_after_their_delay(feed, sample_route, tmp_path):

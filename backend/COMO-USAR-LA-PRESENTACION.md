@@ -151,7 +151,30 @@ usa motivos inventados:
   Franz Liszt, Sibelius y Dunker Lavalle. Los micros simulados de esas líneas
   recorren el desvío y el backend acepta sus posiciones sobre el trazo.
 - M-34 «A»: desvío en Av. Nicolás de Piérola y Calle los Diamantes, con la
-  calle nueva por Av. Mansiche hasta Av. Gerónimo de la Torre.
+  calle nueva por Av. Mansiche hasta Av. Gerónimo de la Torre. El tramo queda
+  cerrado para las 12 líneas que lo recorren en ese sentido, y todas siguen la
+  misma calle nueva: M-34 (2 variantes), C-03, C-07, C-41, CT-23 (2), CT-24 (2),
+  CT-25 y CT-26 (2).
+
+Además hay seis «reportes en vivo» de demostración, no reales, en otras zonas.
+Cada uno afecta a todas las líneas que recorren su tramo en ese sentido, y cada
+línea sigue su calle nueva, trazada con OSRM sobre OpenStreetMap:
+
+| Aparece | Zona | Motivo | Líneas |
+|---|---|---|---|
+| 20 s | La Esperanza | desvío | C-06 «K» |
+| 45 s | El Porvenir | desvío | C-18, C-20 (2), C-22 (2), CT-10 A y CT-10 B |
+| 75 s | Víctor Larco | desvío | CT-05, CT-06 y CT-07 «V-A» |
+| 110 s | Florencia de Mora | cierre | C-07 «Z1» y C-41 «Z2» |
+| 150 s | Huanchaco, Av. La Rivera | desvío | C-27, C-28, M-05 «H» (2) y M-06 |
+| 200 s | Alto Trujillo | obras | M-13 y M-15 (2) |
+
+Los segundos cuentan desde que arranca el backend (campo `afterS`), con hasta
+5 s más por el ritmo del snapshot. Los micros simulados de esas líneas (C-06,
+C-07 y C-20 en el perfil de 30 pasajeros) toman la calle nueva desde el
+arranque, antes de que aparezca el aviso. En el mapa, tocar un punto abre el
+aviso de todas las líneas de ese lugar, y sus calles siguen dibujadas dos
+minutos después de cerrar la hoja.
 
 En la app se ven como cualquier aviso, pero su detalle dice «Incidencia
 simulada para la presentación» y no se pueden confirmar. No generan avisos push
@@ -159,10 +182,14 @@ y desaparecen al apagar la presentación. El backend habitual nunca las publica:
 la opción `BACKEND_SIMULATION_ROUTE_CHANGES` exige la entrada sintética.
 
 Para moverlas o cambiarlas, editar o regenerar
-`simulation/incidencias-presentacion.json`:
+`simulation/incidencias-presentacion.json`. Si cambian el feed o los reportes en
+vivo (`REPORTES_EN_VIVO` en el generador), primero hay que volver a trazar sus
+calles nuevas. El trazado usa internet (el servidor público de OSRM) y tarda unos
+minutos. Los GPX quedan en `tools/prueba-desvio/vivo-*.gpx`:
 
 ```sh
 cd /Users/joaquindiaz05/Documents/RU-IOQT/RutaUTP/backend
+.venv/bin/python tools/trazar_desvios_en_vivo.py
 .venv/bin/python tools/generar_incidencias_presentacion.py
 ```
 
