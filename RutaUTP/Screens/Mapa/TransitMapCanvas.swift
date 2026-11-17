@@ -60,9 +60,11 @@ struct TransitMapCanvas: View {
     static let zoomDetalleAvisos: Double = 0.03
 
     /// Con ruta o viaje, los avisos que llegan al mapa ya son los que les
-    /// afectan; el que el usuario abre también se dibuja entero.
+    /// afectan; el que el usuario abre también se dibuja entero, y sigue así
+    /// un tiempo después de cerrar su hoja.
     private func avisoConLineas(_ cambio: CambioRutaEnMapa) -> Bool {
         rutaViaje != nil || vm.itinerario != nil
+            || vm.cambiosDestacados.contains(cambio.id)
             || vm.cambiosSeleccionados?.avisos.contains(where: { $0.id == cambio.id }) == true
     }
 
@@ -191,7 +193,7 @@ struct TransitMapCanvas: View {
                 Annotation(cambio.aviso.motivo.tituloAviso, coordinate: cambio.aviso.coordenada) {
                     Button {
                         campoEnfocado = false
-                        vm.cambiosSeleccionados = SeleccionCambiosRuta(avisos: [cambio.aviso])
+                        vm.abrirCambios([cambio.aviso])
                     } label: {
                         if avisoConIcono(cambio) {
                             MarcadorCambioRuta(motivo: cambio.aviso.motivo)

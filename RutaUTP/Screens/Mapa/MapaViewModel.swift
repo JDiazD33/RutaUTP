@@ -140,6 +140,9 @@ final class MapaViewModel: NSObject, MKLocalSearchCompleterDelegate {
     var cambiosEnMapa: [CambioRutaEnMapa] = []
     /// Avisos abiertos en la hoja de detalle.
     var cambiosSeleccionados: SeleccionCambiosRuta?
+    /// Avisos que siguen dibujados enteros tras cerrar su hoja (ver +CambiosRuta).
+    var cambiosDestacados: Set<String> = []
+    @ObservationIgnored var tareaFinDestacados: Task<Void, Never>?
     /// Desvío grabado en «Estoy en un micro» que el usuario decidió reportar.
     var desvioPorReportar: TrazadorDesvio.Desvio?
     /// Avisos por opción de ruta. Evita volver a proyectar cada aviso sobre el

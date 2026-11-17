@@ -8,6 +8,7 @@
 
 import Foundation
 import CoreLocation
+import SwiftUI
 
 /// Aviso confirmado listo para dibujar: marcador y, si se conoce, el tramo
 /// del recorrido habitual que la línea deja de atender y la calle nueva por
@@ -65,7 +66,12 @@ extension MapaViewModel {
             let tramo = recorridos[aviso.routeId].flatMap { TramoCambioRuta.coordenadas(de: aviso, en: $0) }
             return CambioRutaEnMapa(aviso: aviso, tramo: tramo ?? [], calleNueva: aviso.calleNueva)
         }
-        // Un aviso que venció no debe seguir abierto como si estuviera vigente.
+        // Un aviso que venció no debe seguir abierto ni destacado como si
+        // estuviera vigente.
+        let vigentesIDs = Set(avisos.map(\.id))
+        if !cambiosDestacados.isSubset(of: vigentesIDs) {
+            cambiosDestacados.formIntersection(vigentesIDs)
+        }
         if let abiertos = cambiosSeleccionados {
             let vigentes = abiertos.avisos.compactMap { abierto in avisos.first { $0.id == abierto.id } }
             if vigentes.isEmpty {
@@ -73,6 +79,32 @@ extension MapaViewModel {
             } else if vigentes != abiertos.avisos {
                 cambiosSeleccionados = SeleccionCambiosRuta(avisos: vigentes)
             }
+        }
+    }
+
+    /// Tiempo que un aviso sigue dibujado entero tras cerrar su hoja.
+    static let duracionDestacado: Duration = .seconds(120)
+
+    /// Abre la hoja de detalle y destaca esos avisos en el mapa: su tramo y su
+    /// calle nueva se dibujan aunque el mapa esté alejado. Sustituye a los
+    /// destacados anteriores, para no acumular líneas de avisos ya consultados.
+    func abrirCambios(_ avisos: [RouteChangeAlert]) {
+        tareaFinDestacados?.cancel()
+        tareaFinDestacados = nil
+        cambiosDestacados = Set(avisos.map(\.id))
+        cambiosSeleccionados = SeleccionCambiosRuta(avisos: avisos)
+    }
+
+    /// Al cerrar la hoja, el aviso sigue a la vista un tiempo para ubicarlo en
+    /// el mapa; después vuelve a ser un punto. Abrir otro aviso lo reemplaza.
+    func mantenerCambiosDestacados() {
+        tareaFinDestacados?.cancel()
+        guard !cambiosDestacados.isEmpty else { return }
+        tareaFinDestacados = Task { [weak self] in
+            try? await Task.sleep(for: Self.duracionDestacado)
+            guard !Task.isCancelled, let self else { return }
+            withAnimation(.easeOut(duration: 0.3)) { self.cambiosDestacados = [] }
+            self.tareaFinDestacados = nil
         }
     }
 

@@ -224,8 +224,10 @@ struct CambiosRutaEnMapaModifier: ViewModifier {
             .onChange(of: vm.itinerario?.optionID) { _, _ in sincronizar() }
             .onChange(of: rutaViaje?.id) { _, _ in sincronizar() }
             .onChange(of: vm.rutasPorId.count) { _, _ in sincronizar() }
+            // Al cerrarla, el aviso sigue dibujado un tiempo en el mapa.
             .sheet(item: Binding(get: { vm.cambiosSeleccionados },
-                                 set: { vm.cambiosSeleccionados = $0 })) { seleccion in
+                                 set: { vm.cambiosSeleccionados = $0 }),
+                   onDismiss: { vm.mantenerCambiosDestacados() }) { seleccion in
                 CambiosRutaDetalleSheet(avisos: seleccion.avisos, quorum: servicio.quorum,
                                         nombreLinea: { vm.nombreLinea(delCambio: $0) })
             }

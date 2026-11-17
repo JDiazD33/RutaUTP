@@ -129,7 +129,7 @@ struct RouteSummaryPanel: View {
             let avisos = vm.cambios(afectando: plan)
             if !avisos.isEmpty {
                 AvisoCambioRutaFila(avisos: avisos) {
-                    vm.cambiosSeleccionados = SeleccionCambiosRuta(avisos: avisos)
+                    vm.abrirCambios(avisos)
                 }
             }
         }
