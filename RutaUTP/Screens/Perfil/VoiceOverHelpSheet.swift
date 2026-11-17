@@ -19,6 +19,7 @@ struct VoiceOverHelpSheet: View {
                     descripcion
                     activacion
                     navegacion
+                    enRutaUTP
                     ajustes
                     guiaApple
                 }
@@ -84,6 +85,31 @@ struct VoiceOverHelpSheet: View {
             instruccion(L.t("Acciones adicionales", "Additional actions"),
                         L.t("En controles con acciones, el rotor permite elegir opciones como mover un punto del mapa o abrir un reporte.",
                             "On controls with actions, use the rotor to choose options such as moving a map point or opening a report."))
+        }
+    }
+
+    /// Cómo se usan con VoiceOver las funciones recientes de la app.
+    private var enRutaUTP: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            encabezado(L.t("En RutaUTP", "In RutaUTP"))
+            instruccion(L.t("Publicaciones de Comunidad", "Community posts"),
+                        L.t("En Seguridad, elige una publicación y desliza un dedo hacia arriba o hacia abajo para escuchar sus acciones: Me gusta, No me gusta, Comentar, Ver foto y Reportar publicación.",
+                            "In Safety, choose a post and swipe up or down with one finger to hear its actions: Like, Dislike, Comment, View photo and Report post."))
+            instruccion(L.t("Reportar una publicación", "Report a post"),
+                        L.t("Dentro de la publicación, el botón Reportar abre los motivos: información falsa, derechos de autor o de imagen, ofensas, datos personales o spam. El motivo elegido se anuncia como seleccionado.",
+                            "Inside the post, the Report button opens the reasons: false information, copyright or image rights, offensive content, personal information or spam. The chosen reason is announced as selected."))
+            instruccion(L.t("Ver una foto", "View a photo"),
+                        L.t("Toca dos veces la foto para abrirla a pantalla completa. Usa las acciones para acercar, alejar o moverla, y frota dos dedos en forma de Z para cerrarla.",
+                            "Double-tap the photo to open it full screen. Use the actions to zoom in, zoom out or move it, and scrub two fingers in a Z shape to close it."))
+            instruccion(L.t("Cerca de ti", "Near you"),
+                        L.t("En Seguridad, sección Ayuda, Comisarías, Salud y Bomberos abren un mapa con los lugares más cercanos y su distancia.",
+                            "In Safety, Help section, Police stations, Healthcare and Fire stations open a map with the nearest places and their distance."))
+            instruccion(L.t("Sin conexión", "Offline"),
+                        L.t("VoiceOver avisa cuando se pierde o se recupera la conexión. Sin internet, el buscador del Mapa ofrece paraderos y lugares guardados. El Modo offline se activa en Perfil.",
+                            "VoiceOver tells you when the connection is lost or restored. Without internet, the Map search offers stops and saved places. Turn on Offline mode in Profile."))
+            instruccion(L.t("Respaldos guardados", "Saved backups"),
+                        L.t("En Perfil, crea, importa, restaura o comparte copias de tus datos. En la lista, las acciones permiten eliminar un respaldo.",
+                            "In Profile, create, import, restore or share copies of your data. In the list, the actions let you delete a backup."))
         }
     }
 
