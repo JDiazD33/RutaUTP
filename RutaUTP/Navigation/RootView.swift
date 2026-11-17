@@ -169,8 +169,8 @@ struct RootView: View {
             abrirRecordatorioSiCorresponde()
             abrirCambioSiCorresponde()
             abrirAvisoDiarioSiCorresponde()
-            // Pantallas como NavegaciónRuta fuerzan .dark sobre la ventana;
-            // al salir de ellas se re-afirma el tema elegido por el usuario.
+            // Una pantalla puede forzar su propio esquema sobre la ventana;
+            // al cambiar de pantalla se re-afirma el tema elegido por el usuario.
             aplicarTemaEnVentanas(isDarkMode)
         }
         // Modo Señas: el miniplayer NO va en overlay aquí — vive en su propia
