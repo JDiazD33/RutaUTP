@@ -17,7 +17,8 @@
 //    2. **Una imagen fija** del bus. Barata, pero no gira: el rumbo no se vería.
 //
 //  Lo que hay ahora es el camino que se eligió: **una tira de 36 fotogramas**
-//  renderizada con Blender (`tira_giros.py`) desde la vista de tres cuartos, uno
+//  renderizada por `modelo 3D/scripts/tira_giros_sdf.py` (trazador de rayos con
+//  NumPy, sin Blender; sustituye a `tira_giros.py`) desde la vista de tres cuartos, uno
 //  por cada 10° de giro. Se dibuja el fotograma que toca y ya está: aspecto de
 //  3D, gira fino, y en tiempo de ejecución no cuesta más que una imagen.
 //
